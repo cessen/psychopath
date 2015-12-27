@@ -46,6 +46,24 @@ impl Float4 {
                 .max(self.data.get_unchecked(2).max(*self.data.get_unchecked(3)))
         }
     }
+
+    pub fn v_min(&self, other: Float4) -> Float4 {
+        unsafe {
+            Float4::new(self.data.get_unchecked(0).min(*other.data.get_unchecked(0)),
+                        self.data.get_unchecked(1).min(*other.data.get_unchecked(1)),
+                        self.data.get_unchecked(2).min(*other.data.get_unchecked(2)),
+                        self.data.get_unchecked(3).min(*other.data.get_unchecked(3)))
+        }
+    }
+
+    pub fn v_max(&self, other: Float4) -> Float4 {
+        unsafe {
+            Float4::new(self.data.get_unchecked(0).max(*other.data.get_unchecked(0)),
+                        self.data.get_unchecked(1).max(*other.data.get_unchecked(1)),
+                        self.data.get_unchecked(2).max(*other.data.get_unchecked(2)),
+                        self.data.get_unchecked(3).max(*other.data.get_unchecked(3)))
+        }
+    }
 }
 
 

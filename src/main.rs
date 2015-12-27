@@ -5,6 +5,7 @@ mod math;
 mod lerp;
 mod float4;
 mod ray;
+mod bbox;
 mod image;
 
 use std::path::Path;
@@ -50,7 +51,7 @@ fn main() {
         println!("Psychopath {}", VERSION);
         return;
     }
-    
+
     // Write output image
     let mut img = Image::new(512, 512);
     img.set(256, 256, (255, 255, 255));
