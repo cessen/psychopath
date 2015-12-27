@@ -16,7 +16,8 @@ pub fn lerp<T: Lerp>(a: T, b: T, alpha: f32) -> T {
 }
 
 
-/// Interpolates a slice of Lerp data.
+/// Interpolates a slice of data as if each adjecent pair of elements
+/// represent a linear segment.
 pub fn lerp_slice<T: Lerp + Copy>(s: &[T], alpha: f32) -> T {
     debug_assert!(s.len() > 0);
     debug_assert!(alpha >= 0.0);
@@ -37,13 +38,13 @@ pub fn lerp_slice<T: Lerp + Copy>(s: &[T], alpha: f32) -> T {
 
 impl Lerp for f32 {
     fn lerp(self, other: f32, alpha: f32) -> f32 {
-        self + ((other - self) * alpha)
+        (self * (1.0 - alpha)) + (other * alpha)
     }
 }
 
 impl Lerp for f64 {
     fn lerp(self, other: f64, alpha: f32) -> f64 {
-        self + ((other - self) * (alpha as f64))
+        (self * (1.0 - alpha as f64)) + (other * alpha as f64)
     }
 }
 
