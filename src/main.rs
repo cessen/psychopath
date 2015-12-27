@@ -1,7 +1,58 @@
+extern crate rustc_serialize;
+extern crate docopt;
+
 mod math;
 mod lerp;
 mod float4;
+mod ray;
+mod image;
+
+use std::path::Path;
+
+use docopt::Docopt;
+
+use image::Image;
+
+// ----------------------------------------------------------------
+
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
+const USAGE: &'static str = r#"
+Psychopath <VERSION>
+
+Usage:
+  psychopath <imgpath>
+  psychopath (-h | --help)
+  psychopath --version
+
+Options:
+  -h --help     Show this screen.
+  --version     Show version.
+"#;
+
+#[derive(Debug, RustcDecodable)]
+struct Args {
+    arg_imgpath: String,
+    flag_version: bool,
+}
+
+
+// ----------------------------------------------------------------
 
 fn main() {
-    println!("Hello, world!");
+    // Parse command line arguments.
+    let args: Args = Docopt::new(USAGE.replace("<VERSION>", VERSION))
+                         .and_then(|d| d.decode())
+                         .unwrap_or_else(|e| e.exit());
+
+    // Print version and exit if requested.
+    if args.flag_version {
+        println!("Psychopath {}", VERSION);
+        return;
+    }
+    
+    // Write output image
+    let mut img = Image::new(512, 512);
+    img.set(256, 256, (255, 255, 255));
+    let _ = img.write_binary_ppm(Path::new(&args.arg_imgpath));
 }
