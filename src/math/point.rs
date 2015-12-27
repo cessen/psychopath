@@ -5,8 +5,9 @@ use std::cmp::PartialEq;
 
 use lerp::Lerp;
 use float4::Float4;
-use vector::Vector;
-use matrix::Matrix4x4;
+
+use super::Vector;
+use super::Matrix4x4;
 
 /// A position in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
@@ -96,9 +97,8 @@ impl Lerp for Point {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vector::Vector;
+    use super::super::{Vector, Matrix4x4};
     use lerp::Lerp;
-    use matrix::Matrix4x4;
 
     #[test]
     fn norm() {

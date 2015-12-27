@@ -4,9 +4,10 @@ use std::ops::{Index, IndexMut, Add, Sub, Mul, Div};
 use std::cmp::PartialEq;
 
 use lerp::Lerp;
-use math::{DotProduct, CrossProduct};
 use float4::Float4;
-use matrix::Matrix4x4;
+
+use super::{DotProduct, CrossProduct};
+use super::Matrix4x4;
 
 /// A direction vector in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
@@ -138,9 +139,8 @@ impl CrossProduct for Vector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use math::*;
+    use super::super::{Matrix4x4, CrossProduct, DotProduct};
     use lerp::Lerp;
-    use matrix::Matrix4x4;
 
     #[test]
     fn add() {
