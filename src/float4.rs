@@ -16,19 +16,35 @@ impl Float4 {
     }
 
     pub fn h_sum(&self) -> f32 {
-        self[0] + self[1] + self[2] + self[3]
+        unsafe {
+            *self.data.get_unchecked(0) + *self.data.get_unchecked(1) +
+            *self.data.get_unchecked(2) + *self.data.get_unchecked(3)
+        }
     }
 
     pub fn h_product(&self) -> f32 {
-        self[0] * self[1] * self[2] * self[3]
+        unsafe {
+            *self.data.get_unchecked(0) * *self.data.get_unchecked(1) *
+            *self.data.get_unchecked(2) * *self.data.get_unchecked(3)
+        }
     }
 
     pub fn h_min(&self) -> f32 {
-        self[0].min(self[1]).min(self[2].min(self[3]))
+        unsafe {
+            self.data
+                .get_unchecked(0)
+                .min(*self.data.get_unchecked(1))
+                .min(self.data.get_unchecked(2).min(*self.data.get_unchecked(3)))
+        }
     }
 
     pub fn h_max(&self) -> f32 {
-        self[0].max(self[1]).max(self[2].max(self[3]))
+        unsafe {
+            self.data
+                .get_unchecked(0)
+                .max(*self.data.get_unchecked(1))
+                .max(self.data.get_unchecked(2).max(*self.data.get_unchecked(3)))
+        }
     }
 }
 
@@ -50,8 +66,12 @@ impl IndexMut<usize> for Float4 {
 
 impl PartialEq for Float4 {
     fn eq(&self, other: &Float4) -> bool {
-        self.data[0] == other.data[0] && self.data[1] == other.data[1] &&
-        self.data[2] == other.data[2] && self.data[3] == other.data[3]
+        unsafe {
+            *self.data.get_unchecked(0) == *other.data.get_unchecked(0) &&
+            *self.data.get_unchecked(1) == *other.data.get_unchecked(1) &&
+            *self.data.get_unchecked(2) == *other.data.get_unchecked(2) &&
+            *self.data.get_unchecked(3) == *other.data.get_unchecked(3)
+        }
     }
 }
 
@@ -60,8 +80,13 @@ impl Add for Float4 {
     type Output = Float4;
 
     fn add(self, other: Float4) -> Float4 {
-        Float4 {
-            data: [self[0] + other[0], self[1] + other[1], self[2] + other[2], self[3] + other[3]],
+        unsafe {
+            Float4 {
+                data: [*self.data.get_unchecked(0) + *other.data.get_unchecked(0),
+                       *self.data.get_unchecked(1) + *other.data.get_unchecked(1),
+                       *self.data.get_unchecked(2) + *other.data.get_unchecked(2),
+                       *self.data.get_unchecked(3) + *other.data.get_unchecked(3)],
+            }
         }
     }
 }
@@ -71,8 +96,13 @@ impl Sub for Float4 {
     type Output = Float4;
 
     fn sub(self, other: Float4) -> Float4 {
-        Float4 {
-            data: [self[0] - other[0], self[1] - other[1], self[2] - other[2], self[3] - other[3]],
+        unsafe {
+            Float4 {
+                data: [*self.data.get_unchecked(0) - *other.data.get_unchecked(0),
+                       *self.data.get_unchecked(1) - *other.data.get_unchecked(1),
+                       *self.data.get_unchecked(2) - *other.data.get_unchecked(2),
+                       *self.data.get_unchecked(3) - *other.data.get_unchecked(3)],
+            }
         }
     }
 }
@@ -82,8 +112,13 @@ impl Mul for Float4 {
     type Output = Float4;
 
     fn mul(self, other: Float4) -> Float4 {
-        Float4 {
-            data: [self[0] * other[0], self[1] * other[1], self[2] * other[2], self[3] * other[3]],
+        unsafe {
+            Float4 {
+                data: [*self.data.get_unchecked(0) * *other.data.get_unchecked(0),
+                       *self.data.get_unchecked(1) * *other.data.get_unchecked(1),
+                       *self.data.get_unchecked(2) * *other.data.get_unchecked(2),
+                       *self.data.get_unchecked(3) * *other.data.get_unchecked(3)],
+            }
         }
     }
 }
@@ -92,7 +127,14 @@ impl Mul<f32> for Float4 {
     type Output = Float4;
 
     fn mul(self, other: f32) -> Float4 {
-        Float4 { data: [self[0] * other, self[1] * other, self[2] * other, self[3] * other] }
+        unsafe {
+            Float4 {
+                data: [*self.data.get_unchecked(0) * other,
+                       *self.data.get_unchecked(1) * other,
+                       *self.data.get_unchecked(2) * other,
+                       *self.data.get_unchecked(3) * other],
+            }
+        }
     }
 }
 
@@ -101,8 +143,13 @@ impl Div for Float4 {
     type Output = Float4;
 
     fn div(self, other: Float4) -> Float4 {
-        Float4 {
-            data: [self[0] / other[0], self[1] / other[1], self[2] / other[2], self[3] / other[3]],
+        unsafe {
+            Float4 {
+                data: [*self.data.get_unchecked(0) / *other.data.get_unchecked(0),
+                       *self.data.get_unchecked(1) / *other.data.get_unchecked(1),
+                       *self.data.get_unchecked(2) / *other.data.get_unchecked(2),
+                       *self.data.get_unchecked(3) / *other.data.get_unchecked(3)],
+            }
         }
     }
 }
@@ -111,6 +158,137 @@ impl Div<f32> for Float4 {
     type Output = Float4;
 
     fn div(self, other: f32) -> Float4 {
-        Float4 { data: [self[0] / other, self[1] / other, self[2] / other, self[3] / other] }
+        unsafe {
+            Float4 {
+                data: [*self.data.get_unchecked(0) / other,
+                       *self.data.get_unchecked(1) / other,
+                       *self.data.get_unchecked(2) / other,
+                       *self.data.get_unchecked(3) / other],
+            }
+        }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn index() {
+        let f = Float4::new(1.0, 2.0, 3.0, 4.0);
+
+        assert_eq!(f[0], 1.0);
+        assert_eq!(f[1], 2.0);
+        assert_eq!(f[2], 3.0);
+        assert_eq!(f[3], 4.0);
+    }
+
+    #[test]
+    fn index_mut() {
+        let mut f = Float4::new(1.0, 2.0, 3.0, 4.0);
+        f[0] = 5.0;
+        f[1] = 6.0;
+        f[2] = 7.0;
+        f[3] = 8.0;
+
+        assert_eq!(f[0], 5.0);
+        assert_eq!(f[1], 6.0);
+        assert_eq!(f[2], 7.0);
+        assert_eq!(f[3], 8.0);
+    }
+
+    #[test]
+    fn partial_eq_1() {
+        let f1 = Float4::new(1.0, 2.0, 3.0, 4.0);
+        let f2 = Float4::new(1.0, 2.0, 3.0, 4.0);
+
+        assert!(f1 == f2);
+    }
+
+    #[test]
+    fn partial_eq_2() {
+        let f1 = Float4::new(1.0, 2.0, 3.0, 4.0);
+        let f2 = Float4::new(1.0, 2.1, 3.0, 4.0);
+
+        assert!(!(f1 == f2));
+    }
+
+    #[test]
+    fn h_sum() {
+        let f = Float4::new(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(f.h_sum(), 10.0);
+    }
+
+    #[test]
+    fn h_product() {
+        let f = Float4::new(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(f.h_product(), 24.0);
+    }
+
+    #[test]
+    fn h_min() {
+        let f = Float4::new(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(f.h_min(), 1.0);
+    }
+
+    #[test]
+    fn h_max() {
+        let f = Float4::new(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(f.h_max(), 4.0);
+    }
+
+    #[test]
+    fn add() {
+        let f1 = Float4::new(1.0, 2.0, 3.0, 4.0);
+        let f2 = Float4::new(2.0, 3.0, 4.0, 5.0);
+        let f3 = Float4::new(3.0, 5.0, 7.0, 9.0);
+
+        assert_eq!(f1 + f2, f3);
+    }
+
+    #[test]
+    fn sub() {
+        let f1 = Float4::new(1.0, 2.0, 3.0, 4.0);
+        let f2 = Float4::new(2.0, 3.0, 4.0, 5.0);
+        let f3 = Float4::new(-1.0, -1.0, -1.0, -1.0);
+
+        assert_eq!(f1 - f2, f3);
+    }
+
+    #[test]
+    fn mul_component() {
+        let f1 = Float4::new(1.0, 2.0, 3.0, 4.0);
+        let f2 = Float4::new(2.0, 3.0, 4.0, 5.0);
+        let f3 = Float4::new(2.0, 6.0, 12.0, 20.0);
+
+        assert_eq!(f1 * f2, f3);
+    }
+
+    #[test]
+    fn mul_scalar() {
+        let f1 = Float4::new(1.0, 2.0, 3.0, 4.0);
+        let v = 3.0;
+        let f2 = Float4::new(3.0, 6.0, 9.0, 12.0);
+
+        assert_eq!(f1 * v, f2);
+    }
+
+    #[test]
+    fn div_component() {
+        let f1 = Float4::new(1.0, 3.0, 3.0, 6.0);
+        let f2 = Float4::new(2.0, 2.0, 4.0, 8.0);
+        let f3 = Float4::new(0.5, 1.5, 0.75, 0.75);
+
+        assert_eq!(f1 / f2, f3);
+    }
+
+    #[test]
+    fn div_scalar() {
+        let f1 = Float4::new(1.0, 2.0, 3.0, 4.0);
+        let v = 2.0;
+        let f2 = Float4::new(0.5, 1.0, 1.5, 2.0);
+
+        assert_eq!(f1 / v, f2);
     }
 }
