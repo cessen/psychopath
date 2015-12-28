@@ -64,7 +64,7 @@ fn main() {
             Obj [Things and stuff\]]
         }
 
-        Thing $yar { # A comment
+        Thing { # A comment
             Obj [23]
             Obj [42]
             Obj ["The meaning of life!"]

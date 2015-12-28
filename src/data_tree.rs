@@ -91,7 +91,7 @@ fn parse<'a>(source_text: &'a str) -> ParseResult<'a> {
                     text_remaining = text3;
                     children.push(node);
                 }
-                if let (Token::CloseInner, text3) = next_token(text2) {
+                if let (Token::CloseInner, text3) = next_token(text_remaining) {
                     return Ok((DataTree::Internal {
                         type_: t,
                         name: None,
