@@ -6,6 +6,7 @@ mod lerp;
 mod float4;
 mod ray;
 mod bbox;
+mod data_tree;
 mod image;
 
 use std::path::Path;
@@ -13,6 +14,7 @@ use std::path::Path;
 use docopt::Docopt;
 
 use image::Image;
+use data_tree::DataTree;
 
 // ----------------------------------------------------------------
 
@@ -56,4 +58,19 @@ fn main() {
     let mut img = Image::new(512, 512);
     img.set(256, 256, (255, 255, 255));
     let _ = img.write_binary_ppm(Path::new(&args.arg_imgpath));
+
+    let test_string = r##"
+        Thing $yar { # A comment
+            Obj [Things and stuff\]]
+        }
+
+        Thing $yar { # A comment
+            Obj [23]
+            Obj [42]
+            Obj ["The meaning of life!"]
+        }
+    "##;
+    let tree = DataTree::from_str(test_string);
+
+    println!("{:#?}", tree);
 }
