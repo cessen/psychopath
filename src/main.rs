@@ -8,6 +8,7 @@ mod ray;
 mod bbox;
 mod data_tree;
 mod image;
+mod triangle;
 
 use std::path::Path;
 
@@ -15,6 +16,8 @@ use docopt::Docopt;
 
 use image::Image;
 use data_tree::DataTree;
+use math::{Point, Vector};
+use ray::Ray;
 
 // ----------------------------------------------------------------
 
@@ -54,9 +57,23 @@ fn main() {
         return;
     }
 
-    // Write output image
+    // Write output image of ray-traced triangle
+    let p1 = Point::new(10.0, 80.0, 1.0);
+    let p2 = Point::new(420.0, 40.0, 1.0);
+    let p3 = Point::new(235.0, 490.0, 1.0);
     let mut img = Image::new(512, 512);
-    img.set(256, 256, (255, 255, 255));
+    for y in 0..img.height() {
+        for x in 0..img.width() {
+            let ray = Ray::new(Point::new(x as f32, y as f32, 0.0),
+                               Vector::new(0.0, 0.0, 1.0));
+            if let Some((_, u, v)) = triangle::intersect_ray(&ray, (p1, p2, p3)) {
+                let r = (u * 255.0) as u8;
+                let g = (v * 255.0) as u8;
+                let b = ((1.0 - u - v) * 255.0).max(0.0) as u8;
+                img.set(x, y, (r, g, b));
+            }
+        }
+    }
     let _ = img.write_binary_ppm(Path::new(&args.arg_imgpath));
 
     let test_string = r##"
