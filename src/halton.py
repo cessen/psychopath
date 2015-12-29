@@ -24,7 +24,7 @@
 # Generate Rust code for evaluating Halton points with Faure-permutations for different bases.
 
 # How many components to generate.
-num_dimensions = 256
+num_dimensions = 128
 
 # Check primality. Not optimized, since it's not performance-critical.
 def is_prime(p):
@@ -89,6 +89,7 @@ def invert(base, index, digits):
 
 # Print the beginning bits of the file
 print '''#![allow(dead_code)]
+#![cfg_attr(rustfmt, rustfmt_skip)]
 // Copyright (c) 2012 Leonhard Gruenschloss (leonhard@gruenschloss.org)
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -113,14 +114,12 @@ print '''#![allow(dead_code)]
 
 // Compute points of the Halton sequence with with Faure-permutations for different bases.
 
-pub const MAX_DIMENSION: u32 = %d;
-''' % num_dimensions
+pub const MAX_DIMENSION: u32 = %d;''' % num_dimensions
 
 # Print the sampling function
 print '''
 pub fn sample(dimension: u32, index: u32) -> f32 {
-    match dimension {
-'''
+    match dimension {'''
 
 for i in range(num_dimensions):
     print '        %d => halton%d(index),' % (i, primes[i])
@@ -134,7 +133,6 @@ print '''
 # Print the special-cased first dimension
 print '''
 // Special case: radical inverse in base 2, with direct bit reversal.
-#[inline(always)]
 fn halton2(mut index: u32) -> f32 {
     index = (index << 16) | (index >> 16);
     index = ((index & 0x00ff00ff) << 8) | ((index & 0xff00ff00) >> 8);
@@ -168,8 +166,6 @@ for i in range(1, num_dimensions): # Skip base 2.
         
     power = max_power / pow_base
     print '''
-
-#[inline(always)]
 fn halton%d(index: u32) -> f32 {
     const PERM%d: [u16; %d] = [%s];
     ''' % (base, base, len(perm), ', '.join(str(k) for k in perm))
