@@ -29,6 +29,6 @@ pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32,
         let t = dot(edge2, qvec) * inv_det;
         return Some((t, u, v));
     } else {
-        return None;  // Ray is parallell to the plane of the triangle
+        return None;
     }
 }

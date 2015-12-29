@@ -25,6 +25,20 @@ impl Point {
     pub fn norm(&self) -> Point {
         Point { co: self.co / self.co[3] }
     }
+
+    pub fn min(&self, other: Point) -> Point {
+        let n1 = self.norm();
+        let n2 = other.norm();
+
+        Point { co: n1.co.v_min(n2.co) }
+    }
+
+    pub fn max(&self, other: Point) -> Point {
+        let n1 = self.norm();
+        let n2 = other.norm();
+
+        Point { co: n1.co.v_max(n2.co) }
+    }
 }
 
 

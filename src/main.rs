@@ -2,6 +2,7 @@ extern crate rustc_serialize;
 extern crate docopt;
 
 mod math;
+mod algorithm;
 mod lerp;
 mod float4;
 mod ray;
@@ -9,6 +10,7 @@ mod bbox;
 mod data_tree;
 mod image;
 mod triangle;
+mod halton;
 
 use std::path::Path;
 
@@ -16,7 +18,7 @@ use docopt::Docopt;
 
 use image::Image;
 use data_tree::DataTree;
-use math::{Point, Vector};
+use math::{Point, Vector, fast_logit};
 use ray::Ray;
 
 // ----------------------------------------------------------------
@@ -45,6 +47,18 @@ struct Args {
 
 // ----------------------------------------------------------------
 
+fn hash_u32(n: u32, seed: u32) -> u32 {
+    let mut hash = n;
+
+    for _ in 0..3 {
+        hash = hash.wrapping_mul(1936502639);
+        hash ^= hash.wrapping_shr(16);
+        hash = hash.wrapping_add(seed);
+    }
+
+    return hash;
+}
+
 fn main() {
     // Parse command line arguments.
     let args: Args = Docopt::new(USAGE.replace("<VERSION>", VERSION))
@@ -64,14 +78,31 @@ fn main() {
     let mut img = Image::new(512, 512);
     for y in 0..img.height() {
         for x in 0..img.width() {
-            let ray = Ray::new(Point::new(x as f32, y as f32, 0.0),
-                               Vector::new(0.0, 0.0, 1.0));
-            if let Some((_, u, v)) = triangle::intersect_ray(&ray, (p1, p2, p3)) {
-                let r = (u * 255.0) as u8;
-                let g = (v * 255.0) as u8;
-                let b = ((1.0 - u - v) * 255.0).max(0.0) as u8;
-                img.set(x, y, (r, g, b));
+            let mut r = 0.0;
+            let mut g = 0.0;
+            let mut b = 0.0;
+            let offset = hash_u32(((x as u32) << 16) ^ (y as u32), 0);
+            const SAMPLES: usize = 16;
+            for si in 0..SAMPLES {
+                let ray = Ray::new(Point::new(x as f32 +
+                                              fast_logit(halton::sample(0, offset + si as u32),
+                                                         1.5),
+                                              y as f32 +
+                                              fast_logit(halton::sample(3, offset + si as u32),
+                                                         1.5),
+                                              0.0),
+                                   Vector::new(0.0, 0.0, 1.0));
+                if let Some((_, u, v)) = triangle::intersect_ray(&ray, (p1, p2, p3)) {
+                    r += u;
+                    g += v;
+                    b += (1.0 - u - v).max(0.0);
+                }
             }
+            r *= 255.0 / SAMPLES as f32;
+            g *= 255.0 / SAMPLES as f32;
+            b *= 255.0 / SAMPLES as f32;
+
+            img.set(x, y, (r as u8, g as u8, b as u8));
         }
     }
     let _ = img.write_binary_ppm(Path::new(&args.arg_imgpath));
