@@ -1,2 +1,1 @@
 - Implement a basic camera.
-- Implement a BVH for lists of triangles.

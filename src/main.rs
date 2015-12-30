@@ -10,6 +10,7 @@ mod bbox;
 mod data_tree;
 mod image;
 mod triangle;
+mod bvh;
 mod halton;
 
 use std::path::Path;
@@ -17,7 +18,6 @@ use std::path::Path;
 use docopt::Docopt;
 
 use image::Image;
-use data_tree::DataTree;
 use math::{Point, Vector, fast_logit};
 use ray::Ray;
 
@@ -71,10 +71,24 @@ fn main() {
         return;
     }
 
+    // Generate a scene of triangles
+    let mut triangles = {
+        let mut triangles = Vec::new();
+        for x in 0..10 {
+            for y in 0..10 {
+                let cx = x as f32 * 32.0;
+                let cy = y as f32 * 32.0;
+                triangles.push((Point::new(cx, cy, 1.0),
+                                Point::new(cx + 32.0, cy, 1.0),
+                                Point::new(cx, cy + 32.0, 1.0)));
+            }
+        }
+        triangles
+    };
+    let scene = bvh::BVH::from_triangles(&mut triangles[..]);
+    println!("Scene built.");
+
     // Write output image of ray-traced triangle
-    let p1 = Point::new(10.0, 80.0, 1.0);
-    let p2 = Point::new(420.0, 40.0, 1.0);
-    let p3 = Point::new(235.0, 490.0, 1.0);
     let mut img = Image::new(512, 512);
     for y in 0..img.height() {
         for x in 0..img.width() {
@@ -82,7 +96,7 @@ fn main() {
             let mut g = 0.0;
             let mut b = 0.0;
             let offset = hash_u32(((x as u32) << 16) ^ (y as u32), 0);
-            const SAMPLES: usize = 16;
+            const SAMPLES: usize = 64;
             for si in 0..SAMPLES {
                 let ray = Ray::new(Point::new(x as f32 +
                                               fast_logit(halton::sample(0, offset + si as u32),
@@ -92,10 +106,13 @@ fn main() {
                                                          1.5),
                                               0.0),
                                    Vector::new(0.0, 0.0, 1.0));
-                if let Some((_, u, v)) = triangle::intersect_ray(&ray, (p1, p2, p3)) {
-                    r += u;
-                    g += v;
-                    b += (1.0 - u - v).max(0.0);
+                if bvh::intersect_bvh(&scene, &ray) {
+                    r += 1.0;
+                    g += 1.0;
+                    b += 1.0;
+                    // r += u;
+                    // g += v;
+                    // b += (1.0 - u - v).max(0.0);
                 }
             }
             r *= 255.0 / SAMPLES as f32;
@@ -106,19 +123,4 @@ fn main() {
         }
     }
     let _ = img.write_binary_ppm(Path::new(&args.arg_imgpath));
-
-    let test_string = r##"
-        Thing $yar { # A comment
-            Obj [Things and stuff\]]
-        }
-
-        Thing { # A comment
-            Obj [23]
-            Obj [42]
-            Obj ["The meaning of life!"]
-        }
-    "##;
-    let tree = DataTree::from_str(test_string);
-
-    println!("{:#?}", tree);
 }
