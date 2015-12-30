@@ -48,7 +48,7 @@ impl BBox {
                         .max(t1[2].min(t2[2]));
         let hitt1 = (t1[0].max(t2[0]))
                         .min(t1[1].max(t2[1]))
-                        .min(t1[2].max(t2[2]));
+                        .min(t1[2].max(t2[2])) * BBOX_MAXT_ADJUST;
 
         // Did we hit?
         return hitt0.max(0.0) <= hitt1.min(ray.max_t);
