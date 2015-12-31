@@ -7,8 +7,10 @@ use triangle;
 use algorithm::partition;
 
 #[derive(Debug)]
-pub struct BVH {
+pub struct BVH<'a, T: 'a> {
     nodes: Vec<BVHNode>,
+    objects: &'a [T],
+    depth: usize,
 }
 
 #[derive(Debug)]
@@ -20,36 +22,51 @@ enum BVHNode {
 
     Leaf {
         bounds: BBox,
-        triangle: (Point, Point, Point),
+        object_index: usize,
     },
 }
 
-impl BVH {
-    pub fn from_triangles(triangles: &mut [(Point, Point, Point)]) -> BVH {
-        let mut bvh = BVH { nodes: Vec::new() };
+impl<'a, T> BVH<'a, T> {
+    pub fn from_objects<F>(objects: &'a mut [T], bounder: F) -> BVH<'a, T>
+        where F: Fn(&T) -> BBox
+    {
+        let mut bvh = BVH {
+            nodes: Vec::new(),
+            objects: &[],
+            depth: 0,
+        };
 
-        bvh.recursive_build(triangles);
+        bvh.recursive_build(0, 0, objects, &bounder);
+        bvh.objects = objects;
+
+        println!("BVH Depth: {}", bvh.depth);
 
         bvh
     }
 
-    // Recursively builds the BVH starting at the given node with the given
-    // first and last primitive indices (in bag).
-    fn recursive_build(&mut self, triangles: &mut [(Point, Point, Point)]) -> usize {
+
+    fn recursive_build<F>(&mut self,
+                          offset: usize,
+                          depth: usize,
+                          objects: &mut [T],
+                          bounder: &F)
+                          -> usize
+        where F: Fn(&T) -> BBox
+    {
         let me = self.nodes.len();
 
-        if triangles.len() == 1 {
+        if objects.len() == 0 {
+            return 0;
+        } else if objects.len() == 1 {
             // Leaf node
-            let tri = triangles[0];
-
             self.nodes.push(BVHNode::Leaf {
-                bounds: {
-                    let minimum = tri.0.min(tri.1.min(tri.2));
-                    let maximum = tri.0.max(tri.1.max(tri.2));
-                    BBox::from_points(minimum, maximum)
-                },
-                triangle: tri,
+                bounds: bounder(&objects[0]),
+                object_index: offset,
             });
+
+            if self.depth < depth {
+                self.depth = depth;
+            }
         } else {
             // Not a leaf node
             self.nodes.push(BVHNode::Internal {
@@ -58,18 +75,10 @@ impl BVH {
             });
 
             // Determine which axis to split on
-            fn tri_bounds(tri: (Point, Point, Point)) -> BBox {
-                let minimum = tri.0.min(tri.1.min(tri.2));
-                let maximum = tri.0.max(tri.1.max(tri.2));
-                BBox {
-                    min: minimum,
-                    max: maximum,
-                }
-            }
             let bounds = {
                 let mut bounds = BBox::new();
-                for tri in &triangles[..] {
-                    bounds = bounds | tri_bounds(*tri);
+                for obj in objects.iter() {
+                    bounds = bounds | bounder(obj);
                 }
                 bounds
             };
@@ -87,10 +96,10 @@ impl BVH {
             };
             let split_pos = (bounds.min[split_axis] + bounds.max[split_axis]) * 0.5;
 
-            // Partition triangles based on split
+            // Partition objects based on split
             let split_index = {
-                let mut split_i = partition(triangles, |tri| {
-                    let tb = tri_bounds(*tri);
+                let mut split_i = partition(objects, |obj| {
+                    let tb = bounder(obj);
                     let centroid = (tb.min[split_axis] + tb.max[split_axis]) * 0.5;
                     centroid < split_pos
                 });
@@ -102,8 +111,11 @@ impl BVH {
             };
 
             // Create child nodes
-            self.recursive_build(&mut triangles[..split_index]);
-            let child2_index = self.recursive_build(&mut triangles[split_index..]);
+            self.recursive_build(offset, depth + 1, &mut objects[..split_index], bounder);
+            let child2_index = self.recursive_build(offset + split_index,
+                                                    depth + 1,
+                                                    &mut objects[split_index..],
+                                                    bounder);
 
             // Set node
             self.nodes[me] = BVHNode::Internal {
@@ -117,11 +129,18 @@ impl BVH {
 }
 
 
-pub fn intersect_bvh(bvh: &BVH, ray: &Ray) -> bool {
-    let mut i_stack = [0; 64];
-    let mut stack_ptr = 0;
+pub fn intersect_bvh(bvh: &BVH<(Point, Point, Point)>, ray: &mut Ray) -> Option<(f32, f32, f32)> {
+    if bvh.nodes.len() == 0 {
+        return None;
+    }
 
-    loop {
+    let mut i_stack = [0; 65];
+    let mut stack_ptr: usize = 1;
+    let mut hit = false;
+    let mut u = 0.0;
+    let mut v = 0.0;
+
+    while stack_ptr > 0 {
         match bvh.nodes[i_stack[stack_ptr]] {
             BVHNode::Internal { bounds, second_child_index } => {
                 if bounds.intersect_ray(ray) {
@@ -129,25 +148,29 @@ pub fn intersect_bvh(bvh: &BVH, ray: &Ray) -> bool {
                     i_stack[stack_ptr + 1] = second_child_index;
                     stack_ptr += 1;
                 } else {
-                    if stack_ptr == 0 {
-                        break;
-                    }
                     stack_ptr -= 1;
                 }
             }
 
-            BVHNode::Leaf{bounds: _, triangle: tri} => {
-                if let Some(_) = triangle::intersect_ray(ray, tri) {
-                    return true;
-                } else {
-                    if stack_ptr == 0 {
-                        break;
+            BVHNode::Leaf { bounds: _, object_index } => {
+                if let Some((t, tri_u, tri_v)) =
+                       triangle::intersect_ray(ray, bvh.objects[object_index]) {
+                    if t < ray.max_t {
+                        hit = true;
+                        ray.max_t = t;
+                        u = tri_u;
+                        v = tri_v;
                     }
-                    stack_ptr -= 1;
                 }
+
+                stack_ptr -= 1;
             }
         }
     }
 
-    return false;
+    if hit {
+        return Some((ray.max_t, u, v));
+    } else {
+        return None;
+    }
 }

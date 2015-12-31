@@ -20,6 +20,7 @@ use docopt::Docopt;
 use image::Image;
 use math::{Point, Vector, fast_logit};
 use ray::Ray;
+use bbox::BBox;
 
 // ----------------------------------------------------------------
 
@@ -74,18 +75,32 @@ fn main() {
     // Generate a scene of triangles
     let mut triangles = {
         let mut triangles = Vec::new();
-        for x in 0..10 {
-            for y in 0..10 {
-                let cx = x as f32 * 32.0;
-                let cy = y as f32 * 32.0;
+        let xres = 512;
+        let yres = 512;
+        let xinc = 512.0 / (xres as f32);
+        let yinc = 512.0 / (yres as f32);
+        for x in 0..xres {
+            for y in 0..yres {
+                let cx = x as f32 * xinc;
+                let cy = y as f32 * yinc;
                 triangles.push((Point::new(cx, cy, 1.0),
-                                Point::new(cx + 32.0, cy, 1.0),
-                                Point::new(cx, cy + 32.0, 1.0)));
+                                Point::new(cx + xinc, cy, 1.1),
+                                Point::new(cx, cy + yinc, 1.2)));
+                triangles.push((Point::new(cx + xinc, cy + yinc, 1.0),
+                                Point::new(cx, cy + yinc, 1.1),
+                                Point::new(cx + xinc, cy, 1.2)));
             }
         }
         triangles
     };
-    let scene = bvh::BVH::from_triangles(&mut triangles[..]);
+    let scene = bvh::BVH::from_objects(&mut triangles[..], |tri| {
+        let minimum = tri.0.min(tri.1.min(tri.2));
+        let maximum = tri.0.max(tri.1.max(tri.2));
+        BBox {
+            min: minimum,
+            max: maximum,
+        }
+    });
     println!("Scene built.");
 
     // Write output image of ray-traced triangle
@@ -96,23 +111,29 @@ fn main() {
             let mut g = 0.0;
             let mut b = 0.0;
             let offset = hash_u32(((x as u32) << 16) ^ (y as u32), 0);
-            const SAMPLES: usize = 64;
+            const SAMPLES: usize = 16;
             for si in 0..SAMPLES {
-                let ray = Ray::new(Point::new(x as f32 +
-                                              fast_logit(halton::sample(0, offset + si as u32),
-                                                         1.5),
-                                              y as f32 +
-                                              fast_logit(halton::sample(3, offset + si as u32),
-                                                         1.5),
-                                              0.0),
-                                   Vector::new(0.0, 0.0, 1.0));
-                if bvh::intersect_bvh(&scene, &ray) {
-                    r += 1.0;
-                    g += 1.0;
-                    b += 1.0;
-                    // r += u;
-                    // g += v;
-                    // b += (1.0 - u - v).max(0.0);
+                let mut ray = Ray::new(Point::new(x as f32 +
+                                                  fast_logit(halton::sample(0,
+                                                                            offset + si as u32),
+                                                             1.5),
+                                                  y as f32 +
+                                                  fast_logit(halton::sample(3,
+                                                                            offset + si as u32),
+                                                             1.5),
+                                                  0.0),
+                                       Vector::new(0.0, 0.0, 1.0));
+                if let Some((_, u, v)) = bvh::intersect_bvh(&scene, &mut ray) {
+                    r += u;
+                    g += v;
+                    b += (1.0 - u - v).max(0.0);
+                    // r += 1.0;
+                    // g += 1.0;
+                    // b += 1.0;
+                } else {
+                    r += 0.1;
+                    g += 0.1;
+                    b += 0.1;
                 }
             }
             r *= 255.0 / SAMPLES as f32;

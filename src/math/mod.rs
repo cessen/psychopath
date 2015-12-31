@@ -40,14 +40,20 @@ pub fn fast_ln(x: f32) -> f32 {
     return y - 87.989971088;
 }
 
-pub fn fast_logit(p: f32, width: f32) -> f32 {
-    let n = 0.001 + (p * 0.998);
 
-    fast_ln((n / (1.0 - n))) * width * (0.6266 / 4.0)
-}
 
+/// The logit function, scaled to approximate the probit function.
+///
+/// We use this as a close approximation to the gaussian inverse CDF,
+/// since the gaussian inverse CDF (probit) has no analytic formula.
 pub fn logit(p: f32, width: f32) -> f32 {
     let n = 0.001 + (p * 0.998);
 
     (n / (1.0 - n)).ln() * width * (0.6266 / 4.0)
+}
+
+pub fn fast_logit(p: f32, width: f32) -> f32 {
+    let n = 0.001 + (p * 0.998);
+
+    fast_ln((n / (1.0 - n))) * width * (0.6266 / 4.0)
 }
