@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
+use std::marker;
+
 use bbox::BBox;
-use math::Point;
 use ray::Ray;
-use triangle;
 use algorithm::partition;
 
 #[derive(Debug)]
@@ -129,48 +129,50 @@ impl<'a, T> BVH<'a, T> {
 }
 
 
-pub fn intersect_bvh(bvh: &BVH<(Point, Point, Point)>, ray: &mut Ray) -> Option<(f32, f32, f32)> {
-    if bvh.nodes.len() == 0 {
-        return None;
+pub struct BVHTraverser<'a, T: 'a> {
+    bvh: &'a BVH<'a, T>,
+    ray: *mut Ray,
+    _ray_marker: marker::PhantomData<&'a mut Ray>,
+    i_stack: [usize; 65],
+    stack_ptr: usize,
+}
+
+impl<'a, T> BVHTraverser<'a, T> {
+    pub fn from_bvh_and_ray(bvh: &'a BVH<'a, T>, ray: &'a mut Ray) -> BVHTraverser<'a, T> {
+        BVHTraverser {
+            bvh: bvh,
+            ray: ray as *mut Ray,
+            _ray_marker: marker::PhantomData,
+            i_stack: [0; 65],
+            stack_ptr: 1,
+        }
     }
+}
 
-    let mut i_stack = [0; 65];
-    let mut stack_ptr: usize = 1;
-    let mut hit = false;
-    let mut u = 0.0;
-    let mut v = 0.0;
-
-    while stack_ptr > 0 {
-        match bvh.nodes[i_stack[stack_ptr]] {
-            BVHNode::Internal { bounds, second_child_index } => {
-                if bounds.intersect_ray(ray) {
-                    i_stack[stack_ptr] += 1;
-                    i_stack[stack_ptr + 1] = second_child_index;
-                    stack_ptr += 1;
-                } else {
-                    stack_ptr -= 1;
-                }
-            }
-
-            BVHNode::Leaf { bounds: _, object_index } => {
-                if let Some((t, tri_u, tri_v)) =
-                       triangle::intersect_ray(ray, bvh.objects[object_index]) {
-                    if t < ray.max_t {
-                        hit = true;
-                        ray.max_t = t;
-                        u = tri_u;
-                        v = tri_v;
+impl<'a, T> Iterator for BVHTraverser<'a, T> {
+    type Item = (&'a T, &'a mut Ray);
+    fn next(&mut self) -> Option<(&'a T, &'a mut Ray)> {
+        while self.stack_ptr > 0 {
+            match self.bvh.nodes[self.i_stack[self.stack_ptr]] {
+                BVHNode::Internal { bounds, second_child_index } => {
+                    if bounds.intersect_ray(&(unsafe { *self.ray })) {
+                        self.i_stack[self.stack_ptr] += 1;
+                        self.i_stack[self.stack_ptr + 1] = second_child_index;
+                        self.stack_ptr += 1;
+                    } else {
+                        self.stack_ptr -= 1;
                     }
                 }
 
-                stack_ptr -= 1;
+                BVHNode::Leaf { bounds: _, object_index } => {
+                    self.stack_ptr -= 1;
+                    unsafe {
+                        return Some((&self.bvh.objects[object_index], &mut (*self.ray)));
+                    }
+                }
             }
         }
-    }
 
-    if hit {
-        return Some((ray.max_t, u, v));
-    } else {
         return None;
     }
 }

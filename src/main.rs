@@ -75,8 +75,8 @@ fn main() {
     // Generate a scene of triangles
     let mut triangles = {
         let mut triangles = Vec::new();
-        let xres = 512;
-        let yres = 512;
+        let xres = 16;
+        let yres = 16;
         let xinc = 512.0 / (xres as f32);
         let yinc = 512.0 / (yres as f32);
         for x in 0..xres {
@@ -113,6 +113,7 @@ fn main() {
             let offset = hash_u32(((x as u32) << 16) ^ (y as u32), 0);
             const SAMPLES: usize = 16;
             for si in 0..SAMPLES {
+                // Generate ray
                 let mut ray = Ray::new(Point::new(x as f32 +
                                                   fast_logit(halton::sample(0,
                                                                             offset + si as u32),
@@ -123,7 +124,23 @@ fn main() {
                                                              1.5),
                                                   0.0),
                                        Vector::new(0.0, 0.0, 1.0));
-                if let Some((_, u, v)) = bvh::intersect_bvh(&scene, &mut ray) {
+
+                // Test ray against scene
+                let (mut u, mut v) = (0.0, 0.0);
+                let mut hit = false;
+                for (tri, r) in bvh::BVHTraverser::from_bvh_and_ray(&scene, &mut ray) {
+                    if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(r, *tri) {
+                        if t < r.max_t {
+                            hit = true;
+                            r.max_t = t;
+                            u = tri_u;
+                            v = tri_v;
+                        }
+                    }
+                }
+
+                // Update color based on ray hit
+                if hit {
                     r += u;
                     g += v;
                     b += (1.0 - u - v).max(0.0);
@@ -136,6 +153,7 @@ fn main() {
                     b += 0.1;
                 }
             }
+
             r *= 255.0 / SAMPLES as f32;
             g *= 255.0 / SAMPLES as f32;
             b *= 255.0 / SAMPLES as f32;
