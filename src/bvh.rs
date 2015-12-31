@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::marker;
+use std::slice;
 
 use bbox::BBox;
 use ray::Ray;
@@ -131,33 +132,40 @@ impl<'a, T> BVH<'a, T> {
 
 pub struct BVHTraverser<'a, T: 'a> {
     bvh: &'a BVH<'a, T>,
-    ray: *mut Ray,
-    _ray_marker: marker::PhantomData<&'a mut Ray>,
+    rays: (*mut Ray, usize),
+    _ray_marker: marker::PhantomData<&'a mut [Ray]>,
     i_stack: [usize; 65],
+    ray_i_stack: [usize; 65],
     stack_ptr: usize,
 }
 
 impl<'a, T> BVHTraverser<'a, T> {
-    pub fn from_bvh_and_ray(bvh: &'a BVH<'a, T>, ray: &'a mut Ray) -> BVHTraverser<'a, T> {
+    pub fn from_bvh_and_ray(bvh: &'a BVH<'a, T>, rays: &'a mut [Ray]) -> BVHTraverser<'a, T> {
         BVHTraverser {
             bvh: bvh,
-            ray: ray as *mut Ray,
+            rays: (&mut rays[0] as *mut Ray, rays.len()),
             _ray_marker: marker::PhantomData,
             i_stack: [0; 65],
+            ray_i_stack: [rays.len(); 65],
             stack_ptr: 1,
         }
     }
 }
 
 impl<'a, T> Iterator for BVHTraverser<'a, T> {
-    type Item = (&'a T, &'a mut Ray);
-    fn next(&mut self) -> Option<(&'a T, &'a mut Ray)> {
+    type Item = (&'a T, &'a mut [Ray]);
+    fn next(&mut self) -> Option<(&'a T, &'a mut [Ray])> {
+        let rays = unsafe { slice::from_raw_parts_mut(self.rays.0, self.rays.1) };
         while self.stack_ptr > 0 {
             match self.bvh.nodes[self.i_stack[self.stack_ptr]] {
                 BVHNode::Internal { bounds, second_child_index } => {
-                    if bounds.intersect_ray(&(unsafe { *self.ray })) {
+                    let part = partition(&mut rays[..self.ray_i_stack[self.stack_ptr]],
+                                         |r| bounds.intersect_ray(r));
+                    if part > 0 {
                         self.i_stack[self.stack_ptr] += 1;
                         self.i_stack[self.stack_ptr + 1] = second_child_index;
+                        self.ray_i_stack[self.stack_ptr] = part;
+                        self.ray_i_stack[self.stack_ptr + 1] = part;
                         self.stack_ptr += 1;
                     } else {
                         self.stack_ptr -= 1;
@@ -166,9 +174,8 @@ impl<'a, T> Iterator for BVHTraverser<'a, T> {
 
                 BVHNode::Leaf { bounds: _, object_index } => {
                     self.stack_ptr -= 1;
-                    unsafe {
-                        return Some((&self.bvh.objects[object_index], &mut (*self.ray)));
-                    }
+                    return Some((&self.bvh.objects[object_index],
+                                 &mut rays[..self.ray_i_stack[self.stack_ptr + 1]]));
                 }
             }
         }

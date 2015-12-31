@@ -13,6 +13,7 @@ mod triangle;
 mod bvh;
 mod halton;
 
+use std::mem;
 use std::path::Path;
 
 use docopt::Docopt;
@@ -72,6 +73,8 @@ fn main() {
         return;
     }
 
+    println!("Ray size: {} bytes", mem::size_of::<Ray>());
+
     // Generate a scene of triangles
     let mut triangles = {
         let mut triangles = Vec::new();
@@ -103,17 +106,20 @@ fn main() {
     });
     println!("Scene built.");
 
+    let mut rays = Vec::new();
+    let mut isects = Vec::new();
+
     // Write output image of ray-traced triangle
     let mut img = Image::new(512, 512);
     for y in 0..img.height() {
         for x in 0..img.width() {
-            let mut r = 0.0;
-            let mut g = 0.0;
-            let mut b = 0.0;
             let offset = hash_u32(((x as u32) << 16) ^ (y as u32), 0);
             const SAMPLES: usize = 16;
+
+            // Generate rays
+            rays.clear();
+            isects.clear();
             for si in 0..SAMPLES {
-                // Generate ray
                 let mut ray = Ray::new(Point::new(x as f32 +
                                                   fast_logit(halton::sample(0,
                                                                             offset + si as u32),
@@ -124,40 +130,43 @@ fn main() {
                                                              1.5),
                                                   0.0),
                                        Vector::new(0.0, 0.0, 1.0));
+                ray.id = si as u32;
+                rays.push(ray);
+                isects.push((false, 0.0, 0.0));
+            }
 
-                // Test ray against scene
-                let (mut u, mut v) = (0.0, 0.0);
-                let mut hit = false;
-                for (tri, r) in bvh::BVHTraverser::from_bvh_and_ray(&scene, &mut ray) {
+            // Test ray against scene
+            for (tri, rs) in bvh::BVHTraverser::from_bvh_and_ray(&scene, &mut rays[..]) {
+                for r in rs.iter_mut() {
                     if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(r, *tri) {
                         if t < r.max_t {
-                            hit = true;
+                            isects[r.id as usize] = (true, tri_u, tri_v);
                             r.max_t = t;
-                            u = tri_u;
-                            v = tri_v;
                         }
                     }
                 }
+            }
 
-                // Update color based on ray hit
+            // Calculate color based on ray hits
+            let mut r = 0.0;
+            let mut g = 0.0;
+            let mut b = 0.0;
+            for &(hit, u, v) in isects.iter() {
                 if hit {
                     r += u;
                     g += v;
                     b += (1.0 - u - v).max(0.0);
-                    // r += 1.0;
-                    // g += 1.0;
-                    // b += 1.0;
                 } else {
                     r += 0.1;
                     g += 0.1;
                     b += 0.1;
                 }
             }
-
             r *= 255.0 / SAMPLES as f32;
             g *= 255.0 / SAMPLES as f32;
             b *= 255.0 / SAMPLES as f32;
 
+            // Set pixel color
             img.set(x, y, (r as u8, g as u8, b as u8));
         }
     }

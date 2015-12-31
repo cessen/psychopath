@@ -12,6 +12,8 @@ pub struct Ray {
     pub dir_inv: Vector,
     pub max_t: f32,
     pub time: f32,
+    pub id: u32,
+    pub flags: u32,
 }
 
 impl Ray {
@@ -22,6 +24,8 @@ impl Ray {
             dir_inv: Vector { co: Float4::new(1.0, 1.0, 1.0, 1.0) / dir.co },
             max_t: std::f32::INFINITY,
             time: 0.0,
+            id: 0,
+            flags: 0,
         }
     }
 
