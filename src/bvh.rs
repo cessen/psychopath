@@ -16,6 +16,7 @@ enum BVHNode {
     Internal {
         bounds: BBox,
         second_child_index: usize,
+        split_axis: u8,
     },
 
     Leaf {
@@ -77,6 +78,7 @@ impl<'a, T> BVH<'a, T> {
             self.nodes.push(BVHNode::Internal {
                 bounds: BBox::new(),
                 second_child_index: 0,
+                split_axis: 0,
             });
 
             // Determine which axis to split on
@@ -131,6 +133,7 @@ impl<'a, T> BVH<'a, T> {
             self.nodes[me] = BVHNode::Internal {
                 bounds: bounds,
                 second_child_index: child2_index,
+                split_axis: split_axis as u8,
             };
         }
 
@@ -147,7 +150,7 @@ impl<'a, T> BVH<'a, T> {
 
         while stack_ptr > 0 {
             match self.nodes[i_stack[stack_ptr]] {
-                BVHNode::Internal { bounds, second_child_index } => {
+                BVHNode::Internal { bounds, second_child_index, split_axis } => {
                     let part = partition(&mut rays[..ray_i_stack[stack_ptr]],
                                          |r| bounds.intersect_ray(r));
                     if part > 0 {
@@ -155,6 +158,9 @@ impl<'a, T> BVH<'a, T> {
                         i_stack[stack_ptr + 1] = second_child_index;
                         ray_i_stack[stack_ptr] = part;
                         ray_i_stack[stack_ptr + 1] = part;
+                        if rays[0].dir[split_axis as usize] > 0.0 {
+                            i_stack.swap(stack_ptr, stack_ptr + 1);
+                        }
                         stack_ptr += 1;
                     } else {
                         stack_ptr -= 1;
