@@ -105,7 +105,7 @@ fn main() {
         }
         triangles
     };
-    let scene = bvh::BVH::from_objects(&mut triangles[..], |tri| {
+    let scene = bvh::BVH::from_objects(&mut triangles[..], 3, |tri| {
         let minimum = tri.0.min(tri.1.min(tri.2));
         let maximum = tri.0.max(tri.1.max(tri.2));
         BBox {
@@ -144,12 +144,14 @@ fn main() {
             }
 
             // Test ray against scene
-            for (tri, rs) in bvh::BVHTraverser::from_bvh_and_ray(&scene, &mut rays[..]) {
+            for (tris, rs) in bvh::BVHTraverser::from_bvh_and_ray(&scene, &mut rays[..]) {
                 for r in rs.iter_mut() {
-                    if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(r, *tri) {
-                        if t < r.max_t {
-                            isects[r.id as usize] = (true, tri_u, tri_v);
-                            r.max_t = t;
+                    for tri in tris.iter() {
+                        if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(r, *tri) {
+                            if t < r.max_t {
+                                isects[r.id as usize] = (true, tri_u, tri_v);
+                                r.max_t = t;
+                            }
                         }
                     }
                 }

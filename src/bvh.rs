@@ -23,12 +23,12 @@ enum BVHNode {
 
     Leaf {
         bounds: BBox,
-        object_index: usize,
+        object_range: (usize, usize),
     },
 }
 
 impl<'a, T> BVH<'a, T> {
-    pub fn from_objects<F>(objects: &'a mut [T], bounder: F) -> BVH<'a, T>
+    pub fn from_objects<F>(objects: &'a mut [T], objects_per_leaf: usize, bounder: F) -> BVH<'a, T>
         where F: Fn(&T) -> BBox
     {
         let mut bvh = BVH {
@@ -37,7 +37,7 @@ impl<'a, T> BVH<'a, T> {
             depth: 0,
         };
 
-        bvh.recursive_build(0, 0, objects, &bounder);
+        bvh.recursive_build(0, 0, objects_per_leaf, objects, &bounder);
         bvh.objects = objects;
 
         println!("BVH Depth: {}", bvh.depth);
@@ -49,6 +49,7 @@ impl<'a, T> BVH<'a, T> {
     fn recursive_build<F>(&mut self,
                           offset: usize,
                           depth: usize,
+                          objects_per_leaf: usize,
                           objects: &mut [T],
                           bounder: &F)
                           -> usize
@@ -58,11 +59,17 @@ impl<'a, T> BVH<'a, T> {
 
         if objects.len() == 0 {
             return 0;
-        } else if objects.len() == 1 {
+        } else if objects.len() <= objects_per_leaf {
             // Leaf node
             self.nodes.push(BVHNode::Leaf {
-                bounds: bounder(&objects[0]),
-                object_index: offset,
+                bounds: {
+                    let mut bounds = bounder(&objects[0]);
+                    for obj in &objects[1..] {
+                        bounds = bounds | bounder(obj);
+                    }
+                    bounds
+                },
+                object_range: (offset, offset + objects.len()),
             });
 
             if self.depth < depth {
@@ -112,9 +119,14 @@ impl<'a, T> BVH<'a, T> {
             };
 
             // Create child nodes
-            self.recursive_build(offset, depth + 1, &mut objects[..split_index], bounder);
+            self.recursive_build(offset,
+                                 depth + 1,
+                                 objects_per_leaf,
+                                 &mut objects[..split_index],
+                                 bounder);
             let child2_index = self.recursive_build(offset + split_index,
                                                     depth + 1,
+                                                    objects_per_leaf,
                                                     &mut objects[split_index..],
                                                     bounder);
 
@@ -153,8 +165,8 @@ impl<'a, T> BVHTraverser<'a, T> {
 }
 
 impl<'a, T> Iterator for BVHTraverser<'a, T> {
-    type Item = (&'a T, &'a mut [Ray]);
-    fn next(&mut self) -> Option<(&'a T, &'a mut [Ray])> {
+    type Item = (&'a [T], &'a mut [Ray]);
+    fn next(&mut self) -> Option<(&'a [T], &'a mut [Ray])> {
         let rays = unsafe { slice::from_raw_parts_mut(self.rays.0, self.rays.1) };
         while self.stack_ptr > 0 {
             match self.bvh.nodes[self.i_stack[self.stack_ptr]] {
@@ -172,10 +184,15 @@ impl<'a, T> Iterator for BVHTraverser<'a, T> {
                     }
                 }
 
-                BVHNode::Leaf { bounds: _, object_index } => {
+                BVHNode::Leaf { bounds, object_range } => {
+                    // let part = self.ray_i_stack[self.stack_ptr];
+                    let part = partition(&mut rays[..self.ray_i_stack[self.stack_ptr]],
+                                         |r| bounds.intersect_ray(r));
                     self.stack_ptr -= 1;
-                    return Some((&self.bvh.objects[object_index],
-                                 &mut rays[..self.ray_i_stack[self.stack_ptr + 1]]));
+                    if part > 0 {
+                        return Some((&self.bvh.objects[object_range.0..object_range.1],
+                                     &mut rays[..part]));
+                    }
                 }
             }
         }
