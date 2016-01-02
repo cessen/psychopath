@@ -143,19 +143,17 @@ fn main() {
                 isects.push((false, 0.0, 0.0));
             }
 
-            // Test ray against scene
-            for (tris, rs) in bvh::BVHTraverser::from_bvh_and_ray(&scene, &mut rays[..]) {
-                for r in rs.iter_mut() {
-                    for tri in tris.iter() {
-                        if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(r, *tri) {
-                            if t < r.max_t {
-                                isects[r.id as usize] = (true, tri_u, tri_v);
-                                r.max_t = t;
-                            }
+            // Test rays against scene
+            scene.traverse(&mut rays, |tri, rs| {
+                for r in rs {
+                    if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(r, *tri) {
+                        if t < r.max_t {
+                            isects[r.id as usize] = (true, tri_u, tri_v);
+                            r.max_t = t;
                         }
                     }
                 }
-            }
+            });
 
             // Calculate color based on ray hits
             let mut r = 0.0;

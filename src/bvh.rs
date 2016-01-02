@@ -1,8 +1,5 @@
 #![allow(dead_code)]
 
-use std::marker;
-use std::slice;
-
 use bbox::BBox;
 use ray::Ray;
 use algorithm::partition;
@@ -139,64 +136,43 @@ impl<'a, T> BVH<'a, T> {
 
         return me;
     }
-}
 
 
-pub struct BVHTraverser<'a, T: 'a> {
-    bvh: &'a BVH<'a, T>,
-    rays: (*mut Ray, usize),
-    _ray_marker: marker::PhantomData<&'a mut [Ray]>,
-    i_stack: [usize; 65],
-    ray_i_stack: [usize; 65],
-    stack_ptr: usize,
-}
+    pub fn traverse<F>(&self, rays: &mut [Ray], mut obj_ray_test: F)
+        where F: FnMut(&T, &mut [Ray])
+    {
+        let mut i_stack = [0; 65];
+        let mut ray_i_stack = [rays.len(); 65];
+        let mut stack_ptr = 1;
 
-impl<'a, T> BVHTraverser<'a, T> {
-    pub fn from_bvh_and_ray(bvh: &'a BVH<'a, T>, rays: &'a mut [Ray]) -> BVHTraverser<'a, T> {
-        BVHTraverser {
-            bvh: bvh,
-            rays: (&mut rays[0] as *mut Ray, rays.len()),
-            _ray_marker: marker::PhantomData,
-            i_stack: [0; 65],
-            ray_i_stack: [rays.len(); 65],
-            stack_ptr: 1,
-        }
-    }
-}
-
-impl<'a, T> Iterator for BVHTraverser<'a, T> {
-    type Item = (&'a [T], &'a mut [Ray]);
-    fn next(&mut self) -> Option<(&'a [T], &'a mut [Ray])> {
-        let rays = unsafe { slice::from_raw_parts_mut(self.rays.0, self.rays.1) };
-        while self.stack_ptr > 0 {
-            match self.bvh.nodes[self.i_stack[self.stack_ptr]] {
+        while stack_ptr > 0 {
+            match self.nodes[i_stack[stack_ptr]] {
                 BVHNode::Internal { bounds, second_child_index } => {
-                    let part = partition(&mut rays[..self.ray_i_stack[self.stack_ptr]],
+                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]],
                                          |r| bounds.intersect_ray(r));
                     if part > 0 {
-                        self.i_stack[self.stack_ptr] += 1;
-                        self.i_stack[self.stack_ptr + 1] = second_child_index;
-                        self.ray_i_stack[self.stack_ptr] = part;
-                        self.ray_i_stack[self.stack_ptr + 1] = part;
-                        self.stack_ptr += 1;
+                        i_stack[stack_ptr] += 1;
+                        i_stack[stack_ptr + 1] = second_child_index;
+                        ray_i_stack[stack_ptr] = part;
+                        ray_i_stack[stack_ptr + 1] = part;
+                        stack_ptr += 1;
                     } else {
-                        self.stack_ptr -= 1;
+                        stack_ptr -= 1;
                     }
                 }
 
                 BVHNode::Leaf { bounds, object_range } => {
-                    // let part = self.ray_i_stack[self.stack_ptr];
-                    let part = partition(&mut rays[..self.ray_i_stack[self.stack_ptr]],
+                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]],
                                          |r| bounds.intersect_ray(r));
-                    self.stack_ptr -= 1;
                     if part > 0 {
-                        return Some((&self.bvh.objects[object_range.0..object_range.1],
-                                     &mut rays[..part]));
+                        for obj in &self.objects[object_range.0..object_range.1] {
+                            obj_ray_test(obj, &mut rays[..part]);
+                        }
                     }
+
+                    stack_ptr -= 1;
                 }
             }
         }
-
-        return None;
     }
 }
