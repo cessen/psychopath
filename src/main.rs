@@ -98,7 +98,7 @@ fn main() {
         }
         triangles
     };
-    let scene = bvh::BVH::from_objects(&mut triangles[..], 3, |tri| {
+    let accel = bvh::BVH::from_objects(&mut triangles[..], 3, |tri| {
         let minimum = tri.0.min(tri.1.min(tri.2));
         let maximum = tri.0.max(tri.1.max(tri.2));
         BBox {
@@ -118,7 +118,7 @@ fn main() {
         resolution: (512, 512),
         spp: samples_per_pixel as usize,
         camera: cam,
-        scene: scene,
+        scene: (triangles, accel),
     };
 
     r.render();

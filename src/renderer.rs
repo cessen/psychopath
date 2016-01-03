@@ -7,15 +7,15 @@ use image::Image;
 use bvh::BVH;
 use triangle;
 
-pub struct Renderer<'a> {
+pub struct Renderer {
     pub output_file: String,
     pub resolution: (usize, usize),
     pub spp: usize,
     pub camera: Camera,
-    pub scene: BVH<'a, (Point, Point, Point)>,
+    pub scene: (Vec<(Point, Point, Point)>, BVH),
 }
 
-impl<'a> Renderer<'a> {
+impl Renderer {
     pub fn render(&self) {
         let mut rays = Vec::new();
         let mut isects = Vec::new();
@@ -48,7 +48,7 @@ impl<'a> Renderer<'a> {
                 }
 
                 // Test rays against scene
-                self.scene.traverse(&mut rays, |tri, rs| {
+                self.scene.1.traverse(&mut rays, &self.scene.0, |tri, rs| {
                     for r in rs {
                         if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(r, *tri) {
                             if t < r.max_t {

@@ -5,9 +5,8 @@ use ray::Ray;
 use algorithm::partition;
 
 #[derive(Debug)]
-pub struct BVH<'a, T: 'a> {
+pub struct BVH {
     nodes: Vec<BVHNode>,
-    objects: &'a [T],
     depth: usize,
 }
 
@@ -25,18 +24,16 @@ enum BVHNode {
     },
 }
 
-impl<'a, T> BVH<'a, T> {
-    pub fn from_objects<F>(objects: &'a mut [T], objects_per_leaf: usize, bounder: F) -> BVH<'a, T>
+impl BVH {
+    pub fn from_objects<T, F>(objects: &mut [T], objects_per_leaf: usize, bounder: F) -> BVH
         where F: Fn(&T) -> BBox
     {
         let mut bvh = BVH {
             nodes: Vec::new(),
-            objects: &[],
             depth: 0,
         };
 
         bvh.recursive_build(0, 0, objects_per_leaf, objects, &bounder);
-        bvh.objects = objects;
 
         println!("BVH Depth: {}", bvh.depth);
 
@@ -44,13 +41,13 @@ impl<'a, T> BVH<'a, T> {
     }
 
 
-    fn recursive_build<F>(&mut self,
-                          offset: usize,
-                          depth: usize,
-                          objects_per_leaf: usize,
-                          objects: &mut [T],
-                          bounder: &F)
-                          -> usize
+    fn recursive_build<T, F>(&mut self,
+                             offset: usize,
+                             depth: usize,
+                             objects_per_leaf: usize,
+                             objects: &mut [T],
+                             bounder: &F)
+                             -> usize
         where F: Fn(&T) -> BBox
     {
         let me = self.nodes.len();
@@ -141,7 +138,7 @@ impl<'a, T> BVH<'a, T> {
     }
 
 
-    pub fn traverse<F>(&self, rays: &mut [Ray], mut obj_ray_test: F)
+    pub fn traverse<T, F>(&self, rays: &mut [Ray], objects: &[T], mut obj_ray_test: F)
         where F: FnMut(&T, &mut [Ray])
     {
         let mut i_stack = [0; 65];
@@ -171,7 +168,7 @@ impl<'a, T> BVH<'a, T> {
                     let part = partition(&mut rays[..ray_i_stack[stack_ptr]],
                                          |r| bounds.intersect_ray(r));
                     if part > 0 {
-                        for obj in &self.objects[object_range.0..object_range.1] {
+                        for obj in &objects[object_range.0..object_range.1] {
                             obj_ray_test(obj, &mut rays[..part]);
                         }
                     }
