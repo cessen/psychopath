@@ -6,7 +6,7 @@ use std::ops::{Index, IndexMut, Mul};
 use float4::Float4;
 use lerp::Lerp;
 
-
+use super::Point;
 
 
 /// A 4x4 matrix, used for transforms
@@ -54,6 +54,15 @@ impl Matrix4x4 {
                      Float4::new(e, f, g, h),
                      Float4::new(i, j, k, l),
                      Float4::new(m, n, o, p)],
+        }
+    }
+
+    pub fn from_location(loc: Point) -> Matrix4x4 {
+        Matrix4x4 {
+            values: [Float4::new(1.0, 0.0, 0.0, loc[0]),
+                     Float4::new(0.0, 1.0, 0.0, loc[1]),
+                     Float4::new(0.0, 0.0, 1.0, loc[2]),
+                     Float4::new(0.0, 0.0, 0.0, 1.0)],
         }
     }
 

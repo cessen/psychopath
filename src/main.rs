@@ -20,9 +20,10 @@ use std::path::Path;
 use docopt::Docopt;
 
 use image::Image;
-use math::{Point, Vector, fast_logit};
+use math::{Point, Matrix4x4, fast_logit};
 use ray::Ray;
 use bbox::BBox;
+use camera::Camera;
 
 // ----------------------------------------------------------------
 
@@ -119,6 +120,11 @@ fn main() {
     });
     println!("Scene built.");
 
+    let cam = Camera::new(vec![Matrix4x4::from_location(Point::new(256.0, 256.0, -1024.0))],
+                          vec![0.785],
+                          vec![20.0],
+                          vec![1026.0]);
+
     let mut rays = Vec::new();
     let mut isects = Vec::new();
 
@@ -132,17 +138,15 @@ fn main() {
             rays.clear();
             isects.clear();
             for si in 0..samples_per_pixel {
-                let mut ray = Ray::new(Point::new(0.5 + x as f32 +
-                                                  fast_logit(halton::sample(0,
-                                                                            offset + si as u32),
-                                                             1.5),
-                                                  0.5 + y as f32 +
-                                                  fast_logit(halton::sample(3,
-                                                                            offset + si as u32),
-                                                             1.5),
-                                                  0.0),
-                                       Vector::new(0.0, 0.0, 1.0),
-                                       0.0);
+                let mut ray = {
+                    let filter_x = fast_logit(halton::sample(3, offset + si as u32), 1.5);
+                    let filter_y = fast_logit(halton::sample(4, offset + si as u32), 1.5);
+                    cam.generate_ray((x as f32 + filter_x) / 512.0 - 0.5,
+                                     (y as f32 + filter_y) / 512.0 - 0.5,
+                                     halton::sample(0, offset + si as u32),
+                                     halton::sample(1, offset + si as u32),
+                                     halton::sample(2, offset + si as u32))
+                };
                 ray.id = si as u32;
                 rays.push(ray);
                 isects.push((false, 0.0, 0.0));
