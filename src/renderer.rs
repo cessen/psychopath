@@ -69,14 +69,14 @@ impl Renderer {
                         g += v;
                         b += (1.0 - u - v).max(0.0);
                     } else {
-                        r += 0.1;
-                        g += 0.1;
-                        b += 0.1;
+                        r += 0.02;
+                        g += 0.02;
+                        b += 0.02;
                     }
                 }
-                r *= 255.0 / self.spp as f32;
-                g *= 255.0 / self.spp as f32;
-                b *= 255.0 / self.spp as f32;
+                r = 255.0 * sRGB_gamma(r / self.spp as f32);
+                g = 255.0 * sRGB_gamma(g / self.spp as f32);
+                b = 255.0 * sRGB_gamma(b / self.spp as f32);
 
                 // Set pixel color
                 img.set(x, y, (r as u8, g as u8, b as u8));
@@ -99,4 +99,21 @@ fn hash_u32(n: u32, seed: u32) -> u32 {
     }
 
     return hash;
+}
+
+
+fn sRGB_gamma(n: f32) -> f32 {
+    if n < 0.0031308 {
+        n * 12.92
+    } else {
+        (1.055 * n.powf(1.0 / 2.4)) - 0.055
+    }
+}
+
+fn sRGB_inv_gamma(n: f32) -> f32 {
+    if n < 0.04045 {
+        n / 12.92
+    } else {
+        ((n + 0.055) / 1.055).powf(2.4)
+    }
 }
