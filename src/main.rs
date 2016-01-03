@@ -12,6 +12,7 @@ mod parse;
 mod renderer;
 mod image;
 mod triangle;
+mod surface;
 mod bvh;
 mod halton;
 
@@ -21,9 +22,9 @@ use docopt::Docopt;
 
 use math::{Point, Matrix4x4};
 use ray::Ray;
-use bbox::BBox;
 use camera::Camera;
 use renderer::Renderer;
+use surface::triangle_mesh::TriangleMesh;
 
 // ----------------------------------------------------------------
 
@@ -73,7 +74,7 @@ fn main() {
     println!("Ray size: {} bytes", mem::size_of::<Ray>());
 
     // Generate a scene of triangles
-    let mut triangles = {
+    let mesh = TriangleMesh::from_triangles({
         let mut triangles = Vec::new();
         let xres = 32;
         let yres = 32;
@@ -97,14 +98,6 @@ fn main() {
             }
         }
         triangles
-    };
-    let accel = bvh::BVH::from_objects(&mut triangles[..], 3, |tri| {
-        let minimum = tri.0.min(tri.1.min(tri.2));
-        let maximum = tri.0.max(tri.1.max(tri.2));
-        BBox {
-            min: minimum,
-            max: maximum,
-        }
     });
     println!("Scene built.");
 
@@ -118,7 +111,7 @@ fn main() {
         resolution: (512, 512),
         spp: samples_per_pixel as usize,
         camera: cam,
-        scene: (triangles, accel),
+        scene: mesh,
     };
 
     r.render();

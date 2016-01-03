@@ -1,18 +1,20 @@
+#![allow(dead_code)]
+
 use std::path::Path;
 
 use camera::Camera;
 use halton;
-use math::{Point, fast_logit};
+use math::fast_logit;
 use image::Image;
-use bvh::BVH;
-use triangle;
+use surface;
+use surface::Surface;
 
 pub struct Renderer {
     pub output_file: String,
     pub resolution: (usize, usize),
     pub spp: usize,
     pub camera: Camera,
-    pub scene: (Vec<(Point, Point, Point)>, BVH),
+    pub scene: surface::triangle_mesh::TriangleMesh,
 }
 
 impl Renderer {
@@ -44,39 +46,36 @@ impl Renderer {
                     };
                     ray.id = si as u32;
                     rays.push(ray);
-                    isects.push((false, 0.0, 0.0));
+                    isects.push(surface::SurfaceIntersection::Miss);
                 }
 
                 // Test rays against scene
-                self.scene.1.traverse(&mut rays, &self.scene.0, |tri, rs| {
-                    for r in rs {
-                        if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(r, *tri) {
-                            if t < r.max_t {
-                                isects[r.id as usize] = (true, tri_u, tri_v);
-                                r.max_t = t;
-                            }
-                        }
-                    }
-                });
+                self.scene.intersect_rays(&mut rays, &mut isects);
 
                 // Calculate color based on ray hits
                 let mut r = 0.0;
                 let mut g = 0.0;
                 let mut b = 0.0;
-                for &(hit, u, v) in isects.iter() {
-                    if hit {
-                        r += u;
-                        g += v;
-                        b += (1.0 - u - v).max(0.0);
+                for isect in isects.iter() {
+                    if let &surface::SurfaceIntersection::Hit{
+                            t: _,
+                            pos: _,
+                            nor: _,
+                            space: _,
+                            uv,
+                        } = isect {
+                        r += uv.0;
+                        g += uv.1;
+                        b += (1.0 - uv.0 - uv.1).max(0.0);
                     } else {
                         r += 0.02;
                         g += 0.02;
                         b += 0.02;
                     }
                 }
-                r = 255.0 * sRGB_gamma(r / self.spp as f32);
-                g = 255.0 * sRGB_gamma(g / self.spp as f32);
-                b = 255.0 * sRGB_gamma(b / self.spp as f32);
+                r = 255.0 * srgb_gamma(r / self.spp as f32);
+                g = 255.0 * srgb_gamma(g / self.spp as f32);
+                b = 255.0 * srgb_gamma(b / self.spp as f32);
 
                 // Set pixel color
                 img.set(x, y, (r as u8, g as u8, b as u8));
@@ -102,7 +101,7 @@ fn hash_u32(n: u32, seed: u32) -> u32 {
 }
 
 
-fn sRGB_gamma(n: f32) -> f32 {
+fn srgb_gamma(n: f32) -> f32 {
     if n < 0.0031308 {
         n * 12.92
     } else {
@@ -110,7 +109,7 @@ fn sRGB_gamma(n: f32) -> f32 {
     }
 }
 
-fn sRGB_inv_gamma(n: f32) -> f32 {
+fn srgb_inv_gamma(n: f32) -> f32 {
     if n < 0.04045 {
         n / 12.92
     } else {

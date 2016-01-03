@@ -1,7 +1,9 @@
-// use renderer::Renderer;
-//
-// use super::DataTree;
+#![allow(dead_code)]
 
-// pub fn parse_frame<'a>(tree: &DataTree) -> Renderer<'a> {
-//    unimplemented!()
-// }
+use renderer::Renderer;
+
+use super::DataTree;
+
+pub fn parse_frame(tree: &DataTree) -> Renderer {
+    unimplemented!()
+}
