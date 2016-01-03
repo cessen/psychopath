@@ -8,22 +8,22 @@ mod float4;
 mod ray;
 mod bbox;
 mod camera;
-mod data_tree;
+mod parse;
+mod renderer;
 mod image;
 mod triangle;
 mod bvh;
 mod halton;
 
 use std::mem;
-use std::path::Path;
 
 use docopt::Docopt;
 
-use image::Image;
-use math::{Point, Matrix4x4, fast_logit};
+use math::{Point, Matrix4x4};
 use ray::Ray;
 use bbox::BBox;
 use camera::Camera;
+use renderer::Renderer;
 
 // ----------------------------------------------------------------
 
@@ -54,18 +54,6 @@ struct Args {
 
 
 // ----------------------------------------------------------------
-
-fn hash_u32(n: u32, seed: u32) -> u32 {
-    let mut hash = n;
-
-    for _ in 0..3 {
-        hash = hash.wrapping_mul(1936502639);
-        hash ^= hash.wrapping_shr(16);
-        hash = hash.wrapping_add(seed);
-    }
-
-    return hash;
-}
 
 fn main() {
     // Parse command line arguments.
@@ -125,67 +113,13 @@ fn main() {
                           vec![20.0],
                           vec![1026.0]);
 
-    let mut rays = Vec::new();
-    let mut isects = Vec::new();
+    let r = Renderer {
+        output_file: args.arg_imgpath.clone(),
+        resolution: (512, 512),
+        spp: samples_per_pixel as usize,
+        camera: cam,
+        scene: scene,
+    };
 
-    // Write output image of ray-traced triangle
-    let mut img = Image::new(512, 512);
-    for y in 0..img.height() {
-        for x in 0..img.width() {
-            let offset = hash_u32(((x as u32) << 16) ^ (y as u32), 0);
-
-            // Generate rays
-            rays.clear();
-            isects.clear();
-            for si in 0..samples_per_pixel {
-                let mut ray = {
-                    let filter_x = fast_logit(halton::sample(3, offset + si as u32), 1.5);
-                    let filter_y = fast_logit(halton::sample(4, offset + si as u32), 1.5);
-                    cam.generate_ray((x as f32 + filter_x) / 512.0 - 0.5,
-                                     (y as f32 + filter_y) / 512.0 - 0.5,
-                                     halton::sample(0, offset + si as u32),
-                                     halton::sample(1, offset + si as u32),
-                                     halton::sample(2, offset + si as u32))
-                };
-                ray.id = si as u32;
-                rays.push(ray);
-                isects.push((false, 0.0, 0.0));
-            }
-
-            // Test rays against scene
-            scene.traverse(&mut rays, |tri, rs| {
-                for r in rs {
-                    if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(r, *tri) {
-                        if t < r.max_t {
-                            isects[r.id as usize] = (true, tri_u, tri_v);
-                            r.max_t = t;
-                        }
-                    }
-                }
-            });
-
-            // Calculate color based on ray hits
-            let mut r = 0.0;
-            let mut g = 0.0;
-            let mut b = 0.0;
-            for &(hit, u, v) in isects.iter() {
-                if hit {
-                    r += u;
-                    g += v;
-                    b += (1.0 - u - v).max(0.0);
-                } else {
-                    r += 0.1;
-                    g += 0.1;
-                    b += 0.1;
-                }
-            }
-            r *= 255.0 / samples_per_pixel as f32;
-            g *= 255.0 / samples_per_pixel as f32;
-            b *= 255.0 / samples_per_pixel as f32;
-
-            // Set pixel color
-            img.set(x, y, (r as u8, g as u8, b as u8));
-        }
-    }
-    let _ = img.write_binary_ppm(Path::new(&args.arg_imgpath));
+    r.render();
 }
