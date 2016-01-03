@@ -7,6 +7,7 @@ mod lerp;
 mod float4;
 mod ray;
 mod bbox;
+mod camera;
 mod data_tree;
 mod image;
 mod triangle;
@@ -95,6 +96,9 @@ fn main() {
                 let cx = halton::sample(0, i) * 512.0;
                 let cy = halton::sample(1, i) * 512.0;
                 let cz = halton::sample(2, i) * 512.0;
+                // let cx = x as f32 * xinc;
+                // let cy = y as f32 * yinc;
+                // let cz = 1.0;
                 triangles.push((Point::new(cx, cy, cz + 1.0),
                                 Point::new(cx + xinc, cy, cz + 1.1),
                                 Point::new(cx, cy + yinc, cz + 1.2)));
@@ -137,7 +141,8 @@ fn main() {
                                                                             offset + si as u32),
                                                              1.5),
                                                   0.0),
-                                       Vector::new(0.0, 0.0, 1.0));
+                                       Vector::new(0.0, 0.0, 1.0),
+                                       0.0);
                 ray.id = si as u32;
                 rays.push(ray);
                 isects.push((false, 0.0, 0.0));

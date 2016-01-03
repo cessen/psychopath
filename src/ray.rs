@@ -17,13 +17,13 @@ pub struct Ray {
 }
 
 impl Ray {
-    pub fn new(orig: Point, dir: Vector) -> Ray {
+    pub fn new(orig: Point, dir: Vector, time: f32) -> Ray {
         Ray {
             orig: orig,
             dir: dir,
             dir_inv: Vector { co: Float4::new(1.0, 1.0, 1.0, 1.0) / dir.co },
             max_t: std::f32::INFINITY,
-            time: 0.0,
+            time: time,
             id: 0,
             flags: 0,
         }
@@ -32,5 +32,6 @@ impl Ray {
     pub fn transform(&mut self, mat: &Matrix4x4) {
         self.orig = self.orig * *mat;
         self.dir = self.dir * *mat;
+        self.dir_inv = Vector { co: Float4::new(1.0, 1.0, 1.0, 1.0) / self.dir.co };
     }
 }
