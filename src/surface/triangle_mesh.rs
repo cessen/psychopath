@@ -9,22 +9,28 @@ use bvh::BVH;
 use super::{Surface, SurfaceIntersection};
 
 pub struct TriangleMesh {
+    time_samples: usize,
     geo: Vec<(Point, Point, Point)>,
     accel: BVH,
 }
 
 impl TriangleMesh {
-    pub fn from_triangles(mut triangles: Vec<(Point, Point, Point)>) -> TriangleMesh {
-        let accel = BVH::from_objects(&mut triangles[..], 3, |tri| {
+    pub fn from_triangles(time_samples: usize,
+                          mut triangles: Vec<(Point, Point, Point)>)
+                          -> TriangleMesh {
+        assert!(triangles.len() % time_samples == 0);
+        // let mut indices: Vec<usize> = (0 .. (triangles.len() / time_samples)).collect();
+
+        let accel = BVH::from_objects(&mut triangles[..], 3, |tri, bounds| {
+            // for tri in &triangles[i..(i+time_samples)] {
             let minimum = tri.0.min(tri.1.min(tri.2));
             let maximum = tri.0.max(tri.1.max(tri.2));
-            BBox {
-                min: minimum,
-                max: maximum,
-            }
+            bounds.push(BBox::from_points(minimum, maximum));
+            // }
         });
 
         TriangleMesh {
+            time_samples: time_samples,
             geo: triangles,
             accel: accel,
         }

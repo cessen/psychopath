@@ -74,7 +74,7 @@ fn main() {
     println!("Ray size: {} bytes", mem::size_of::<Ray>());
 
     // Generate a scene of triangles
-    let mesh = TriangleMesh::from_triangles({
+    let mesh = TriangleMesh::from_triangles(1, {
         let mut triangles = Vec::new();
         let xres = 32;
         let yres = 32;

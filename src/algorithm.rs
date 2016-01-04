@@ -8,8 +8,8 @@ use std;
 ///
 /// The predicate is executed precisely once on every element in
 /// the slice, and is allowed to modify the elements.
-pub fn partition<T, F>(slc: &mut [T], pred: F) -> usize
-    where F: Fn(&mut T) -> bool
+pub fn partition<T, F>(slc: &mut [T], mut pred: F) -> usize
+    where F: FnMut(&mut T) -> bool
 {
     // This version uses raw pointers and pointer arithmetic to squeeze more
     // performance out of the code.

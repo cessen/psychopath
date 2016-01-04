@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use lerp::lerp_slice;
 use bbox::BBox;
 use ray::Ray;
 use algorithm::partition;
@@ -7,39 +8,64 @@ use algorithm::partition;
 #[derive(Debug)]
 pub struct BVH {
     nodes: Vec<BVHNode>,
+    bounds: Vec<BBox>,
     depth: usize,
+    bounds_cache: Vec<BBox>,
+    bounds_temp: Vec<BBox>,
 }
 
 #[derive(Debug)]
 enum BVHNode {
     Internal {
-        bounds: BBox,
+        bounds_range: (usize, usize),
         second_child_index: usize,
         split_axis: u8,
     },
 
     Leaf {
-        bounds: BBox,
+        bounds_range: (usize, usize),
         object_range: (usize, usize),
     },
 }
 
 impl BVH {
-    pub fn from_objects<T, F>(objects: &mut [T], objects_per_leaf: usize, bounder: F) -> BVH
-        where F: Fn(&T) -> BBox
+    pub fn from_objects<'a, T, F>(objects: &mut [T], objects_per_leaf: usize, bounder: F) -> BVH
+        where F: Fn(&T, &mut Vec<BBox>)
     {
         let mut bvh = BVH {
             nodes: Vec::new(),
+            bounds: Vec::new(),
             depth: 0,
+            bounds_cache: Vec::new(),
+            bounds_temp: Vec::new(),
         };
 
         bvh.recursive_build(0, 0, objects_per_leaf, objects, &bounder);
+        bvh.bounds_cache.clear();
+        bvh.bounds_temp.clear();
+        bvh.bounds_cache.shrink_to_fit();
+        bvh.bounds_temp.shrink_to_fit();
 
         println!("BVH Depth: {}", bvh.depth);
 
         bvh
     }
 
+    fn acc_bounds<T, F>(&mut self, objects1: &mut [T], bounder: F)
+        where F: Fn(&T, &mut Vec<BBox>)
+    {
+        // TODO: merging of different length bounds
+        self.bounds_cache.clear();
+        bounder(&objects1[0], &mut self.bounds_cache);
+        for obj in &objects1[1..] {
+            self.bounds_temp.clear();
+            bounder(obj, &mut self.bounds_temp);
+            debug_assert!(self.bounds_cache.len() == self.bounds_temp.len());
+            for i in 0..self.bounds_cache.len() {
+                self.bounds_cache[i] = self.bounds_cache[i] | self.bounds_temp[i];
+            }
+        }
+    }
 
     fn recursive_build<T, F>(&mut self,
                              offset: usize,
@@ -47,44 +73,60 @@ impl BVH {
                              objects_per_leaf: usize,
                              objects: &mut [T],
                              bounder: &F)
-                             -> usize
-        where F: Fn(&T) -> BBox
+                             -> (usize, (usize, usize))
+        where F: Fn(&T, &mut Vec<BBox>)
     {
+        // fn acc_bounds2(objects2: &mut [T]) {
+        //    self.bounds_cache2.clear();
+        //    bounder(&objects2[0], &mut self.bounds_cache2);
+        //    for obj in &objects2[1..] {
+        //        self.bounds_temp.clear();
+        //        bounder(obj, &mut self.bounds_temp);
+        //        debug_assert!(self.bounds_cache2.len() == self.bounds_temp.len());
+        //        for i in 0..self.bounds_cache2.len() {
+        //            self.bounds_cache2[i] = self.bounds_cache2[i] | self.bounds_temp[i];
+        //        }
+        //    }
+        // }
+
         let me = self.nodes.len();
 
         if objects.len() == 0 {
-            return 0;
+            return (0, (0, 0));
         } else if objects.len() <= objects_per_leaf {
             // Leaf node
+            self.acc_bounds(objects, bounder);
+            let bi = self.bounds.len();
+            for b in self.bounds_cache.iter() {
+                self.bounds.push(*b);
+            }
             self.nodes.push(BVHNode::Leaf {
-                bounds: {
-                    let mut bounds = bounder(&objects[0]);
-                    for obj in &objects[1..] {
-                        bounds = bounds | bounder(obj);
-                    }
-                    bounds
-                },
+                bounds_range: (bi, self.bounds.len()),
                 object_range: (offset, offset + objects.len()),
             });
 
             if self.depth < depth {
                 self.depth = depth;
             }
+
+            return (me, (bi, self.bounds.len()));
         } else {
             // Not a leaf node
             self.nodes.push(BVHNode::Internal {
-                bounds: BBox::new(),
+                bounds_range: (0, 0),
                 second_child_index: 0,
                 split_axis: 0,
             });
 
             // Determine which axis to split on
             let bounds = {
-                let mut bounds = BBox::new();
-                for obj in objects.iter() {
-                    bounds = bounds | bounder(obj);
+                let mut bb = BBox::new();
+                for obj in &objects[..] {
+                    self.bounds_cache.clear();
+                    bounder(obj, &mut self.bounds_cache);
+                    bb = bb | lerp_slice(&self.bounds_cache[..], 0.5);
                 }
-                bounds
+                bb
             };
             let split_axis = {
                 let x_ext = bounds.max[0] - bounds.min[0];
@@ -102,8 +144,10 @@ impl BVH {
 
             // Partition objects based on split
             let split_index = {
-                let mut split_i = partition(objects, |obj| {
-                    let tb = bounder(obj);
+                let mut split_i = partition(&mut objects[..], |obj| {
+                    self.bounds_cache.clear();
+                    bounder(obj, &mut self.bounds_cache);
+                    let tb = lerp_slice(&self.bounds_cache[..], 0.5);
                     let centroid = (tb.min[split_axis] + tb.max[split_axis]) * 0.5;
                     centroid < split_pos
                 });
@@ -115,26 +159,34 @@ impl BVH {
             };
 
             // Create child nodes
-            self.recursive_build(offset,
-                                 depth + 1,
-                                 objects_per_leaf,
-                                 &mut objects[..split_index],
-                                 bounder);
-            let child2_index = self.recursive_build(offset + split_index,
-                                                    depth + 1,
-                                                    objects_per_leaf,
-                                                    &mut objects[split_index..],
-                                                    bounder);
+            let (_, c1_bounds) = self.recursive_build(offset,
+                                                      depth + 1,
+                                                      objects_per_leaf,
+                                                      &mut objects[..split_index],
+                                                      bounder);
+            let (c2_index, c2_bounds) = self.recursive_build(offset + split_index,
+                                                             depth + 1,
+                                                             objects_per_leaf,
+                                                             &mut objects[split_index..],
+                                                             bounder);
+
+            // Determine bounds
+            // TODO: merging of different length bounds
+            let bi = self.bounds.len();
+            for (i1, i2) in Iterator::zip(c1_bounds.0..c1_bounds.1, c2_bounds.0..c2_bounds.1) {
+                let bb = self.bounds[i1] | self.bounds[i2];
+                self.bounds.push(bb);
+            }
 
             // Set node
             self.nodes[me] = BVHNode::Internal {
-                bounds: bounds,
-                second_child_index: child2_index,
+                bounds_range: (bi, self.bounds.len()),
+                second_child_index: c2_index,
                 split_axis: split_axis as u8,
             };
-        }
 
-        return me;
+            return (me, (bi, self.bounds.len()));
+        }
     }
 
 
@@ -147,15 +199,16 @@ impl BVH {
 
         while stack_ptr > 0 {
             match self.nodes[i_stack[stack_ptr]] {
-                BVHNode::Internal { bounds, second_child_index, split_axis } => {
-                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]],
-                                         |r| bounds.intersect_ray(r));
+                BVHNode::Internal { bounds_range: br, second_child_index, split_axis } => {
+                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
+                        lerp_slice(&self.bounds[br.0..br.1], r.time).intersect_ray(r)
+                    });
                     if part > 0 {
                         i_stack[stack_ptr] += 1;
                         i_stack[stack_ptr + 1] = second_child_index;
                         ray_i_stack[stack_ptr] = part;
                         ray_i_stack[stack_ptr + 1] = part;
-                        if rays[0].dir[split_axis as usize] > 0.0 {
+                        if rays[0].dir[split_axis as usize].is_sign_positive() {
                             i_stack.swap(stack_ptr, stack_ptr + 1);
                         }
                         stack_ptr += 1;
@@ -164,9 +217,10 @@ impl BVH {
                     }
                 }
 
-                BVHNode::Leaf { bounds, object_range } => {
-                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]],
-                                         |r| bounds.intersect_ray(r));
+                BVHNode::Leaf { bounds_range: br, object_range } => {
+                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
+                        lerp_slice(&self.bounds[br.0..br.1], r.time).intersect_ray(r)
+                    });
                     if part > 0 {
                         for obj in &objects[object_range.0..object_range.1] {
                             obj_ray_test(obj, &mut rays[..part]);
