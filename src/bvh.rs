@@ -11,7 +11,6 @@ pub struct BVH {
     bounds: Vec<BBox>,
     depth: usize,
     bounds_cache: Vec<BBox>,
-    bounds_temp: Vec<BBox>,
 }
 
 #[derive(Debug)]
@@ -30,65 +29,50 @@ enum BVHNode {
 
 impl BVH {
     pub fn from_objects<'a, T, F>(objects: &mut [T], objects_per_leaf: usize, bounder: F) -> BVH
-        where F: Fn(&T, &mut Vec<BBox>)
+        where F: 'a + Fn(&T) -> &'a [BBox]
     {
         let mut bvh = BVH {
             nodes: Vec::new(),
             bounds: Vec::new(),
             depth: 0,
             bounds_cache: Vec::new(),
-            bounds_temp: Vec::new(),
         };
 
         bvh.recursive_build(0, 0, objects_per_leaf, objects, &bounder);
         bvh.bounds_cache.clear();
-        bvh.bounds_temp.clear();
         bvh.bounds_cache.shrink_to_fit();
-        bvh.bounds_temp.shrink_to_fit();
 
         println!("BVH Depth: {}", bvh.depth);
 
         bvh
     }
 
-    fn acc_bounds<T, F>(&mut self, objects1: &mut [T], bounder: F)
-        where F: Fn(&T, &mut Vec<BBox>)
+    fn acc_bounds<'a, T, F>(&mut self, objects1: &mut [T], bounder: &F)
+        where F: 'a + Fn(&T) -> &'a [BBox]
     {
         // TODO: merging of different length bounds
         self.bounds_cache.clear();
-        bounder(&objects1[0], &mut self.bounds_cache);
+        for bb in bounder(&objects1[0]).iter() {
+            self.bounds_cache.push(*bb);
+        }
         for obj in &objects1[1..] {
-            self.bounds_temp.clear();
-            bounder(obj, &mut self.bounds_temp);
-            debug_assert!(self.bounds_cache.len() == self.bounds_temp.len());
-            for i in 0..self.bounds_cache.len() {
-                self.bounds_cache[i] = self.bounds_cache[i] | self.bounds_temp[i];
+            let bounds = bounder(obj);
+            debug_assert!(self.bounds_cache.len() == bounds.len());
+            for i in 0..bounds.len() {
+                self.bounds_cache[i] = self.bounds_cache[i] | bounds[i];
             }
         }
     }
 
-    fn recursive_build<T, F>(&mut self,
-                             offset: usize,
-                             depth: usize,
-                             objects_per_leaf: usize,
-                             objects: &mut [T],
-                             bounder: &F)
-                             -> (usize, (usize, usize))
-        where F: Fn(&T, &mut Vec<BBox>)
+    fn recursive_build<'a, T, F>(&mut self,
+                                 offset: usize,
+                                 depth: usize,
+                                 objects_per_leaf: usize,
+                                 objects: &mut [T],
+                                 bounder: &F)
+                                 -> (usize, (usize, usize))
+        where F: 'a + Fn(&T) -> &'a [BBox]
     {
-        // fn acc_bounds2(objects2: &mut [T]) {
-        //    self.bounds_cache2.clear();
-        //    bounder(&objects2[0], &mut self.bounds_cache2);
-        //    for obj in &objects2[1..] {
-        //        self.bounds_temp.clear();
-        //        bounder(obj, &mut self.bounds_temp);
-        //        debug_assert!(self.bounds_cache2.len() == self.bounds_temp.len());
-        //        for i in 0..self.bounds_cache2.len() {
-        //            self.bounds_cache2[i] = self.bounds_cache2[i] | self.bounds_temp[i];
-        //        }
-        //    }
-        // }
-
         let me = self.nodes.len();
 
         if objects.len() == 0 {
@@ -122,9 +106,7 @@ impl BVH {
             let bounds = {
                 let mut bb = BBox::new();
                 for obj in &objects[..] {
-                    self.bounds_cache.clear();
-                    bounder(obj, &mut self.bounds_cache);
-                    bb = bb | lerp_slice(&self.bounds_cache[..], 0.5);
+                    bb = bb | lerp_slice(bounder(obj), 0.5);
                 }
                 bb
             };
@@ -145,9 +127,7 @@ impl BVH {
             // Partition objects based on split
             let split_index = {
                 let mut split_i = partition(&mut objects[..], |obj| {
-                    self.bounds_cache.clear();
-                    bounder(obj, &mut self.bounds_cache);
-                    let tb = lerp_slice(&self.bounds_cache[..], 0.5);
+                    let tb = lerp_slice(bounder(obj), 0.5);
                     let centroid = (tb.min[split_axis] + tb.max[split_axis]) * 0.5;
                     centroid < split_pos
                 });

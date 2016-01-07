@@ -21,17 +21,24 @@ impl TriangleMesh {
                           triangles: Vec<(Point, Point, Point)>)
                           -> TriangleMesh {
         assert!(triangles.len() % time_samples == 0);
+
         let mut indices: Vec<usize> = (0..(triangles.len() / time_samples))
                                           .map(|n| n * time_samples)
                                           .collect();
 
-        let accel = BVH::from_objects(&mut indices[..], 3, |tri_i, bounds| {
-            for tri in &triangles[*tri_i..(*tri_i + time_samples)] {
+        let bounds = {
+            let mut bounds = Vec::new();
+            for tri in triangles.iter() {
                 let minimum = tri.0.min(tri.1.min(tri.2));
                 let maximum = tri.0.max(tri.1.max(tri.2));
                 bounds.push(BBox::from_points(minimum, maximum));
             }
-        });
+            bounds
+        };
+
+        let accel = BVH::from_objects(&mut indices[..],
+                                      3,
+                                      |tri_i| &bounds[*tri_i..(*tri_i + time_samples)]);
 
         TriangleMesh {
             time_samples: time_samples,
