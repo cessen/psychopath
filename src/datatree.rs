@@ -51,27 +51,34 @@ fn parse_node(ti: &mut TokenIter) -> Option<Node> {
 fn token_iter<'a>(text: &'a str) -> TokenIter<'a> {
     TokenIter {
         text: text,
+        bytes_consumed: 0,
         after_open_leaf: false,
     }
 }
 
 
-/// /////////////////////////////////////////////////////////////
 
+
+// ================================================================
+
+/// Tokens contain their starting byte offset in the original source
+/// text.  Some variants also contain a string slice of the relevant
+/// text.
 #[derive(Debug, PartialEq, Eq)]
 enum Token<'a> {
-    TypeName(&'a str),
-    Ident(&'a str),
-    OpenInner,
-    CloseInner,
-    OpenLeaf,
-    CloseLeaf,
-    LeafContents(&'a str),
-    Unknown,
+    TypeName((usize, &'a str)),
+    Ident((usize, &'a str)),
+    OpenInner(usize),
+    CloseInner(usize),
+    OpenLeaf(usize),
+    CloseLeaf(usize),
+    LeafContents((usize, &'a str)),
+    Unknown(usize),
 }
 
 struct TokenIter<'a> {
     text: &'a str,
+    bytes_consumed: usize,
     after_open_leaf: bool,
 }
 
@@ -122,7 +129,7 @@ impl<'a> Iterator for TokenIter<'a> {
                     iter.next();
                     let i1 = i;
                     let i2 = {
-                        let mut i2 = 0;
+                        let mut i2 = i1;
                         while let Some(&(i, c)) = iter.peek() {
                             if is_ident_char(c) {
                                 iter.next();
@@ -133,78 +140,85 @@ impl<'a> Iterator for TokenIter<'a> {
                         }
                         i2
                     };
-                    token = Some(Token::TypeName(&self.text[i1..i2]));
+                    token = Some(Token::TypeName((self.bytes_consumed + i1, &self.text[i1..i2])));
                 }
                 // Ident
-                // TODO: handle escaping
                 else if c == '$' {
                     iter.next();
                     let i1 = i;
                     let i2 = {
-                        let mut i2 = 0;
+                        let mut i2 = i1;
+                        let mut escaped = false;
                         while let Some(&(i, c)) = iter.peek() {
-                            if is_ident_char(c) {
-                                iter.next();
-                            } else {
+                            if escaped {
+                                escaped = false;
+                            } else if c == '\\' {
+                                escaped = true;
+                            } else if !is_ident_char(c) {
                                 i2 = i;
                                 break;
                             }
+                            iter.next();
                         }
                         i2
                     };
-                    token = Some(Token::Ident(&self.text[i1..i2]));
+                    token = Some(Token::Ident((self.bytes_consumed + i1, &self.text[i1..i2])));
                 }
                 // Structural characters
                 else if is_reserved_char(c) {
                     iter.next();
                     match c {
                         '{' => {
-                            token = Some(Token::OpenInner);
+                            token = Some(Token::OpenInner(self.bytes_consumed + i));
                         }
 
                         '}' => {
-                            token = Some(Token::CloseInner);
+                            token = Some(Token::CloseInner(self.bytes_consumed + i));
                         }
 
                         '[' => {
                             self.after_open_leaf = true;
-                            token = Some(Token::OpenLeaf);
+                            token = Some(Token::OpenLeaf(self.bytes_consumed + i));
                         }
 
                         ']' => {
-                            token = Some(Token::CloseLeaf);
+                            token = Some(Token::CloseLeaf(self.bytes_consumed + i));
                         }
 
                         _ => {
-                            token = Some(Token::Unknown);
+                            token = Some(Token::Unknown(self.bytes_consumed + i));
                         }
                     }
                 }
             }
         }
         // Leaf contents
-        // TODO: handle escaping
         else if let Some(&(i, _)) = iter.peek() {
             self.after_open_leaf = false;
             let i1 = i;
             let i2 = {
-                let mut i2 = 0;
+                let mut i2 = i1;
+                let mut escaped = false;
                 while let Some(&(i, c)) = iter.peek() {
-                    if c != ']' {
-                        iter.next();
-                    } else {
+                    if escaped {
+                        escaped = false;
+                    } else if c == '\\' {
+                        escaped = true;
+                    } else if c == ']' {
                         i2 = i;
                         break;
                     }
+                    iter.next();
                 }
                 i2
             };
-            token = Some(Token::LeafContents(&self.text[i1..i2]));
+            token = Some(Token::LeafContents((self.bytes_consumed + i1, &self.text[i1..i2])));
         }
 
         // Finish up
         match iter.peek() {
             Some(&(i, _)) => {
+                self.bytes_consumed += i;
                 self.text = &self.text[i..];
             }
 
@@ -218,7 +232,8 @@ impl<'a> Iterator for TokenIter<'a> {
 
 
 
-/// /////////////////////////////////////////////////////////////
+
+// ================================================================
 
 /// Returns whether the given unicode character is whitespace or not.
 fn is_ws_char(c: char) -> bool {
@@ -265,6 +280,9 @@ fn is_ident_char(c: char) -> bool {
 
 
 
+
+// ================================================================
+
 #[cfg(test)]
 mod tests {
     use super::{token_iter, Token};
@@ -272,21 +290,47 @@ mod tests {
     #[test]
     fn token_iter_1() {
         let s = r#"
-# This is a comment and should be skipped
-MyThing $ident { # This is another comment
-    MyProp [Some content]
-}
+            # This is a comment and should be skipped
+            MyThing $ident { # This is another comment
+                MyProp [Some content]
+            }
         "#;
 
         let mut ti = token_iter(s);
-        assert_eq!(ti.next(), Some(Token::TypeName("MyThing")));
-        assert_eq!(ti.next(), Some(Token::Ident("$ident")));
-        assert_eq!(ti.next(), Some(Token::OpenInner));
-        assert_eq!(ti.next(), Some(Token::TypeName("MyProp")));
-        assert_eq!(ti.next(), Some(Token::OpenLeaf));
-        assert_eq!(ti.next(), Some(Token::LeafContents("Some content")));
-        assert_eq!(ti.next(), Some(Token::CloseLeaf));
-        assert_eq!(ti.next(), Some(Token::CloseInner));
+        assert_eq!(ti.next(), Some(Token::TypeName((67, "MyThing"))));
+        assert_eq!(ti.next(), Some(Token::Ident((75, "$ident"))));
+        assert_eq!(ti.next(), Some(Token::OpenInner(82)));
+        assert_eq!(ti.next(), Some(Token::TypeName((126, "MyProp"))));
+        assert_eq!(ti.next(), Some(Token::OpenLeaf(133)));
+        assert_eq!(ti.next(), Some(Token::LeafContents((134, "Some content"))));
+        assert_eq!(ti.next(), Some(Token::CloseLeaf(146)));
+        assert_eq!(ti.next(), Some(Token::CloseInner(160)));
+        assert_eq!(ti.next(), None);
+    }
+
+    #[test]
+    fn token_iter_2() {
+        let s = r#"MyProp [Some content\] with \escaped \\characters]"#;
+
+        let mut ti = token_iter(s);
+        assert_eq!(ti.next(), Some(Token::TypeName((0, "MyProp"))));
+        assert_eq!(ti.next(), Some(Token::OpenLeaf(7)));
+        assert_eq!(ti.next(),
+                   Some(Token::LeafContents((8, r#"Some content\] with \escaped \\characters"#))));
+        assert_eq!(ti.next(), Some(Token::CloseLeaf(49)));
+        assert_eq!(ti.next(), None);
+    }
+
+    #[test]
+    fn token_iter_3() {
+        let s = r#"MyThing $\ an\ ident\$\ with\\\{\[\ \#escaped\ content {}"#;
+
+        let mut ti = token_iter(s);
+        assert_eq!(ti.next(), Some(Token::TypeName((0, "MyThing"))));
+        assert_eq!(ti.next(),
+                   Some(Token::Ident((8, r#"$\ an\ ident\$\ with\\\{\[\ \#escaped\ content"#))));
+        assert_eq!(ti.next(), Some(Token::OpenInner(55)));
+        assert_eq!(ti.next(), Some(Token::CloseInner(56)));
         assert_eq!(ti.next(), None);
     }
 }
