@@ -1,161 +1,200 @@
 #![allow(dead_code)]
 
-use std::result;
+use std::result::Result;
 use std::cmp::Eq;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum DataTree<'a> {
     Internal {
-        type_: &'a str,
-        name: Option<&'a str>,
+        type_name: &'a str,
+        ident: Option<&'a str>,
         children: Vec<DataTree<'a>>,
     },
 
     Leaf {
-        type_: &'a str,
+        type_name: &'a str,
         contents: &'a str,
     },
 }
 
 
 impl<'a> DataTree<'a> {
-    pub fn from_str(source_text: &'a str) -> Option<Vec<DataTree<'a>>> {
+    pub fn from_str(source_text: &'a str) -> Result<DataTree<'a>, ParseError> {
         let mut items = Vec::new();
-        let mut remaining_text = source_text;
+        let mut remaining_text = (0, source_text);
 
-        while let Ok((item, text)) = parse(remaining_text) {
+        while let Some((item, text)) = try!(parse_node(remaining_text)) {
             remaining_text = text;
             items.push(item);
         }
 
         remaining_text = skip_ws_and_comments(remaining_text);
 
-        if remaining_text.len() > 0 {
-            return None;
+        if remaining_text.1.len() == 0 {
+            return Ok(DataTree::Internal {
+                type_name: "ROOT",
+                ident: None,
+                children: items,
+            });
         } else {
-            return Some(items);
+            // If the whole text wasn't parsed, something went wrong.
+            return Err(ParseError::Other((0, "Failed to parse the entire string.")));
+        }
+    }
+
+    // For unit tests
+    fn internal_data(&'a self) -> (&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>) {
+        if let DataTree::Internal { type_name, ident, ref children } = *self {
+            (type_name, ident, children)
+        } else {
+            panic!("Expected DataTree::Internal, found DataTree::Leaf")
+        }
+    }
+    fn leaf_data(&'a self) -> (&'a str, &'a str) {
+        if let DataTree::Leaf { type_name, contents } = *self {
+            (type_name, contents)
+        } else {
+            panic!("Expected DataTree::Leaf, found DataTree::Internal")
         }
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum ParseError {
+    MissingOpener(usize),
+    MissingOpenInternal(usize),
+    MissingCloseInternal(usize),
+    MissingOpenLeaf(usize),
+    MissingCloseLeaf(usize),
+    MissingTypeName(usize),
+    UnexpectedIdent(usize),
+    UnknownToken(usize),
+    Other((usize, &'static str)),
+}
+
+
+
+
+// ================================================================
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum Token<'a> {
+enum Token<'a> {
     OpenInner,
     CloseInner,
     OpenLeaf,
     CloseLeaf,
-    Type(&'a str),
-    Name(&'a str),
+    TypeName(&'a str),
+    Ident(&'a str),
     End,
     Unknown,
 }
 
-type ParseResult<'a> = result::Result<(DataTree<'a>, &'a str), ()>;
+type ParseResult<'a> = Result<Option<(DataTree<'a>, (usize, &'a str))>, ParseError>;
 
-
-fn parse<'a>(source_text: &'a str) -> ParseResult<'a> {
+fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
     let (token, text1) = next_token(source_text);
-
-    if let Token::Type(t) = token {
+    if let Token::TypeName(type_name) = token {
         match next_token(text1) {
-            // Inner with name
-            (Token::Name(n), text2) => {
+            // Internal with name
+            (Token::Ident(n), text2) => {
                 if let (Token::OpenInner, text3) = next_token(text2) {
                     let mut children = Vec::new();
                     let mut text_remaining = text3;
-                    while let Ok((node, text4)) = parse(text_remaining) {
+                    while let Some((node, text4)) = try!(parse_node(text_remaining)) {
                         text_remaining = text4;
                         children.push(node);
                     }
                     if let (Token::CloseInner, text4) = next_token(text_remaining) {
-                        return Ok((DataTree::Internal {
-                            type_: t,
-                            name: Some(n),
+                        return Ok(Some((DataTree::Internal {
+                            type_name: type_name,
+                            ident: Some(n),
                             children: children,
                         },
-                                   text4));
+                                        text4)));
                     } else {
-                        return Err(());
+                        return Err(ParseError::MissingCloseInternal(text_remaining.0));
                     }
                 } else {
-                    return Err(());
+                    return Err(ParseError::MissingOpenInternal(text2.0));
                 }
             }
 
-            // Inner without name
+            // Internal without name
             (Token::OpenInner, text2) => {
                 let mut children = Vec::new();
                 let mut text_remaining = text2;
-                while let Ok((node, text3)) = parse(text_remaining) {
+                while let Some((node, text3)) = try!(parse_node(text_remaining)) {
                     text_remaining = text3;
                     children.push(node);
                 }
+
                 if let (Token::CloseInner, text3) = next_token(text_remaining) {
-                    return Ok((DataTree::Internal {
-                        type_: t,
-                        name: None,
+                    return Ok(Some((DataTree::Internal {
+                        type_name: type_name,
+                        ident: None,
                         children: children,
                     },
-                               text3));
+                                    text3)));
                 } else {
-                    return Err(());
+                    return Err(ParseError::MissingCloseInternal(text_remaining.0));
                 }
             }
 
             // Leaf
             (Token::OpenLeaf, text2) => {
-                if let Ok((lc, text3)) = parse_leaf_content(text2) {
-                    if let (Token::CloseLeaf, text4) = next_token(text3) {
-                        return Ok((DataTree::Leaf {
-                            type_: t,
-                            contents: lc,
-                        },
-                                   text4));
-                    } else {
-                        return Err(());
-                    }
+                let (contents, text3) = parse_leaf_content(text2);
+                if let (Token::CloseLeaf, text4) = next_token(text3) {
+                    return Ok(Some((DataTree::Leaf {
+                        type_name: type_name,
+                        contents: contents,
+                    },
+                                    text4)));
                 } else {
-                    return Err(());
+                    return Err(ParseError::MissingCloseLeaf(text3.0));
                 }
             }
 
             // Other
             _ => {
-                return Err(());
+                return Err(ParseError::MissingOpener(text1.0));
             }
         }
     } else {
-        return Err(());
+        return Ok(None);
     }
 }
 
 
-fn parse_leaf_content<'a>(source_text: &'a str) -> result::Result<(&'a str, &'a str), ()> {
-    let mut escape = false;
-
-    for (i, c) in source_text.char_indices() {
-        if escape {
-            escape = false;
-            continue;
-        }
-
-        if c == ']' {
-            return Ok((&source_text[0..i], &source_text[i..]));
+fn parse_leaf_content<'a>(source_text: (usize, &'a str)) -> (&'a str, (usize, &'a str)) {
+    let mut si = 1;
+    let mut escaped = false;
+    let mut reached_end = true;
+    for (i, c) in source_text.1.char_indices() {
+        si = i;
+        if escaped {
+            escaped = false;
         } else if c == '\\' {
-            escape = true;
+            escaped = true;
+        } else if c == ']' {
+            reached_end = false;
+            break;
         }
     }
 
-    return Err(());
+    if reached_end {
+        si = source_text.1.len();
+    }
+
+    return (&source_text.1[0..si],
+            (source_text.0 + si, &source_text.1[si..]));
 }
 
 
-pub fn next_token<'a>(source_text: &'a str) -> (Token<'a>, &'a str) {
+fn next_token<'a>(source_text: (usize, &'a str)) -> (Token<'a>, (usize, &'a str)) {
     let text1 = skip_ws_and_comments(source_text);
 
-    if let Some(c) = text1.chars().nth(0) {
-        let text2 = &text1[c.len_utf8()..];
+    if let Some(c) = text1.1.chars().nth(0) {
+        let text2 = (text1.0 + c.len_utf8(), &text1.1[c.len_utf8()..]);
         match c {
             '{' => {
                 return (Token::OpenInner, text2);
@@ -175,46 +214,48 @@ pub fn next_token<'a>(source_text: &'a str) -> (Token<'a>, &'a str) {
 
             '$' => {
                 // Parse name
-                let mut si = 0;
-                let mut escape = false;
-                let mut broke = false;
-
-                for (i, c) in text2.char_indices() {
-                    if c == '\\' {
-                        escape = true;
-                    } else if (is_reserved_char(c) || is_ws(c)) && !escape {
-                        si = i;
-                        broke = true;
+                let mut si = 1;
+                let mut escaped = false;
+                let mut reached_end = true;
+                for (i, c) in text1.1.char_indices().skip(1) {
+                    si = i;
+                    if escaped {
+                        escaped = false;
+                    } else if c == '\\' {
+                        escaped = true;
+                    } else if !is_ident_char(c) {
+                        reached_end = false;
                         break;
-                    } else {
-                        escape = false;
                     }
                 }
 
-                if broke {
-                    return (Token::Name(&text1[0..si + 1]), &text1[si + 1..]);
-                } else {
-                    return (Token::Name(text1), "");
+                if reached_end {
+                    si = text1.1.len();
                 }
+
+                return (Token::Ident(&text1.1[0..si]),
+                        (text1.0 + si, &text1.1[si..]));
             }
 
             _ => {
-                // Parse type
-                let mut si = 0;
-                let mut broke = false;
-
-                for (i, c) in text1.char_indices() {
-                    if (is_reserved_char(c) || is_ws(c)) && c != '\\' {
+                if is_ident_char(c) {
+                    // Parse type
+                    let mut si = 0;
+                    let mut reached_end = true;
+                    for (i, c) in text1.1.char_indices() {
                         si = i;
-                        broke = true;
-                        break;
+                        if !is_ident_char(c) {
+                            reached_end = false;
+                            break;
+                        }
                     }
-                }
 
-                if broke {
-                    return (Token::Type(&text1[0..si]), &text1[si..]);
-                } else {
-                    return (Token::Type(text1), "");
+                    if reached_end {
+                        si = text1.1.len();
+                    }
+
+                    return (Token::TypeName(&text1.1[0..si]),
+                            (text1.0 + si, &text1.1[si..]));
                 }
             }
 
@@ -233,153 +274,192 @@ fn is_ws(c: char) -> bool {
     }
 }
 
-fn is_reserved_char(c: char) -> bool {
+fn is_nl(c: char) -> bool {
     match c {
-        '{' | '}' | '[' | ']' | '$' | '\\' => true,
+        '\n' | '\r' => true,
         _ => false,
     }
 }
 
-fn skip_ws<'a>(text: &'a str) -> Option<&'a str> {
+fn is_reserved_char(c: char) -> bool {
+    match c {
+        '{' | '}' | '[' | ']' | '$' | '#' | '\\' => true,
+        _ => false,
+    }
+}
+
+fn is_ident_char(c: char) -> bool {
+    // Anything that isn't whitespace or a reserved character
+    !is_ws(c) && !is_reserved_char(c)
+}
+
+fn skip_ws<'a>(text: &'a str) -> &'a str {
+    let mut si = 0;
+    let mut reached_end = true;
     for (i, c) in text.char_indices() {
+        si = i;
         if !is_ws(c) {
-            if i > 0 {
-                return Some(&text[i..]);
-            } else {
-                return None;
-            }
-        }
-    }
-
-    if text.len() > 0 {
-        return Some("");
-    } else {
-        return None;
-    }
-}
-
-fn skip_comment<'a>(text: &'a str) -> Option<&'a str> {
-    let mut tci = text.char_indices();
-    if let Some((_, '#')) = tci.next() {
-        for (i, c) in tci {
-            match c {
-                '\n' | '\r' => {
-                    return Some(&text[i..]);
-                }
-
-                _ => {}
-            }
-        }
-
-        return Some("");
-    } else {
-        return None;
-    }
-}
-
-fn skip_ws_and_comments<'a>(text: &'a str) -> &'a str {
-    let mut remaining_text = text;
-
-    loop {
-        let mut ws = 0;
-        let mut comment = 0;
-
-        while let Some(t) = skip_ws(remaining_text) {
-            remaining_text = t;
-            ws += 1;
-        }
-
-        while let Some(t) = skip_comment(remaining_text) {
-            remaining_text = t;
-            comment += 1;
-        }
-
-        if ws == 0 && comment == 0 {
+            reached_end = false;
             break;
         }
     }
 
-    return remaining_text;
+    if reached_end {
+        si = text.len();
+    }
+
+    return &text[si..];
+}
+
+fn skip_comment<'a>(text: &'a str) -> &'a str {
+    let mut si = 0;
+    if Some('#') == text.chars().nth(0) {
+        let mut reached_end = true;
+        for (i, c) in text.char_indices() {
+            si = i;
+            if is_nl(c) {
+                reached_end = false;
+                break;
+            }
+        }
+
+        if reached_end {
+            si = text.len();
+        }
+    }
+
+    return &text[si..];
+}
+
+fn skip_ws_and_comments<'a>(text: (usize, &'a str)) -> (usize, &'a str) {
+    let mut remaining_text = text.1;
+
+    loop {
+        let tmp = skip_comment(skip_ws(remaining_text));
+
+        if tmp.len() == remaining_text.len() {
+            break;
+        } else {
+            remaining_text = tmp;
+        }
+    }
+
+    let offset = text.0 + text.1.len() - remaining_text.len();
+    return (offset, remaining_text);
 }
 
 
 
+
+// ================================================================
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::{next_token, Token};
 
     #[test]
-    fn test_tokenize_1() {
-        let input = "Thing";
+    fn tokenize_1() {
+        let input = (0, "Thing");
 
-        assert_eq!(next_token(input), (Token::Type("Thing"), ""));
+        assert_eq!(next_token(input), (Token::TypeName("Thing"), (5, "")));
     }
 
     #[test]
-    fn test_tokenize_2() {
-        let input = "  \n# gdfgdf gfdg dggdf\\sg dfgsd \n   Thing";
+    fn tokenize_2() {
+        let input = (0, "  \n# gdfgdf gfdg dggdf\\sg dfgsd \n   Thing");
 
-        assert_eq!(next_token(input), (Token::Type("Thing"), ""));
+        assert_eq!(next_token(input), (Token::TypeName("Thing"), (41, "")));
     }
 
     #[test]
-    fn test_tokenize_3() {
-        let input1 = " Thing { }";
+    fn tokenize_3() {
+        let input1 = (0, " Thing { }");
         let (token1, input2) = next_token(input1);
         let (token2, input3) = next_token(input2);
         let (token3, input4) = next_token(input3);
 
-        assert_eq!((token1, input2), (Token::Type("Thing"), " { }"));
-        assert_eq!((token2, input3), (Token::OpenInner, " }"));
-        assert_eq!((token3, input4), (Token::CloseInner, ""));
+        assert_eq!((token1, input2.1), (Token::TypeName("Thing"), " { }"));
+        assert_eq!((token2, input3.1), (Token::OpenInner, " }"));
+        assert_eq!((token3, input4.1), (Token::CloseInner, ""));
     }
 
     #[test]
-    fn test_tokenize_4() {
-        let input = " $hi_there ";
+    fn tokenize_4() {
+        let input = (0, " $hi_there ");
 
-        assert_eq!(next_token(input), (Token::Name("$hi_there"), " "));
+        assert_eq!(next_token(input), (Token::Ident("$hi_there"), (10, " ")));
     }
 
     #[test]
-    fn test_tokenize_5() {
-        let input = " $hi\\ t\\#he\\[re ";
+    fn tokenize_5() {
+        let input = (0, " $hi\\ t\\#he\\[re ");
 
-        assert_eq!(next_token(input), (Token::Name("$hi\\ t\\#he\\[re"), " "));
+        assert_eq!(next_token(input),
+                   (Token::Ident("$hi\\ t\\#he\\[re"), (15, " ")));
     }
 
     #[test]
-    fn test_tokenize_6() {
-        let input1 = " $hi the[re";
+    fn tokenize_6() {
+        let input1 = (0, " $hi the[re");
         let (token1, input2) = next_token(input1);
         let (token2, input3) = next_token(input2);
         let (token3, input4) = next_token(input3);
         let (token4, input5) = next_token(input4);
+        let (token5, input6) = next_token(input5);
 
-        assert_eq!((token1, input2), (Token::Name("$hi"), " the[re"));
-        assert_eq!((token2, input3), (Token::Type("the"), "[re"));
-        assert_eq!((token3, input4), (Token::OpenLeaf, "re"));
-        assert_eq!((token4, input5), (Token::Type("re"), ""));
+        assert_eq!((token1, input2), (Token::Ident("$hi"), (4, " the[re")));
+        assert_eq!((token2, input3), (Token::TypeName("the"), (8, "[re")));
+        assert_eq!((token3, input4), (Token::OpenLeaf, (9, "re")));
+        assert_eq!((token4, input5), (Token::TypeName("re"), (11, "")));
+        assert_eq!((token5, input6), (Token::End, (11, "")));
     }
 
     #[test]
-    fn test_tokenize_7() {
-        let input1 = "Thing $yar { # A comment\n\tThing2 []\n}";
+    fn tokenize_7() {
+        let input1 = (0, "Thing $yar { # A comment\n\tThing2 []\n}");
         let (token1, input2) = next_token(input1);
         let (token2, input3) = next_token(input2);
         let (token3, input4) = next_token(input3);
         let (token4, input5) = next_token(input4);
         let (token5, input6) = next_token(input5);
         let (token6, input7) = next_token(input6);
+        let (token7, input8) = next_token(input7);
+        let (token8, input9) = next_token(input8);
 
         assert_eq!((token1, input2),
-                   (Token::Type("Thing"), " $yar { # A comment\n\tThing2 []\n}"));
+                   (Token::TypeName("Thing"),
+                    (5, " $yar { # A comment\n\tThing2 []\n}")));
         assert_eq!((token2, input3),
-                   (Token::Name("$yar"), " { # A comment\n\tThing2 []\n}"));
+                   (Token::Ident("$yar"), (10, " { # A comment\n\tThing2 []\n}")));
         assert_eq!((token3, input4),
-                   (Token::OpenInner, " # A comment\n\tThing2 []\n}"));
-        assert_eq!((token4, input5), (Token::Type("Thing2"), " []\n}"));
-        assert_eq!((token5, input6), (Token::OpenLeaf, "]\n}"));
-        assert_eq!((token6, input7), (Token::CloseLeaf, "\n}"));
+                   (Token::OpenInner, (12, " # A comment\n\tThing2 []\n}")));
+        assert_eq!((token4, input5),
+                   (Token::TypeName("Thing2"), (32, " []\n}")));
+        assert_eq!((token5, input6), (Token::OpenLeaf, (34, "]\n}")));
+        assert_eq!((token6, input7), (Token::CloseLeaf, (35, "\n}")));
+        assert_eq!((token7, input8), (Token::CloseInner, (37, "")));
+        assert_eq!((token8, input9), (Token::End, (37, "")));
+    }
+
+    #[test]
+    fn parse_1() {
+        let input = r#"
+            Thing {}
+        "#;
+
+        let dt = DataTree::from_str(input).unwrap();
+
+        // Root
+        let (t, i, c) = dt.internal_data();
+        assert_eq!(t, "ROOT");
+        assert_eq!(i, None);
+        assert_eq!(c.len(), 1);
+
+        // First (and only) child
+        let (t, i, c) = c[0].internal_data();
+        assert_eq!(t, "Thing");
+        assert_eq!(i, None);
+        assert_eq!(c.len(), 0);
     }
 }

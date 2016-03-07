@@ -9,7 +9,6 @@ mod ray;
 mod bbox;
 mod camera;
 mod parse;
-mod datatree;
 mod renderer;
 mod image;
 mod triangle;
