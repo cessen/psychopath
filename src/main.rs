@@ -17,6 +17,9 @@ mod bvh;
 mod halton;
 
 use std::mem;
+use std::io;
+use std::io::Read;
+use std::fs::File;
 
 use docopt::Docopt;
 
@@ -25,6 +28,7 @@ use ray::Ray;
 use camera::Camera;
 use renderer::Renderer;
 use surface::triangle_mesh::TriangleMesh;
+use parse::DataTree;
 
 // ----------------------------------------------------------------
 
@@ -35,20 +39,21 @@ Psychopath <VERSION>
 
 Usage:
   psychopath [options] <imgpath>
+  psychopath [options] -i <file>
   psychopath (-h | --help)
   psychopath --version
 
 Options:
-  -i <input_file>       Input .psy file
-  -s <n>, --spp <n>     Number of samples per pixel [default: 16].
-  -h, --help            Show this screen.
-  --version             Show version.
+  -i <file>, --input <file>     Input .psy file
+  -s <n>, --spp <n>             Number of samples per pixel [default: 16].
+  -h, --help                    Show this screen.
+  --version                     Show version.
 "#;
 
 #[derive(Debug, RustcDecodable)]
 struct Args {
     arg_imgpath: String,
-    flag_input_file: Option<String>,
+    flag_input: Option<String>,
     flag_spp: Option<u32>,
     flag_version: bool,
 }
@@ -67,6 +72,19 @@ fn main() {
         println!("Psychopath {}", VERSION);
         return;
     }
+
+    // =======================
+    // Print tree from psy file if passed as an argument.
+    // TODO: remove this, because it's for debugging
+    if let Some(fp) = args.flag_input {
+        let mut f = io::BufReader::new(File::open(fp).unwrap());
+        let mut s = String::new();
+        let _ = f.read_to_string(&mut s);
+        let dt = DataTree::from_str(&s);
+        println!("{:#?}", dt);
+        return;
+    }
+    // =======================
 
     let samples_per_pixel = args.flag_spp.unwrap_or_else(|| 16);
     println!("Sample count: {}", samples_per_pixel);
