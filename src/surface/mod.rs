@@ -1,11 +1,14 @@
 #![allow(dead_code)]
 
+use std::fmt::Debug;
+
 pub mod triangle_mesh;
 
 use ray::Ray;
 use math::{Point, Normal, Matrix4x4};
 
 
+#[derive(Debug)]
 pub enum SurfaceIntersection {
     Miss,
     Occlude,
@@ -18,6 +21,6 @@ pub enum SurfaceIntersection {
     },
 }
 
-pub trait Surface {
+pub trait Surface: Debug {
     fn intersect_rays(&self, rays: &mut [Ray], isects: &mut [SurfaceIntersection]);
 }

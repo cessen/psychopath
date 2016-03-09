@@ -9,6 +9,7 @@ use bvh::BVH;
 
 use super::{Surface, SurfaceIntersection};
 
+#[derive(Debug)]
 pub struct TriangleMesh {
     time_samples: usize,
     geo: Vec<(Point, Point, Point)>,

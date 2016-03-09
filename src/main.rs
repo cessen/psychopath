@@ -14,6 +14,8 @@ mod image;
 mod triangle;
 mod surface;
 mod bvh;
+mod scene;
+mod assembly;
 mod halton;
 
 use std::mem;
