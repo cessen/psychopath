@@ -8,6 +8,7 @@ use math::fast_logit;
 use image::Image;
 use surface;
 use surface::Surface;
+use scene::Scene;
 
 pub struct Renderer {
     pub output_file: String,

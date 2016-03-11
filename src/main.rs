@@ -1,5 +1,7 @@
 extern crate rustc_serialize;
 extern crate docopt;
+#[macro_use]
+extern crate nom;
 
 mod math;
 mod algorithm;

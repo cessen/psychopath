@@ -42,15 +42,62 @@ impl<'a> DataTree<'a> {
         }
     }
 
+    pub fn get_first_child_with_type_name(&'a self, type_name: &str) -> Option<&'a DataTree> {
+        if let &DataTree::Internal { ref children, .. } = self {
+            for child in children.iter() {
+                match child {
+                    &DataTree::Internal { type_name: tn, .. } => {
+                        if tn == type_name {
+                            return Some(child);
+                        }
+                    }
+
+                    &DataTree::Leaf { type_name: tn, .. } => {
+                        if tn == type_name {
+                            return Some(child);
+                        }
+                    }
+                }
+            }
+            return None;
+        } else {
+            return None;
+        }
+    }
+
+    pub fn count_children_with_type_name(&self, type_name: &str) -> usize {
+        if let &DataTree::Internal { ref children, .. } = self {
+            let mut count = 0;
+            for child in children.iter() {
+                match child {
+                    &DataTree::Internal { type_name: tn, .. } => {
+                        if tn == type_name {
+                            count += 1;
+                        }
+                    }
+
+                    &DataTree::Leaf { type_name: tn, .. } => {
+                        if tn == type_name {
+                            count += 1;
+                        }
+                    }
+                }
+            }
+            return count;
+        } else {
+            return 0;
+        }
+    }
+
     // For unit tests
-    fn internal_data(&'a self) -> (&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>) {
+    fn internal_data_or_panic(&'a self) -> (&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>) {
         if let DataTree::Internal { type_name, ident, ref children } = *self {
             (type_name, ident, children)
         } else {
             panic!("Expected DataTree::Internal, found DataTree::Leaf")
         }
     }
-    fn leaf_data(&'a self) -> (&'a str, &'a str) {
+    fn leaf_data_or_panic(&'a self) -> (&'a str, &'a str) {
         if let DataTree::Leaf { type_name, contents } = *self {
             (type_name, contents)
         } else {
@@ -451,13 +498,13 @@ mod tests {
         let dt = DataTree::from_str(input).unwrap();
 
         // Root
-        let (t, i, c) = dt.internal_data();
+        let (t, i, c) = dt.internal_data_or_panic();
         assert_eq!(t, "ROOT");
         assert_eq!(i, None);
         assert_eq!(c.len(), 1);
 
         // First (and only) child
-        let (t, i, c) = c[0].internal_data();
+        let (t, i, c) = c[0].internal_data_or_panic();
         assert_eq!(t, "Thing");
         assert_eq!(i, None);
         assert_eq!(c.len(), 0);

@@ -6,3 +6,4 @@ authors = ["Nathan Vegdahl <cessen@cessen.com>"]
 [dependencies]
 docopt = "0.6"
 rustc-serialize = "0.3"
+nom = "1.2"
