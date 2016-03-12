@@ -4,8 +4,8 @@ use assembly::Assembly;
 
 #[derive(Debug)]
 pub struct Scene {
-    name: String,
-    background_color: (f32, f32, f32),
-    camera: Camera,
-    root: Assembly,
+    pub name: Option<String>,
+    pub background_color: (f32, f32, f32),
+    pub camera: Camera,
+    pub root: Assembly,
 }

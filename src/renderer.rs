@@ -10,12 +10,12 @@ use surface;
 use surface::Surface;
 use scene::Scene;
 
+#[derive(Debug)]
 pub struct Renderer {
     pub output_file: String,
     pub resolution: (usize, usize),
     pub spp: usize,
-    pub camera: Camera,
-    pub scene: surface::triangle_mesh::TriangleMesh,
+    pub scene: Scene,
 }
 
 impl Renderer {
@@ -39,11 +39,11 @@ impl Renderer {
                     let mut ray = {
                         let filter_x = fast_logit(halton::sample(3, offset + si as u32), 1.5);
                         let filter_y = fast_logit(halton::sample(4, offset + si as u32), 1.5);
-                        self.camera.generate_ray((x as f32 + filter_x) * cmpx - 0.5,
-                                                 (y as f32 + filter_y) * cmpy - 0.5,
-                                                 halton::sample(0, offset + si as u32),
-                                                 halton::sample(1, offset + si as u32),
-                                                 halton::sample(2, offset + si as u32))
+                        self.scene.camera.generate_ray((x as f32 + filter_x) * cmpx - 0.5,
+                                                       (y as f32 + filter_y) * cmpy - 0.5,
+                                                       halton::sample(0, offset + si as u32),
+                                                       halton::sample(1, offset + si as u32),
+                                                       halton::sample(2, offset + si as u32))
                     };
                     ray.id = si as u32;
                     rays.push(ray);
@@ -51,7 +51,7 @@ impl Renderer {
                 }
 
                 // Test rays against scene
-                self.scene.intersect_rays(&mut rays, &mut isects);
+                self.scene.root.intersect_rays(&mut rays, &mut isects);
 
                 // Calculate color based on ray hits
                 let mut r = 0.0;

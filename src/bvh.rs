@@ -28,15 +28,19 @@ enum BVHNode {
 }
 
 impl BVH {
-    pub fn from_objects<'a, T, F>(objects: &mut [T], objects_per_leaf: usize, bounder: F) -> BVH
-        where F: 'a + Fn(&T) -> &'a [BBox]
-    {
-        let mut bvh = BVH {
+    pub fn new_empty() -> BVH {
+        BVH {
             nodes: Vec::new(),
             bounds: Vec::new(),
             depth: 0,
             bounds_cache: Vec::new(),
-        };
+        }
+    }
+
+    pub fn from_objects<'a, T, F>(objects: &mut [T], objects_per_leaf: usize, bounder: F) -> BVH
+        where F: 'a + Fn(&T) -> &'a [BBox]
+    {
+        let mut bvh = BVH::new_empty();
 
         bvh.recursive_build(0, 0, objects_per_leaf, objects, &bounder);
         bvh.bounds_cache.clear();

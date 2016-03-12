@@ -42,6 +42,34 @@ impl<'a> DataTree<'a> {
         }
     }
 
+    pub fn type_name(&'a self) -> &'a str {
+        match self {
+            &DataTree::Internal{type_name, ..} => type_name,
+            &DataTree::Leaf{type_name, ..} => type_name,
+        }
+    }
+
+    pub fn is_internal(&self) -> bool {
+        match self {
+            &DataTree::Internal{..} => true,
+            &DataTree::Leaf{..} => false,
+        }
+    }
+
+    pub fn is_leaf(&self) -> bool {
+        match self {
+            &DataTree::Internal{..} => false,
+            &DataTree::Leaf{..} => true,
+        }
+    }
+
+    pub fn leaf_contents(&'a self) -> Option<&'a str> {
+        match self {
+            &DataTree::Internal{..} => None,
+            &DataTree::Leaf{contents, ..} => Some(contents),
+        }
+    }
+
     pub fn get_first_child_with_type_name(&'a self, type_name: &str) -> Option<&'a DataTree> {
         if let &DataTree::Internal { ref children, .. } = self {
             for child in children.iter() {

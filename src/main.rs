@@ -12,6 +12,7 @@ mod bbox;
 mod camera;
 mod parse;
 mod renderer;
+mod tracer;
 mod image;
 mod triangle;
 mod surface;
@@ -30,6 +31,8 @@ use docopt::Docopt;
 use math::{Point, Matrix4x4};
 use ray::Ray;
 use camera::Camera;
+use scene::Scene;
+use assembly::{Assembly, Object};
 use renderer::Renderer;
 use surface::triangle_mesh::TriangleMesh;
 use parse::DataTree;
@@ -128,12 +131,21 @@ fn main() {
                           vec![20.0],
                           vec![1026.0]);
 
+    let mut assembly = Assembly::new();
+    assembly.add_object("yar", Object::Surface(Box::new(mesh)));
+
+    let scene = Scene {
+        name: None,
+        background_color: (0.0, 0.0, 0.0),
+        camera: cam,
+        root: assembly,
+    };
+
     let r = Renderer {
         output_file: args.arg_imgpath.clone(),
         resolution: (512, 512),
         spp: samples_per_pixel as usize,
-        camera: cam,
-        scene: mesh,
+        scene: scene,
     };
 
     r.render();

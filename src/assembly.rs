@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use math::Matrix4x4;
 use bvh::BVH;
-use surface::Surface;
+use surface::{Surface, SurfaceIntersection};
+use ray::Ray;
 
 
 #[derive(Debug)]
@@ -21,6 +22,38 @@ pub struct Assembly {
 
     // Object accel
     object_accel: BVH,
+}
+
+impl Assembly {
+    pub fn new() -> Assembly {
+        Assembly {
+            instances: Vec::new(),
+            xforms: Vec::new(),
+            objects: Vec::new(),
+            object_map: HashMap::new(),
+            assemblies: Vec::new(),
+            assembly_map: HashMap::new(),
+            object_accel: BVH::new_empty(),
+        }
+    }
+
+    // TODO: this is just temporary.  Remove this and move tracing functionality
+    // into the tracer.
+    pub fn intersect_rays(&self, rays: &mut [Ray], isects: &mut [SurfaceIntersection]) {
+        for obj in self.objects.iter() {
+            match obj {
+                &Object::Surface(ref surface) => {
+                    surface.intersect_rays(rays, isects);
+                }
+            }
+        }
+    }
+
+
+    pub fn add_object(&mut self, name: &str, obj: Object) {
+        self.object_map.insert(name.to_string(), self.objects.len());
+        self.objects.push(obj);
+    }
 }
 
 
