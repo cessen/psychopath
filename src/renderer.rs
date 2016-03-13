@@ -2,6 +2,7 @@
 
 use std::path::Path;
 
+use tracer::Tracer;
 use camera::Camera;
 use halton;
 use math::fast_logit;
@@ -21,7 +22,7 @@ pub struct Renderer {
 impl Renderer {
     pub fn render(&self) {
         let mut rays = Vec::new();
-        let mut isects = Vec::new();
+        let mut tracer = Tracer::from_assembly(&self.scene.root);
         let mut img = Image::new(self.resolution.0, self.resolution.1);
 
         // Render image of ray-traced triangle
@@ -34,7 +35,6 @@ impl Renderer {
 
                 // Generate rays
                 rays.clear();
-                isects.clear();
                 for si in 0..self.spp {
                     let mut ray = {
                         let filter_x = fast_logit(halton::sample(3, offset + si as u32), 1.5);
@@ -47,11 +47,10 @@ impl Renderer {
                     };
                     ray.id = si as u32;
                     rays.push(ray);
-                    isects.push(surface::SurfaceIntersection::Miss);
                 }
 
                 // Test rays against scene
-                self.scene.root.intersect_rays(&mut rays, &mut isects);
+                let isects = tracer.trace(&rays);
 
                 // Calculate color based on ray hits
                 let mut r = 0.0;

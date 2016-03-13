@@ -9,19 +9,19 @@ use ray::Ray;
 #[derive(Debug)]
 pub struct Assembly {
     // Instance list
-    instances: Vec<Instance>,
-    xforms: Vec<Matrix4x4>,
+    pub instances: Vec<Instance>,
+    pub xforms: Vec<Matrix4x4>,
 
     // Object list
-    objects: Vec<Object>,
+    pub objects: Vec<Object>,
     object_map: HashMap<String, usize>, // map Name -> Index
 
     // Assembly list
-    assemblies: Vec<Assembly>,
+    pub assemblies: Vec<Assembly>,
     assembly_map: HashMap<String, usize>, // map Name -> Index
 
     // Object accel
-    object_accel: BVH,
+    pub object_accel: BVH,
 }
 
 impl Assembly {
@@ -37,17 +37,6 @@ impl Assembly {
         }
     }
 
-    // TODO: this is just temporary.  Remove this and move tracing functionality
-    // into the tracer.
-    pub fn intersect_rays(&self, rays: &mut [Ray], isects: &mut [SurfaceIntersection]) {
-        for obj in self.objects.iter() {
-            match obj {
-                &Object::Surface(ref surface) => {
-                    surface.intersect_rays(rays, isects);
-                }
-            }
-        }
-    }
 
 
     pub fn add_object(&mut self, name: &str, obj: Object) {
@@ -64,7 +53,7 @@ pub enum Object {
 
 
 #[derive(Debug, Copy, Clone)]
-enum Instance {
+pub enum Instance {
     Object {
         data_index: usize,
         transform_indices: (usize, usize),

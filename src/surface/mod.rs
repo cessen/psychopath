@@ -8,7 +8,7 @@ use ray::Ray;
 use math::{Point, Normal, Matrix4x4};
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum SurfaceIntersection {
     Miss,
     Occlude,
