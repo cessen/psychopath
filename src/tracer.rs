@@ -1,5 +1,6 @@
 use std::iter;
 use std::slice;
+use std::cell::UnsafeCell;
 
 use math::Matrix4x4;
 use assembly::{Assembly, Object};
@@ -8,7 +9,7 @@ use surface::SurfaceIntersection;
 
 pub struct Tracer<'a> {
     root: &'a Assembly,
-    rays: Vec<Ray>, // Should only be used from trace(), not any other methods
+    rays: UnsafeCell<Vec<Ray>>, // Should only be used from trace(), not any other methods
     xform_stack: Vec<Matrix4x4>,
     isects: Vec<SurfaceIntersection>,
 }
@@ -18,16 +19,19 @@ impl<'a> Tracer<'a> {
         Tracer {
             root: assembly,
             xform_stack: Vec::new(),
-            rays: Vec::new(),
+            rays: UnsafeCell::new(Vec::new()),
             isects: Vec::new(),
         }
     }
 
     pub fn trace<'b>(&'b mut self, wrays: &[Ray]) -> &'b [SurfaceIntersection] {
         // Ready the rays
-        self.rays.clear();
-        self.rays.reserve(wrays.len());
-        self.rays.extend(wrays.iter());
+        let rays_ptr = self.rays.get();
+        unsafe {
+            (*rays_ptr).clear();
+            (*rays_ptr).reserve(wrays.len());
+            (*rays_ptr).extend(wrays.iter());
+        }
 
         // Ready the isects
         self.isects.clear();
@@ -44,7 +48,7 @@ impl<'a> Tracer<'a> {
             // NOT be used in any other methods.  The rays should only be
             // accessed in other methods via the mutable slice passed directly
             // to them in their function parameters.
-            slice::from_raw_parts_mut(self.rays.as_mut_ptr(), self.rays.len())
+            &mut (*rays_ptr)[..]
         };
         self.trace_assembly(self.root, wrays, ray_refs);
 
