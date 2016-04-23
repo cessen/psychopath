@@ -3,7 +3,7 @@ use std::slice;
 use std::cell::UnsafeCell;
 
 use math::Matrix4x4;
-use assembly::{Assembly, Object};
+use assembly::{Assembly, Object, Instance, InstanceType};
 use ray::Ray;
 use surface::SurfaceIntersection;
 
@@ -56,11 +56,24 @@ impl<'a> Tracer<'a> {
     }
 
     fn trace_assembly<'b>(&'b mut self, assembly: &Assembly, wrays: &[Ray], rays: &mut [Ray]) {
-        for obj in assembly.objects.iter() {
-            match obj {
-                &Object::Surface(ref surface) => {
-                    surface.intersect_rays(rays, &mut self.isects);
+        assembly.object_accel.traverse(&mut rays[..], &assembly.instances[..], |inst, rs| {
+            // TODO: transform rays
+            match inst.instance_type {
+                InstanceType::Object => {
+                    self.trace_object(&assembly.objects[inst.data_index], wrays, rs);
                 }
+
+                InstanceType::Assembly => {
+                    self.trace_assembly(&assembly.assemblies[inst.data_index], wrays, rs);
+                }
+            }
+        });
+    }
+
+    fn trace_object<'b>(&'b mut self, obj: &Object, wrays: &[Ray], rays: &mut [Ray]) {
+        match obj {
+            &Object::Surface(ref surface) => {
+                surface.intersect_rays(rays, &mut self.isects);
             }
         }
     }

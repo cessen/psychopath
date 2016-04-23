@@ -6,6 +6,7 @@ pub mod triangle_mesh;
 
 use ray::Ray;
 use math::{Point, Normal, Matrix4x4};
+use boundable::Boundable;
 
 
 #[derive(Debug, Clone)]
@@ -21,6 +22,6 @@ pub enum SurfaceIntersection {
     },
 }
 
-pub trait Surface: Debug {
+pub trait Surface: Boundable + Debug {
     fn intersect_rays(&self, rays: &mut [Ray], isects: &mut [SurfaceIntersection]);
 }

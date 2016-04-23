@@ -5,6 +5,7 @@ use math::{Point, Normal, Matrix4x4};
 use ray::Ray;
 use triangle;
 use bbox::BBox;
+use boundable::Boundable;
 use bvh::BVH;
 
 use super::{Surface, SurfaceIntersection};
@@ -47,6 +48,12 @@ impl TriangleMesh {
             indices: indices,
             accel: accel,
         }
+    }
+}
+
+impl Boundable for TriangleMesh {
+    fn bounds<'a>(&'a self) -> &'a [BBox] {
+        self.accel.bounds()
     }
 }
 

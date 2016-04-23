@@ -14,6 +14,7 @@ mod parse;
 mod renderer;
 mod tracer;
 mod image;
+mod boundable;
 mod triangle;
 mod surface;
 mod bvh;
@@ -133,6 +134,9 @@ fn main() {
 
     let mut assembly = Assembly::new();
     assembly.add_object("yar", Object::Surface(Box::new(mesh)));
+    assembly.add_object_instance("yar",
+                                 Some(&[Matrix4x4::from_location(Point::new(0.0, 0.0, 0.0))]));
+    assembly.finalize();
 
     let scene = Scene {
         name: None,

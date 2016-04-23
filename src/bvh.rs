@@ -2,6 +2,7 @@
 
 use lerp::lerp_slice;
 use bbox::BBox;
+use boundable::Boundable;
 use ray::Ray;
 use algorithm::partition;
 
@@ -214,6 +215,17 @@ impl BVH {
                     stack_ptr -= 1;
                 }
             }
+        }
+    }
+}
+
+
+impl Boundable for BVH {
+    fn bounds<'a>(&'a self) -> &'a [BBox] {
+        match self.nodes[0] {
+            BVHNode::Internal{bounds_range, ..} => &self.bounds[bounds_range.0..bounds_range.1],
+
+            BVHNode::Leaf{bounds_range, ..} => &self.bounds[bounds_range.0..bounds_range.1],
         }
     }
 }

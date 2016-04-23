@@ -66,9 +66,8 @@ impl Camera {
 
         // Ray origin
         let orig = {
-            let (u, v) = square_to_circle(aperture_radius * ((u * 2.0) - 1.0),
-                                          aperture_radius * ((v * 2.0) - 1.0));
-            Point::new(u, v, 0.0)
+            let (u, v) = square_to_circle((u * 2.0) - 1.0, (v * 2.0) - 1.0);
+            Point::new(aperture_radius * u, aperture_radius * v, 0.0)
         };
 
         // Ray direction
