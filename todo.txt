@@ -1,4 +1,2 @@
-- Implement a Tracer to handle ray tracing responsibilities, with hierarchical
-  instancing, etc.
 - Basic scene parsing with triangle meshes.
 - Unit tests for scene parsing.

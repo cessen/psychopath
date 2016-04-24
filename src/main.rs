@@ -33,7 +33,7 @@ use math::{Point, Matrix4x4};
 use ray::Ray;
 use camera::Camera;
 use scene::Scene;
-use assembly::{Assembly, Object};
+use assembly::{AssemblyBuilder, Object};
 use renderer::Renderer;
 use surface::triangle_mesh::TriangleMesh;
 use parse::DataTree;
@@ -132,11 +132,11 @@ fn main() {
                           vec![20.0],
                           vec![1026.0]);
 
-    let mut assembly = Assembly::new();
-    assembly.add_object("yar", Object::Surface(Box::new(mesh)));
-    assembly.add_object_instance("yar",
-                                 Some(&[Matrix4x4::from_location(Point::new(0.0, 0.0, 0.0))]));
-    assembly.finalize();
+    let mut assembly_b = AssemblyBuilder::new();
+    assembly_b.add_object("yar", Object::Surface(Box::new(mesh)));
+    assembly_b.add_object_instance("yar",
+                                   Some(&[Matrix4x4::from_location(Point::new(25.0, 0.0, 0.0))]));
+    let assembly = assembly_b.build();
 
     let scene = Scene {
         name: None,

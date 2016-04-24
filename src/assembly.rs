@@ -16,30 +16,48 @@ pub struct Assembly {
 
     // Object list
     pub objects: Vec<Object>,
-    object_map: HashMap<String, usize>, // map Name -> Index
 
     // Assembly list
     pub assemblies: Vec<Assembly>,
-    assembly_map: HashMap<String, usize>, // map Name -> Index
 
     // Object accel
     pub object_accel: BVH,
 }
 
-impl Assembly {
-    pub fn new() -> Assembly {
-        Assembly {
+impl Boundable for Assembly {
+    fn bounds<'a>(&'a self) -> &'a [BBox] {
+        self.object_accel.bounds()
+    }
+}
+
+
+#[derive(Debug)]
+pub struct AssemblyBuilder {
+    // Instance list
+    instances: Vec<Instance>,
+    xforms: Vec<Matrix4x4>,
+
+    // Object list
+    objects: Vec<Object>,
+    object_map: HashMap<String, usize>, // map Name -> Index
+
+    // Assembly list
+    assemblies: Vec<Assembly>,
+    assembly_map: HashMap<String, usize>, // map Name -> Index
+}
+
+
+impl AssemblyBuilder {
+    pub fn new() -> AssemblyBuilder {
+        AssemblyBuilder {
             instances: Vec::new(),
             xforms: Vec::new(),
             objects: Vec::new(),
             object_map: HashMap::new(),
             assemblies: Vec::new(),
             assembly_map: HashMap::new(),
-            object_accel: BVH::new_empty(),
         }
     }
-
-
 
     pub fn add_object(&mut self, name: &str, obj: Object) {
         self.object_map.insert(name.to_string(), self.objects.len());
@@ -81,31 +99,29 @@ impl Assembly {
         }
     }
 
-    pub fn finalize(&mut self) {
-        // Clear maps (no longer needed).
-        // However, don't clear shader maps, as they are still used by
-        // get_surface_shader() et al.
-        self.object_map.clear();
-        self.assembly_map.clear();
-
+    pub fn build(mut self) -> Assembly {
         // Shrink storage to minimum.
         // However, don't shrink shader storage, because there are pointers to
         // that data that could get invalidated.
         self.instances.shrink_to_fit();
         self.xforms.shrink_to_fit();
         self.objects.shrink_to_fit();
-        self.object_map.shrink_to_fit();
         self.assemblies.shrink_to_fit();
-        self.assembly_map.shrink_to_fit();
 
         // Build object accel
         let (bis, bbs) = self.instance_bounds();
-        println!("Len: {}, {}", bis.len(), bbs.len());
-        self.object_accel = BVH::from_objects(&mut self.instances[..],
-                                              1,
-                                              |inst| &bbs[bis[inst.id]..bis[inst.id + 1]]);
-    }
+        let object_accel = BVH::from_objects(&mut self.instances[..],
+                                             1,
+                                             |inst| &bbs[bis[inst.id]..bis[inst.id + 1]]);
 
+        Assembly {
+            instances: self.instances,
+            xforms: self.xforms,
+            objects: self.objects,
+            assemblies: self.assemblies,
+            object_accel: object_accel,
+        }
+    }
 
 
     /// Returns a pair of vectors with the bounds of all instances.
@@ -121,16 +137,17 @@ impl Assembly {
             // Get bounding boxes
             match inst.instance_type {
                 InstanceType::Object => {
+                    // Push bounds onto bbs
                     let obj = &self.objects[inst.data_index];
-                    // TODO: push bounds onto bbs
                     match obj {
                         &Object::Surface(ref s) => bbs.extend(s.bounds()),
                     }
                 }
 
                 InstanceType::Assembly => {
+                    // Push bounds onto bbs
                     let asmb = &self.assemblies[inst.data_index];
-                    // TODO: push bounds onto bbs
+                    bbs.extend(asmb.bounds());
                 }
             }
 
@@ -151,6 +168,7 @@ impl Assembly {
         return (indices, bounds);
     }
 }
+
 
 
 #[derive(Debug)]
