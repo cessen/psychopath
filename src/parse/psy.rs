@@ -14,27 +14,36 @@ use camera::Camera;
 use renderer::Renderer;
 use scene::Scene;
 
-
+#[derive(Copy, Clone, Debug)]
+pub enum PsyParseError {
+    UnknownError,
+    SectionWrongCount(&'static str, usize),
+}
 
 
 /// Takes in a DataTree representing a Scene node and returns
 /// a renderer.
-pub fn parse_frame(tree: &DataTree) -> Result<Renderer, ()> {
+pub fn parse_scene(tree: &DataTree) -> Result<Renderer, PsyParseError> {
     // Verify we have the right number of each section
     if tree.count_children_with_type_name("Output") != 1 {
-        return Err(());
+        let count = tree.count_children_with_type_name("Output");
+        return Err(PsyParseError::SectionWrongCount("Output", count));
     }
     if tree.count_children_with_type_name("RenderSettings") != 1 {
-        return Err(());
+        let count = tree.count_children_with_type_name("RenderSettings");
+        return Err(PsyParseError::SectionWrongCount("RenderSettings", count));
     }
     if tree.count_children_with_type_name("Camera") != 1 {
-        return Err(());
+        let count = tree.count_children_with_type_name("Camera");
+        return Err(PsyParseError::SectionWrongCount("Camera", count));
     }
     if tree.count_children_with_type_name("World") != 1 {
-        return Err(());
+        let count = tree.count_children_with_type_name("World");
+        return Err(PsyParseError::SectionWrongCount("World", count));
     }
     if tree.count_children_with_type_name("Assembly") != 1 {
-        return Err(());
+        let count = tree.count_children_with_type_name("Assembly");
+        return Err(PsyParseError::SectionWrongCount("Root Assembly", count));
     }
 
     // Parse output info
@@ -73,23 +82,22 @@ pub fn parse_frame(tree: &DataTree) -> Result<Renderer, ()> {
         root: assembly,
     };
 
-    // // Put renderer together
-    // let renderer = Renderer {
-    //     output_file: output_info.0.clone(),
-    //     resolution: (render_settings.0.0 as usize, render_settings.0.1 as usize),
-    //     spp: render_settings.1,
-    //     scene: scene,
-    // }
-    //
-    // return Ok(renderer);
+    // Put renderer together
+    let renderer = Renderer {
+        output_file: output_info.clone(),
+        resolution: ((render_settings.0).0 as usize,
+                     (render_settings.0).1 as usize),
+        spp: render_settings.1 as usize,
+        scene: scene,
+    };
 
-    return Err(());
+    return Ok(renderer);
 }
 
 
 
 
-fn parse_output_info(tree: &DataTree) -> Result<(String), ()> {
+fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
     if let &DataTree::Internal{ref children, ..} = tree {
         let mut found_path = false;
         let mut path = String::new();
@@ -109,17 +117,17 @@ fn parse_output_info(tree: &DataTree) -> Result<(String), ()> {
         if found_path {
             return Ok((path));
         } else {
-            return Err(());
+            return Err(PsyParseError::UnknownError);
         }
     } else {
-        return Err(());
+        return Err(PsyParseError::UnknownError);
     };
 }
 
 
 
 
-fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), ()> {
+fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyParseError> {
     if let &DataTree::Internal{ref children, ..} = tree {
         let mut found_res = false;
         let mut found_spp = false;
@@ -137,7 +145,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), ()> 
                         res = (w, h);
                     } else {
                         // Found Resolution, but its contents is not in the right format
-                        return Err(());
+                        return Err(PsyParseError::UnknownError);
                     }
                 }
 
@@ -148,7 +156,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), ()> 
                         spp = n;
                     } else {
                         // Found SamplesPerPixel, but its contents is not in the right format
-                        return Err(());
+                        return Err(PsyParseError::UnknownError);
                     }
                 }
 
@@ -158,7 +166,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), ()> 
                         seed = n;
                     } else {
                         // Found Seed, but its contents is not in the right format
-                        return Err(());
+                        return Err(PsyParseError::UnknownError);
                     }
                 }
 
@@ -169,17 +177,17 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), ()> 
         if found_res && found_spp {
             return Ok((res, spp, seed));
         } else {
-            return Err(());
+            return Err(PsyParseError::UnknownError);
         }
     } else {
-        return Err(());
+        return Err(PsyParseError::UnknownError);
     };
 }
 
 
 
 
-fn parse_camera(tree: &DataTree) -> Result<Camera, ()> {
+fn parse_camera(tree: &DataTree) -> Result<Camera, PsyParseError> {
     if let &DataTree::Internal{ref children, ..} = tree {
         let mut mats = Vec::new();
         let mut fovs = Vec::new();
@@ -195,7 +203,7 @@ fn parse_camera(tree: &DataTree) -> Result<Camera, ()> {
                         fovs.push(fov * (3.1415926536 / 180.0));
                     } else {
                         // Found Fov, but its contents is not in the right format
-                        return Err(());
+                        return Err(PsyParseError::UnknownError);
                     }
                 }
 
@@ -205,7 +213,7 @@ fn parse_camera(tree: &DataTree) -> Result<Camera, ()> {
                         focus_distances.push(fd);
                     } else {
                         // Found FocalDistance, but its contents is not in the right format
-                        return Err(());
+                        return Err(PsyParseError::UnknownError);
                     }
                 }
 
@@ -215,7 +223,7 @@ fn parse_camera(tree: &DataTree) -> Result<Camera, ()> {
                         aperture_radii.push(ar);
                     } else {
                         // Found ApertureRadius, but its contents is not in the right format
-                        return Err(());
+                        return Err(PsyParseError::UnknownError);
                     }
                 }
 
@@ -225,7 +233,7 @@ fn parse_camera(tree: &DataTree) -> Result<Camera, ()> {
                         mats.push(mat);
                     } else {
                         // Found Transform, but its contents is not in the right format
-                        return Err(());
+                        return Err(PsyParseError::UnknownError);
                     }
                 }
 
@@ -235,14 +243,14 @@ fn parse_camera(tree: &DataTree) -> Result<Camera, ()> {
 
         return Ok(Camera::new(mats, fovs, aperture_radii, focus_distances));
     } else {
-        return Err(());
+        return Err(PsyParseError::UnknownError);
     }
 }
 
 
 
 
-fn parse_world(tree: &DataTree) -> Result<(f32, f32, f32), ()> {
+fn parse_world(tree: &DataTree) -> Result<(f32, f32, f32), PsyParseError> {
     if tree.is_internal() {
         let mut found_background_color = false;
         let mut background_color = (0.0, 0.0, 0.0);
@@ -250,19 +258,19 @@ fn parse_world(tree: &DataTree) -> Result<(f32, f32, f32), ()> {
         // Parse background shader
         let bgs = {
             if tree.count_children_with_type_name("BackgroundShader") != 1 {
-                return Err(());
+                return Err(PsyParseError::UnknownError);
             }
             tree.get_first_child_with_type_name("BackgroundShader").unwrap()
         };
         let bgs_type = {
             if bgs.count_children_with_type_name("Type") != 1 {
-                return Err(());
+                return Err(PsyParseError::UnknownError);
             }
-            if let &DataTree::Leaf{contents, ..} = tree.get_first_child_with_type_name("Type")
-                                                       .unwrap() {
+            if let &DataTree::Leaf{contents, ..} = bgs.get_first_child_with_type_name("Type")
+                                                      .unwrap() {
                 contents.trim()
             } else {
-                return Err(());
+                return Err(PsyParseError::UnknownError);
             }
         };
         match bgs_type {
@@ -276,26 +284,26 @@ fn parse_world(tree: &DataTree) -> Result<(f32, f32, f32), ()> {
                         found_background_color = true;
                         background_color = color;
                     } else {
-                        return Err(());
+                        return Err(PsyParseError::UnknownError);
                     }
                 } else {
-                    return Err(());
+                    return Err(PsyParseError::UnknownError);
                 }
             }
 
-            _ => return Err(()),
+            _ => return Err(PsyParseError::UnknownError),
         }
 
         return Ok(background_color);
     } else {
-        return Err(());
+        return Err(PsyParseError::UnknownError);
     }
 }
 
 
 
 
-fn parse_matrix(contents: &str) -> Result<Matrix4x4, ()> {
+fn parse_matrix(contents: &str) -> Result<Matrix4x4, PsyParseError> {
     if let IResult::Done(_, ns) = closure!(terminated!(tuple!(ws_f32,
                                                               ws_f32,
                                                               ws_f32,
@@ -330,6 +338,6 @@ fn parse_matrix(contents: &str) -> Result<Matrix4x4, ()> {
                                              ns.14,
                                              ns.15));
     } else {
-        return Err(());
+        return Err(PsyParseError::UnknownError);
     }
 }

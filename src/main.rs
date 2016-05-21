@@ -36,7 +36,7 @@ use scene::Scene;
 use assembly::{AssemblyBuilder, Object};
 use renderer::Renderer;
 use surface::triangle_mesh::TriangleMesh;
-use parse::DataTree;
+use parse::{parse_scene, DataTree};
 
 // ----------------------------------------------------------------
 
@@ -81,76 +81,86 @@ fn main() {
         return;
     }
 
-    // =======================
-    // Print tree from psy file if passed as an argument.
-    // TODO: remove this, because it's for debugging
-    if let Some(fp) = args.flag_input {
+    // Parse data tree of scene file
+    let mut s = String::new();
+    let dt = if let Some(fp) = args.flag_input {
         let mut f = io::BufReader::new(File::open(fp).unwrap());
-        let mut s = String::new();
         let _ = f.read_to_string(&mut s);
-        let dt = DataTree::from_str(&s);
-        println!("{:#?}", dt);
-        return;
-    }
-    // =======================
+
+        DataTree::from_str(&s).unwrap()
+    } else {
+        panic!()
+    };
+
+
+    // Generate a scene of triangles
+    // let mesh = TriangleMesh::from_triangles(2, {
+    // let mut triangles = Vec::new();
+    // let xres = 32;
+    // let yres = 32;
+    // let xinc = 512.0 / (xres as f32);
+    // let yinc = 512.0 / (yres as f32);
+    // for x in 0..xres {
+    // for y in 0..yres {
+    // let i = y * xres + x;
+    // let cx = halton::sample(0, i) * 512.0;
+    // let cy = halton::sample(1, i) * 512.0;
+    // let cz = halton::sample(2, i) * 512.0;
+    // let cx = x as f32 * xinc;
+    // let cy = y as f32 * yinc;
+    // let cz = 1.0;
+    // triangles.push((Point::new(cx, cy, cz + 1.0),
+    // Point::new(cx + xinc, cy, cz + 1.1),
+    // Point::new(cx, cy + yinc, cz + 1.2)));
+    // triangles.push((Point::new(cx + 25.0, cy, cz + 1.0),
+    // Point::new(cx + 25.0 + xinc, cy, cz + 1.1),
+    // Point::new(cx + 25.0, cy + yinc, cz + 1.2)));
+    // }
+    // }
+    // triangles
+    // });
+    //
+    // let cam = Camera::new(vec![Matrix4x4::from_location(Point::new(256.0, 256.0, -1024.0))],
+    // vec![0.785],
+    // vec![20.0],
+    // vec![1026.0]);
+    //
+    // let mut assembly_b = AssemblyBuilder::new();
+    // assembly_b.add_object("yar", Object::Surface(Box::new(mesh)));
+    // assembly_b.add_object_instance("yar",
+    // Some(&[Matrix4x4::from_location(Point::new(25.0, 0.0, 0.0))]));
+    // let assembly = assembly_b.build();
+    //
+    // let scene = Scene {
+    // name: None,
+    // background_color: (0.0, 0.0, 0.0),
+    // camera: cam,
+    // root: assembly,
+    // };
+    //
+    // let r = Renderer {
+    // output_file: args.arg_imgpath.clone(),
+    // resolution: (512, 512),
+    // spp: samples_per_pixel as usize,
+    // scene: scene,
+    // };
+    //
+    println!("Scene built.");
 
     let samples_per_pixel = args.flag_spp.unwrap_or_else(|| 16);
     println!("Sample count: {}", samples_per_pixel);
 
     println!("Ray size: {} bytes", mem::size_of::<Ray>());
 
-    // Generate a scene of triangles
-    let mesh = TriangleMesh::from_triangles(2, {
-        let mut triangles = Vec::new();
-        let xres = 32;
-        let yres = 32;
-        let xinc = 512.0 / (xres as f32);
-        let yinc = 512.0 / (yres as f32);
-        for x in 0..xres {
-            for y in 0..yres {
-                let i = y * xres + x;
-                let cx = halton::sample(0, i) * 512.0;
-                let cy = halton::sample(1, i) * 512.0;
-                let cz = halton::sample(2, i) * 512.0;
-                // let cx = x as f32 * xinc;
-                // let cy = y as f32 * yinc;
-                // let cz = 1.0;
-                triangles.push((Point::new(cx, cy, cz + 1.0),
-                                Point::new(cx + xinc, cy, cz + 1.1),
-                                Point::new(cx, cy + yinc, cz + 1.2)));
-                triangles.push((Point::new(cx + 25.0, cy, cz + 1.0),
-                                Point::new(cx + 25.0 + xinc, cy, cz + 1.1),
-                                Point::new(cx + 25.0, cy + yinc, cz + 1.2)));
+    // Iterate through scenes and render them
+    if let DataTree::Internal{ref children, ..} = dt {
+        for child in children {
+            if child.type_name() == "Scene" {
+                println!("Parsing scene...");
+                let r = parse_scene(child).unwrap();
+                println!("Rendering scene...");
+                r.render();
             }
         }
-        triangles
-    });
-    println!("Scene built.");
-
-    let cam = Camera::new(vec![Matrix4x4::from_location(Point::new(256.0, 256.0, -1024.0))],
-                          vec![0.785],
-                          vec![20.0],
-                          vec![1026.0]);
-
-    let mut assembly_b = AssemblyBuilder::new();
-    assembly_b.add_object("yar", Object::Surface(Box::new(mesh)));
-    assembly_b.add_object_instance("yar",
-                                   Some(&[Matrix4x4::from_location(Point::new(25.0, 0.0, 0.0))]));
-    let assembly = assembly_b.build();
-
-    let scene = Scene {
-        name: None,
-        background_color: (0.0, 0.0, 0.0),
-        camera: cam,
-        root: assembly,
-    };
-
-    let r = Renderer {
-        output_file: args.arg_imgpath.clone(),
-        resolution: (512, 512),
-        spp: samples_per_pixel as usize,
-        scene: scene,
-    };
-
-    r.render();
+    }
 }

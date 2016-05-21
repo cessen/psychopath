@@ -178,6 +178,10 @@ impl BVH {
     pub fn traverse<T, F>(&self, rays: &mut [Ray], objects: &[T], mut obj_ray_test: F)
         where F: FnMut(&T, &mut [Ray])
     {
+        if self.nodes.len() == 0 {
+            return;
+        }
+
         let mut i_stack = [0; 65];
         let mut ray_i_stack = [rays.len(); 65];
         let mut stack_ptr = 1;
