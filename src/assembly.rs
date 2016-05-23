@@ -60,43 +60,65 @@ impl AssemblyBuilder {
     }
 
     pub fn add_object(&mut self, name: &str, obj: Object) {
+        // Make sure the name hasn't already been used.
+        if self.name_exists(name) {
+            panic!("Attempted to add object to assembly with a name that already exists.");
+        }
+
+        // Add object
         self.object_map.insert(name.to_string(), self.objects.len());
         self.objects.push(obj);
     }
 
     pub fn add_assembly(&mut self, name: &str, asmb: Assembly) {
+        // Make sure the name hasn't already been used.
+        if self.name_exists(name) {
+            panic!("Attempted to add assembly to another assembly with a name that already \
+                    exists.");
+        }
+
+        // Add assembly
         self.assembly_map.insert(name.to_string(), self.assemblies.len());
         self.assemblies.push(asmb);
     }
 
-    pub fn add_object_instance(&mut self, name: &str, xforms: Option<&[Matrix4x4]>) {
-        let instance = Instance {
-            instance_type: InstanceType::Object,
-            data_index: self.object_map[name],
-            id: self.instances.len(),
-            transform_indices: xforms.map(|xf| (self.xforms.len(), self.xforms.len() + xf.len())),
+    pub fn add_instance(&mut self, name: &str, xforms: Option<&[Matrix4x4]>) {
+        // Make sure name exists
+        if !self.name_exists(name) {
+            panic!("Attempted to add instance with a name that doesn't exist.");
+        }
+
+        // Create instance
+        let instance = if self.object_map.contains_key(name) {
+            Instance {
+                instance_type: InstanceType::Object,
+                data_index: self.object_map[name],
+                id: self.instances.len(),
+                transform_indices: xforms.map(|xf| {
+                    (self.xforms.len(), self.xforms.len() + xf.len())
+                }),
+            }
+        } else {
+            Instance {
+                instance_type: InstanceType::Assembly,
+                data_index: self.assembly_map[name],
+                id: self.instances.len(),
+                transform_indices: xforms.map(|xf| {
+                    (self.xforms.len(), self.xforms.len() + xf.len())
+                }),
+            }
         };
 
         self.instances.push(instance);
 
+        // Store transforms
         if let Some(xf) = xforms {
             self.xforms.extend(xf);
         }
     }
 
-    pub fn add_assembly_instance(&mut self, name: &str, xforms: Option<&[Matrix4x4]>) {
-        let instance = Instance {
-            instance_type: InstanceType::Assembly,
-            data_index: self.object_map[name],
-            id: self.instances.len(),
-            transform_indices: xforms.map(|xf| (self.xforms.len(), self.xforms.len() + xf.len())),
-        };
-
-        self.instances.push(instance);
-
-        if let Some(xf) = xforms {
-            self.xforms.extend(xf);
-        }
+    pub fn name_exists(&self, name: &str) -> bool {
+        self.object_map.contains_key(name) || self.assembly_map.contains_key(name)
     }
 
     pub fn build(mut self) -> Assembly {

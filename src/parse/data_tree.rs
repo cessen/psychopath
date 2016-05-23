@@ -2,6 +2,8 @@
 
 use std::result::Result;
 use std::cmp::Eq;
+use std::iter::{Iterator, Filter};
+use std::slice;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum DataTree<'a> {
@@ -70,50 +72,57 @@ impl<'a> DataTree<'a> {
         }
     }
 
-    pub fn get_first_child_with_type_name(&'a self, type_name: &str) -> Option<&'a DataTree> {
-        if let &DataTree::Internal { ref children, .. } = self {
-            for child in children.iter() {
-                match child {
-                    &DataTree::Internal { type_name: tn, .. } => {
-                        if tn == type_name {
-                            return Some(child);
-                        }
-                    }
-
-                    &DataTree::Leaf { type_name: tn, .. } => {
-                        if tn == type_name {
-                            return Some(child);
-                        }
-                    }
-                }
-            }
-            return None;
+    pub fn iter_children(&'a self) -> slice::Iter<'a, DataTree<'a>> {
+        if let &DataTree::Internal{ref children, ..} = self {
+            children.iter()
         } else {
-            return None;
+            [].iter()
         }
     }
 
-    pub fn count_children_with_type_name(&self, type_name: &str) -> usize {
-        if let &DataTree::Internal { ref children, .. } = self {
-            let mut count = 0;
-            for child in children.iter() {
-                match child {
-                    &DataTree::Internal { type_name: tn, .. } => {
-                        if tn == type_name {
-                            count += 1;
-                        }
-                    }
-
-                    &DataTree::Leaf { type_name: tn, .. } => {
-                        if tn == type_name {
-                            count += 1;
-                        }
-                    }
-                }
+    pub fn iter_children_with_type(&'a self, type_name: &'static str) -> DataTreeFilterIter<'a> {
+        if let &DataTree::Internal{ref children, ..} = self {
+            DataTreeFilterIter {
+                type_name: type_name,
+                iter: children.iter(),
             }
-            return count;
         } else {
-            return 0;
+            DataTreeFilterIter {
+                type_name: type_name,
+                iter: [].iter(),
+            }
+        }
+    }
+
+    pub fn iter_internal_children_with_type(&'a self,
+                                            type_name: &'static str)
+                                            -> DataTreeFilterInternalIter<'a> {
+        if let &DataTree::Internal{ref children, ..} = self {
+            DataTreeFilterInternalIter {
+                type_name: type_name,
+                iter: children.iter(),
+            }
+        } else {
+            DataTreeFilterInternalIter {
+                type_name: type_name,
+                iter: [].iter(),
+            }
+        }
+    }
+
+    pub fn iter_leaf_children_with_type(&'a self,
+                                        type_name: &'static str)
+                                        -> DataTreeFilterLeafIter<'a> {
+        if let &DataTree::Internal{ref children, ..} = self {
+            DataTreeFilterLeafIter {
+                type_name: type_name,
+                iter: children.iter(),
+            }
+        } else {
+            DataTreeFilterLeafIter {
+                type_name: type_name,
+                iter: [].iter(),
+            }
         }
     }
 
@@ -133,6 +142,103 @@ impl<'a> DataTree<'a> {
         }
     }
 }
+
+
+/// An iterator over the children of a DataTree node that filters out the
+/// children not matching a specified type name.
+pub struct DataTreeFilterIter<'a> {
+    type_name: &'a str,
+    iter: slice::Iter<'a, DataTree<'a>>,
+}
+
+impl<'a> Iterator for DataTreeFilterIter<'a> {
+    type Item = &'a DataTree<'a>;
+
+    fn next(&mut self) -> Option<&'a DataTree<'a>> {
+        loop {
+            if let Some(dt) = self.iter.next() {
+                if dt.type_name() == self.type_name {
+                    return Some(dt);
+                } else {
+                    continue;
+                }
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+
+/// An iterator over the children of a DataTree node that filters out the
+/// children that aren't internal nodes and that don't match a specified
+/// type name.
+pub struct DataTreeFilterInternalIter<'a> {
+    type_name: &'a str,
+    iter: slice::Iter<'a, DataTree<'a>>,
+}
+
+impl<'a> Iterator for DataTreeFilterInternalIter<'a> {
+    type Item = (&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>);
+
+    fn next(&mut self) -> Option<(&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>)> {
+        loop {
+            match self.iter.next() {            
+                Some(&DataTree::Internal{type_name: type_name, ident: ident, children: ref children}) => {
+                    if type_name == self.type_name {
+                        return Some((type_name, ident, children));
+                    } else {
+                        continue;
+                    }
+                }
+
+                Some(&DataTree::Leaf{..}) => {
+                    continue;
+                }
+
+                None => {
+                    return None;
+                }
+            }
+        }
+    }
+}
+
+
+/// An iterator over the children of a DataTree node that filters out the
+/// children that aren't internal nodes and that don't match a specified
+/// type name.
+pub struct DataTreeFilterLeafIter<'a> {
+    type_name: &'a str,
+    iter: slice::Iter<'a, DataTree<'a>>,
+}
+
+impl<'a> Iterator for DataTreeFilterLeafIter<'a> {
+    type Item = (&'a str, &'a str);
+
+    fn next(&mut self) -> Option<(&'a str, &'a str)> {
+        loop {
+            match self.iter.next() {
+                Some(&DataTree::Internal{..}) => {
+                    continue;
+                }
+
+                Some(&DataTree::Leaf{type_name: type_name, contents: contents}) => {
+                    if type_name == self.type_name {
+                        return Some((type_name, contents));
+                    } else {
+                        continue;
+                    }
+                }
+
+                None => {
+                    return None;
+                }
+            }
+        }
+    }
+}
+
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum ParseError {
@@ -536,5 +642,50 @@ mod tests {
         assert_eq!(t, "Thing");
         assert_eq!(i, None);
         assert_eq!(c.len(), 0);
+    }
+
+    #[test]
+    fn iter_1() {
+        let dt = DataTree::from_str(r#"
+            A {}
+            B {}
+            A []
+            A {}
+            B {}
+        "#)
+                     .unwrap();
+
+        let mut i = dt.iter_children_with_type("A");
+        assert_eq!(i.count(), 3);
+    }
+
+    #[test]
+    fn iter_2() {
+        let dt = DataTree::from_str(r#"
+            A {}
+            B {}
+            A []
+            A {}
+            B {}
+        "#)
+                     .unwrap();
+
+        let mut i = dt.iter_internal_children_with_type("A");
+        assert_eq!(i.count(), 2);
+    }
+
+    #[test]
+    fn iter_3() {
+        let dt = DataTree::from_str(r#"
+            A []
+            B {}
+            A {}
+            A []
+            B {}
+        "#)
+                     .unwrap();
+
+        let mut i = dt.iter_leaf_children_with_type("A");
+        assert_eq!(i.count(), 2);
     }
 }

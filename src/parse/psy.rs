@@ -25,45 +25,47 @@ pub enum PsyParseError {
 /// a renderer.
 pub fn parse_scene(tree: &DataTree) -> Result<Renderer, PsyParseError> {
     // Verify we have the right number of each section
-    if tree.count_children_with_type_name("Output") != 1 {
-        let count = tree.count_children_with_type_name("Output");
+    if tree.iter_children_with_type("Output").count() != 1 {
+        let count = tree.iter_children_with_type("Output").count();
         return Err(PsyParseError::SectionWrongCount("Output", count));
     }
-    if tree.count_children_with_type_name("RenderSettings") != 1 {
-        let count = tree.count_children_with_type_name("RenderSettings");
+    if tree.iter_children_with_type("RenderSettings").count() != 1 {
+        let count = tree.iter_children_with_type("RenderSettings").count();
         return Err(PsyParseError::SectionWrongCount("RenderSettings", count));
     }
-    if tree.count_children_with_type_name("Camera") != 1 {
-        let count = tree.count_children_with_type_name("Camera");
+    if tree.iter_children_with_type("Camera").count() != 1 {
+        let count = tree.iter_children_with_type("Camera").count();
         return Err(PsyParseError::SectionWrongCount("Camera", count));
     }
-    if tree.count_children_with_type_name("World") != 1 {
-        let count = tree.count_children_with_type_name("World");
+    if tree.iter_children_with_type("World").count() != 1 {
+        let count = tree.iter_children_with_type("World").count();
         return Err(PsyParseError::SectionWrongCount("World", count));
     }
-    if tree.count_children_with_type_name("Assembly") != 1 {
-        let count = tree.count_children_with_type_name("Assembly");
+    if tree.iter_children_with_type("Assembly").count() != 1 {
+        let count = tree.iter_children_with_type("Assembly").count();
         return Err(PsyParseError::SectionWrongCount("Root Assembly", count));
     }
 
     // Parse output info
-    let output_info = try!(parse_output_info(tree.get_first_child_with_type_name("Output")
+    let output_info = try!(parse_output_info(tree.iter_children_with_type("Output")
+                                                 .nth(0)
                                                  .unwrap()));
 
     // Parse render settings
-    let render_settings = try!(parse_render_settings(tree.get_first_child_with_type_name("Rende\
+    let render_settings = try!(parse_render_settings(tree.iter_children_with_type("Rende\
                                                                                           rSett\
                                                                                           ings")
+                                                         .nth(0)
                                                          .unwrap()));
 
     // Parse camera
-    let camera = try!(parse_camera(tree.get_first_child_with_type_name("Camera").unwrap()));
+    let camera = try!(parse_camera(tree.iter_children_with_type("Camera").nth(0).unwrap()));
 
     // Parse world
-    let world = try!(parse_world(tree.get_first_child_with_type_name("World").unwrap()));
+    let world = try!(parse_world(tree.iter_children_with_type("World").nth(0).unwrap()));
 
     // Parse root scene assembly
-    let assembly = try!(parse_assembly(tree.get_first_child_with_type_name("Assembly").unwrap()));
+    let assembly = try!(parse_assembly(tree.iter_children_with_type("Assembly").nth(0).unwrap()));
 
     // Put scene together
     let scene_name = if let &DataTree::Internal{ident, ..} = tree {
@@ -257,16 +259,17 @@ fn parse_world(tree: &DataTree) -> Result<(f32, f32, f32), PsyParseError> {
 
         // Parse background shader
         let bgs = {
-            if tree.count_children_with_type_name("BackgroundShader") != 1 {
+            if tree.iter_children_with_type("BackgroundShader").count() != 1 {
                 return Err(PsyParseError::UnknownError);
             }
-            tree.get_first_child_with_type_name("BackgroundShader").unwrap()
+            tree.iter_children_with_type("BackgroundShader").nth(0).unwrap()
         };
         let bgs_type = {
-            if bgs.count_children_with_type_name("Type") != 1 {
+            if bgs.iter_children_with_type("Type").count() != 1 {
                 return Err(PsyParseError::UnknownError);
             }
-            if let &DataTree::Leaf{contents, ..} = bgs.get_first_child_with_type_name("Type")
+            if let &DataTree::Leaf{contents, ..} = bgs.iter_children_with_type("Type")
+                                                      .nth(0)
                                                       .unwrap() {
                 contents.trim()
             } else {
@@ -275,8 +278,8 @@ fn parse_world(tree: &DataTree) -> Result<(f32, f32, f32), PsyParseError> {
         };
         match bgs_type {
             "Color" => {
-                if let Some(&DataTree::Leaf{contents, ..}) =
-                       bgs.get_first_child_with_type_name("Color") {
+                if let Some(&DataTree::Leaf{contents, ..}) = bgs.iter_children_with_type("Color")
+                                                                .nth(0) {
                     if let IResult::Done(_, color) = closure!(tuple!(ws_f32,
                                                                      ws_f32,
                                                                      ws_f32))(contents.trim()
@@ -303,7 +306,7 @@ fn parse_world(tree: &DataTree) -> Result<(f32, f32, f32), PsyParseError> {
 
 
 
-fn parse_matrix(contents: &str) -> Result<Matrix4x4, PsyParseError> {
+pub fn parse_matrix(contents: &str) -> Result<Matrix4x4, PsyParseError> {
     if let IResult::Done(_, ns) = closure!(terminated!(tuple!(ws_f32,
                                                               ws_f32,
                                                               ws_f32,

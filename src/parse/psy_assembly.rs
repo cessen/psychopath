@@ -7,7 +7,7 @@ use nom::IResult;
 
 use super::DataTree;
 use super::basics::{ws_u32, ws_f32};
-use super::psy::PsyParseError;
+use super::psy::{parse_matrix, PsyParseError};
 
 use math::Matrix4x4;
 use camera::Camera;
@@ -17,8 +17,8 @@ use assembly::{Assembly, AssemblyBuilder};
 pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
     let mut builder = AssemblyBuilder::new();
 
-    if let &DataTree::Internal{ref children, ..} = tree {
-        for child in children {
+    if tree.is_internal() {
+        for child in tree.iter_children() {
             match child.type_name() {
                 // Sub-Assembly
                 "Assembly" => {
@@ -26,7 +26,46 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                         builder.add_assembly(ident, try!(parse_assembly(&child)));
                     } else {
                         // TODO: error condition of some kind, because no ident
+                        panic!();
                     }
+                }
+
+                // Instance
+                "Instance" => {
+                    // Pre-conditions
+                    if !child.is_internal() {
+                        // TODO: proper error
+                        panic!();
+                    }
+
+                    // Get data name
+                    let name = {
+                        if child.iter_leaf_children_with_type("Data").count() != 1 {
+                            // TODO: proper error message
+                            panic!();
+                        }
+                        child.iter_leaf_children_with_type("Data").nth(0).unwrap().1
+                    };
+
+                    // Get xforms
+                    let mut xforms = Vec::new();
+                    for (_, contents) in child.iter_leaf_children_with_type("Transform") {
+                        xforms.push(try!(parse_matrix(contents)));
+                    }
+
+                    // Add instance
+                    if builder.name_exists(name) {
+                        builder.add_instance(name, Some(&xforms));
+                    } else {
+                        // TODO: proper error message
+                        panic!("Attempted to add instance for data with a name that doesn't \
+                                exist.");
+                    }
+                }
+
+                // MeshSurface
+                "MeshSurface" => {
+                    // TODO: call mesh surface parsing function once it's written
                 }
 
                 _ => {
@@ -68,34 +107,6 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                 //     assembly->add_object(child.name, parse_rectangle_light(child));
                 // }
                 //
-                // // Instance
-                // else if (child.type == "Instance") {
-                //     // Parse
-                //     std::string name = "";
-                //     std::vector<Transform> xforms;
-                //     const SurfaceShader *shader = nullptr;
-                //     for (const auto& child2: child.children) {
-                //         if (child2.type == "Transform") {
-                //             xforms.emplace_back(parse_matrix(child2.leaf_contents));
-                //         } else if (child2.type == "Data") {
-                //             name = child2.leaf_contents;
-                //         } else if (child2.type == "SurfaceShaderBind") {
-                //             shader = assembly->get_surface_shader(child2.leaf_contents);
-                //             if (shader == nullptr) {
-                //                 std::cout << "ERROR: attempted to bind surface shader that doesn't exist." << std::endl;
-                //             }
-                //         }
-                //     }
-                //
-                //     // Add instance
-                //     if (assembly->object_map.count(name) != 0) {
-                //         assembly->create_object_instance(name, xforms, shader);
-                //     } else if (assembly->assembly_map.count(name) != 0) {
-                //         assembly->create_assembly_instance(name, xforms, shader);
-                //     } else {
-                //         std::cout << "ERROR: attempted to add instace for data that doesn't exist." << std::endl;
-                //     }
-                // }
             }
         }
     } else {
