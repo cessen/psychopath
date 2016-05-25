@@ -2,7 +2,7 @@
 
 use std::result::Result;
 use std::cmp::Eq;
-use std::iter::{Iterator, Filter};
+use std::iter::Iterator;
 use std::slice;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -184,7 +184,7 @@ impl<'a> Iterator for DataTreeFilterInternalIter<'a> {
     fn next(&mut self) -> Option<(&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>)> {
         loop {
             match self.iter.next() {            
-                Some(&DataTree::Internal{type_name: type_name, ident: ident, children: ref children}) => {
+                Some(&DataTree::Internal{type_name, ident, ref children}) => {
                     if type_name == self.type_name {
                         return Some((type_name, ident, children));
                     } else {
@@ -223,7 +223,7 @@ impl<'a> Iterator for DataTreeFilterLeafIter<'a> {
                     continue;
                 }
 
-                Some(&DataTree::Leaf{type_name: type_name, contents: contents}) => {
+                Some(&DataTree::Leaf{type_name, contents}) => {
                     if type_name == self.type_name {
                         return Some((type_name, contents));
                     } else {

@@ -3,12 +3,10 @@
 use std::path::Path;
 
 use tracer::Tracer;
-use camera::Camera;
 use halton;
 use math::fast_logit;
 use image::Image;
 use surface;
-use surface::Surface;
 use scene::Scene;
 
 #[derive(Debug)]

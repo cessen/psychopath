@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use math::Matrix4x4;
 use bvh::BVH;
 use boundable::Boundable;
-use surface::{Surface, SurfaceIntersection};
-use ray::Ray;
+use surface::Surface;
 use bbox::{BBox, transform_bbox_slice_from};
 
 

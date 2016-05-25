@@ -29,13 +29,7 @@ use std::fs::File;
 
 use docopt::Docopt;
 
-use math::{Point, Matrix4x4};
 use ray::Ray;
-use camera::Camera;
-use scene::Scene;
-use assembly::{AssemblyBuilder, Object};
-use renderer::Renderer;
-use surface::triangle_mesh::TriangleMesh;
 use parse::{parse_scene, DataTree};
 
 // ----------------------------------------------------------------

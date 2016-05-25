@@ -10,8 +10,10 @@ use nom::IResult::*;
 // Parsers for numbers surrounded by whitespace
 named!(pub ws_u32<u32>, delimited!(opt!(multispace), u32_utf8, opt!(multispace)));
 named!(pub ws_u64<u64>, delimited!(opt!(multispace), u64_utf8, opt!(multispace)));
+named!(pub ws_usize<usize>, delimited!(opt!(multispace), usize_utf8, opt!(multispace)));
 named!(pub ws_i32<i32>, delimited!(opt!(multispace), i32_utf8, opt!(multispace)));
 named!(pub ws_i64<i64>, delimited!(opt!(multispace), i64_utf8, opt!(multispace)));
+named!(pub ws_isize<isize>, delimited!(opt!(multispace), isize_utf8, opt!(multispace)));
 named!(pub ws_f32<f32>, delimited!(opt!(multispace), f32_utf8, opt!(multispace)));
 named!(pub ws_f64<f64>, delimited!(opt!(multispace), f64_utf8, opt!(multispace)));
 
@@ -48,6 +50,22 @@ named!(pub i64_utf8<i64>, chain!(
             match sign {
                 Some(s) if s == '-' => -str::from_utf8(bytes).unwrap().parse::<i64>().unwrap(),
                 _ => str::from_utf8(bytes).unwrap().parse::<i64>().unwrap(),
+            }
+        }
+));
+
+named!(pub usize_utf8<usize>, chain!(
+        bytes: digit,
+        || { str::from_utf8(bytes).unwrap().parse::<usize>().unwrap() }
+));
+
+named!(pub isize_utf8<isize>, chain!(
+        sign: one_of!("-+")? ~
+        bytes: digit,
+        || {
+            match sign {
+                Some(s) if s == '-' => -str::from_utf8(bytes).unwrap().parse::<isize>().unwrap(),
+                _ => str::from_utf8(bytes).unwrap().parse::<isize>().unwrap(),
             }
         }
 ));
