@@ -107,9 +107,23 @@ fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
         for child in children {
             match child {
                 &DataTree::Leaf { type_name, contents } if type_name == "Path" => {
-                    // TODO: proper string escaping and quotes stripping
+                    // Trim and validate
+                    let tc = contents.trim();
+                    if tc.chars().count() < 2 {
+                        // TODO: proper error
+                        panic!();
+                    }
+                    if tc.chars().nth(0).unwrap() != '"' || tc.chars().last().unwrap() != '"' {
+                        // TODO: proper error
+                        panic!();
+                    }
+                    let len = tc.len();
+                    let tc = &tc[1..len - 1];
+
+                    // Parse
+                    // TODO: proper string escaping
                     found_path = true;
-                    path = contents.to_string();
+                    path = tc.to_string();
                 }
 
                 _ => {}
@@ -325,20 +339,20 @@ pub fn parse_matrix(contents: &str) -> Result<Matrix4x4, PsyParseError> {
                                                               ws_f32),
                                                        nom::eof))(contents.as_bytes()) {
         return Ok(Matrix4x4::new_from_values(ns.0,
-                                             ns.1,
-                                             ns.2,
-                                             ns.3,
                                              ns.4,
-                                             ns.5,
-                                             ns.6,
-                                             ns.7,
                                              ns.8,
-                                             ns.9,
-                                             ns.10,
-                                             ns.11,
                                              ns.12,
+                                             ns.1,
+                                             ns.5,
+                                             ns.9,
                                              ns.13,
+                                             ns.2,
+                                             ns.6,
+                                             ns.10,
                                              ns.14,
+                                             ns.3,
+                                             ns.7,
+                                             ns.11,
                                              ns.15));
     } else {
         return Err(PsyParseError::UnknownError);
