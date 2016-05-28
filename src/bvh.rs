@@ -47,9 +47,11 @@ impl BVH {
         bvh.bounds_cache.clear();
         bvh.bounds_cache.shrink_to_fit();
 
-        println!("BVH Depth: {}", bvh.depth);
-
         bvh
+    }
+
+    pub fn tree_depth(&self) -> usize {
+        self.depth
     }
 
     fn acc_bounds<'a, T, F>(&mut self, objects1: &mut [T], bounder: &F)

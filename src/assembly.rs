@@ -122,8 +122,6 @@ impl AssemblyBuilder {
 
     pub fn build(mut self) -> Assembly {
         // Shrink storage to minimum.
-        // However, don't shrink shader storage, because there are pointers to
-        // that data that could get invalidated.
         self.instances.shrink_to_fit();
         self.xforms.shrink_to_fit();
         self.objects.shrink_to_fit();
@@ -134,6 +132,8 @@ impl AssemblyBuilder {
         let object_accel = BVH::from_objects(&mut self.instances[..],
                                              1,
                                              |inst| &bbs[bis[inst.id]..bis[inst.id + 1]]);
+
+        println!("Assembly BVH Depth: {}", object_accel.tree_depth());
 
         Assembly {
             instances: self.instances,

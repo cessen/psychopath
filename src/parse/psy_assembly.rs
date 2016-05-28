@@ -60,7 +60,10 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                 // MeshSurface
                 "MeshSurface" => {
                     if let &DataTree::Internal {ident: Some(ident), ..} = child {
-                        builder.add_object(ident, Object::Surface(Box::new(try!(parse_mesh_surface(&child)))));
+                        builder.add_object(
+                            ident,
+                            Object::Surface(Box::new(try!(parse_mesh_surface(&child))))
+                        );
                     } else {
                         // TODO: error condition of some kind, because no ident
                         panic!();

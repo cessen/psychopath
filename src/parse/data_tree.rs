@@ -183,7 +183,7 @@ impl<'a> Iterator for DataTreeFilterInternalIter<'a> {
 
     fn next(&mut self) -> Option<(&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>)> {
         loop {
-            match self.iter.next() {            
+            match self.iter.next() {
                 Some(&DataTree::Internal{type_name, ident, ref children}) => {
                     if type_name == self.type_name {
                         return Some((type_name, ident, children));
