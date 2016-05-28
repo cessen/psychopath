@@ -198,6 +198,33 @@ mod test {
     }
 
     #[test]
+    fn ws_usize_1() {
+        assert_eq!(ws_usize(b"42"), Done(&b""[..], 42));
+        assert_eq!(ws_usize(b"     42"), Done(&b""[..], 42));
+        assert_eq!(ws_usize(b"42   "), Done(&b""[..], 42));
+        assert_eq!(ws_usize(b"     42"), Done(&b""[..], 42));
+        assert_eq!(ws_usize(b"     42   53"), Done(&b"53"[..], 42));
+    }
+
+    #[test]
+    fn ws_isize_1() {
+        assert_eq!(ws_isize(b"42"), Done(&b""[..], 42));
+        assert_eq!(ws_isize(b"     42"), Done(&b""[..], 42));
+        assert_eq!(ws_isize(b"42   "), Done(&b""[..], 42));
+        assert_eq!(ws_isize(b"     42"), Done(&b""[..], 42));
+        assert_eq!(ws_isize(b"     42   53"), Done(&b"53"[..], 42));
+    }
+
+    #[test]
+    fn ws_isize_2() {
+        assert_eq!(ws_isize(b"-42"), Done(&b""[..], -42));
+        assert_eq!(ws_isize(b"     -42"), Done(&b""[..], -42));
+        assert_eq!(ws_isize(b"-42   "), Done(&b""[..], -42));
+        assert_eq!(ws_isize(b"     -42   "), Done(&b""[..], -42));
+        assert_eq!(ws_isize(b"     -42   53"), Done(&b"53"[..], -42));
+    }
+
+    #[test]
     fn ws_f32_1() {
         assert_eq!(ws_f32(b"42"), Done(&b""[..], 42.0));
         assert_eq!(ws_f32(b"     42"), Done(&b""[..], 42.0));

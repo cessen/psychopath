@@ -4,8 +4,9 @@ use std::result::Result;
 
 use super::DataTree;
 use super::psy::{parse_matrix, PsyParseError};
+use super::psy_mesh_surface::parse_mesh_surface;
 
-use assembly::{Assembly, AssemblyBuilder};
+use assembly::{Assembly, AssemblyBuilder, Object};
 
 pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
     let mut builder = AssemblyBuilder::new();
@@ -58,7 +59,12 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
 
                 // MeshSurface
                 "MeshSurface" => {
-                    // TODO: call mesh surface parsing function once it's written
+                    if let &DataTree::Internal {ident: Some(ident), ..} = child {
+                        builder.add_object(ident, Object::Surface(Box::new(try!(parse_mesh_surface(&child)))));
+                    } else {
+                        // TODO: error condition of some kind, because no ident
+                        panic!();
+                    }
                 }
 
                 _ => {
