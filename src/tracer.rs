@@ -11,8 +11,7 @@ use surface::SurfaceIntersection;
 pub struct Tracer<'a> {
     root: &'a Assembly,
     rays: UnsafeCell<Vec<Ray>>, // Should only be used from trace(), not any other methods
-    xform_stack: Vec<Matrix4x4>,
-    xform_stack_indices: Vec<usize>,
+    xform_stack: TransformStack,
     isects: Vec<SurfaceIntersection>,
 }
 
@@ -21,8 +20,7 @@ impl<'a> Tracer<'a> {
         Tracer {
             root: assembly,
             rays: UnsafeCell::new(Vec::new()),
-            xform_stack: Vec::new(),
-            xform_stack_indices: vec![0],
+            xform_stack: TransformStack::new(),
             isects: Vec::new(),
         }
     }
@@ -63,23 +61,10 @@ impl<'a> Tracer<'a> {
             // Transform rays if needed
             if let Some((xstart, xend)) = inst.transform_indices {
                 // Push transforms to stack
-                let mut combined = Vec::new();
-                if self.xform_stack.len() == 0 {
-                    self.xform_stack.extend(&assembly.xforms[xstart..xend]);
-                } else {
-                    let x2start = self.xform_stack_indices[self.xform_stack_indices.len() - 2];
-                    let x2end = self.xform_stack_indices[self.xform_stack_indices.len() - 1];
-                    multiply_matrix_slices(&self.xform_stack[x2start..x2end],
-                                           &assembly.xforms[xstart..xend],
-                                           &mut combined);
-                    self.xform_stack.extend(&combined);
-                }
-                self.xform_stack_indices.push(self.xform_stack.len());
+                self.xform_stack.push(&assembly.xforms[xstart..xend]);
 
                 // Do transforms
-                let xstart = self.xform_stack_indices[self.xform_stack_indices.len() - 2];
-                let xend = self.xform_stack_indices[self.xform_stack_indices.len() - 1];
-                let xforms = &self.xform_stack[xstart..xend];
+                let xforms = self.xform_stack.top();
                 for ray in &mut rs[..] {
                     let id = ray.id;
                     let t = ray.time;
@@ -102,17 +87,11 @@ impl<'a> Tracer<'a> {
             // Un-transform rays if needed
             if let Some(_) = inst.transform_indices {
                 // Pop transforms off stack
-                let xstart = self.xform_stack_indices[self.xform_stack_indices.len() - 2];
-                let xend = self.xform_stack_indices[self.xform_stack_indices.len() - 1];
-                let l = self.xform_stack.len();
-                self.xform_stack.resize(l - (xend - xstart), Matrix4x4::new());
-                self.xform_stack_indices.pop();
+                self.xform_stack.pop();
 
                 // Undo transforms
-                if self.xform_stack.len() > 0 {
-                    let xstart = self.xform_stack_indices[self.xform_stack_indices.len() - 2];
-                    let xend = self.xform_stack_indices[self.xform_stack_indices.len() - 1];
-                    let xforms = &self.xform_stack[xstart..xend];
+                let xforms = self.xform_stack.top();
+                if xforms.len() > 0 {
                     for ray in &mut rs[..] {
                         let id = ray.id;
                         let t = ray.time;
@@ -136,5 +115,79 @@ impl<'a> Tracer<'a> {
                 surface.intersect_rays(rays, &mut self.isects);
             }
         }
+    }
+}
+
+
+struct TransformStack {
+    stack: Vec<Matrix4x4>,
+    stack_indices: Vec<usize>,
+    scratch_space: Vec<Matrix4x4>,
+}
+
+impl TransformStack {
+    fn new() -> TransformStack {
+        let mut ts = TransformStack {
+            stack: Vec::new(),
+            stack_indices: Vec::new(),
+            scratch_space: Vec::new(),
+        };
+
+        ts.stack_indices.push(0);
+        ts.stack_indices.push(0);
+
+        ts
+    }
+
+    fn with_capacity(capacity: usize) -> TransformStack {
+        let mut ts = TransformStack {
+            stack: Vec::with_capacity(capacity),
+            stack_indices: Vec::with_capacity(capacity),
+            scratch_space: Vec::with_capacity(capacity),
+        };
+
+        ts.stack_indices.push(0);
+        ts.stack_indices.push(0);
+
+        ts
+    }
+
+    fn push(&mut self, xforms: &[Matrix4x4]) {
+        assert!(xforms.len() > 0);
+
+        if self.stack.len() == 0 {
+            self.stack.extend(xforms);
+        } else {
+            let sil = self.stack_indices.len();
+            let i1 = self.stack_indices[sil - 2];
+            let i2 = self.stack_indices[sil - 1];
+
+            self.scratch_space.clear();
+            multiply_matrix_slices(&self.stack[i1..i2], xforms, &mut self.scratch_space);
+
+            self.stack.extend(&self.scratch_space);
+        }
+
+        self.stack_indices.push(self.stack.len());
+    }
+
+    fn pop(&mut self) {
+        assert!(self.stack_indices.len() > 1);
+
+        let sl = self.stack.len();
+        let sil = self.stack_indices.len();
+        let i1 = self.stack_indices[sil - 2];
+        let i2 = self.stack_indices[sil - 1];
+
+        self.stack.truncate(sl - (i2 - i1));
+        self.stack_indices.pop();
+    }
+
+    fn top<'a>(&'a self) -> &'a [Matrix4x4] {
+        let sil = self.stack_indices.len();
+        let i1 = self.stack_indices[sil - 2];
+        let i2 = self.stack_indices[sil - 1];
+
+        &self.stack[i1..i2]
     }
 }
