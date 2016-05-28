@@ -23,10 +23,18 @@ impl Renderer {
         let mut tracer = Tracer::from_assembly(&self.scene.root);
         let mut img = Image::new(self.resolution.0, self.resolution.1);
 
-        // Render image of ray-traced triangle
+        // Pre-calculate some useful values related to the image plane
         let cmpx = 1.0 / self.resolution.0 as f32;
         let cmpy = 1.0 / self.resolution.1 as f32;
+        let min_x = -1.0;
+        let max_x = 1.0;
+        let min_y = -(self.resolution.1 as f32 / self.resolution.0 as f32);
+        let max_y = self.resolution.1 as f32 / self.resolution.0 as f32;
+        let x_extent = max_x - min_x;
+        let y_extent = max_y - min_y;
 
+
+        // Render
         for y in 0..img.height() {
             for x in 0..img.width() {
                 let offset = hash_u32(((x as u32) << 16) ^ (y as u32), 0);
@@ -35,10 +43,13 @@ impl Renderer {
                 rays.clear();
                 for si in 0..self.spp {
                     let mut ray = {
-                        let filter_x = fast_logit(halton::sample(3, offset + si as u32), 1.5);
-                        let filter_y = fast_logit(halton::sample(4, offset + si as u32), 1.5);
-                        self.scene.camera.generate_ray((x as f32 + filter_x) * cmpx - 0.5,
-                                                       (y as f32 + filter_y) * cmpy - 0.5,
+                        let filter_x = fast_logit(halton::sample(3, offset + si as u32), 1.5) + 0.5;
+                        let filter_y = fast_logit(halton::sample(4, offset + si as u32), 1.5) + 0.5;
+                        let samp_x = (filter_x + x as f32) * cmpx;
+                        let samp_y = (filter_y + y as f32) * cmpy;
+
+                        self.scene.camera.generate_ray((samp_x - 0.5) * x_extent,
+                                                       (0.5 - samp_y) * y_extent,
                                                        halton::sample(0, offset + si as u32),
                                                        halton::sample(1, offset + si as u32),
                                                        halton::sample(2, offset + si as u32))
