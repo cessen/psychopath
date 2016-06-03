@@ -1,2 +1,2 @@
-- Basic scene parsing with triangle meshes.
+//- Basic scene parsing with triangle meshes.
 - Unit tests for scene parsing.

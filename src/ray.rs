@@ -34,4 +34,14 @@ impl Ray {
         self.dir = self.dir * *mat;
         self.dir_inv = Vector { co: Float4::new(1.0, 1.0, 1.0, 1.0) / self.dir.co };
     }
+
+    pub fn update_from_world_ray(&mut self, wr: &Ray) {
+        self.orig = wr.orig;
+        self.dir = wr.dir;
+    }
+
+    pub fn update_from_xformed_world_ray(&mut self, wr: &Ray, mat: &Matrix4x4) {
+        self.update_from_world_ray(wr);
+        self.transform(mat);
+    }
 }

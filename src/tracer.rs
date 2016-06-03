@@ -68,8 +68,7 @@ impl<'a> Tracer<'a> {
                 for ray in &mut rs[..] {
                     let id = ray.id;
                     let t = ray.time;
-                    *ray = wrays[id as usize];
-                    ray.transform(&lerp_slice(xforms, t));
+                    ray.update_from_xformed_world_ray(&wrays[id as usize], &lerp_slice(xforms, t));
                 }
             }
 
@@ -95,14 +94,13 @@ impl<'a> Tracer<'a> {
                     for ray in &mut rs[..] {
                         let id = ray.id;
                         let t = ray.time;
-                        *ray = wrays[id as usize];
-                        ray.transform(&lerp_slice(xforms, t));
+                        ray.update_from_xformed_world_ray(&wrays[id as usize],
+                                                          &lerp_slice(xforms, t));
                     }
                 } else {
                     for ray in &mut rs[..] {
                         let id = ray.id;
-                        let t = ray.time;
-                        *ray = wrays[id as usize];
+                        ray.update_from_world_ray(&wrays[id as usize]);
                     }
                 }
             }
