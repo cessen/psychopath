@@ -66,8 +66,8 @@ struct Args {
 fn main() {
     // Parse command line arguments.
     let args: Args = Docopt::new(USAGE.replace("<VERSION>", VERSION))
-                         .and_then(|d| d.decode())
-                         .unwrap_or_else(|e| e.exit());
+        .and_then(|d| d.decode())
+        .unwrap_or_else(|e| e.exit());
 
     // Print version and exit if requested.
     if args.flag_version {
@@ -147,7 +147,7 @@ fn main() {
     println!("Ray size: {} bytes", mem::size_of::<Ray>());
 
     // Iterate through scenes and render them
-    if let DataTree::Internal{ref children, ..} = dt {
+    if let DataTree::Internal { ref children, .. } = dt {
         for child in children {
             if child.type_name() == "Scene" {
                 println!("Parsing scene...");

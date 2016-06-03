@@ -74,7 +74,7 @@ impl Camera {
         let dir = Vector::new((x * tfov) - (orig[0] / focus_distance),
                               (y * tfov) - (orig[1] / focus_distance),
                               1.0)
-                      .normalized();
+            .normalized();
 
         Ray::new(orig * transform, dir * transform, time)
     }

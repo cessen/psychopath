@@ -25,8 +25,8 @@ impl TriangleMesh {
         assert!(triangles.len() % time_samples == 0);
 
         let mut indices: Vec<usize> = (0..(triangles.len() / time_samples))
-                                          .map(|n| n * time_samples)
-                                          .collect();
+            .map(|n| n * time_samples)
+            .collect();
 
         let bounds = {
             let mut bounds = Vec::new();
@@ -62,13 +62,12 @@ impl Surface for TriangleMesh {
     fn intersect_rays(&self, rays: &mut [Ray], isects: &mut [SurfaceIntersection]) {
         self.accel.traverse(&mut rays[..], &self.indices, |tri_i, rs| {
             for r in rs {
-                let tri = lerp_slice_with(&self.geo[*tri_i..(*tri_i + self.time_samples)],
-                                          r.time,
-                                          |a, b, t| {
-                                              (lerp(a.0, b.0, t),
-                                               lerp(a.1, b.1, t),
-                                               lerp(a.2, b.2, t))
-                                          });
+                let tri =
+                    lerp_slice_with(&self.geo[*tri_i..(*tri_i + self.time_samples)],
+                                    r.time,
+                                    |a, b, t| {
+                                        (lerp(a.0, b.0, t), lerp(a.1, b.1, t), lerp(a.2, b.2, t))
+                                    });
                 if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(r, tri) {
                     if t < r.max_t {
                         isects[r.id as usize] = SurfaceIntersection::Hit {

@@ -229,9 +229,9 @@ impl BVH {
 impl Boundable for BVH {
     fn bounds<'a>(&'a self) -> &'a [BBox] {
         match self.nodes[0] {
-            BVHNode::Internal{bounds_range, ..} => &self.bounds[bounds_range.0..bounds_range.1],
+            BVHNode::Internal { bounds_range, .. } => &self.bounds[bounds_range.0..bounds_range.1],
 
-            BVHNode::Leaf{bounds_range, ..} => &self.bounds[bounds_range.0..bounds_range.1],
+            BVHNode::Leaf { bounds_range, .. } => &self.bounds[bounds_range.0..bounds_range.1],
         }
     }
 }

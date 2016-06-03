@@ -66,13 +66,11 @@ impl Renderer {
                 let mut g = 0.0;
                 let mut b = 0.0;
                 for isect in isects.iter() {
-                    if let &surface::SurfaceIntersection::Hit{
-                            t: _,
-                            pos: _,
-                            nor: _,
-                            space: _,
-                            uv,
-                        } = isect {
+                    if let &surface::SurfaceIntersection::Hit { t: _,
+                                                                pos: _,
+                                                                nor: _,
+                                                                space: _,
+                                                                uv } = isect {
                         r += uv.0;
                         g += uv.1;
                         b += (1.0 - uv.0 - uv.1).max(0.0);

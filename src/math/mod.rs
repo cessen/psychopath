@@ -11,8 +11,7 @@ pub use self::point::Point;
 pub use self::matrix::{Matrix4x4, multiply_matrix_slices};
 
 /// Trait for calculating dot products.
-pub trait DotProduct
-{
+pub trait DotProduct {
     fn dot(self, other: Self) -> f32;
 }
 
@@ -22,8 +21,7 @@ pub fn dot<T: DotProduct>(a: T, b: T) -> f32 {
 
 
 /// Trait for calculating cross products.
-pub trait CrossProduct
-{
+pub trait CrossProduct {
     fn cross(self, other: Self) -> Self;
 }
 

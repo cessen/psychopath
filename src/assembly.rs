@@ -93,18 +93,16 @@ impl AssemblyBuilder {
                 instance_type: InstanceType::Object,
                 data_index: self.object_map[name],
                 id: self.instances.len(),
-                transform_indices: xforms.map(|xf| {
-                    (self.xforms.len(), self.xforms.len() + xf.len())
-                }),
+                transform_indices:
+                    xforms.map(|xf| (self.xforms.len(), self.xforms.len() + xf.len())),
             }
         } else {
             Instance {
                 instance_type: InstanceType::Assembly,
                 data_index: self.assembly_map[name],
                 id: self.instances.len(),
-                transform_indices: xforms.map(|xf| {
-                    (self.xforms.len(), self.xforms.len() + xf.len())
-                }),
+                transform_indices:
+                    xforms.map(|xf| (self.xforms.len(), self.xforms.len() + xf.len())),
             }
         };
 

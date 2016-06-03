@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 
 /// Trait for allowing a type to be linearly interpolated.
-pub trait Lerp
-{
+pub trait Lerp {
     fn lerp(self, other: Self, alpha: f32) -> Self;
 }
 

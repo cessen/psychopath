@@ -46,34 +46,34 @@ impl<'a> DataTree<'a> {
 
     pub fn type_name(&'a self) -> &'a str {
         match self {
-            &DataTree::Internal{type_name, ..} => type_name,
-            &DataTree::Leaf{type_name, ..} => type_name,
+            &DataTree::Internal { type_name, .. } => type_name,
+            &DataTree::Leaf { type_name, .. } => type_name,
         }
     }
 
     pub fn is_internal(&self) -> bool {
         match self {
-            &DataTree::Internal{..} => true,
-            &DataTree::Leaf{..} => false,
+            &DataTree::Internal { .. } => true,
+            &DataTree::Leaf { .. } => false,
         }
     }
 
     pub fn is_leaf(&self) -> bool {
         match self {
-            &DataTree::Internal{..} => false,
-            &DataTree::Leaf{..} => true,
+            &DataTree::Internal { .. } => false,
+            &DataTree::Leaf { .. } => true,
         }
     }
 
     pub fn leaf_contents(&'a self) -> Option<&'a str> {
         match self {
-            &DataTree::Internal{..} => None,
-            &DataTree::Leaf{contents, ..} => Some(contents),
+            &DataTree::Internal { .. } => None,
+            &DataTree::Leaf { contents, .. } => Some(contents),
         }
     }
 
     pub fn iter_children(&'a self) -> slice::Iter<'a, DataTree<'a>> {
-        if let &DataTree::Internal{ref children, ..} = self {
+        if let &DataTree::Internal { ref children, .. } = self {
             children.iter()
         } else {
             [].iter()
@@ -81,7 +81,7 @@ impl<'a> DataTree<'a> {
     }
 
     pub fn iter_children_with_type(&'a self, type_name: &'static str) -> DataTreeFilterIter<'a> {
-        if let &DataTree::Internal{ref children, ..} = self {
+        if let &DataTree::Internal { ref children, .. } = self {
             DataTreeFilterIter {
                 type_name: type_name,
                 iter: children.iter(),
@@ -97,7 +97,7 @@ impl<'a> DataTree<'a> {
     pub fn iter_internal_children_with_type(&'a self,
                                             type_name: &'static str)
                                             -> DataTreeFilterInternalIter<'a> {
-        if let &DataTree::Internal{ref children, ..} = self {
+        if let &DataTree::Internal { ref children, .. } = self {
             DataTreeFilterInternalIter {
                 type_name: type_name,
                 iter: children.iter(),
@@ -113,7 +113,7 @@ impl<'a> DataTree<'a> {
     pub fn iter_leaf_children_with_type(&'a self,
                                         type_name: &'static str)
                                         -> DataTreeFilterLeafIter<'a> {
-        if let &DataTree::Internal{ref children, ..} = self {
+        if let &DataTree::Internal { ref children, .. } = self {
             DataTreeFilterLeafIter {
                 type_name: type_name,
                 iter: children.iter(),
@@ -184,7 +184,7 @@ impl<'a> Iterator for DataTreeFilterInternalIter<'a> {
     fn next(&mut self) -> Option<(&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>)> {
         loop {
             match self.iter.next() {
-                Some(&DataTree::Internal{type_name, ident, ref children}) => {
+                Some(&DataTree::Internal { type_name, ident, ref children }) => {
                     if type_name == self.type_name {
                         return Some((type_name, ident, children));
                     } else {
@@ -192,7 +192,7 @@ impl<'a> Iterator for DataTreeFilterInternalIter<'a> {
                     }
                 }
 
-                Some(&DataTree::Leaf{..}) => {
+                Some(&DataTree::Leaf { .. }) => {
                     continue;
                 }
 
@@ -219,11 +219,11 @@ impl<'a> Iterator for DataTreeFilterLeafIter<'a> {
     fn next(&mut self) -> Option<(&'a str, &'a str)> {
         loop {
             match self.iter.next() {
-                Some(&DataTree::Internal{..}) => {
+                Some(&DataTree::Internal { .. }) => {
                     continue;
                 }
 
-                Some(&DataTree::Leaf{type_name, contents}) => {
+                Some(&DataTree::Leaf { type_name, contents }) => {
                     if type_name == self.type_name {
                         return Some((type_name, contents));
                     } else {
@@ -366,8 +366,7 @@ fn parse_leaf_content<'a>(source_text: (usize, &'a str)) -> (&'a str, (usize, &'
         si = source_text.1.len();
     }
 
-    return (&source_text.1[0..si],
-            (source_text.0 + si, &source_text.1[si..]));
+    return (&source_text.1[0..si], (source_text.0 + si, &source_text.1[si..]));
 }
 
 
@@ -414,8 +413,7 @@ fn next_token<'a>(source_text: (usize, &'a str)) -> (Token<'a>, (usize, &'a str)
                     si = text1.1.len();
                 }
 
-                return (Token::Ident(&text1.1[0..si]),
-                        (text1.0 + si, &text1.1[si..]));
+                return (Token::Ident(&text1.1[0..si]), (text1.0 + si, &text1.1[si..]));
             }
 
             _ => {
@@ -435,8 +433,7 @@ fn next_token<'a>(source_text: (usize, &'a str)) -> (Token<'a>, (usize, &'a str)
                         si = text1.1.len();
                     }
 
-                    return (Token::TypeName(&text1.1[0..si]),
-                            (text1.0 + si, &text1.1[si..]));
+                    return (Token::TypeName(&text1.1[0..si]), (text1.0 + si, &text1.1[si..]));
                 }
             }
 
@@ -653,7 +650,7 @@ mod tests {
             A {}
             B {}
         "#)
-                     .unwrap();
+            .unwrap();
 
         let mut i = dt.iter_children_with_type("A");
         assert_eq!(i.count(), 3);
@@ -668,7 +665,7 @@ mod tests {
             A {}
             B {}
         "#)
-                     .unwrap();
+            .unwrap();
 
         let mut i = dt.iter_internal_children_with_type("A");
         assert_eq!(i.count(), 2);
@@ -683,7 +680,7 @@ mod tests {
             A []
             B {}
         "#)
-                     .unwrap();
+            .unwrap();
 
         let mut i = dt.iter_leaf_children_with_type("A");
         assert_eq!(i.count(), 2);

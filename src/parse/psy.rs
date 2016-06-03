@@ -68,7 +68,7 @@ pub fn parse_scene(tree: &DataTree) -> Result<Renderer, PsyParseError> {
     let assembly = try!(parse_assembly(tree.iter_children_with_type("Assembly").nth(0).unwrap()));
 
     // Put scene together
-    let scene_name = if let &DataTree::Internal{ident, ..} = tree {
+    let scene_name = if let &DataTree::Internal { ident, .. } = tree {
         if let Some(name) = ident {
             Some(name.to_string())
         } else {
@@ -87,8 +87,7 @@ pub fn parse_scene(tree: &DataTree) -> Result<Renderer, PsyParseError> {
     // Put renderer together
     let renderer = Renderer {
         output_file: output_info.clone(),
-        resolution: ((render_settings.0).0 as usize,
-                     (render_settings.0).1 as usize),
+        resolution: ((render_settings.0).0 as usize, (render_settings.0).1 as usize),
         spp: render_settings.1 as usize,
         scene: scene,
     };
@@ -100,7 +99,7 @@ pub fn parse_scene(tree: &DataTree) -> Result<Renderer, PsyParseError> {
 
 
 fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
-    if let &DataTree::Internal{ref children, ..} = tree {
+    if let &DataTree::Internal { ref children, .. } = tree {
         let mut found_path = false;
         let mut path = String::new();
 
@@ -144,7 +143,7 @@ fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
 
 
 fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyParseError> {
-    if let &DataTree::Internal{ref children, ..} = tree {
+    if let &DataTree::Internal { ref children, .. } = tree {
         let mut found_res = false;
         let mut found_spp = false;
         let mut res = (0, 0);
@@ -204,7 +203,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
 
 
 fn parse_camera(tree: &DataTree) -> Result<Camera, PsyParseError> {
-    if let &DataTree::Internal{ref children, ..} = tree {
+    if let &DataTree::Internal { ref children, .. } = tree {
         let mut mats = Vec::new();
         let mut fovs = Vec::new();
         let mut focus_distances = Vec::new();
@@ -282,9 +281,9 @@ fn parse_world(tree: &DataTree) -> Result<(f32, f32, f32), PsyParseError> {
             if bgs.iter_children_with_type("Type").count() != 1 {
                 return Err(PsyParseError::UnknownError);
             }
-            if let &DataTree::Leaf{contents, ..} = bgs.iter_children_with_type("Type")
-                                                      .nth(0)
-                                                      .unwrap() {
+            if let &DataTree::Leaf { contents, .. } = bgs.iter_children_with_type("Type")
+                .nth(0)
+                .unwrap() {
                 contents.trim()
             } else {
                 return Err(PsyParseError::UnknownError);
@@ -292,12 +291,12 @@ fn parse_world(tree: &DataTree) -> Result<(f32, f32, f32), PsyParseError> {
         };
         match bgs_type {
             "Color" => {
-                if let Some(&DataTree::Leaf{contents, ..}) = bgs.iter_children_with_type("Color")
-                                                                .nth(0) {
+                if let Some(&DataTree::Leaf { contents, .. }) = bgs.iter_children_with_type("Color")
+                    .nth(0) {
                     if let IResult::Done(_, color) = closure!(tuple!(ws_f32,
                                                                      ws_f32,
                                                                      ws_f32))(contents.trim()
-                                                                                      .as_bytes()) {
+                        .as_bytes()) {
                         found_background_color = true;
                         background_color = color;
                     } else {
