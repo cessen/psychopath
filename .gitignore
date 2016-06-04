@@ -2,3 +2,4 @@ target
 *.rs.bk
 
 .zedstate
+test_renders
