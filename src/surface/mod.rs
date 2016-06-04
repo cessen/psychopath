@@ -22,6 +22,6 @@ pub enum SurfaceIntersection {
     },
 }
 
-pub trait Surface: Boundable + Debug {
+pub trait Surface: Boundable + Debug + Sync {
     fn intersect_rays(&self, rays: &mut [Ray], isects: &mut [SurfaceIntersection]);
 }

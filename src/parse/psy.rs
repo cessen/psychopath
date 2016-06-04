@@ -48,15 +48,13 @@ pub fn parse_scene(tree: &DataTree) -> Result<Renderer, PsyParseError> {
 
     // Parse output info
     let output_info = try!(parse_output_info(tree.iter_children_with_type("Output")
-                                                 .nth(0)
-                                                 .unwrap()));
+        .nth(0)
+        .unwrap()));
 
     // Parse render settings
-    let render_settings = try!(parse_render_settings(tree.iter_children_with_type("Rende\
-                                                                                          rSett\
-                                                                                          ings")
-                                                         .nth(0)
-                                                         .unwrap()));
+    let render_settings = try!(parse_render_settings(tree.iter_children_with_type("RenderSettings")
+        .nth(0)
+        .unwrap()));
 
     // Parse camera
     let camera = try!(parse_camera(tree.iter_children_with_type("Camera").nth(0).unwrap()));

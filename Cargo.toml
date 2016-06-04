@@ -7,3 +7,5 @@ authors = ["Nathan Vegdahl <cessen@cessen.com>"]
 docopt = "0.6"
 rustc-serialize = "0.3"
 nom = "1.2"
+scoped_threadpool = "0.1"
+num_cpus = "0.2"

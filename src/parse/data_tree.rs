@@ -606,8 +606,7 @@ mod tests {
         let (token8, input9) = next_token(input8);
 
         assert_eq!((token1, input2),
-                   (Token::TypeName("Thing"),
-                    (5, " $yar { # A comment\n\tThing2 []\n}")));
+                   (Token::TypeName("Thing"), (5, " $yar { # A comment\n\tThing2 []\n}")));
         assert_eq!((token2, input3),
                    (Token::Ident("$yar"), (10, " { # A comment\n\tThing2 []\n}")));
         assert_eq!((token3, input4),

@@ -1,5 +1,7 @@
 extern crate rustc_serialize;
 extern crate docopt;
+extern crate scoped_threadpool;
+extern crate num_cpus;
 #[macro_use]
 extern crate nom;
 
@@ -99,7 +101,7 @@ fn main() {
                 }
 
                 println!("Rendering scene...");
-                r.render();
+                r.render(num_cpus::get() as u32);
             }
         }
     }

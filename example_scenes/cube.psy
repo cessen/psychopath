@@ -1,6 +1,6 @@
 Scene $Scene_fr1 {
     Output {
-        Path ["cube.ppm"]
+        Path ["test_renders/cube.ppm"]
     }
     RenderSettings {
         Resolution [960 540]
