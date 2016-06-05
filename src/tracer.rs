@@ -1,10 +1,9 @@
 use std::iter;
-use std::slice;
 use std::cell::UnsafeCell;
 
 use math::{Matrix4x4, multiply_matrix_slices};
 use lerp::lerp_slice;
-use assembly::{Assembly, Object, Instance, InstanceType};
+use assembly::{Assembly, Object, InstanceType};
 use ray::Ray;
 use surface::SurfaceIntersection;
 

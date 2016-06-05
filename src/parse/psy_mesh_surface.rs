@@ -2,7 +2,6 @@
 
 use std::result::Result;
 
-use nom;
 use nom::IResult;
 
 use super::DataTree;

@@ -2,6 +2,7 @@
 name = "psychopath"
 version = "0.1.0"
 dependencies = [
+ "crossbeam 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt 0.6.80 (registry+https://github.com/rust-lang/crates.io-index)",
  "nom 1.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -16,6 +17,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "memchr 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "crossbeam"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "docopt"

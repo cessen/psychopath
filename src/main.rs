@@ -1,6 +1,7 @@
 extern crate rustc_serialize;
 extern crate docopt;
 extern crate scoped_threadpool;
+extern crate crossbeam;
 extern crate num_cpus;
 #[macro_use]
 extern crate nom;
