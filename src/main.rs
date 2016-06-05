@@ -50,6 +50,8 @@ Usage:
 Options:
   -i <file>, --input <file>     Input .psy file.
   -s <n>, --spp <n>             Number of samples per pixel.
+  -t <n>, --threads <n>         Number of threads to render with.  Defaults
+                                to the number of logical cores on the system.
   -h, --help                    Show this screen.
   --version                     Show version.
 "#;
@@ -58,6 +60,7 @@ Options:
 struct Args {
     flag_input: Option<String>,
     flag_spp: Option<usize>,
+    flag_threads: Option<usize>,
     flag_version: bool,
 }
 
@@ -101,8 +104,14 @@ fn main() {
                     r.spp = spp;
                 }
 
-                println!("Rendering scene...");
-                r.render(num_cpus::get() as u32);
+                let thread_count = if let Some(threads) = args.flag_threads {
+                    threads as u32
+                } else {
+                    num_cpus::get() as u32
+                };
+
+                println!("Rendering scene with {} threads...", thread_count);
+                r.render(thread_count);
             }
         }
     }
