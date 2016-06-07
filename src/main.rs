@@ -24,6 +24,7 @@ mod bvh;
 mod scene;
 mod assembly;
 mod halton;
+mod color;
 
 use std::mem;
 use std::io;
