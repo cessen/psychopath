@@ -64,6 +64,30 @@ impl Float4 {
                         self.data.get_unchecked(3).max(*other.data.get_unchecked(3)))
         }
     }
+
+    pub fn set_0(&mut self, n: f32) {
+        unsafe {
+            *self.data.get_unchecked_mut(0) = n;
+        }
+    }
+
+    pub fn set_1(&mut self, n: f32) {
+        unsafe {
+            *self.data.get_unchecked_mut(1) = n;
+        }
+    }
+
+    pub fn set_2(&mut self, n: f32) {
+        unsafe {
+            *self.data.get_unchecked_mut(2) = n;
+        }
+    }
+
+    pub fn set_3(&mut self, n: f32) {
+        unsafe {
+            *self.data.get_unchecked_mut(3) = n;
+        }
+    }
 }
 
 

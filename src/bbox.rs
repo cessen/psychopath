@@ -44,12 +44,12 @@ impl BBox {
         let t2 = (self.max.co - ray.orig.co) * ray.dir_inv.co;
 
         // Find the far and near intersection
-        let hitt0 = (t1[0].min(t2[0]))
-            .max(t1[1].min(t2[1]))
-            .max(t1[2].min(t2[2]));
-        let hitt1 = (t1[0].max(t2[0]))
-            .min(t1[1].max(t2[1]))
-            .min(t1[2].max(t2[2])) * BBOX_MAXT_ADJUST;
+        let mut near_t = t1.v_min(t2);
+        let mut far_t = t1.v_max(t2);
+        near_t.set_3(std::f32::NEG_INFINITY);
+        far_t.set_3(std::f32::INFINITY);
+        let hitt0 = near_t.h_max();
+        let hitt1 = far_t.h_min() * BBOX_MAXT_ADJUST;
 
         // Did we hit?
         return hitt0.max(0.0) <= hitt1.min(ray.max_t);
