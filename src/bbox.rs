@@ -6,7 +6,7 @@ use std::iter::Iterator;
 
 use math::{Point, Matrix4x4};
 use lerp::{lerp, lerp_slice, Lerp};
-use ray::Ray;
+use ray::AccelRay;
 
 const BBOX_MAXT_ADJUST: f32 = 1.00000024;
 
@@ -38,7 +38,7 @@ impl BBox {
     }
 
     // Returns whether the given ray intersects with the bbox.
-    pub fn intersect_ray(&self, ray: &Ray) -> bool {
+    pub fn intersect_accel_ray(&self, ray: &AccelRay) -> bool {
         // Calculate slab intersections
         let t1 = (self.min.co - ray.orig.co) * ray.dir_inv.co;
         let t2 = (self.max.co - ray.orig.co) * ray.dir_inv.co;

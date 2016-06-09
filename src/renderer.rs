@@ -102,7 +102,6 @@ impl Renderer {
                                                           halton::sample(1, offset + si as u32),
                                                           halton::sample(2, offset + si as u32))
                                     };
-                                    ray.id = rays.len() as u32;
                                     rays.push(ray);
                                     pixel_mapping.push((x, y))
                                 }
@@ -120,7 +119,7 @@ impl Renderer {
                             if let &surface::SurfaceIntersection::Hit { t: _,
                                                                         pos: _,
                                                                         nor: _,
-                                                                        space: _,
+                                                                        local_space: _,
                                                                         uv } = isect {
 
                                 col.0 += uv.0 / self.spp as f32;

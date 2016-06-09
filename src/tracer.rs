@@ -4,12 +4,12 @@ use std::cell::UnsafeCell;
 use math::{Matrix4x4, multiply_matrix_slices};
 use lerp::lerp_slice;
 use assembly::{Assembly, Object, InstanceType};
-use ray::Ray;
+use ray::{Ray, AccelRay};
 use surface::SurfaceIntersection;
 
 pub struct Tracer<'a> {
     root: &'a Assembly,
-    rays: UnsafeCell<Vec<Ray>>, // Should only be used from trace(), not any other methods
+    rays: UnsafeCell<Vec<AccelRay>>, // Should only be used from trace(), not any other methods
     xform_stack: TransformStack,
     isects: Vec<SurfaceIntersection>,
 }
@@ -30,7 +30,8 @@ impl<'a> Tracer<'a> {
         unsafe {
             (*rays_ptr).clear();
             (*rays_ptr).reserve(wrays.len());
-            (*rays_ptr).extend(wrays.iter());
+            let mut ids = 0..(wrays.len() as u32);
+            (*rays_ptr).extend(wrays.iter().map(|wr| AccelRay::new(wr, ids.next().unwrap())));
         }
 
         // Ready the isects
@@ -55,8 +56,11 @@ impl<'a> Tracer<'a> {
         return &self.isects;
     }
 
-    fn trace_assembly<'b>(&'b mut self, assembly: &Assembly, wrays: &[Ray], rays: &mut [Ray]) {
-        assembly.object_accel.traverse(&mut rays[..], &assembly.instances[..], |inst, rs| {
+    fn trace_assembly<'b>(&'b mut self,
+                          assembly: &Assembly,
+                          wrays: &[Ray],
+                          accel_rays: &mut [AccelRay]) {
+        assembly.object_accel.traverse(&mut accel_rays[..], &assembly.instances[..], |inst, rs| {
             // Transform rays if needed
             if let Some((xstart, xend)) = inst.transform_indices {
                 // Push transforms to stack
@@ -106,10 +110,10 @@ impl<'a> Tracer<'a> {
         });
     }
 
-    fn trace_object<'b>(&'b mut self, obj: &Object, wrays: &[Ray], rays: &mut [Ray]) {
+    fn trace_object<'b>(&'b mut self, obj: &Object, wrays: &[Ray], rays: &mut [AccelRay]) {
         match obj {
             &Object::Surface(ref surface) => {
-                surface.intersect_rays(rays, &mut self.isects);
+                surface.intersect_rays(rays, wrays, &mut self.isects, self.xform_stack.top());
             }
         }
     }

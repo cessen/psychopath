@@ -3,7 +3,7 @@
 use lerp::lerp_slice;
 use bbox::BBox;
 use boundable::Boundable;
-use ray::Ray;
+use ray::{Ray, AccelRay};
 use algorithm::partition;
 
 #[derive(Debug)]
@@ -177,8 +177,8 @@ impl BVH {
     }
 
 
-    pub fn traverse<T, F>(&self, rays: &mut [Ray], objects: &[T], mut obj_ray_test: F)
-        where F: FnMut(&T, &mut [Ray])
+    pub fn traverse<T, F>(&self, rays: &mut [AccelRay], objects: &[T], mut obj_ray_test: F)
+        where F: FnMut(&T, &mut [AccelRay])
     {
         if self.nodes.len() == 0 {
             return;
@@ -192,14 +192,14 @@ impl BVH {
             match self.nodes[i_stack[stack_ptr]] {
                 BVHNode::Internal { bounds_range: br, second_child_index, split_axis } => {
                     let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
-                        lerp_slice(&self.bounds[br.0..br.1], r.time).intersect_ray(r)
+                        lerp_slice(&self.bounds[br.0..br.1], r.time).intersect_accel_ray(r)
                     });
                     if part > 0 {
                         i_stack[stack_ptr] += 1;
                         i_stack[stack_ptr + 1] = second_child_index;
                         ray_i_stack[stack_ptr] = part;
                         ray_i_stack[stack_ptr + 1] = part;
-                        if rays[0].dir[split_axis as usize].is_sign_positive() {
+                        if rays[0].dir_inv[split_axis as usize].is_sign_positive() {
                             i_stack.swap(stack_ptr, stack_ptr + 1);
                         }
                         stack_ptr += 1;
@@ -210,7 +210,7 @@ impl BVH {
 
                 BVHNode::Leaf { bounds_range: br, object_range } => {
                     let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
-                        lerp_slice(&self.bounds[br.0..br.1], r.time).intersect_ray(r)
+                        lerp_slice(&self.bounds[br.0..br.1], r.time).intersect_accel_ray(r)
                     });
                     if part > 0 {
                         for obj in &objects[object_range.0..object_range.1] {

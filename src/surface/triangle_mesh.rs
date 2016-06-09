@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
-use lerp::{lerp, lerp_slice_with};
+use lerp::{lerp, lerp_slice, lerp_slice_with};
 use math::{Point, Normal, Matrix4x4};
-use ray::Ray;
+use ray::{Ray, AccelRay};
 use triangle;
 use bbox::BBox;
 use boundable::Boundable;
@@ -59,22 +59,30 @@ impl Boundable for TriangleMesh {
 
 
 impl Surface for TriangleMesh {
-    fn intersect_rays(&self, rays: &mut [Ray], isects: &mut [SurfaceIntersection]) {
-        self.accel.traverse(&mut rays[..], &self.indices, |tri_i, rs| {
+    fn intersect_rays(&self,
+                      accel_rays: &mut [AccelRay],
+                      wrays: &[Ray],
+                      isects: &mut [SurfaceIntersection],
+                      space: &[Matrix4x4]) {
+        self.accel.traverse(&mut accel_rays[..], &self.indices, |tri_i, rs| {
             for r in rs {
+                let wr = &wrays[r.id as usize];
                 let tri =
                     lerp_slice_with(&self.geo[*tri_i..(*tri_i + self.time_samples)],
-                                    r.time,
+                                    wr.time,
                                     |a, b, t| {
                                         (lerp(a.0, b.0, t), lerp(a.1, b.1, t), lerp(a.2, b.2, t))
                                     });
-                if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(r, tri) {
+                let mat_space = lerp_slice(space, wr.time);
+                let mat_inv = mat_space.inverse();
+                let tri = (tri.0 * mat_inv, tri.1 * mat_inv, tri.2 * mat_inv);
+                if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(wr, tri) {
                     if t < r.max_t {
                         isects[r.id as usize] = SurfaceIntersection::Hit {
                             t: t,
-                            pos: r.orig + (r.dir * t),
+                            pos: wr.orig + (wr.dir * t),
                             nor: Normal::new(0.0, 0.0, 0.0), // TODO
-                            space: Matrix4x4::new(), // TODO
+                            local_space: mat_space,
                             uv: (tri_u, tri_v),
                         };
                         r.max_t = t;

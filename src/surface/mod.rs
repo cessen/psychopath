@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 pub mod triangle_mesh;
 
-use ray::Ray;
+use ray::{Ray, AccelRay};
 use math::{Point, Normal, Matrix4x4};
 use boundable::Boundable;
 
@@ -17,11 +17,15 @@ pub enum SurfaceIntersection {
         t: f32,
         pos: Point,
         nor: Normal,
-        space: Matrix4x4,
+        local_space: Matrix4x4,
         uv: (f32, f32),
     },
 }
 
 pub trait Surface: Boundable + Debug + Sync {
-    fn intersect_rays(&self, rays: &mut [Ray], isects: &mut [SurfaceIntersection]);
+    fn intersect_rays(&self,
+                      accel_rays: &mut [AccelRay],
+                      wrays: &[Ray],
+                      isects: &mut [SurfaceIntersection],
+                      space: &[Matrix4x4]);
 }

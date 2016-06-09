@@ -33,7 +33,7 @@ use std::fs::File;
 
 use docopt::Docopt;
 
-use ray::Ray;
+use ray::{Ray, AccelRay};
 use parse::{parse_scene, DataTree};
 
 // ----------------------------------------------------------------
@@ -91,7 +91,8 @@ fn main() {
         panic!()
     };
 
-    println!("Ray size: {} bytes", mem::size_of::<Ray>());
+    println!("Ray size:      {} bytes", mem::size_of::<Ray>());
+    println!("AccelRay size: {} bytes", mem::size_of::<AccelRay>());
 
     // Iterate through scenes and render them
     if let DataTree::Internal { ref children, .. } = dt {

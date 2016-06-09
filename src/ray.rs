@@ -9,10 +9,8 @@ use math::{Vector, Point, Matrix4x4};
 pub struct Ray {
     pub orig: Point,
     pub dir: Vector,
-    pub dir_inv: Vector,
     pub max_t: f32,
     pub time: f32,
-    pub id: u32,
     pub flags: u32,
 }
 
@@ -21,10 +19,8 @@ impl Ray {
         Ray {
             orig: orig,
             dir: dir,
-            dir_inv: Vector { co: Float4::new(1.0, 1.0, 1.0, 1.0) / dir.co },
             max_t: std::f32::INFINITY,
             time: time,
-            id: 0,
             flags: 0,
         }
     }
@@ -32,16 +28,39 @@ impl Ray {
     pub fn transform(&mut self, mat: &Matrix4x4) {
         self.orig = self.orig * *mat;
         self.dir = self.dir * *mat;
-        self.dir_inv = Vector { co: Float4::new(1.0, 1.0, 1.0, 1.0) / self.dir.co };
+    }
+}
+
+
+#[derive(Debug, Copy, Clone)]
+pub struct AccelRay {
+    pub orig: Point,
+    pub dir_inv: Vector,
+    pub max_t: f32,
+    pub time: f32,
+    pub flags: u32,
+    pub id: u32,
+}
+
+impl AccelRay {
+    pub fn new(ray: &Ray, id: u32) -> AccelRay {
+        AccelRay {
+            orig: ray.orig,
+            dir_inv: Vector { co: Float4::new(1.0, 1.0, 1.0, 1.0) / ray.dir.co },
+            max_t: ray.max_t,
+            time: ray.time,
+            flags: ray.flags,
+            id: id,
+        }
     }
 
     pub fn update_from_world_ray(&mut self, wr: &Ray) {
         self.orig = wr.orig;
-        self.dir = wr.dir;
+        self.dir_inv = Vector { co: Float4::new(1.0, 1.0, 1.0, 1.0) / wr.dir.co };
     }
 
     pub fn update_from_xformed_world_ray(&mut self, wr: &Ray, mat: &Matrix4x4) {
-        self.update_from_world_ray(wr);
-        self.transform(mat);
+        self.orig = wr.orig * *mat;
+        self.dir_inv = Vector { co: Float4::new(1.0, 1.0, 1.0, 1.0) / (wr.dir * *mat).co };
     }
 }
