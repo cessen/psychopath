@@ -2,6 +2,7 @@ mod spectra_xyz;
 
 use std::ops::{Add, AddAssign, Mul, MulAssign, Div, DivAssign};
 
+use lerp::Lerp;
 use self::spectra_xyz::{spectrum_xyz_to_p, EQUAL_ENERGY_REFLECTANCE};
 
 // Minimum and maximum wavelength of light we care about, in nanometers
@@ -12,6 +13,26 @@ const WL_RANGE_Q: f32 = WL_RANGE / 4.0;
 
 pub trait Color {
     fn sample_spectrum(&self, wavelength: f32) -> f32;
+
+    fn get_spectral_sample(&self, hero_wavelength: f32) -> SpectralSample {
+        SpectralSample {
+            e: [self.sample_spectrum(nth_wavelength(hero_wavelength, 0)),
+                self.sample_spectrum(nth_wavelength(hero_wavelength, 1)),
+                self.sample_spectrum(nth_wavelength(hero_wavelength, 2)),
+                self.sample_spectrum(nth_wavelength(hero_wavelength, 3))],
+
+            hero_wavelength: hero_wavelength,
+        }
+    }
+}
+
+fn nth_wavelength(hero_wavelength: f32, n: usize) -> f32 {
+    let mut wl = hero_wavelength + (WL_RANGE_Q * n as f32);
+    if wl > WL_MAX {
+        wl - WL_RANGE
+    } else {
+        wl
+    }
 }
 
 
@@ -84,6 +105,12 @@ impl XYZ {
 impl Color for XYZ {
     fn sample_spectrum(&self, wavelength: f32) -> f32 {
         xyz_to_spectrum((self.x, self.y, self.z), wavelength)
+    }
+}
+
+impl Lerp for XYZ {
+    fn lerp(self, other: XYZ, alpha: f32) -> XYZ {
+        (self * (1.0 - alpha)) + (other * alpha)
     }
 }
 

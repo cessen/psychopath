@@ -40,6 +40,23 @@ pub fn fast_ln(x: f32) -> f32 {
 
 
 
+/// Creates a coordinate system from a single vector.
+pub fn coordinate_system_from_vector(v: Vector) -> (Vector, Vector, Vector) {
+    let v2 = if v[0].abs() > v[1].abs() {
+        let invlen = 1.0 / ((v[0] * v[0]) + (v[2] * v[2])).sqrt();
+        Vector::new(-v[2] * invlen, 0.0, v[0] * invlen)
+    } else {
+        let invlen = 1.0 / ((v[1] * v[1]) + (v[2] * v[2])).sqrt();
+        Vector::new(0.0, v[2] * invlen, -v[1] * invlen)
+    };
+
+    let v3 = cross(v, v2);
+
+    (v, v2, v3)
+}
+
+
+
 /// The logit function, scaled to approximate the probit function.
 ///
 /// We use this as a close approximation to the gaussian inverse CDF,

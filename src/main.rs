@@ -20,10 +20,12 @@ mod image;
 mod boundable;
 mod triangle;
 mod surface;
+mod light;
 mod bvh;
 mod scene;
 mod assembly;
 mod halton;
+mod sampling;
 mod color;
 
 use std::mem;
