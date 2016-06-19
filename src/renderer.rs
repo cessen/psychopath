@@ -14,6 +14,7 @@ use math::fast_logit;
 use image::Image;
 use surface;
 use scene::Scene;
+use color::{XYZ, rec709e_to_xyz};
 
 #[derive(Debug)]
 pub struct Renderer {
@@ -121,15 +122,12 @@ impl Renderer {
                                                                         nor: _,
                                                                         local_space: _,
                                                                         uv } = isect {
-
-                                col.0 += uv.0 / self.spp as f32;
-                                col.1 += uv.1 / self.spp as f32;
-                                col.2 += (1.0 - uv.0 - uv.1).max(0.0) / self.spp as f32;
+                                let rgbcol = (uv.0, uv.1, (1.0 - uv.0 - uv.1).max(0.0));
+                                let xyzcol = rec709e_to_xyz(rgbcol);
+                                col += XYZ::new(xyzcol.0, xyzcol.1, xyzcol.2) / self.spp as f32;
 
                             } else {
-                                col.0 += 0.02 / self.spp as f32;
-                                col.1 += 0.02 / self.spp as f32;
-                                col.2 += 0.02 / self.spp as f32;
+                                col += XYZ::new(0.02, 0.02, 0.02) / self.spp as f32;
                             }
                             img.set(co.0 as usize, co.1 as usize, col);
                         }
