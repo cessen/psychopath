@@ -1,5 +1,6 @@
 use math::{Vector, Point, coordinate_system_from_vector};
 use bbox::BBox;
+use boundable::Boundable;
 use color::{XYZ, SpectralSample, Color};
 use super::LightSource;
 use lerp::lerp_slice;
@@ -7,15 +8,15 @@ use sampling::{uniform_sample_cone, uniform_sample_cone_pdf, uniform_sample_sphe
 use std::f64::consts::PI as PI_64;
 use std::f32::consts::PI as PI_32;
 
+#[derive(Debug)]
 pub struct SphereLight {
-    positions: Vec<Point>,
     radii: Vec<f32>,
     colors: Vec<XYZ>,
     bounds_: Vec<BBox>,
 }
 
 impl SphereLight {
-    fn new() -> SphereLight {
+    pub fn new(radii: Vec<f32>, colors: Vec<XYZ>) -> SphereLight {
         unimplemented!()
     }
 }
@@ -29,7 +30,7 @@ impl LightSource for SphereLight {
               time: f32)
               -> (SpectralSample, Vector, f32) {
         // Calculate time interpolated values
-        let pos = lerp_slice(&self.positions, time);
+        let pos = Point::new(0.0, 0.0, 0.0); // Light position is always at origin
         let radius: f64 = lerp_slice(&self.radii, time) as f64;
         let col = lerp_slice(&self.colors, time);
         let surface_area_inv: f64 = 1.0 / (4.0 * PI_64 * radius * radius);
@@ -98,7 +99,7 @@ impl LightSource for SphereLight {
                   wavelength: f32,
                   time: f32)
                   -> f32 {
-        let pos = lerp_slice(&self.positions, time);
+        let pos = Point::new(0.0, 0.0, 0.0); // Light position is always at origin
         let radius: f64 = lerp_slice(&self.radii, time) as f64;
 
         let d2: f64 = (pos - arr).length2() as f64;  // Distance from center of sphere squared
@@ -125,5 +126,11 @@ impl LightSource for SphereLight {
 
     fn is_delta(&self) -> bool {
         false
+    }
+}
+
+impl Boundable for SphereLight {
+    fn bounds<'a>(&'a self) -> &'a [BBox] {
+        &self.bounds_
     }
 }

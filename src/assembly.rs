@@ -4,6 +4,7 @@ use math::Matrix4x4;
 use bvh::BVH;
 use boundable::Boundable;
 use surface::Surface;
+use light::LightSource;
 use bbox::{BBox, transform_bbox_slice_from};
 
 
@@ -160,6 +161,7 @@ impl AssemblyBuilder {
                     let obj = &self.objects[inst.data_index];
                     match obj {
                         &Object::Surface(ref s) => bbs.extend(s.bounds()),
+                        &Object::Light(_) => unimplemented!(),
                     }
                 }
 
@@ -193,6 +195,7 @@ impl AssemblyBuilder {
 #[derive(Debug)]
 pub enum Object {
     Surface(Box<Surface>),
+    Light(Box<LightSource>),
 }
 
 

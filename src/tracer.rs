@@ -115,6 +115,8 @@ impl<'a> Tracer<'a> {
             &Object::Surface(ref surface) => {
                 surface.intersect_rays(rays, wrays, &mut self.isects, self.xform_stack.top());
             }
+
+            &Object::Light(_) => unimplemented!(),
         }
     }
 }

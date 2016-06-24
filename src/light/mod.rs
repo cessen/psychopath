@@ -1,11 +1,14 @@
 mod sphere_light;
 
-// pub use sphere_light::{SphereLight};
+use std::fmt::Debug;
+
+pub use self::sphere_light::SphereLight;
 
 use math::{Vector, Point};
 use color::SpectralSample;
+use boundable::Boundable;
 
-pub trait LightSource {
+pub trait LightSource: Boundable + Debug + Sync {
     /// Samples the light source for a given point to be illuminated.
     ///
     ///     - arr: The point to be illuminated.
@@ -49,7 +52,7 @@ pub trait LightSource {
     ///     - dir: The direction of the outgoing light.
     ///     - u: Random parameter U.
     ///     - v: Random parameter V.
-    ///     - wavelength: The wavelength of light to sample at.
+    ///     - wavelength: The hero wavelength of light to sample at.
     ///     - time: The time to sample at.
     fn outgoing(&self, dir: Vector, u: f32, v: f32, wavelength: f32, time: f32) -> SpectralSample;
 
