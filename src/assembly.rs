@@ -161,7 +161,7 @@ impl AssemblyBuilder {
                     let obj = &self.objects[inst.data_index];
                     match obj {
                         &Object::Surface(ref s) => bbs.extend(s.bounds()),
-                        &Object::Light(_) => unimplemented!(),
+                        &Object::Light(ref l) => bbs.extend(l.bounds()),
                     }
                 }
 

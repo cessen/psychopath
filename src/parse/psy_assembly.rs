@@ -5,6 +5,7 @@ use std::result::Result;
 use super::DataTree;
 use super::psy::{parse_matrix, PsyParseError};
 use super::psy_mesh_surface::parse_mesh_surface;
+use super::psy_light::parse_sphere_light;
 
 use assembly::{Assembly, AssemblyBuilder, Object};
 
@@ -70,6 +71,17 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                     }
                 }
 
+                // Sphere Light
+                "SphereLight" => {
+                    if let &DataTree::Internal { ident: Some(ident), .. } = child {
+                        builder.add_object(ident,
+                                        Object::Light(Box::new(try!(parse_sphere_light(&child)))));
+                    } else {
+                        // TODO: error condition of some kind, because no ident
+                        panic!();
+                    }
+                }
+
                 _ => {
                     // TODO: some kind of error, because not a known type name
                 }
@@ -99,10 +111,6 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                 //     assembly->add_surface_shader(child.name, parse_surface_shader(child));
                 // }
                 //
-                // // Sphere Light
-                // else if (child.type == "SphereLight") {
-                //     assembly->add_object(child.name, parse_sphere_light(child));
-                // }
                 //
                 // // Rectangle Light
                 // else if (child.type == "RectangleLight") {

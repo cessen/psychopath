@@ -17,7 +17,19 @@ pub struct SphereLight {
 
 impl SphereLight {
     pub fn new(radii: Vec<f32>, colors: Vec<XYZ>) -> SphereLight {
-        unimplemented!()
+        let bbs = radii.iter()
+            .map(|r| {
+                BBox {
+                    min: Point::new(-*r, -*r, -*r),
+                    max: Point::new(*r, *r, *r),
+                }
+            })
+            .collect();
+        SphereLight {
+            radii: radii,
+            colors: colors,
+            bounds_: bbs,
+        }
     }
 }
 
