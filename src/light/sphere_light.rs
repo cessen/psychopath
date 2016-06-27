@@ -92,13 +92,13 @@ impl LightSource for SphereLight {
             // Calculate the final values and return everything.
             let shadow_vec = (x * sample[0]) + (y * sample[1]) + (z * sample[2]);
             let pdf = uniform_sample_cone_pdf(cos_theta_max);
-            let spectral_sample = (col * surface_area_inv as f32).get_spectral_sample(wavelength);
+            let spectral_sample = (col * surface_area_inv as f32).to_spectral_sample(wavelength);
             return (spectral_sample, shadow_vec, pdf as f32);
         } else {
             // If we're inside the sphere, there's light from every direction.
             let shadow_vec = uniform_sample_sphere(u, v);
             let pdf = 1.0 / (4.0 * PI_64);
-            let spectral_sample = (col * surface_area_inv as f32).get_spectral_sample(wavelength);
+            let spectral_sample = (col * surface_area_inv as f32).to_spectral_sample(wavelength);
             return (spectral_sample, shadow_vec, pdf as f32);
         }
     }
@@ -133,7 +133,7 @@ impl LightSource for SphereLight {
         let radius = lerp_slice(&self.radii, time) as f64;
         let col = lerp_slice(&self.colors, time);
         let surface_area = 4.0 * PI_64 * radius * radius;
-        (col / surface_area as f32).get_spectral_sample(wavelength)
+        (col / surface_area as f32).to_spectral_sample(wavelength)
     }
 
     fn is_delta(&self) -> bool {

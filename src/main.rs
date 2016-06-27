@@ -36,6 +36,7 @@ use std::fs::File;
 use docopt::Docopt;
 
 use ray::{Ray, AccelRay};
+use renderer::LightPath;
 use parse::{parse_scene, DataTree};
 
 // ----------------------------------------------------------------
@@ -93,8 +94,9 @@ fn main() {
         panic!()
     };
 
-    println!("Ray size:      {} bytes", mem::size_of::<Ray>());
-    println!("AccelRay size: {} bytes", mem::size_of::<AccelRay>());
+    println!("Ray size:       {} bytes", mem::size_of::<Ray>());
+    println!("AccelRay size:  {} bytes", mem::size_of::<AccelRay>());
+    println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
 
     // Iterate through scenes and render them
     if let DataTree::Internal { ref children, .. } = dt {

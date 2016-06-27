@@ -8,13 +8,15 @@ use std::cell::RefCell;
 use scoped_threadpool::Pool;
 use crossbeam::sync::MsQueue;
 
+use algorithm::partition_pair;
+use ray::Ray;
 use tracer::Tracer;
 use halton;
 use math::fast_logit;
 use image::Image;
 use surface;
 use scene::Scene;
-use color::{XYZ, rec709e_to_xyz};
+use color::{Color, XYZ, rec709e_to_xyz, map_0_1_to_wavelength};
 
 #[derive(Debug)]
 pub struct Renderer {
@@ -59,13 +61,13 @@ impl Renderer {
                 let ajq = &all_jobs_queued;
                 let img = &image;
                 scope.execute(move || {
+                    let mut paths = Vec::new();
                     let mut rays = Vec::new();
-                    let mut pixel_mapping = Vec::new();
                     let mut tracer = Tracer::from_assembly(&self.scene.root);
 
                     loop {
+                        paths.clear();
                         rays.clear();
-                        pixel_mapping.clear();
 
                         // Get bucket, or exit if no more jobs left
                         let bucket: BucketJob;
@@ -85,51 +87,57 @@ impl Renderer {
                             for x in bucket.x..(bucket.x + bucket.w) {
                                 let offset = hash_u32(((x as u32) << 16) ^ (y as u32), 0);
                                 for si in 0..self.spp {
-                                    let mut ray = {
+                                    // Calculate image plane x and y coordinates
+                                    let (img_x, img_y) = {
                                         let filter_x =
-                                            fast_logit(halton::sample(3, offset + si as u32), 1.5) +
+                                            fast_logit(halton::sample(4, offset + si as u32), 1.5) +
                                             0.5;
                                         let filter_y =
-                                            fast_logit(halton::sample(4, offset + si as u32), 1.5) +
+                                            fast_logit(halton::sample(5, offset + si as u32), 1.5) +
                                             0.5;
                                         let samp_x = (filter_x + x as f32) * cmpx;
                                         let samp_y = (filter_y + y as f32) * cmpy;
-
-                                        self.scene
-                                            .camera
-                                            .generate_ray((samp_x - 0.5) * x_extent,
-                                                          (0.5 - samp_y) * y_extent,
-                                                          halton::sample(0, offset + si as u32),
-                                                          halton::sample(1, offset + si as u32),
-                                                          halton::sample(2, offset + si as u32))
+                                        ((samp_x - 0.5) * x_extent, (0.5 - samp_y) * y_extent)
                                     };
+
+                                    // Create the light path and initial ray for this sample
+                                    let (path, ray) =
+                                        LightPath::new(&self.scene,
+                                                       (x, y),
+                                                       (img_x, img_y),
+                                                       (halton::sample(0, offset + si as u32),
+                                                        halton::sample(1, offset + si as u32)),
+                                                       halton::sample(2, offset + si as u32),
+                                                       map_0_1_to_wavelength(
+                                                           halton::sample(3, offset + si as u32)
+                                                       ),
+                                                       offset + si as u32);
+                                    paths.push(path);
                                     rays.push(ray);
-                                    pixel_mapping.push((x, y))
                                 }
                             }
                         }
 
-                        // Test rays against scene
-                        let isects = tracer.trace(&rays);
+                        // Trace the paths!
+                        let mut pi = paths.len();
+                        while pi > 0 {
+                            // Test rays against scene
+                            let isects = tracer.trace(&rays);
+
+                            // Determine next rays to shoot based on result
+                            pi = partition_pair(&mut paths[..pi],
+                                                &mut rays[..pi],
+                                                |i, path, ray| path.next(&isects[i], &mut *ray));
+                        }
 
                         // Calculate color based on ray hits
                         let img = img.lock().unwrap();
                         let mut img = img.borrow_mut();
-                        for (isect, co) in Iterator::zip(isects.iter(), pixel_mapping.iter()) {
-                            let mut col = img.get(co.0 as usize, co.1 as usize);
-                            if let &surface::SurfaceIntersection::Hit { t: _,
-                                                                        pos: _,
-                                                                        nor: _,
-                                                                        local_space: _,
-                                                                        uv } = isect {
-                                let rgbcol = (uv.0, uv.1, (1.0 - uv.0 - uv.1).max(0.0));
-                                let xyzcol = rec709e_to_xyz(rgbcol);
-                                col += XYZ::new(xyzcol.0, xyzcol.1, xyzcol.2) / self.spp as f32;
-
-                            } else {
-                                col += XYZ::new(0.02, 0.02, 0.02) / self.spp as f32;
-                            }
-                            img.set(co.0 as usize, co.1 as usize, col);
+                        for path in paths.iter() {
+                            let mut col =
+                                img.get(path.pixel_co.0 as usize, path.pixel_co.1 as usize);
+                            col += path.color / self.spp as f32;
+                            img.set(path.pixel_co.0 as usize, path.pixel_co.1 as usize, col);
                         }
                     }
                 });
@@ -167,6 +175,61 @@ impl Renderer {
         }
     }
 }
+
+
+#[derive(Debug)]
+pub struct LightPath {
+    pixel_co: (u32, u32),
+    lds_offset: u32,
+    dim_offset: u32,
+    round: u32,
+    time: f32,
+    wavelength: f32,
+    color: XYZ,
+}
+
+impl LightPath {
+    fn new(scene: &Scene,
+           pixel_co: (u32, u32),
+           image_plane_co: (f32, f32),
+           lens_uv: (f32, f32),
+           time: f32,
+           wavelength: f32,
+           lds_offset: u32)
+           -> (LightPath, Ray) {
+        (LightPath {
+            pixel_co: pixel_co,
+            lds_offset: lds_offset,
+            dim_offset: 6,
+            round: 1,
+            time: time,
+            wavelength: wavelength,
+            color: XYZ::new(0.0, 0.0, 0.0),
+        },
+
+         scene.camera.generate_ray(image_plane_co.0,
+                                   image_plane_co.1,
+                                   time,
+                                   lens_uv.0,
+                                   lens_uv.1))
+    }
+
+    fn next(&mut self, isect: &surface::SurfaceIntersection, ray: &mut Ray) -> bool {
+        if let &surface::SurfaceIntersection::Hit { t: _, pos: _, nor: _, local_space: _, uv } =
+               isect {
+            let rgbcol = (uv.0, uv.1, (1.0 - uv.0 - uv.1).max(0.0));
+            let xyz = XYZ::from_tuple(rec709e_to_xyz(rgbcol));
+            self.color += XYZ::from_spectral_sample(&xyz.to_spectral_sample(self.wavelength));
+
+        } else {
+            let xyz = XYZ::new(0.02, 0.02, 0.02);
+            self.color += XYZ::from_spectral_sample(&xyz.to_spectral_sample(self.wavelength));
+        }
+
+        return false;
+    }
+}
+
 
 #[derive(Debug)]
 struct BucketJob {

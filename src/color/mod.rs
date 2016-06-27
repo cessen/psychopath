@@ -11,10 +11,14 @@ const WL_MAX: f32 = 700.0;
 const WL_RANGE: f32 = WL_MAX - WL_MIN;
 const WL_RANGE_Q: f32 = WL_RANGE / 4.0;
 
+pub fn map_0_1_to_wavelength(n: f32) -> f32 {
+    n * WL_RANGE + WL_MIN
+}
+
 pub trait Color {
     fn sample_spectrum(&self, wavelength: f32) -> f32;
 
-    fn get_spectral_sample(&self, hero_wavelength: f32) -> SpectralSample {
+    fn to_spectral_sample(&self, hero_wavelength: f32) -> SpectralSample {
         SpectralSample {
             e: [self.sample_spectrum(nth_wavelength(hero_wavelength, 0)),
                 self.sample_spectrum(nth_wavelength(hero_wavelength, 1)),
@@ -89,12 +93,28 @@ impl XYZ {
         XYZ { x: x, y: y, z: z }
     }
 
+    pub fn from_tuple(xyz: (f32, f32, f32)) -> XYZ {
+        XYZ {
+            x: xyz.0,
+            y: xyz.1,
+            z: xyz.2,
+        }
+    }
+
     pub fn from_wavelength(wavelength: f32, intensity: f32) -> XYZ {
         XYZ {
             x: x_1931(wavelength) * intensity,
             y: y_1931(wavelength) * intensity,
             z: z_1931(wavelength) * intensity,
         }
+    }
+
+    pub fn from_spectral_sample(ss: &SpectralSample) -> XYZ {
+        let xyz0 = XYZ::from_wavelength(ss.wl_n(0), ss.e[0]);
+        let xyz1 = XYZ::from_wavelength(ss.wl_n(1), ss.e[1]);
+        let xyz2 = XYZ::from_wavelength(ss.wl_n(2), ss.e[2]);
+        let xyz3 = XYZ::from_wavelength(ss.wl_n(3), ss.e[3]);
+        (xyz0 + xyz1 + xyz2 + xyz3) * 0.75
     }
 
     pub fn to_tuple(&self) -> (f32, f32, f32) {
