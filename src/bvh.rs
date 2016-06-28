@@ -192,6 +192,7 @@ impl BVH {
             match self.nodes[i_stack[stack_ptr]] {
                 BVHNode::Internal { bounds_range: br, second_child_index, split_axis } => {
                     let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
+                        (!r.is_done()) &&
                         lerp_slice(&self.bounds[br.0..br.1], r.time).intersect_accel_ray(r)
                     });
                     if part > 0 {
@@ -210,6 +211,7 @@ impl BVH {
 
                 BVHNode::Leaf { bounds_range: br, object_range } => {
                     let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
+                        (!r.is_done()) &&
                         lerp_slice(&self.bounds[br.0..br.1], r.time).intersect_accel_ray(r)
                     });
                     if part > 0 {

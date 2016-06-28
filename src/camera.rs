@@ -76,7 +76,7 @@ impl Camera {
                               1.0)
             .normalized();
 
-        Ray::new(orig * transform, dir * transform, time)
+        Ray::new(orig * transform, dir * transform, time, false)
     }
 }
 

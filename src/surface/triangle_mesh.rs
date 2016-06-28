@@ -78,14 +78,19 @@ impl Surface for TriangleMesh {
                 let tri = (tri.0 * mat_inv, tri.1 * mat_inv, tri.2 * mat_inv);
                 if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(wr, tri) {
                     if t < r.max_t {
-                        isects[r.id as usize] = SurfaceIntersection::Hit {
-                            t: t,
-                            pos: wr.orig + (wr.dir * t),
-                            nor: Normal::new(0.0, 0.0, 0.0), // TODO
-                            local_space: mat_space,
-                            uv: (tri_u, tri_v),
-                        };
-                        r.max_t = t;
+                        if r.is_occlusion() {
+                            isects[r.id as usize] = SurfaceIntersection::Occlude;
+                            r.mark_done();
+                        } else {
+                            isects[r.id as usize] = SurfaceIntersection::Hit {
+                                t: t,
+                                pos: wr.orig + (wr.dir * t),
+                                nor: Normal::new(0.0, 0.0, 0.0), // TODO
+                                local_space: mat_space,
+                                uv: (tri_u, tri_v),
+                            };
+                            r.max_t = t;
+                        }
                     }
                 }
             }
