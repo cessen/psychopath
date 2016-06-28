@@ -1,4 +1,4 @@
-use math::{Vector, Point, coordinate_system_from_vector};
+use math::{Vector, Point, Matrix4x4, coordinate_system_from_vector};
 use bbox::BBox;
 use boundable::Boundable;
 use color::{XYZ, SpectralSample, Color};
@@ -35,14 +35,16 @@ impl SphereLight {
 
 impl LightSource for SphereLight {
     fn sample(&self,
+              space: &Matrix4x4,
               arr: Point,
               u: f32,
               v: f32,
               wavelength: f32,
               time: f32)
               -> (SpectralSample, Vector, f32) {
+        // TODO: use transform space correctly
+        let pos = Point::new(0.0, 0.0, 0.0) * space.inverse();
         // Calculate time interpolated values
-        let pos = Point::new(0.0, 0.0, 0.0); // Light position is always at origin
         let radius: f64 = lerp_slice(&self.radii, time) as f64;
         let col = lerp_slice(&self.colors, time);
         let surface_area_inv: f64 = 1.0 / (4.0 * PI_64 * radius * radius);
@@ -104,6 +106,7 @@ impl LightSource for SphereLight {
     }
 
     fn sample_pdf(&self,
+                  space: &Matrix4x4,
                   arr: Point,
                   sample_dir: Vector,
                   sample_u: f32,
@@ -111,7 +114,8 @@ impl LightSource for SphereLight {
                   wavelength: f32,
                   time: f32)
                   -> f32 {
-        let pos = Point::new(0.0, 0.0, 0.0); // Light position is always at origin
+        // TODO: use transform space correctly
+        let pos = Point::new(0.0, 0.0, 0.0) * space.inverse();
         let radius: f64 = lerp_slice(&self.radii, time) as f64;
 
         let d2: f64 = (pos - arr).length2() as f64;  // Distance from center of sphere squared
@@ -129,7 +133,15 @@ impl LightSource for SphereLight {
         }
     }
 
-    fn outgoing(&self, dir: Vector, u: f32, v: f32, wavelength: f32, time: f32) -> SpectralSample {
+    fn outgoing(&self,
+                space: &Matrix4x4,
+                dir: Vector,
+                u: f32,
+                v: f32,
+                wavelength: f32,
+                time: f32)
+                -> SpectralSample {
+        // TODO: use transform space correctly
         let radius = lerp_slice(&self.radii, time) as f64;
         let col = lerp_slice(&self.colors, time);
         let surface_area = 4.0 * PI_64 * radius * radius;

@@ -22,6 +22,9 @@ pub struct Assembly {
 
     // Object accel
     pub object_accel: BVH,
+
+    // Light accel
+    pub light_accel: Vec<Instance>,
 }
 
 impl Boundable for Assembly {
@@ -126,13 +129,29 @@ impl AssemblyBuilder {
         self.objects.shrink_to_fit();
         self.assemblies.shrink_to_fit();
 
-        // Build object accel
+        // Calculate instance bounds, used for building object accel and
+        // (TODO) light accel.
         let (bis, bbs) = self.instance_bounds();
+
+        // Build object accel
         let object_accel = BVH::from_objects(&mut self.instances[..],
                                              1,
                                              |inst| &bbs[bis[inst.id]..bis[inst.id + 1]]);
-
         println!("Assembly BVH Depth: {}", object_accel.tree_depth());
+
+        // Build light accel
+        // TODO: build light tree instead of stupid vec
+        let light_accel = {
+            let mut light_accel = Vec::new();
+            for inst in self.instances.iter() {
+                if let InstanceType::Object = inst.instance_type {
+                    if let Object::Light(_) = self.objects[inst.data_index] {
+                        light_accel.push(*inst);
+                    }
+                }
+            }
+            light_accel
+        };
 
         Assembly {
             instances: self.instances,
@@ -140,6 +159,7 @@ impl AssemblyBuilder {
             objects: self.objects,
             assemblies: self.assemblies,
             object_accel: object_accel,
+            light_accel: light_accel,
         }
     }
 

@@ -9,10 +9,12 @@ use scoped_threadpool::Pool;
 use crossbeam::sync::MsQueue;
 
 use algorithm::partition_pair;
+use lerp::lerp_slice;
 use ray::Ray;
+use assembly::Object;
 use tracer::Tracer;
 use halton;
-use math::fast_logit;
+use math::{Vector, Matrix4x4, dot, fast_logit};
 use image::Image;
 use surface;
 use scene::Scene;
@@ -125,9 +127,10 @@ impl Renderer {
                             let isects = tracer.trace(&rays);
 
                             // Determine next rays to shoot based on result
-                            pi = partition_pair(&mut paths[..pi],
-                                                &mut rays[..pi],
-                                                |i, path, ray| path.next(&isects[i], &mut *ray));
+                            pi =
+                                partition_pair(&mut paths[..pi], &mut rays[..pi], |i, path, ray| {
+                                    path.next(&self.scene, &isects[i], &mut *ray)
+                                });
                         }
 
                         // Calculate color based on ray hits
@@ -185,6 +188,7 @@ pub struct LightPath {
     round: u32,
     time: f32,
     wavelength: f32,
+    light_attenuation: XYZ,
     color: XYZ,
 }
 
@@ -201,9 +205,10 @@ impl LightPath {
             pixel_co: pixel_co,
             lds_offset: lds_offset,
             dim_offset: 6,
-            round: 1,
+            round: 0,
             time: time,
             wavelength: wavelength,
+            light_attenuation: XYZ::new(1.0, 1.0, 1.0),
             color: XYZ::new(0.0, 0.0, 0.0),
         },
 
@@ -214,19 +219,82 @@ impl LightPath {
                                    lens_uv.1))
     }
 
-    fn next(&mut self, isect: &surface::SurfaceIntersection, ray: &mut Ray) -> bool {
-        if let &surface::SurfaceIntersection::Hit { t: _, pos: _, nor: _, local_space: _, uv } =
-               isect {
-            let rgbcol = (uv.0, uv.1, (1.0 - uv.0 - uv.1).max(0.0));
-            let xyz = XYZ::from_tuple(rec709e_to_xyz(rgbcol));
-            self.color += XYZ::from_spectral_sample(&xyz.to_spectral_sample(self.wavelength));
+    fn next_lds_samp(&mut self) -> f32 {
+        let s = halton::sample(self.dim_offset, self.lds_offset);
+        self.dim_offset += 1;
+        s
+    }
 
-        } else {
-            let xyz = XYZ::new(0.02, 0.02, 0.02);
-            self.color += XYZ::from_spectral_sample(&xyz.to_spectral_sample(self.wavelength));
+    fn next(&mut self, scene: &Scene, isect: &surface::SurfaceIntersection, ray: &mut Ray) -> bool {
+        match self.round {
+            // Result of camera rays, prepare light rays
+            0 => {
+                self.round += 1;
+                if let &surface::SurfaceIntersection::Hit { t: _,
+                                                            pos: pos,
+                                                            nor: nor,
+                                                            local_space: _,
+                                                            uv } = isect {
+                    // Hit something!  Do lighting!
+                    if scene.root.light_accel.len() > 0 {
+                        // Get the light and the mapping to its local space
+                        let (light, space) = {
+                            let l1 = &scene.root.objects[scene.root.light_accel[0].data_index];
+                            let light = if let &Object::Light(ref light) = l1 {
+                                light
+                            } else {
+                                panic!()
+                            };
+                            let space = if let Some((start, end)) = scene.root.light_accel[0]
+                                .transform_indices {
+                                lerp_slice(&scene.root.xforms[start..end], self.time)
+                            } else {
+                                Matrix4x4::new()
+                            };
+                            (light, space)
+                        };
+
+                        let lu = self.next_lds_samp();
+                        let lv = self.next_lds_samp();
+                        // TODO: store incident light info and pdf, and use them properly
+                        let (_, shadow_vec, _) =
+                            light.sample(&space, pos, lu, lv, self.wavelength, self.time);
+
+                        let la = dot(nor.normalized().into_vector(), shadow_vec.normalized())
+                            .max(0.0);
+                        self.light_attenuation = XYZ::from_spectral_sample(&XYZ::new(la, la, la)
+                            .to_spectral_sample(self.wavelength));
+                        *ray = Ray::new(pos + shadow_vec.normalized() * 0.0001,
+                                        shadow_vec,
+                                        self.time,
+                                        true);
+
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else {
+                    // Didn't hit anything, so background color
+                    let xyz = XYZ::new(0.02, 0.02, 0.02);
+                    self.color +=
+                        XYZ::from_spectral_sample(&xyz.to_spectral_sample(self.wavelength));
+                    return false;
+                }
+
+            }
+
+            // Result of light rays
+            1 => {
+                self.round += 1;
+                if let &surface::SurfaceIntersection::Miss = isect {
+                    self.color += self.light_attenuation;
+                }
+                return false;
+            }
+
+            // TODO
+            _ => unimplemented!(),
         }
-
-        return false;
     }
 }
 

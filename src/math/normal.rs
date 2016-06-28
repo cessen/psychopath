@@ -7,7 +7,7 @@ use lerp::Lerp;
 use float4::Float4;
 
 use super::{DotProduct, CrossProduct};
-use super::Matrix4x4;
+use super::{Matrix4x4, Vector};
 
 /// A surface normal in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
@@ -30,6 +30,10 @@ impl Normal {
 
     pub fn normalized(&self) -> Normal {
         *self / self.length()
+    }
+
+    pub fn into_vector(self) -> Vector {
+        Vector::new(self.co[0], self.co[1], self.co[2])
     }
 }
 

@@ -7,7 +7,7 @@ use lerp::Lerp;
 use float4::Float4;
 
 use super::{DotProduct, CrossProduct};
-use super::Matrix4x4;
+use super::{Matrix4x4, Normal};
 
 /// A direction vector in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
@@ -30,6 +30,10 @@ impl Vector {
 
     pub fn normalized(&self) -> Vector {
         *self / self.length()
+    }
+
+    pub fn into_normal(self) -> Normal {
+        Normal::new(self.co[0], self.co[1], self.co[2])
     }
 }
 
