@@ -39,6 +39,10 @@ impl Point {
 
         Point { co: n1.co.v_max(n2.co) }
     }
+
+    pub fn into_vector(self) -> Vector {
+        Vector::new(self[0], self[1], self[2])
+    }
 }
 
 

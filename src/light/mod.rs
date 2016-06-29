@@ -1,8 +1,10 @@
 mod sphere_light;
+mod rectangle_light;
 
 use std::fmt::Debug;
 
 pub use self::sphere_light::SphereLight;
+pub use self::rectangle_light::RectangleLight;
 
 use math::{Vector, Point, Matrix4x4};
 use color::SpectralSample;

@@ -5,7 +5,7 @@ use std::result::Result;
 use super::DataTree;
 use super::psy::{parse_matrix, PsyParseError};
 use super::psy_mesh_surface::parse_mesh_surface;
-use super::psy_light::parse_sphere_light;
+use super::psy_light::{parse_sphere_light, parse_rectangle_light};
 
 use assembly::{Assembly, AssemblyBuilder, Object};
 
@@ -76,6 +76,19 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
                         builder.add_object(ident,
                                         Object::Light(Box::new(try!(parse_sphere_light(&child)))));
+                    } else {
+                        // TODO: error condition of some kind, because no ident
+                        panic!();
+                    }
+                }
+
+                // Sphere Light
+                "RectangleLight" => {
+                    if let &DataTree::Internal { ident: Some(ident), .. } = child {
+                        builder.add_object(ident,
+                                        Object::Light(Box::new(
+                                            try!(parse_rectangle_light(&child))
+                                        )));
                     } else {
                         // TODO: error condition of some kind, because no ident
                         panic!();

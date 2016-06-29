@@ -67,6 +67,12 @@ impl Lerp for f64 {
     }
 }
 
+impl<T: Lerp> Lerp for (T, T) {
+    fn lerp(self, other: (T, T), alpha: f32) -> (T, T) {
+        (self.0.lerp(other.0, alpha), self.1.lerp(other.1, alpha))
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

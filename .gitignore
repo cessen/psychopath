@@ -3,3 +3,4 @@ target
 
 .zedstate
 test_renders
+perf.data*

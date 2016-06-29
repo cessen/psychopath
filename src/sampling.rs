@@ -1,4 +1,4 @@
-use math::Vector;
+use math::{Vector, dot};
 
 use std::f64::consts::PI as PI_64;
 use std::f32::consts::PI as PI_32;
@@ -68,4 +68,97 @@ pub fn uniform_sample_cone(u: f32, v: f32, cos_theta_max: f64) -> Vector {
 pub fn uniform_sample_cone_pdf(cos_theta_max: f64) -> f64 {
     // 1.0 / solid angle
     1.0 / (2.0 * PI_64 * (1.0 - cos_theta_max))
+}
+
+/// Calculates the projected solid angle of a spherical triangle.
+///
+/// A, B, and C are the points of the triangle on a unit sphere.
+pub fn spherical_triangle_solid_angle(va: Vector, vb: Vector, vc: Vector) -> f32 {
+    // Calculate sines and cosines of the spherical triangle's edge lengths
+    let cos_a: f64 = dot(vb, vc).max(-1.0).min(1.0) as f64;
+    let cos_b: f64 = dot(vc, va).max(-1.0).min(1.0) as f64;
+    let cos_c: f64 = dot(va, vb).max(-1.0).min(1.0) as f64;
+    let sin_a: f64 = (1.0 - (cos_a * cos_a)).sqrt();
+    let sin_b: f64 = (1.0 - (cos_b * cos_b)).sqrt();
+    let sin_c: f64 = (1.0 - (cos_c * cos_c)).sqrt();
+
+    // If two of the vertices are coincident, area is zero.
+    // Return early to avoid a divide by zero below.
+    if cos_a == 1.0 || cos_b == 1.0 || cos_c == 1.0 {
+        return 0.0;
+    }
+
+    // Calculate the cosine of the angles at the vertices
+    let cos_va = ((cos_a - (cos_b * cos_c)) / (sin_b * sin_c)).max(-1.0).min(1.0);
+    let cos_vb = ((cos_b - (cos_c * cos_a)) / (sin_c * sin_a)).max(-1.0).min(1.0);
+    let cos_vc = ((cos_c - (cos_a * cos_b)) / (sin_a * sin_b)).max(-1.0).min(1.0);
+
+    // Calculate the angles themselves, in radians
+    let ang_va = cos_va.acos();
+    let ang_vb = cos_vb.acos();
+    let ang_vc = cos_vc.acos();
+
+    // Calculate and return the solid angle of the triangle
+    (ang_va + ang_vb + ang_vc - PI_64) as f32
+}
+
+/// Generates a uniform sample on a spherical triangle given two uniform
+/// random variables i and j in [0, 1].
+pub fn uniform_sample_spherical_triangle(va: Vector,
+                                         vb: Vector,
+                                         vc: Vector,
+                                         i: f32,
+                                         j: f32)
+                                         -> Vector {
+    // Calculate sines and cosines of the spherical triangle's edge lengths
+    let cos_a: f64 = dot(vb, vc).max(-1.0).min(1.0) as f64;
+    let cos_b: f64 = dot(vc, va).max(-1.0).min(1.0) as f64;
+    let cos_c: f64 = dot(va, vb).max(-1.0).min(1.0) as f64;
+    let sin_a: f64 = (1.0 - (cos_a * cos_a)).sqrt();
+    let sin_b: f64 = (1.0 - (cos_b * cos_b)).sqrt();
+    let sin_c: f64 = (1.0 - (cos_c * cos_c)).sqrt();
+
+    // If two of the vertices are coincident, area is zero.
+    // Return early to avoid a divide by zero below.
+    if cos_a == 1.0 || cos_b == 1.0 || cos_c == 1.0 {
+        // TODO: do something more intelligent here, in the case that it's
+        // an infinitely thin line.
+        return va;
+    }
+
+    // Calculate the cosine of the angles at the vertices
+    let cos_va = ((cos_a - (cos_b * cos_c)) / (sin_b * sin_c)).max(-1.0).min(1.0);
+    let cos_vb = ((cos_b - (cos_c * cos_a)) / (sin_c * sin_a)).max(-1.0).min(1.0);
+    let cos_vc = ((cos_c - (cos_a * cos_b)) / (sin_a * sin_b)).max(-1.0).min(1.0);
+
+    // Calculate sine for A
+    let sin_va = (1.0 - (cos_va * cos_va)).sqrt();
+
+    // Calculate the angles themselves, in radians
+    let ang_va = cos_va.acos();
+    let ang_vb = cos_vb.acos();
+    let ang_vc = cos_vc.acos();
+
+    // Calculate the area of the spherical triangle
+    let area = ang_va + ang_vb + ang_vc - PI_64;
+
+    // The rest of this is from the paper "Stratified Sampling of Spherical
+    // Triangles" by James Arvo.
+    let area_2 = area * i as f64;
+
+    let s = (area_2 - ang_va).sin();
+    let t = (area_2 - ang_va).cos();
+    let u = t - cos_va;
+    let v = s + (sin_va * cos_c);
+
+    let q_top = (((v * t) - (u * s)) * cos_va) - v;
+    let q_bottom = ((v * s) + (u * t)) * sin_va;
+    let q = q_top / q_bottom;
+
+    let vc_2 = (va * q as f32) +
+               ((vc - (va * dot(vc, va))).normalized() * (1.0 - (q * q)).sqrt() as f32);
+
+    let z = 1.0 - (j * (1.0 - dot(vc_2, vb)));
+
+    (vb * z) + ((vc_2 - (vb * dot(vc_2, vb))).normalized() * (1.0 - (z * z)).sqrt())
 }

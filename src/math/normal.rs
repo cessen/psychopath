@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::ops::{Index, IndexMut, Add, Sub, Mul, Div};
+use std::ops::{Index, IndexMut, Add, Sub, Mul, Div, Neg};
 use std::cmp::PartialEq;
 
 use lerp::Lerp;
@@ -110,6 +110,15 @@ impl Div<f32> for Normal {
 
     fn div(self, other: f32) -> Normal {
         Normal { co: self.co / other }
+    }
+}
+
+
+impl Neg for Normal {
+    type Output = Normal;
+
+    fn neg(self) -> Normal {
+        Normal { co: self.co * -1.0 }
     }
 }
 
