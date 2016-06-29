@@ -6,7 +6,6 @@ use super::LightSource;
 use lerp::lerp_slice;
 use sampling::{uniform_sample_cone, uniform_sample_cone_pdf, uniform_sample_sphere};
 use std::f64::consts::PI as PI_64;
-use std::f32::consts::PI as PI_32;
 
 #[derive(Debug)]
 pub struct SphereLight {
@@ -52,8 +51,7 @@ impl LightSource for SphereLight {
 
         // Create a coordinate system from the vector between the
         // point and the center of the light
-        let (x, y, z): (Vector, Vector, Vector);
-        z = pos - arr;
+        let z = pos - arr;
         let d2: f64 = z.length2() as f64;  // Distance from center of sphere squared
         let d = d2.sqrt(); // Distance from center of sphere
         let (z, x, y) = coordinate_system_from_vector(z);
@@ -79,11 +77,11 @@ impl LightSource for SphereLight {
             // Convert to a point on the sphere.
             // The technique for this is from "Akalin" on ompf2.com:
             // http://ompf2.com/viewtopic.php?f=3&t=1914#p4414
-            let D = 1.0 - (d2 * sin_theta * sin_theta / (radius * radius));
-            let cos_a = if D <= 0.0 {
+            let dd = 1.0 - (d2 * sin_theta * sin_theta / (radius * radius));
+            let cos_a = if dd <= 0.0 {
                 sin_theta_max
             } else {
-                ((d / radius) * sin_theta2) + (cos_theta * D.sqrt())
+                ((d / radius) * sin_theta2) + (cos_theta * dd.sqrt())
             };
             let sin_a = ((1.0 - (cos_a * cos_a)).max(0.0)).sqrt();
             let phi = v as f64 * 2.0 * PI_64;
@@ -114,6 +112,9 @@ impl LightSource for SphereLight {
                   wavelength: f32,
                   time: f32)
                   -> f32 {
+        // We're not using these, silence warnings
+        let _ = (sample_dir, sample_u, sample_v, wavelength);
+
         // TODO: use transform space correctly
         let pos = Point::new(0.0, 0.0, 0.0) * space.inverse();
         let radius: f64 = lerp_slice(&self.radii, time) as f64;
@@ -141,6 +142,9 @@ impl LightSource for SphereLight {
                 wavelength: f32,
                 time: f32)
                 -> SpectralSample {
+        // We're not using these, silence warnings
+        let _ = (space, dir, u, v);
+
         // TODO: use transform space correctly
         let radius = lerp_slice(&self.radii, time) as f64;
         let col = lerp_slice(&self.colors, time);

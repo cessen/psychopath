@@ -1,12 +1,10 @@
-use math::{Vector, Point, Matrix4x4, cross};
+use math::{Vector, Point, Matrix4x4};
 use bbox::BBox;
 use boundable::Boundable;
 use color::{XYZ, SpectralSample, Color};
 use super::LightSource;
 use lerp::lerp_slice;
 use sampling::{spherical_triangle_solid_angle, uniform_sample_spherical_triangle};
-use std::f64::consts::PI as PI_64;
-use std::f32::consts::PI as PI_32;
 
 #[derive(Debug)]
 pub struct RectangleLight {
@@ -105,6 +103,9 @@ impl LightSource for RectangleLight {
                   wavelength: f32,
                   time: f32)
                   -> f32 {
+        // We're not using these, silence warnings
+        let _ = (sample_dir, sample_u, sample_v, wavelength);
+
         let dim = lerp_slice(&self.dimensions, time);
 
         // Get the four corners of the rectangle, transformed into world space
@@ -136,6 +137,9 @@ impl LightSource for RectangleLight {
                 wavelength: f32,
                 time: f32)
                 -> SpectralSample {
+        // We're not using these, silence warnings
+        let _ = (space, dir, u, v);
+
         let dim = lerp_slice(&self.dimensions, time);
         let col = lerp_slice(&self.colors, time);
 

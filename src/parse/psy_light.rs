@@ -5,11 +5,10 @@ use std::result::Result;
 use nom::IResult;
 
 use super::DataTree;
-use super::basics::{ws_usize, ws_f32};
+use super::basics::ws_f32;
 use super::psy::PsyParseError;
 
 use light::{SphereLight, RectangleLight};
-use math::Point;
 use color::XYZ;
 
 pub fn parse_sphere_light(tree: &DataTree) -> Result<SphereLight, PsyParseError> {

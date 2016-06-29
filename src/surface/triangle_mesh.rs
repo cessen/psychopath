@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use lerp::{lerp, lerp_slice, lerp_slice_with};
-use math::{Point, Normal, Matrix4x4, cross};
+use math::{Point, Matrix4x4, cross};
 use ray::{Ray, AccelRay};
 use triangle;
 use bbox::BBox;

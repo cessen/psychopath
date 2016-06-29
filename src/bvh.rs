@@ -3,7 +3,7 @@
 use lerp::lerp_slice;
 use bbox::BBox;
 use boundable::Boundable;
-use ray::{Ray, AccelRay};
+use ray::AccelRay;
 use algorithm::partition;
 
 #[derive(Debug)]

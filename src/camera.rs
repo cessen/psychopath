@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 
-use std::f32::consts::FRAC_PI_4;
-
 use math::{Vector, Point, Matrix4x4};
+use sampling::square_to_circle;
 use ray::Ray;
 use lerp::lerp_slice;
 
@@ -78,35 +77,4 @@ impl Camera {
 
         Ray::new(orig * transform, dir * transform, time, false)
     }
-}
-
-
-/// Maps the unit square to the unit circle.
-/// NOTE: x and y should be distributed within [-1, 1],
-/// not [0, 1].
-fn square_to_circle(x: f32, y: f32) -> (f32, f32) {
-    debug_assert!(x >= -1.0 && x <= 1.0);
-    debug_assert!(y >= -1.0 && y <= 1.0);
-
-    if x == 0.0 && y == 0.0 {
-        return (0.0, 0.0);
-    }
-
-    let (radius, angle) = {
-        if x > y.abs() {
-            // Quadrant 1
-            (x, (y / x) * FRAC_PI_4)
-        } else if y > x.abs() {
-            // Quadrant 2
-            (y, (2.0 - (x / y)) * FRAC_PI_4)
-        } else if x < -(y.abs()) {
-            // Quadrant 3
-            (-x, (4.0 + (y / x)) * FRAC_PI_4)
-        } else {
-            // Quadrant 4
-            (-y, (6.0 - (x / y)) * FRAC_PI_4)
-        }
-    };
-
-    return (radius * angle.cos(), radius * angle.sin());
 }

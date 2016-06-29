@@ -31,7 +31,7 @@ pub trait Color {
 }
 
 fn nth_wavelength(hero_wavelength: f32, n: usize) -> f32 {
-    let mut wl = hero_wavelength + (WL_RANGE_Q * n as f32);
+    let wl = hero_wavelength + (WL_RANGE_Q * n as f32);
     if wl > WL_MAX {
         wl - WL_RANGE
     } else {
@@ -55,23 +55,9 @@ impl SpectralSample {
         }
     }
 
-    pub fn add_color<T: Color>(&mut self, color: &T) {
-        self.e[0] += color.sample_spectrum(self.wl_n(0));
-        self.e[1] += color.sample_spectrum(self.wl_n(1));
-        self.e[2] += color.sample_spectrum(self.wl_n(2));
-        self.e[3] += color.sample_spectrum(self.wl_n(3));
-    }
-
-    pub fn mul_color<T: Color>(&mut self, color: &T) {
-        self.e[0] *= color.sample_spectrum(self.wl_n(0));
-        self.e[1] *= color.sample_spectrum(self.wl_n(1));
-        self.e[2] *= color.sample_spectrum(self.wl_n(2));
-        self.e[3] *= color.sample_spectrum(self.wl_n(3));
-    }
-
     /// Returns the nth wavelength
     fn wl_n(&self, n: usize) -> f32 {
-        let mut wl = self.hero_wavelength + (WL_RANGE_Q * n as f32);
+        let wl = self.hero_wavelength + (WL_RANGE_Q * n as f32);
         if wl > WL_MAX {
             wl - WL_RANGE
         } else {

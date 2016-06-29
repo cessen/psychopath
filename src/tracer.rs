@@ -144,19 +144,6 @@ impl TransformStack {
         ts
     }
 
-    fn with_capacity(capacity: usize) -> TransformStack {
-        let mut ts = TransformStack {
-            stack: Vec::with_capacity(capacity),
-            stack_indices: Vec::with_capacity(capacity),
-            scratch_space: Vec::with_capacity(capacity),
-        };
-
-        ts.stack_indices.push(0);
-        ts.stack_indices.push(0);
-
-        ts
-    }
-
     fn push(&mut self, xforms: &[Matrix4x4]) {
         assert!(xforms.len() > 0);
 

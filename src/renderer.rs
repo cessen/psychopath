@@ -14,11 +14,11 @@ use ray::Ray;
 use assembly::Object;
 use tracer::Tracer;
 use halton;
-use math::{Vector, Matrix4x4, dot, fast_logit};
+use math::{Matrix4x4, dot, fast_logit};
 use image::Image;
 use surface;
 use scene::Scene;
-use color::{Color, XYZ, rec709e_to_xyz, map_0_1_to_wavelength};
+use color::{Color, XYZ, map_0_1_to_wavelength};
 
 #[derive(Debug)]
 pub struct Renderer {
@@ -231,10 +231,10 @@ impl LightPath {
             0 => {
                 self.round += 1;
                 if let &surface::SurfaceIntersection::Hit { t: _,
-                                                            pos: pos,
-                                                            nor: nor,
+                                                            pos,
+                                                            nor,
                                                             local_space: _,
-                                                            uv } = isect {
+                                                            uv: _ } = isect {
                     // Hit something!  Do lighting!
                     if scene.root.light_accel.len() > 0 {
                         // Get the light and the mapping to its local space

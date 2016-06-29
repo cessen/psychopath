@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use math::{Vector, dot};
 
 use std::f64::consts::PI as PI_64;
@@ -5,7 +7,6 @@ use std::f32::consts::PI as PI_32;
 use std::f32::consts::FRAC_PI_4 as QPI_32;
 
 /// Maps the unit square to the unit circle.
-/// Modifies x and y in place.
 /// NOTE: x and y should be distributed within [-1, 1],
 /// not [0, 1].
 pub fn square_to_circle(x: f32, y: f32) -> (f32, f32) {
