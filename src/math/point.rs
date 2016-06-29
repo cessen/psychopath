@@ -89,6 +89,14 @@ impl Sub for Point {
     }
 }
 
+impl Sub<Vector> for Point {
+    type Output = Point;
+
+    fn sub(self, other: Vector) -> Point {
+        Point { co: self.co - other.co }
+    }
+}
+
 impl Mul<Matrix4x4> for Point {
     type Output = Point;
 

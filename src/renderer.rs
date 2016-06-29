@@ -268,8 +268,8 @@ impl LightPath {
                         let la = dot(rnor, shadow_vec.normalized()).max(0.0);
                         self.light_attenuation = XYZ::from_spectral_sample(&XYZ::new(la, la, la)
                             .to_spectral_sample(self.wavelength));
-                        *ray = Ray::new(pos + shadow_vec.normalized() * 0.0001,
-                                        shadow_vec,
+                        *ray = Ray::new(pos + rnor * 0.0001,
+                                        shadow_vec - rnor * 0.0001,
                                         self.time,
                                         true);
 
