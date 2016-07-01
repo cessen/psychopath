@@ -18,7 +18,7 @@ use math::{Matrix4x4, dot, fast_logit};
 use image::Image;
 use surface;
 use scene::Scene;
-use color::{Color, XYZ, map_0_1_to_wavelength};
+use color::{Color, XYZ, SpectralSample, map_0_1_to_wavelength};
 
 #[derive(Debug)]
 pub struct Renderer {
@@ -139,7 +139,7 @@ impl Renderer {
                         for path in paths.iter() {
                             let mut col =
                                 img.get(path.pixel_co.0 as usize, path.pixel_co.1 as usize);
-                            col += path.color / self.spp as f32;
+                            col += XYZ::from_spectral_sample(&path.color) / self.spp as f32;
                             img.set(path.pixel_co.0 as usize, path.pixel_co.1 as usize, col);
                         }
                     }
@@ -188,8 +188,9 @@ pub struct LightPath {
     round: u32,
     time: f32,
     wavelength: f32,
-    light_attenuation: XYZ,
-    color: XYZ,
+    light_attenuation: SpectralSample,
+    pending_color_addition: SpectralSample,
+    color: SpectralSample,
 }
 
 impl LightPath {
@@ -208,8 +209,9 @@ impl LightPath {
             round: 0,
             time: time,
             wavelength: wavelength,
-            light_attenuation: XYZ::new(1.0, 1.0, 1.0),
-            color: XYZ::new(0.0, 0.0, 0.0),
+            light_attenuation: SpectralSample::from_value(1.0, wavelength),
+            pending_color_addition: SpectralSample::new(wavelength),
+            color: SpectralSample::new(wavelength),
         },
 
          scene.camera.generate_ray(image_plane_co.0,
@@ -257,7 +259,7 @@ impl LightPath {
                         let lu = self.next_lds_samp();
                         let lv = self.next_lds_samp();
                         // TODO: store incident light info and pdf, and use them properly
-                        let (_, shadow_vec, _) =
+                        let (light_color, shadow_vec, light_pdf) =
                             light.sample(&space, pos, lu, lv, self.wavelength, self.time);
 
                         let rnor = if dot(nor.into_vector(), ray.dir) > 0.0 {
@@ -266,8 +268,8 @@ impl LightPath {
                             nor.into_vector().normalized()
                         };
                         let la = dot(rnor, shadow_vec.normalized()).max(0.0);
-                        self.light_attenuation = XYZ::from_spectral_sample(&XYZ::new(la, la, la)
-                            .to_spectral_sample(self.wavelength));
+                        // self.light_attenuation = SpectralSample::from_value(la);
+                        self.pending_color_addition = light_color * la / light_pdf;
                         *ray = Ray::new(pos + rnor * 0.0001,
                                         shadow_vec - rnor * 0.0001,
                                         self.time,
@@ -280,8 +282,7 @@ impl LightPath {
                 } else {
                     // Didn't hit anything, so background color
                     let xyz = XYZ::new(0.02, 0.02, 0.02);
-                    self.color +=
-                        XYZ::from_spectral_sample(&xyz.to_spectral_sample(self.wavelength));
+                    self.color += xyz.to_spectral_sample(self.wavelength);
                     return false;
                 }
 
@@ -291,7 +292,7 @@ impl LightPath {
             1 => {
                 self.round += 1;
                 if let &surface::SurfaceIntersection::Miss = isect {
-                    self.color += self.light_attenuation;
+                    self.color += self.pending_color_addition;
                 }
                 return false;
             }

@@ -2,6 +2,7 @@ mod spectra_xyz;
 
 use std::ops::{Add, AddAssign, Mul, MulAssign, Div, DivAssign};
 
+use float4::Float4;
 use lerp::Lerp;
 use self::spectra_xyz::{spectrum_xyz_to_p, EQUAL_ENERGY_REFLECTANCE};
 
@@ -20,10 +21,10 @@ pub trait Color {
 
     fn to_spectral_sample(&self, hero_wavelength: f32) -> SpectralSample {
         SpectralSample {
-            e: [self.sample_spectrum(nth_wavelength(hero_wavelength, 0)),
-                self.sample_spectrum(nth_wavelength(hero_wavelength, 1)),
-                self.sample_spectrum(nth_wavelength(hero_wavelength, 2)),
-                self.sample_spectrum(nth_wavelength(hero_wavelength, 3))],
+            e: Float4::new(self.sample_spectrum(nth_wavelength(hero_wavelength, 0)),
+                           self.sample_spectrum(nth_wavelength(hero_wavelength, 1)),
+                           self.sample_spectrum(nth_wavelength(hero_wavelength, 2)),
+                           self.sample_spectrum(nth_wavelength(hero_wavelength, 3))),
 
             hero_wavelength: hero_wavelength,
         }
@@ -42,7 +43,7 @@ fn nth_wavelength(hero_wavelength: f32, n: usize) -> f32 {
 
 #[derive(Copy, Clone, Debug)]
 pub struct SpectralSample {
-    e: [f32; 4],
+    e: Float4,
     hero_wavelength: f32,
 }
 
@@ -50,7 +51,15 @@ impl SpectralSample {
     pub fn new(wavelength: f32) -> SpectralSample {
         debug_assert!(wavelength >= WL_MIN && wavelength <= WL_MAX);
         SpectralSample {
-            e: [0.0; 4],
+            e: Float4::new(0.0, 0.0, 0.0, 0.0),
+            hero_wavelength: wavelength,
+        }
+    }
+
+    pub fn from_value(value: f32, wavelength: f32) -> SpectralSample {
+        debug_assert!(wavelength >= WL_MIN && wavelength <= WL_MAX);
+        SpectralSample {
+            e: Float4::new(value, value, value, value),
             hero_wavelength: wavelength,
         }
     }
@@ -63,6 +72,56 @@ impl SpectralSample {
         } else {
             wl
         }
+    }
+}
+
+impl Add for SpectralSample {
+    type Output = SpectralSample;
+    fn add(self, rhs: SpectralSample) -> Self::Output {
+        assert!(self.hero_wavelength == rhs.hero_wavelength);
+        SpectralSample {
+            e: self.e + rhs.e,
+            hero_wavelength: self.hero_wavelength,
+        }
+    }
+}
+
+impl AddAssign for SpectralSample {
+    fn add_assign(&mut self, rhs: SpectralSample) {
+        assert!(self.hero_wavelength == rhs.hero_wavelength);
+        self.e = self.e + rhs.e;
+    }
+}
+
+impl Mul<f32> for SpectralSample {
+    type Output = SpectralSample;
+    fn mul(self, rhs: f32) -> Self::Output {
+        SpectralSample {
+            e: self.e * rhs,
+            hero_wavelength: self.hero_wavelength,
+        }
+    }
+}
+
+impl MulAssign<f32> for SpectralSample {
+    fn mul_assign(&mut self, rhs: f32) {
+        self.e = self.e * rhs;
+    }
+}
+
+impl Div<f32> for SpectralSample {
+    type Output = SpectralSample;
+    fn div(self, rhs: f32) -> Self::Output {
+        SpectralSample {
+            e: self.e / rhs,
+            hero_wavelength: self.hero_wavelength,
+        }
+    }
+}
+
+impl DivAssign<f32> for SpectralSample {
+    fn div_assign(&mut self, rhs: f32) {
+        self.e = self.e / rhs;
     }
 }
 

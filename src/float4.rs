@@ -88,6 +88,22 @@ impl Float4 {
             *self.data.get_unchecked_mut(3) = n;
         }
     }
+
+    pub fn get_0(&self) -> f32 {
+        unsafe { *self.data.get_unchecked(0) }
+    }
+
+    pub fn get_1(&self) -> f32 {
+        unsafe { *self.data.get_unchecked(1) }
+    }
+
+    pub fn get_2(&self) -> f32 {
+        unsafe { *self.data.get_unchecked(2) }
+    }
+
+    pub fn get_3(&self) -> f32 {
+        unsafe { *self.data.get_unchecked(3) }
+    }
 }
 
 

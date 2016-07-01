@@ -9,7 +9,7 @@ use super::basics::ws_f32;
 use super::psy::PsyParseError;
 
 use light::{SphereLight, RectangleLight};
-use color::XYZ;
+use color::{XYZ, rec709e_to_xyz};
 
 pub fn parse_sphere_light(tree: &DataTree) -> Result<SphereLight, PsyParseError> {
     if let &DataTree::Internal { ref children, .. } = tree {
@@ -37,7 +37,7 @@ pub fn parse_sphere_light(tree: &DataTree) -> Result<SphereLight, PsyParseError>
                         // TODO: handle color space conversions properly.
                         // Probably will need a special color type with its
                         // own parser...?
-                        colors.push(XYZ::new(color.0, color.1, color.2));
+                        colors.push(XYZ::from_tuple(rec709e_to_xyz(color)));
                     } else {
                         // Found color, but its contents is not in the right format
                         return Err(PsyParseError::UnknownError);
@@ -81,7 +81,7 @@ pub fn parse_rectangle_light(tree: &DataTree) -> Result<RectangleLight, PsyParse
                         // TODO: handle color space conversions properly.
                         // Probably will need a special color type with its
                         // own parser...?
-                        colors.push(XYZ::new(color.0, color.1, color.2));
+                        colors.push(XYZ::from_tuple(rec709e_to_xyz(color)));
                     } else {
                         // Found color, but its contents is not in the right format
                         return Err(PsyParseError::UnknownError);
