@@ -16,6 +16,11 @@ pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32,
         let tvec = ray.orig - tri.0;
         let qvec = cross(tvec, edge1);
 
+        let t = dot(edge2, qvec) * inv_det;
+        if t < 0.0 {
+            return None;
+        }
+
         let u = dot(tvec, pvec) * inv_det;
         if u < 0.0 || u > 1.0 {
             return None;
@@ -26,7 +31,6 @@ pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32,
             return None;
         }
 
-        let t = dot(edge2, qvec) * inv_det;
         return Some((t, u, v));
     } else {
         return None;
