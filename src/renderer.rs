@@ -3,8 +3,7 @@
 use std::path::Path;
 use std::cmp::min;
 use std::iter::Iterator;
-use std::sync::{Mutex, RwLock};
-use std::cell::RefCell;
+use std::sync::RwLock;
 use scoped_threadpool::Pool;
 use crossbeam::sync::MsQueue;
 
@@ -32,13 +31,8 @@ impl Renderer {
     pub fn render(&self, thread_count: u32) {
         let mut tpool = Pool::new(thread_count);
 
-        let image = Mutex::new(RefCell::new(Image::new(self.resolution.0, self.resolution.1)));
-        let (img_width, img_height) = {
-            let i = image.lock().unwrap();
-            let w = i.borrow().width();
-            let h = i.borrow().height();
-            (w, h)
-        };
+        let mut image = Image::new(self.resolution.0, self.resolution.1);
+        let (img_width, img_height) = (image.width(), image.height());
 
         let all_jobs_queued = RwLock::new(false);
 
@@ -54,6 +48,7 @@ impl Renderer {
 
         // Set up job queue
         let job_queue = MsQueue::new();
+
 
         // Render
         tpool.scoped(|scope| {
@@ -134,13 +129,15 @@ impl Renderer {
                         }
 
                         // Calculate color based on ray hits
-                        let img = img.lock().unwrap();
-                        let mut img = img.borrow_mut();
-                        for path in paths.iter() {
-                            let mut col =
-                                img.get(path.pixel_co.0 as usize, path.pixel_co.1 as usize);
-                            col += XYZ::from_spectral_sample(&path.color) / self.spp as f32;
-                            img.set(path.pixel_co.0 as usize, path.pixel_co.1 as usize, col);
+                        {
+                            let min = (bucket.x, bucket.y);
+                            let max = (bucket.x + bucket.w, bucket.y + bucket.h);
+                            let mut img_bucket = img.get_bucket(min, max);
+                            for path in paths.iter() {
+                                let mut col = img_bucket.get(path.pixel_co.0, path.pixel_co.1);
+                                col += XYZ::from_spectral_sample(&path.color) / self.spp as f32;
+                                img_bucket.set(path.pixel_co.0, path.pixel_co.1, col);
+                            }
                         }
                     }
                 });
@@ -172,10 +169,7 @@ impl Renderer {
 
 
         // Write rendered image to disk
-        {
-            let img = &image.lock().unwrap();
-            let _ = img.borrow().write_binary_ppm(Path::new(&self.output_file));
-        }
+        let _ = image.write_binary_ppm(Path::new(&self.output_file));
     }
 }
 
