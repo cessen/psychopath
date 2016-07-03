@@ -85,6 +85,7 @@ impl Surface for TriangleMesh {
                             isects[r.id as usize] = SurfaceIntersection::Hit {
                                 t: t,
                                 pos: wr.orig + (wr.dir * t),
+                                incoming: wr.dir,
                                 nor: cross(tri.0 - tri.1, tri.0 - tri.2).into_normal(),
                                 local_space: mat_space,
                                 uv: (tri_u, tri_v),

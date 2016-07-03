@@ -27,6 +27,7 @@ mod assembly;
 mod halton;
 mod sampling;
 mod color;
+mod shading;
 
 use std::mem;
 use std::io;

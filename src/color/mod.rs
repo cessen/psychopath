@@ -93,6 +93,24 @@ impl AddAssign for SpectralSample {
     }
 }
 
+impl Mul for SpectralSample {
+    type Output = SpectralSample;
+    fn mul(self, rhs: SpectralSample) -> Self::Output {
+        assert!(self.hero_wavelength == rhs.hero_wavelength);
+        SpectralSample {
+            e: self.e * rhs.e,
+            hero_wavelength: self.hero_wavelength,
+        }
+    }
+}
+
+impl MulAssign for SpectralSample {
+    fn mul_assign(&mut self, rhs: SpectralSample) {
+        assert!(self.hero_wavelength == rhs.hero_wavelength);
+        self.e = self.e * rhs.e;
+    }
+}
+
 impl Mul<f32> for SpectralSample {
     type Output = SpectralSample;
     fn mul(self, rhs: f32) -> Self::Output {

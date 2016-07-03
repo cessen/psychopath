@@ -13,11 +13,12 @@ use ray::Ray;
 use assembly::Object;
 use tracer::Tracer;
 use halton;
-use math::{Matrix4x4, dot, fast_logit};
+use math::{Matrix4x4, fast_logit};
 use image::Image;
 use surface;
 use scene::Scene;
 use color::{Color, XYZ, SpectralSample, map_0_1_to_wavelength};
+use shading::surface_closure::{SurfaceClosure, LambertClosure};
 
 #[derive(Debug)]
 pub struct Renderer {
@@ -182,6 +183,7 @@ pub struct LightPath {
     round: u32,
     time: f32,
     wavelength: f32,
+    interaction: surface::SurfaceIntersection,
     light_attenuation: SpectralSample,
     pending_color_addition: SpectralSample,
     color: SpectralSample,
@@ -203,6 +205,7 @@ impl LightPath {
             round: 0,
             time: time,
             wavelength: wavelength,
+            interaction: surface::SurfaceIntersection::Miss,
             light_attenuation: SpectralSample::from_value(1.0, wavelength),
             pending_color_addition: SpectralSample::new(wavelength),
             color: SpectralSample::new(wavelength),
@@ -222,77 +225,114 @@ impl LightPath {
     }
 
     fn next(&mut self, scene: &Scene, isect: &surface::SurfaceIntersection, ray: &mut Ray) -> bool {
-        match self.round {
-            // Result of camera rays, prepare light rays
-            0 => {
-                self.round += 1;
-                if let &surface::SurfaceIntersection::Hit { t: _,
-                                                            pos,
-                                                            nor,
-                                                            local_space: _,
-                                                            uv: _ } = isect {
-                    // Hit something!  Do lighting!
-                    if scene.root.light_accel.len() > 0 {
-                        // Get the light and the mapping to its local space
-                        let (light, space) = {
-                            let l1 = &scene.root.objects[scene.root.light_accel[0].data_index];
-                            let light = if let &Object::Light(ref light) = l1 {
-                                light
-                            } else {
-                                panic!()
-                            };
-                            let space = if let Some((start, end)) = scene.root.light_accel[0]
-                                .transform_indices {
-                                lerp_slice(&scene.root.xforms[start..end], self.time)
-                            } else {
-                                Matrix4x4::new()
-                            };
-                            (light, space)
-                        };
+        self.round += 1;
 
+        // Result of shading ray, prepare light ray
+        if self.round % 2 == 1 {
+            if let &surface::SurfaceIntersection::Hit { t: _,
+                                                        incoming: _,
+                                                        pos,
+                                                        nor,
+                                                        local_space: _,
+                                                        uv: _ } = isect {
+                // Hit something!  Do the stuff
+                self.interaction = *isect; // Store interaction for use in next phase
+
+                // Prepare light ray
+                if scene.root.light_accel.len() > 0 {
+                    // Get the light and the mapping to its local space
+                    let (light, space) = {
+                        let l1 = &scene.root.objects[scene.root.light_accel[0].data_index];
+                        let light = if let &Object::Light(ref light) = l1 {
+                            light
+                        } else {
+                            panic!()
+                        };
+                        let space = if let Some((start, end)) = scene.root.light_accel[0]
+                            .transform_indices {
+                            lerp_slice(&scene.root.xforms[start..end], self.time)
+                        } else {
+                            Matrix4x4::new()
+                        };
+                        (light, space)
+                    };
+
+                    // Sample the light
+                    let (light_color, shadow_vec, light_pdf) = {
                         let lu = self.next_lds_samp();
                         let lv = self.next_lds_samp();
-                        // TODO: store incident light info and pdf, and use them properly
-                        let (light_color, shadow_vec, light_pdf) =
-                            light.sample(&space, pos, lu, lv, self.wavelength, self.time);
+                        light.sample(&space, pos, lu, lv, self.wavelength, self.time)
+                    };
 
-                        let rnor = if dot(nor.into_vector(), ray.dir) > 0.0 {
-                            -nor.into_vector().normalized()
-                        } else {
-                            nor.into_vector().normalized()
-                        };
-                        let la = dot(rnor, shadow_vec.normalized()).max(0.0);
-                        // self.light_attenuation = SpectralSample::from_value(la);
-                        self.pending_color_addition = light_color * la / light_pdf;
-                        *ray = Ray::new(pos + rnor * 0.0001,
-                                        shadow_vec - rnor * 0.0001,
-                                        self.time,
-                                        true);
+                    // Calculate and store the light that will be contributed
+                    // to the film plane if the light is not in shadow.
+                    self.pending_color_addition = {
+                        let material = LambertClosure::new(XYZ::new(0.8, 0.8, 0.8));
+                        let la = material.evaluate(ray.dir, shadow_vec, nor, self.wavelength);
+                        light_color * la * self.light_attenuation / light_pdf
+                    };
 
-                        return true;
-                    } else {
-                        return false;
-                    }
+                    // Calculate the shadow ray for testing if the light is
+                    // in shadow or not.
+                    // TODO: use proper ray offsets for avoiding self-shadowing
+                    // rather than this hacky stupid stuff.
+                    *ray = Ray::new(pos + shadow_vec.normalized() * 0.0001,
+                                    shadow_vec,
+                                    self.time,
+                                    true);
+
+                    return true;
                 } else {
-                    // Didn't hit anything, so background color
-                    let xyz = XYZ::new(0.02, 0.02, 0.02);
-                    self.color += xyz.to_spectral_sample(self.wavelength);
                     return false;
                 }
-
-            }
-
-            // Result of light rays
-            1 => {
-                self.round += 1;
-                if let &surface::SurfaceIntersection::Miss = isect {
-                    self.color += self.pending_color_addition;
-                }
+            } else {
+                // Didn't hit anything, so background color
+                let xyz = XYZ::new(0.0, 0.0, 0.0);
+                self.color += xyz.to_spectral_sample(self.wavelength);
                 return false;
             }
+        }
+        // Result of light ray, prepare shading ray
+        else if self.round % 2 == 0 {
+            // If the light was not in shadow, add it's light to the film
+            // plane.
+            if let &surface::SurfaceIntersection::Miss = isect {
+                self.color += self.pending_color_addition;
+            }
 
+            // Calculate bounced lighting!
+            if self.round < 6 {
+                if let surface::SurfaceIntersection::Hit { t: _,
+                                                           pos,
+                                                           incoming,
+                                                           nor,
+                                                           local_space: _,
+                                                           uv: _ } = self.interaction {
+                    // Sample material
+                    let (dir, filter, pdf) = {
+                        let material = LambertClosure::new(XYZ::new(0.8, 0.8, 0.8));
+                        let u = self.next_lds_samp();
+                        let v = self.next_lds_samp();
+                        material.sample(incoming, nor, (u, v), self.wavelength)
+                    };
+
+                    // Account for the additional light attenuation from
+                    // this bounce
+                    self.light_attenuation *= filter / pdf;
+
+                    // Calculate the ray for this bounce
+                    *ray = Ray::new(pos + dir.normalized() * 0.0001, dir, self.time, false);
+
+                    return true;
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        } else {
             // TODO
-            _ => unimplemented!(),
+            unimplemented!()
         }
     }
 }

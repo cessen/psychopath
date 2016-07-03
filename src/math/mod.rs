@@ -55,7 +55,25 @@ pub fn coordinate_system_from_vector(v: Vector) -> (Vector, Vector, Vector) {
     (v, v2, v3)
 }
 
+/// Simple mapping of a vector that exists in a z-up space to
+/// the space of another vector who's direction is considered
+/// z-up for the purpose.
+/// Obviously this doesn't care about the direction _around_
+/// the z-up, although it will be sufficiently consistent for
+/// isotropic sampling purposes.
+///
+/// from: The vector we're transforming.
+/// toz: The vector whose space we are transforming "from" into.
+///
+/// Returns he transformed vector.
+pub fn zup_to_vec(from: Vector, toz: Vector) -> Vector {
+    let (toz, tox, toy) = coordinate_system_from_vector(toz.normalized());
 
+    // Use simple linear algebra to convert the "from"
+    // vector to a space composed of tox, toy, and toz
+    // as the x, y, and z axes.
+    (tox * from[0]) + (toy * from[1]) + (toz * from[2])
+}
 
 /// The logit function, scaled to approximate the probit function.
 ///

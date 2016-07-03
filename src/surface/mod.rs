@@ -5,17 +5,18 @@ use std::fmt::Debug;
 pub mod triangle_mesh;
 
 use ray::{Ray, AccelRay};
-use math::{Point, Normal, Matrix4x4};
+use math::{Point, Vector, Normal, Matrix4x4};
 use boundable::Boundable;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum SurfaceIntersection {
     Miss,
     Occlude,
     Hit {
         t: f32,
         pos: Point,
+        incoming: Vector,
         nor: Normal,
         local_space: Matrix4x4,
         uv: (f32, f32),
