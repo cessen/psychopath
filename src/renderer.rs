@@ -276,7 +276,7 @@ impl LightPath {
                     // in shadow or not.
                     // TODO: use proper ray offsets for avoiding self-shadowing
                     // rather than this hacky stupid stuff.
-                    *ray = Ray::new(pos + shadow_vec.normalized() * 0.0001,
+                    *ray = Ray::new(pos + shadow_vec.normalized() * 0.001,
                                     shadow_vec,
                                     self.time,
                                     true);

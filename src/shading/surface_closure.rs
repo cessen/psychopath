@@ -185,7 +185,7 @@ impl SurfaceClosure for LambertClosure {
               uv: (f32, f32),
               wavelength: f32)
               -> (Vector, SpectralSample, f32) {
-        let nn = if dot(nor.into_vector().normalized(), inc.normalized()) <= 0.0 {
+        let nn = if dot(nor.into_vector(), inc) <= 0.0 {
                 nor.normalized()
             } else {
                 -nor.normalized()
@@ -199,7 +199,7 @@ impl SurfaceClosure for LambertClosure {
         let out = zup_to_vec(dir, nn);
         let filter = self.evaluate(inc, out, nor, wavelength);
 
-        (dir, filter, pdf)
+        (out, filter, pdf)
     }
 
     fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, wavelength: f32) -> SpectralSample {
