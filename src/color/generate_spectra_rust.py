@@ -79,6 +79,11 @@ pub fn spectrum_xyz_to_p(lambda: f32, xyz: (f32, f32, f32)) -> f32
     let idx = &cell.idx;
     let num: i32 = cell.num_points;
     
+    // if the cell has no points, nothing we can do, so return 0
+    if num == 0 {
+        return 0.0;
+    }
+    
     // get linearly interpolated spectral power for the corner vertices:
     // this clamping is only necessary if lambda is not sure to be >= SPECTRUM_SAMPLE_MIN and <= SPECTRUM_SAMPLE_MAX:
     let sb: f32 = /*(SPECTRUM_NUM_SAMPLES as f32 - 1e-4).min(0.0.max(*/ (lambda - SPECTRUM_SAMPLE_MIN) / (SPECTRUM_SAMPLE_MAX - SPECTRUM_SAMPLE_MIN) * (SPECTRUM_NUM_SAMPLES as f32 - 1.0)/*))*/;
