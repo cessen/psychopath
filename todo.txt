@@ -1,3 +1,4 @@
-//- Move to spectral rendering.
-- Implement basic direct lighting w/ spherical lights.
+- Implement support for multiple light sources in a scene.
+- Implement shader parsing, and use in rendering.
+- Add gui display of rendering in progress.
 - Unit tests for scene parsing.
