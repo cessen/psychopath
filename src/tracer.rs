@@ -52,7 +52,11 @@ impl<'a> Tracer<'a> {
             // to them in their function parameters.
             &mut (*rays_ptr)[..]
         };
-        self.trace_assembly(self.root, wrays, ray_refs);
+
+        let mut ray_sets = split_rays_by_direction(&mut ray_refs[..]);
+        for ray_set in ray_sets.iter_mut().filter(|ray_set| ray_set.len() > 0) {
+            self.trace_assembly(self.root, wrays, ray_set);
+        }
 
         return &self.isects;
     }
