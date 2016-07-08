@@ -75,7 +75,13 @@ impl Surface for TriangleMesh {
                                     |a, b, t| {
                                         (lerp(a.0, b.0, t), lerp(a.1, b.1, t), lerp(a.2, b.2, t))
                                     });
-                let mat_space = lerp_slice(space, wr.time);
+                // TODO: when there's no transforms, we don't have to
+                // transform the triangles at all.
+                let mat_space = if space.len() > 0 {
+                    lerp_slice(space, wr.time)
+                } else {
+                    Matrix4x4::new()
+                };
                 let mat_inv = mat_space.inverse();
                 let tri = (tri.0 * mat_inv, tri.1 * mat_inv, tri.2 * mat_inv);
                 if let Some((t, _, _)) = triangle::intersect_ray(wr, tri) {

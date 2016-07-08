@@ -91,6 +91,17 @@ impl AssemblyBuilder {
             panic!("Attempted to add instance with a name that doesn't exist.");
         }
 
+        // Map zero-length transforms to None
+        let xforms = if let Some(xf) = xforms {
+            if xf.len() > 0 {
+                Some(xf)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         // Create instance
         let instance = if self.object_map.contains_key(name) {
             Instance {
