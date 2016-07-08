@@ -1,6 +1,7 @@
 use std::iter;
 use std::cell::UnsafeCell;
 
+use algorithm::partition;
 use math::{Matrix4x4, multiply_matrix_slices};
 use lerp::lerp_slice;
 use assembly::{Assembly, Object, InstanceType};
@@ -76,13 +77,41 @@ impl<'a> Tracer<'a> {
             }
 
             // Trace rays
-            match inst.instance_type {
-                InstanceType::Object => {
-                    self.trace_object(&assembly.objects[inst.data_index], wrays, rs);
-                }
+            {
+                // This is kind of weird looking, but what we're doing here is
+                // splitting the rays up based on direction if they were
+                // transformed, and not splitting them up if they weren't
+                // transformed.
+                // But to keep the actual tracing code in one place (DRY),
+                // we map both cases to an array slice that contains slices of
+                // ray arrays.  Gah... that's confusing even when explained.
+                // TODO: do this in a way that's less confusing.  Probably split
+                // the tracing code out into a trace_instance() method or
+                // something.
+                let mut tmp = if let Some(_) = inst.transform_indices {
+                    split_rays_by_direction(rs)
+                } else {
+                    [&mut rs[..], &mut [], &mut [], &mut [], &mut [], &mut [], &mut [], &mut []]
+                };
+                let mut ray_sets = if let Some(_) = inst.transform_indices {
+                    &mut tmp[..]
+                } else {
+                    &mut tmp[..1]
+                };
 
-                InstanceType::Assembly => {
-                    self.trace_assembly(&assembly.assemblies[inst.data_index], wrays, rs);
+                // Loop through the split ray slices and trace them
+                for ray_set in ray_sets.iter_mut().filter(|ray_set| ray_set.len() > 0) {
+                    match inst.instance_type {
+                        InstanceType::Object => {
+                            self.trace_object(&assembly.objects[inst.data_index], wrays, ray_set);
+                        }
+
+                        InstanceType::Assembly => {
+                            self.trace_assembly(&assembly.assemblies[inst.data_index],
+                                                wrays,
+                                                ray_set);
+                        }
+                    }
                 }
             }
 
@@ -121,6 +150,31 @@ impl<'a> Tracer<'a> {
             }
         }
     }
+}
+
+
+fn split_rays_by_direction(rays: &mut [AccelRay]) -> [&mut [AccelRay]; 8] {
+    // |   |   |   |   |   |   |   |   |
+    //     s1  s2  s3  s4  s5  s6  s7
+    let s4 = partition(&mut rays[..], |r| r.dir_inv[0].is_sign_positive());
+
+    let s2 = partition(&mut rays[..s4], |r| r.dir_inv[1].is_sign_positive());
+    let s6 = s4 + partition(&mut rays[s4..], |r| r.dir_inv[1].is_sign_positive());
+
+    let s1 = partition(&mut rays[..s2], |r| r.dir_inv[2].is_sign_positive());
+    let s3 = s2 + partition(&mut rays[s2..s4], |r| r.dir_inv[2].is_sign_positive());
+    let s5 = s4 + partition(&mut rays[s4..s6], |r| r.dir_inv[2].is_sign_positive());
+    let s7 = s6 + partition(&mut rays[s6..], |r| r.dir_inv[2].is_sign_positive());
+
+    let (rest, rs7) = rays.split_at_mut(s7);
+    let (rest, rs6) = rest.split_at_mut(s6);
+    let (rest, rs5) = rest.split_at_mut(s5);
+    let (rest, rs4) = rest.split_at_mut(s4);
+    let (rest, rs3) = rest.split_at_mut(s3);
+    let (rest, rs2) = rest.split_at_mut(s2);
+    let (rs0, rs1) = rest.split_at_mut(s1);
+
+    [rs0, rs1, rs2, rs3, rs4, rs5, rs6, rs7]
 }
 
 
