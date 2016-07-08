@@ -234,7 +234,7 @@ impl LightPath {
                                                         pos,
                                                         nor,
                                                         local_space: _,
-                                                        uv: _ } = isect {
+                                                        closure } = isect {
                 // Hit something!  Do the stuff
                 self.interaction = *isect; // Store interaction for use in next phase
 
@@ -267,7 +267,7 @@ impl LightPath {
                     // Calculate and store the light that will be contributed
                     // to the film plane if the light is not in shadow.
                     self.pending_color_addition = {
-                        let material = LambertClosure::new(XYZ::new(0.8, 0.8, 0.8));
+                        let material = closure.as_surface_closure();
                         let la = material.evaluate(ray.dir, shadow_vec, nor, self.wavelength);
                         light_color * la * self.light_attenuation / light_pdf
                     };
@@ -307,10 +307,10 @@ impl LightPath {
                                                            incoming,
                                                            nor,
                                                            local_space: _,
-                                                           uv: _ } = self.interaction {
+                                                           closure } = self.interaction {
                     // Sample material
                     let (dir, filter, pdf) = {
-                        let material = LambertClosure::new(XYZ::new(0.8, 0.8, 0.8));
+                        let material = closure.as_surface_closure();
                         let u = self.next_lds_samp();
                         let v = self.next_lds_samp();
                         material.sample(incoming, nor, (u, v), self.wavelength)

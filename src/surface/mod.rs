@@ -4,6 +4,7 @@ use std::fmt::Debug;
 
 pub mod triangle_mesh;
 
+use shading::surface_closure::SurfaceClosureUnion;
 use ray::{Ray, AccelRay};
 use math::{Point, Vector, Normal, Matrix4x4};
 use boundable::Boundable;
@@ -19,7 +20,7 @@ pub enum SurfaceIntersection {
         incoming: Vector,
         nor: Normal,
         local_space: Matrix4x4,
-        uv: (f32, f32),
+        closure: SurfaceClosureUnion,
     },
 }
 

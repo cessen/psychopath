@@ -4,8 +4,23 @@ use sampling::cosine_sample_hemisphere;
 use std::f32::consts::PI as PI_32;
 const INV_PI: f32 = 1.0 / PI_32;
 
+#[derive(Debug, Copy, Clone)]
+pub enum SurfaceClosureUnion {
+    EmitClosure(EmitClosure),
+    LambertClosure(LambertClosure),
+}
+
+impl SurfaceClosureUnion {
+    pub fn as_surface_closure(&self) -> &SurfaceClosure {
+        match self {
+            &SurfaceClosureUnion::EmitClosure(ref closure) => closure as &SurfaceClosure,
+            &SurfaceClosureUnion::LambertClosure(ref closure) => closure as &SurfaceClosure,
+        }
+    }
+}
+
 /// Trait for surface closures.
-pub trait SurfaceClosure: Copy {
+pub trait SurfaceClosure {
     /// Returns whether the closure has a delta distribution or not.
     fn is_delta(&self) -> bool;
 

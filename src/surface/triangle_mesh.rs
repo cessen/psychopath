@@ -7,6 +7,8 @@ use triangle;
 use bbox::BBox;
 use boundable::Boundable;
 use bvh::BVH;
+use shading::surface_closure::{SurfaceClosureUnion, LambertClosure};
+use color::XYZ;
 
 use super::{Surface, SurfaceIntersection};
 
@@ -76,7 +78,7 @@ impl Surface for TriangleMesh {
                 let mat_space = lerp_slice(space, wr.time);
                 let mat_inv = mat_space.inverse();
                 let tri = (tri.0 * mat_inv, tri.1 * mat_inv, tri.2 * mat_inv);
-                if let Some((t, tri_u, tri_v)) = triangle::intersect_ray(wr, tri) {
+                if let Some((t, _, _)) = triangle::intersect_ray(wr, tri) {
                     if t < r.max_t {
                         if r.is_occlusion() {
                             isects[r.id as usize] = SurfaceIntersection::Occlude;
@@ -88,7 +90,10 @@ impl Surface for TriangleMesh {
                                 incoming: wr.dir,
                                 nor: cross(tri.0 - tri.1, tri.0 - tri.2).into_normal(),
                                 local_space: mat_space,
-                                uv: (tri_u, tri_v),
+                                // TODO
+                                closure: SurfaceClosureUnion::LambertClosure(
+                                    LambertClosure::new(XYZ::new(0.8, 0.8, 0.8))
+                                ),
                             };
                             r.max_t = t;
                         }
