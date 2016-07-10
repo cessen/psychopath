@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
+use std::io::{self, Write};
 use std::path::Path;
 use std::cmp::min;
-use std::sync::RwLock;
+use std::cell::Cell;
+use std::sync::{RwLock, Mutex};
 use scoped_threadpool::Pool;
 use crossbeam::sync::MsQueue;
 
@@ -46,6 +48,10 @@ impl Renderer {
         // Set up job queue
         let job_queue = MsQueue::new();
 
+        // For printing render progress
+        let total_pixels = self.resolution.0 * self.resolution.1;
+        let pixels_rendered = Mutex::new(Cell::new(0));
+        let pixrenref = &pixels_rendered;
 
         // Render
         tpool.scoped(|scope| {
@@ -125,7 +131,7 @@ impl Renderer {
                                 });
                         }
 
-                        // Calculate color based on ray hits
+                        // Calculate color based on ray hits and save to image
                         {
                             let min = (bucket.x, bucket.y);
                             let max = (bucket.x + bucket.w, bucket.y + bucket.h);
@@ -136,13 +142,49 @@ impl Renderer {
                                 img_bucket.set(path.pixel_co.0, path.pixel_co.1, col);
                             }
                         }
+
+                        // Print render progress
+                        {
+                            let guard = pixrenref.lock().unwrap();
+                            let mut pr = (*guard).get();
+                            let percentage_old = pr as f64 / total_pixels as f64 * 100.0;
+
+                            pr += bucket.w as usize * bucket.h as usize;
+                            (*guard).set(pr);
+                            let percentage_new = pr as f64 / total_pixels as f64 * 100.0;
+
+                            let old_string = format!("{:.2}%", percentage_old);
+                            let new_string = format!("{:.2}%", percentage_new);
+
+                            if new_string != old_string {
+                                print!("\r{}", new_string);
+                                io::stdout().flush();
+                            }
+                        }
                     }
                 });
             }
 
+            // Print initial 0.00% progress
+            print!("0.00%");
+            io::stdout().flush();
+
+            // Determine bucket size based on a target number of samples
+            // per bucket.
+            // TODO: make target samples per bucket configurable
+            let target_samples_per_bucket = 1usize << 12;
+            let (bucket_w, bucket_h) = {
+                let target_pixels_per_bucket = target_samples_per_bucket as f64 / self.spp as f64;
+                let target_bucket_dim = if target_pixels_per_bucket.sqrt() < 1.0 {
+                    1usize
+                } else {
+                    target_pixels_per_bucket.sqrt() as usize
+                };
+
+                (target_bucket_dim, target_bucket_dim)
+            };
+
             // Populate job queue
-            let bucket_w = 16;
-            let bucket_h = 16;
             for by in 0..((img_height / bucket_h) + 1) {
                 for bx in 0..((img_width / bucket_w) + 1) {
                     let x = bx * bucket_w;
