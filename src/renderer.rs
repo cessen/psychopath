@@ -158,7 +158,7 @@ impl Renderer {
 
                             if new_string != old_string {
                                 print!("\r{}", new_string);
-                                io::stdout().flush();
+                                let _ = io::stdout().flush();
                             }
                         }
                     }
@@ -167,7 +167,7 @@ impl Renderer {
 
             // Print initial 0.00% progress
             print!("0.00%");
-            io::stdout().flush();
+            let _ = io::stdout().flush();
 
             // Determine bucket size based on a target number of samples
             // per bucket.
