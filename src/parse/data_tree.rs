@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 use std::result::Result;
-use std::cmp::Eq;
 use std::iter::Iterator;
 use std::slice;
 

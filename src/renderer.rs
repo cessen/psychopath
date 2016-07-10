@@ -2,23 +2,19 @@
 
 use std::path::Path;
 use std::cmp::min;
-use std::iter::Iterator;
 use std::sync::RwLock;
 use scoped_threadpool::Pool;
 use crossbeam::sync::MsQueue;
 
 use algorithm::partition_pair;
-use lerp::lerp_slice;
 use ray::Ray;
-use assembly::Object;
 use tracer::Tracer;
 use halton;
-use math::{Matrix4x4, fast_logit};
+use math::fast_logit;
 use image::Image;
 use surface;
 use scene::Scene;
 use color::{Color, XYZ, SpectralSample, map_0_1_to_wavelength};
-use shading::surface_closure::{SurfaceClosure, LambertClosure};
 
 #[derive(Debug)]
 pub struct Renderer {
@@ -239,31 +235,10 @@ impl LightPath {
                 self.interaction = *isect; // Store interaction for use in next phase
 
                 // Prepare light ray
-                if scene.root.light_accel.len() > 0 {
-                    // Get the light and the mapping to its local space
-                    let (light, space) = {
-                        let l1 = &scene.root.objects[scene.root.light_accel[0].data_index];
-                        let light = if let &Object::Light(ref light) = l1 {
-                            light
-                        } else {
-                            panic!()
-                        };
-                        let space = if let Some((start, end)) = scene.root.light_accel[0]
-                            .transform_indices {
-                            lerp_slice(&scene.root.xforms[start..end], self.time)
-                        } else {
-                            Matrix4x4::new()
-                        };
-                        (light, space)
-                    };
-
-                    // Sample the light
-                    let (light_color, shadow_vec, light_pdf) = {
-                        let lu = self.next_lds_samp();
-                        let lv = self.next_lds_samp();
-                        light.sample(&space, pos, lu, lv, self.wavelength, self.time)
-                    };
-
+                let light_n = self.next_lds_samp();
+                let light_uvw = (self.next_lds_samp(), self.next_lds_samp(), self.next_lds_samp());
+                if let Some((light_color, shadow_vec, light_pdf)) = scene.root
+                    .sample_lights(light_n, light_uvw, self.wavelength, self.time, isect) {
                     // Calculate and store the light that will be contributed
                     // to the film plane if the light is not in shadow.
                     self.pending_color_addition = {

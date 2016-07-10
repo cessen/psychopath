@@ -22,6 +22,7 @@ mod triangle;
 mod surface;
 mod light;
 mod bvh;
+mod light_accel;
 mod scene;
 mod assembly;
 mod halton;

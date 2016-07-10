@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
-use math::Matrix4x4;
+use math::{Matrix4x4, Vector};
+use lerp::lerp_slice;
 use bvh::BVH;
+use light_accel::{LightAccel, LightArray};
 use boundable::Boundable;
-use surface::Surface;
+use surface::{Surface, SurfaceIntersection};
 use light::LightSource;
+use color::SpectralSample;
 use bbox::{BBox, transform_bbox_slice_from};
 
 
@@ -12,6 +15,7 @@ use bbox::{BBox, transform_bbox_slice_from};
 pub struct Assembly {
     // Instance list
     pub instances: Vec<Instance>,
+    pub light_instances: Vec<Instance>,
     pub xforms: Vec<Matrix4x4>,
 
     // Object list
@@ -24,7 +28,51 @@ pub struct Assembly {
     pub object_accel: BVH,
 
     // Light accel
-    pub light_accel: Vec<Instance>,
+    pub light_accel: LightArray,
+}
+
+impl Assembly {
+    // Returns (light_color, shadow_vector, selection_pdf)
+    pub fn sample_lights(&self,
+                         n: f32,
+                         uvw: (f32, f32, f32),
+                         wavelength: f32,
+                         time: f32,
+                         intr: &SurfaceIntersection)
+                         -> Option<(SpectralSample, Vector, f32)> {
+        if let &SurfaceIntersection::Hit { pos, .. } = intr {
+            if let Some((light_i, sel_pdf, _)) = self.light_accel.select(n) {
+                let inst = self.light_instances[light_i];
+                match inst.instance_type {
+                    InstanceType::Object => {
+                        match &self.objects[inst.data_index] {
+                            &Object::Light(ref light) => {
+                                let xform = if let Some((a, b)) = inst.transform_indices {
+                                    lerp_slice(&self.xforms[a..b], time)
+                                } else {
+                                    Matrix4x4::new()
+                                };
+                                let (color, shadow_vec, pdf) =
+                                    light.sample(&xform, pos, uvw.0, uvw.1, wavelength, time);
+                                return Some((color, shadow_vec, pdf * sel_pdf));
+                            }
+
+                            _ => unimplemented!(),
+                        }
+                    }
+
+                    InstanceType::Assembly => {
+                        // TODO: recursive light selection inside assemblies
+                        unimplemented!()
+                    }
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
 }
 
 impl Boundable for Assembly {
@@ -151,21 +199,24 @@ impl AssemblyBuilder {
         println!("Assembly BVH Depth: {}", object_accel.tree_depth());
 
         // Build light accel
-        // TODO: build light tree instead of stupid vec
-        let light_accel = {
-            let mut light_accel = Vec::new();
-            for inst in self.instances.iter() {
-                if let InstanceType::Object = inst.instance_type {
+        let mut light_instances = self.instances.clone();
+        let light_accel = LightArray::new(&mut light_instances[..], |inst| {
+            match inst.instance_type {
+                InstanceType::Object => {
                     if let Object::Light(_) = self.objects[inst.data_index] {
-                        light_accel.push(*inst);
+                        Some((&bbs[bis[inst.id]..bis[inst.id + 1]], 1.0))
+                    } else {
+                        None
                     }
                 }
+
+                _ => None,
             }
-            light_accel
-        };
+        });
 
         Assembly {
             instances: self.instances,
+            light_instances: light_instances,
             xforms: self.xforms,
             objects: self.objects,
             assemblies: self.assemblies,
