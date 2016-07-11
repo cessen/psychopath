@@ -10,6 +10,8 @@ use std::cell::{RefCell, UnsafeCell};
 use std::mem;
 use std::cmp;
 
+use lodepng;
+
 use color::{XYZ, xyz_to_rec709e};
 
 #[derive(Debug)]
@@ -119,6 +121,32 @@ impl Image {
                 let d = [r, g, b];
                 try!(f.write_all(&d));
             }
+        }
+
+        // Done
+        Ok(())
+    }
+
+    pub fn write_png(&mut self, path: &Path) -> io::Result<()> {
+        let mut image = Vec::new();
+
+        // Convert pixels
+        for y in 0..self.res.1 {
+            for x in 0..self.res.0 {
+                let (r, g, b) = quantize_tri_255(xyz_to_srgbe(self.get(x, y).to_tuple()));
+                let d = lodepng::RGB::new(r, g, b);
+                image.push(d);
+            }
+        }
+
+        // Write file
+        if let Err(_) = lodepng::encode_file(path,
+                                             &image,
+                                             self.res.0,
+                                             self.res.1,
+                                             lodepng::ColorType::LCT_RGB,
+                                             8) {
+            panic!("Couldn't write PNG file.");
         }
 
         // Done

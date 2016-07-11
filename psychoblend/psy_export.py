@@ -316,47 +316,17 @@ class PsychoExporter:
                 time_meshes += [ob.to_mesh(self.scene, True, 'RENDER')]
 
         # Export mesh data if necessary
-        if export_mesh and ob.data.psychopath.is_subdivision_surface == False:
-            # Exporting normal mesh
-            self.mesh_names[mesh_name] = True
-            self.w.write("Assembly $%s {\n" % escape_name(mesh_name))
-            self.w.indent()
-
-            # Write patches
-            polys = time_meshes[0].polygons
-            face_count = 0
-            for poly in polys:
-                face_count += 1
-                if len(poly.vertices) == 4:
-                    # Object
-                    self.w.write("BilinearPatch $%s.%d {\n" % (escape_name(mesh_name), face_count))
-                    self.w.indent()
-                    for i in range(len(time_meshes)):
-                        verts = time_meshes[i].vertices
-                        vstr = ""
-                        for vi in [poly.vertices[0], poly.vertices[1], poly.vertices[3], poly.vertices[2]]:
-                            v = verts[vi].co
-                            vstr += ("%f %f %f " % (v[0], v[1], v[2]))
-                        self.w.write("Vertices [%s]\n" % vstr[:-1])
-                    self.w.unindent()
-                    self.w.write("}\n")
-                    # Instance
-                    self.w.write("Instance {\n")
-                    self.w.indent()
-                    self.w.write("Data [$%s.%d]\n" % (escape_name(mesh_name), face_count))
-                    self.w.unindent()
-                    self.w.write("}\n")
-            for m in time_meshes:
-                bpy.data.meshes.remove(m)
-
-            # Assembly section end
-            self.w.unindent()
-            self.w.write("}\n")
-        elif export_mesh and ob.data.psychopath.is_subdivision_surface == True:
-            # Exporting subdivision surface cage
-            self.mesh_names[mesh_name] = True
-            self.w.write("SubdivisionSurface $%s {\n" % escape_name(mesh_name))
-            self.w.indent()
+        if export_mesh:
+            if ob.data.psychopath.is_subdivision_surface == False:
+                # Exporting normal mesh
+                self.mesh_names[mesh_name] = True
+                self.w.write("MeshSurface $%s {\n" % escape_name(mesh_name))
+                self.w.indent()
+            elif ob.data.psychopath.is_subdivision_surface == True:
+                # Exporting subdivision surface cage
+                self.mesh_names[mesh_name] = True
+                self.w.write("SubdivisionSurface $%s {\n" % escape_name(mesh_name))
+                self.w.indent()
             
             # Write vertices
             for ti in range(len(time_meshes)):

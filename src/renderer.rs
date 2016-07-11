@@ -208,7 +208,7 @@ impl Renderer {
 
 
         // Write rendered image to disk
-        let _ = image.write_binary_ppm(Path::new(&self.output_file));
+        let _ = image.write_png(Path::new(&self.output_file));
     }
 }
 

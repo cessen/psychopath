@@ -1,6 +1,6 @@
 Scene $Scene_fr1 {
     Output {
-        Path ["test_renders/cornell_box.ppm"]
+        Path ["test_renders/cornell_box.png"]
     }
     RenderSettings {
         Resolution [512 512]

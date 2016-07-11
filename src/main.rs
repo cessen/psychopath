@@ -3,6 +3,7 @@ extern crate docopt;
 extern crate scoped_threadpool;
 extern crate crossbeam;
 extern crate num_cpus;
+extern crate lodepng;
 #[macro_use]
 extern crate nom;
 
