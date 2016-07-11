@@ -23,6 +23,7 @@ pub struct Renderer {
     pub output_file: String,
     pub resolution: (usize, usize),
     pub spp: usize,
+    pub seed: u32,
     pub scene: Scene,
 }
 
@@ -82,10 +83,10 @@ impl Renderer {
                             }
                         }
 
-                        // Generate rays
+                        // Generate light paths and initial rays
                         for y in bucket.y..(bucket.y + bucket.h) {
                             for x in bucket.x..(bucket.x + bucket.w) {
-                                let offset = hash_u32(((x as u32) << 16) ^ (y as u32), 0);
+                                let offset = hash_u32(((x as u32) << 16) ^ (y as u32), self.seed);
                                 for si in 0..self.spp {
                                     // Calculate image plane x and y coordinates
                                     let (img_x, img_y) = {

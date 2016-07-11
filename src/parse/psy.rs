@@ -87,6 +87,7 @@ pub fn parse_scene(tree: &DataTree) -> Result<Renderer, PsyParseError> {
         output_file: output_info.clone(),
         resolution: ((render_settings.0).0 as usize, (render_settings.0).1 as usize),
         spp: render_settings.1 as usize,
+        seed: render_settings.2,
         scene: scene,
     };
 
