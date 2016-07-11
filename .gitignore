@@ -1,6 +1,10 @@
 target
 *.rs.bk
 
+# Python Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
 .zedstate
 test_renders
 perf.data*
