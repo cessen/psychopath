@@ -27,18 +27,27 @@ pub fn parse_mesh_surface(tree: &DataTree) -> Result<TriangleMesh, PsyParseError
     // and other validation.
 
     // Get verts
-    // TODO: store vert count for a single round and make sure all rounds
-    // have the same count.
     let mut time_samples = 0;
+    let mut first_vert_count = None;
     for (_, text) in tree.iter_leaf_children_with_type("Vertices") {
         let mut raw_text = text.trim().as_bytes();
 
+        // Collect verts for this time sample
+        let mut vert_count = 0;
         while let IResult::Done(remaining, vert) = closure!(tuple!(ws_f32,
                                                                    ws_f32,
                                                                    ws_f32))(raw_text) {
             raw_text = remaining;
 
             verts.push(Point::new(vert.0, vert.1, vert.2));
+            vert_count += 1;
+        }
+
+        // Make sure all time samples have same vert count
+        if let Some(fvc) = first_vert_count {
+            assert!(vert_count == fvc);
+        } else {
+            first_vert_count = Some(vert_count);
         }
 
         time_samples += 1;
@@ -67,20 +76,25 @@ pub fn parse_mesh_surface(tree: &DataTree) -> Result<TriangleMesh, PsyParseError
     }
 
     // Build triangle mesh
-    // TODO: time samples
     let mut triangles = Vec::new();
+    let vert_count = first_vert_count.unwrap();
     let mut ii = 0;
     for fvc in face_vert_counts.iter() {
         if *fvc >= 3 {
+            // Store the polygon, split up into triangles if >3 verts
             let v1 = ii;
             for vi in 0..(fvc - 2) {
-                triangles.push((verts[face_vert_indices[v1]],
-                                verts[face_vert_indices[v1 + vi + 1]],
-                                verts[face_vert_indices[v1 + vi + 2]]));
+                // Store all the time samples of each triangle contiguously
+                for time_sample in 0..time_samples {
+                    let start_vi = vert_count * time_sample;
+                    triangles.push((verts[start_vi + face_vert_indices[v1]],
+                                    verts[start_vi + face_vert_indices[v1 + vi + 1]],
+                                    verts[start_vi + face_vert_indices[v1 + vi + 2]]));
+                }
             }
         } else {
             // TODO: proper error
-            panic!();
+            panic!("Cannot handle polygons with less than three vertices.");
         }
 
         ii += *fvc;

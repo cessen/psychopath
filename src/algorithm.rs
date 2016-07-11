@@ -2,6 +2,8 @@
 
 use std;
 
+use lerp::{Lerp, lerp_slice};
+
 /// Partitions a slice in-place with the given unary predicate, returning
 /// the index of the first element for which the predicate evaluates
 /// false.
@@ -106,6 +108,35 @@ pub fn partition_pair<A, B, F>(slc1: &mut [A], slc2: &mut [B], mut pred: F) -> u
 
             a1 = a1.offset(1);
             a2 = a2.offset(1);
+        }
+    }
+}
+
+/// Merges two slices of things, appending the result to vec_out
+pub fn merge_slices_append<T: Lerp + Copy, F>(slice1: &[T],
+                                              slice2: &[T],
+                                              vec_out: &mut Vec<T>,
+                                              merge: F)
+    where F: Fn(&T, &T) -> T
+{
+    // Transform the bounding boxes
+    if slice1.len() == 0 || slice2.len() == 0 {
+        return;
+    } else if slice1.len() == slice2.len() {
+        for (xf1, xf2) in Iterator::zip(slice1.iter(), slice2.iter()) {
+            vec_out.push(merge(xf1, xf2));
+        }
+    } else if slice1.len() > slice2.len() {
+        let s = (slice1.len() - 1) as f32;
+        for (i, xf1) in slice1.iter().enumerate() {
+            let xf2 = lerp_slice(slice2, i as f32 / s);
+            vec_out.push(merge(xf1, &xf2));
+        }
+    } else if slice1.len() < slice2.len() {
+        let s = (slice2.len() - 1) as f32;
+        for (i, xf2) in slice2.iter().enumerate() {
+            let xf1 = lerp_slice(slice1, i as f32 / s);
+            vec_out.push(merge(&xf1, xf2));
         }
     }
 }

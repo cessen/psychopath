@@ -4,7 +4,7 @@ use lerp::lerp_slice;
 use bbox::BBox;
 use boundable::Boundable;
 use ray::AccelRay;
-use algorithm::partition;
+use algorithm::{partition, merge_slices_append};
 
 #[derive(Debug)]
 pub struct BVH {
@@ -158,12 +158,14 @@ impl BVH {
                                                              bounder);
 
             // Determine bounds
-            // TODO: merging of different length bounds
+            // TODO: do merging without the temporary vec.
             let bi = self.bounds.len();
-            for (i1, i2) in Iterator::zip(c1_bounds.0..c1_bounds.1, c2_bounds.0..c2_bounds.1) {
-                let bb = self.bounds[i1] | self.bounds[i2];
-                self.bounds.push(bb);
-            }
+            let mut merged = Vec::new();
+            merge_slices_append(&self.bounds[c1_bounds.0..c1_bounds.1],
+                                &self.bounds[c2_bounds.0..c2_bounds.1],
+                                &mut merged,
+                                |b1, b2| *b1 | *b2);
+            self.bounds.extend(merged.drain(0..));
 
             // Set node
             self.nodes[me] = BVHNode::Internal {

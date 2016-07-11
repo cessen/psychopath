@@ -348,7 +348,7 @@ class PsychoExporter:
                     self.w.write("%d " % v, False)
             self.w.write("]\n", False)
             
-            # SubdivisionSurface section end
+            # MeshSurface/SubdivisionSurface section end
             self.w.unindent()
             self.w.write("}\n")
             

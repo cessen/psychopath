@@ -4,7 +4,7 @@ use std;
 use std::ops::{Index, IndexMut, Mul};
 
 use float4::Float4;
-use lerp::{Lerp, lerp_slice};
+use lerp::Lerp;
 
 use super::Point;
 
@@ -246,33 +246,6 @@ impl Lerp for Matrix4x4 {
         }
     }
 }
-
-
-pub fn multiply_matrix_slices(xforms1: &[Matrix4x4],
-                              xforms2: &[Matrix4x4],
-                              xforms_out: &mut Vec<Matrix4x4>) {
-    xforms_out.clear();
-
-    // Transform the bounding boxes
-    if xforms1.len() == 0 || xforms2.len() == 0 {
-        return;
-    } else if xforms1.len() == xforms2.len() {
-        for (xf1, xf2) in Iterator::zip(xforms1.iter(), xforms2.iter()) {
-            xforms_out.push(*xf1 * *xf2);
-        }
-    } else if xforms1.len() > xforms2.len() {
-        let s = (xforms1.len() - 1) as f32;
-        for (i, xf) in xforms1.iter().enumerate() {
-            xforms_out.push(*xf * lerp_slice(xforms2, i as f32 / s));
-        }
-    } else if xforms1.len() < xforms2.len() {
-        let s = (xforms2.len() - 1) as f32;
-        for (i, xf) in xforms2.iter().enumerate() {
-            xforms_out.push(lerp_slice(xforms1, i as f32 / s) * *xf);
-        }
-    }
-}
-
 
 
 #[cfg(test)]

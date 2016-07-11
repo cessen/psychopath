@@ -1,8 +1,8 @@
 use std::iter;
 use std::cell::UnsafeCell;
 
-use algorithm::partition;
-use math::{Matrix4x4, multiply_matrix_slices};
+use algorithm::{partition, merge_slices_append};
+use math::Matrix4x4;
 use lerp::lerp_slice;
 use assembly::{Assembly, Object, InstanceType};
 use ray::{Ray, AccelRay};
@@ -213,7 +213,10 @@ impl TransformStack {
             let i2 = self.stack_indices[sil - 1];
 
             self.scratch_space.clear();
-            multiply_matrix_slices(&self.stack[i1..i2], xforms, &mut self.scratch_space);
+            merge_slices_append(&self.stack[i1..i2],
+                                xforms,
+                                &mut self.scratch_space,
+                                |xf1, xf2| *xf1 * *xf2);
 
             self.stack.extend(&self.scratch_space);
         }
