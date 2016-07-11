@@ -54,7 +54,7 @@ class PsychopathRender(bpy.types.RenderEngine):
         # Start Rendering!
         try:
             self._process = subprocess.Popen([psy_binary] + args,
-                                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                             stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
         except OSError:
             # TODO, report api
             print("Psychopath: could not execute '%s'" % psy_binary)
