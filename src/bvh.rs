@@ -184,8 +184,8 @@ impl BVH {
             return;
         }
 
-        let mut i_stack = [0; 65];
-        let mut ray_i_stack = [rays.len(); 65];
+        let mut i_stack = [0; 256];
+        let mut ray_i_stack = [rays.len(); 256];
         let mut stack_ptr = 1;
 
         while stack_ptr > 0 {
