@@ -61,19 +61,27 @@ impl BVH {
         self.depth
     }
 
-    fn acc_bounds<'a, T, F>(&mut self, objects1: &mut [T], bounder: &F)
+    fn acc_bounds<'a, T, F>(&mut self, objects: &mut [T], bounder: &F)
         where F: 'a + Fn(&T) -> &'a [BBox]
     {
-        // TODO: merging of different length bounds
+        // TODO: do all of this without the temporary cache
+        let max_len = objects.iter().map(|obj| bounder(obj).len()).max().unwrap();
+
         self.bounds_cache.clear();
-        for bb in bounder(&objects1[0]).iter() {
-            self.bounds_cache.push(*bb);
-        }
-        for obj in &objects1[1..] {
+        self.bounds_cache.resize(max_len, BBox::new());
+
+        for obj in objects.iter() {
             let bounds = bounder(obj);
-            debug_assert!(self.bounds_cache.len() == bounds.len());
-            for i in 0..bounds.len() {
-                self.bounds_cache[i] = self.bounds_cache[i] | bounds[i];
+            debug_assert!(bounds.len() > 0);
+            if bounds.len() == max_len {
+                for i in 0..bounds.len() {
+                    self.bounds_cache[i] |= bounds[i];
+                }
+            } else {
+                let s = (max_len - 1) as f32;
+                for (i, bbc) in self.bounds_cache.iter_mut().enumerate() {
+                    *bbc |= lerp_slice(bounds, i as f32 / s);
+                }
             }
         }
     }
