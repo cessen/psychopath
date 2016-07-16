@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use std;
-use std::ops::BitOr;
+use std::ops::{BitOr, BitOrAssign};
 use std::iter::Iterator;
 
 use math::{Point, Matrix4x4};
@@ -77,6 +77,14 @@ impl BBox {
 
         return b;
     }
+
+    pub fn surface_area(&self) -> f32 {
+        let x = self.max[0] - self.min[0];
+        let y = self.max[1] - self.min[1];
+        let z = self.max[2] - self.min[2];
+
+        ((x * y) + (y * z) + (z * x)) * 2.0
+    }
 }
 
 
@@ -87,6 +95,12 @@ impl BitOr for BBox {
     fn bitor(self, rhs: BBox) -> BBox {
         BBox::from_points(Point { co: self.min.co.v_min(rhs.min.co) },
                           Point { co: self.max.co.v_max(rhs.max.co) })
+    }
+}
+
+impl BitOrAssign for BBox {
+    fn bitor_assign(&mut self, rhs: BBox) {
+        *self = *self | rhs;
     }
 }
 

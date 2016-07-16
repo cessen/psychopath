@@ -46,14 +46,15 @@ pub fn log2_64(value: u64) -> u64 {
                               52, 38, 26, 32, 41, 50, 36, 17, 19, 29, 10, 13, 21, 56, 45, 25, 31,
                               35, 16, 9, 12, 44, 24, 15, 8, 23, 7, 6, 5];
 
-    let value = value | (value >> 1);
-    let value = value | (value >> 2);
-    let value = value | (value >> 4);
-    let value = value | (value >> 8);
-    let value = value | (value >> 16);
-    let value = value | (value >> 32);
+    let value = value | value.wrapping_shr(1);
+    let value = value | value.wrapping_shr(2);
+    let value = value | value.wrapping_shr(4);
+    let value = value | value.wrapping_shr(8);
+    let value = value | value.wrapping_shr(16);
+    let value = value | value.wrapping_shr(32);
 
-    TAB64[((((value - (value >> 1)) * 0x07EDD5E59A4E28C2)) >> 58) as usize]
+    TAB64[((value.wrapping_sub(value.wrapping_shr(1)) as u64).wrapping_mul(0x07EDD5E59A4E28C2))
+        .wrapping_shr(58) as usize]
 }
 
 
