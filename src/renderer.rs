@@ -1,3 +1,4 @@
+use std::cmp;
 use std::io::{self, Write};
 use std::path::Path;
 use std::cmp::min;
@@ -10,7 +11,8 @@ use algorithm::partition_pair;
 use ray::Ray;
 use tracer::Tracer;
 use halton;
-use math::fast_logit;
+use hilbert;
+use math::{fast_logit, upper_power_of_two};
 use image::Image;
 use surface;
 use scene::Scene;
@@ -184,20 +186,27 @@ impl Renderer {
             };
 
             // Populate job queue
-            for by in 0..((img_height / bucket_h) + 1) {
-                for bx in 0..((img_width / bucket_w) + 1) {
-                    let x = bx * bucket_w;
-                    let y = by * bucket_h;
-                    let w = min(bucket_w, img_width - x);
-                    let h = min(bucket_h, img_height - y);
-                    if w > 0 && h > 0 {
-                        job_queue.push(BucketJob {
-                            x: x as u32,
-                            y: y as u32,
-                            w: w as u32,
-                            h: h as u32,
-                        });
-                    }
+            let bucket_n = {
+                let bucket_count_x = ((img_width / bucket_w) + 1) as u32;
+                let bucket_count_y = ((img_height / bucket_h) + 1) as u32;
+                let larger = cmp::max(bucket_count_x, bucket_count_y);
+                let pow2 = upper_power_of_two(larger);
+                pow2 * pow2
+            };
+            for hilbert_d in 0..bucket_n {
+                let (bx, by) = hilbert::d2xy(hilbert_d);
+
+                let x = bx as usize * bucket_w;
+                let y = by as usize * bucket_h;
+                let w = min(bucket_w, img_width - x);
+                let h = min(bucket_h, img_height - y);
+                if x < img_width && y < img_height && w > 0 && h > 0 {
+                    job_queue.push(BucketJob {
+                        x: x as u32,
+                        y: y as u32,
+                        w: w as u32,
+                        h: h as u32,
+                    });
                 }
             }
 

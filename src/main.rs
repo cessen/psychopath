@@ -9,6 +9,7 @@ extern crate lodepng;
 extern crate nom;
 
 mod math;
+mod hilbert;
 mod algorithm;
 mod lerp;
 mod float4;

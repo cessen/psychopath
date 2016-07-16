@@ -39,7 +39,18 @@ pub fn fast_ln(x: f32) -> f32 {
 }
 
 
+/// Rounds an integer up to the next power of two.
+pub fn upper_power_of_two(mut v: u32) -> u32 {
+    v -= 1;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v + 1
+}
 
+/// Gets the log base 2 of the given integer
 pub fn log2_64(value: u64) -> u64 {
     const TAB64: [u64; 64] = [63, 0, 58, 1, 59, 47, 53, 2, 60, 39, 48, 27, 54, 33, 42, 3, 61, 51,
                               37, 40, 49, 18, 28, 20, 55, 30, 34, 11, 43, 14, 22, 4, 62, 57, 46,
