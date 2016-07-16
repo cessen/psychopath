@@ -228,6 +228,8 @@ impl BVH {
                     axis
                 };
 
+                // TODO: use a select algorithm like introselect instead of a
+                // full sort.
                 sort_by(objects,
                         &|a, b| {
                     let tb_a = lerp_slice(bounder(a), 0.5);
