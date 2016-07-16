@@ -1,10 +1,15 @@
 #![allow(dead_code)]
 
+use std::cmp::Ordering;
+use quickersort::sort_by;
 use lerp::lerp_slice;
 use bbox::BBox;
 use boundable::Boundable;
 use ray::AccelRay;
 use algorithm::{partition, merge_slices_append};
+use math::log2_64;
+
+const BVH_MAX_DEPTH: usize = 64;
 
 #[derive(Debug)]
 pub struct BVH {
@@ -129,10 +134,15 @@ impl BVH {
                     2
                 }
             };
-            let split_pos = (bounds.min[split_axis] + bounds.max[split_axis]) * 0.5;
 
-            // Partition objects based on split
-            let split_index = {
+            // Partition objects based on split.
+            // If we're too near the max depth, we do balanced building to
+            // avoid exceeding max depth.
+            // Otherwise we do cooler clever stuff to build better trees.
+            let split_index = if (log2_64(objects.len() as u64) as usize) <
+                                 (BVH_MAX_DEPTH - depth) {
+                // Clever splitting, when we have room to play
+                let split_pos = (bounds.min[split_axis] + bounds.max[split_axis]) * 0.5;
                 let mut split_i = partition(&mut objects[..], |obj| {
                     let tb = lerp_slice(bounder(obj), 0.5);
                     let centroid = (tb.min[split_axis] + tb.max[split_axis]) * 0.5;
@@ -143,6 +153,25 @@ impl BVH {
                 }
 
                 split_i
+            } else {
+                // Balanced splitting, when we don't have room to play
+                sort_by(objects,
+                        &|a, b| {
+                    let tb_a = lerp_slice(bounder(a), 0.5);
+                    let tb_b = lerp_slice(bounder(b), 0.5);
+                    let centroid_a = (tb_a.min[split_axis] + tb_a.max[split_axis]) * 0.5;
+                    let centroid_b = (tb_b.min[split_axis] + tb_b.max[split_axis]) * 0.5;
+
+                    if centroid_a < centroid_b {
+                        Ordering::Less
+                    } else if centroid_a == centroid_b {
+                        Ordering::Equal
+                    } else {
+                        Ordering::Greater
+                    }
+                });
+
+                objects.len() / 2
             };
 
             // Create child nodes
@@ -186,8 +215,8 @@ impl BVH {
             return;
         }
 
-        let mut i_stack = [0; 256];
-        let mut ray_i_stack = [rays.len(); 256];
+        let mut i_stack = [0; BVH_MAX_DEPTH + 1];
+        let mut ray_i_stack = [rays.len(); BVH_MAX_DEPTH + 1];
         let mut stack_ptr = 1;
 
         while stack_ptr > 0 {
