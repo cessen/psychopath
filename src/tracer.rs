@@ -1,5 +1,4 @@
 use std::iter;
-use std::cell::UnsafeCell;
 
 use algorithm::{partition, merge_slices_append};
 use math::Matrix4x4;
@@ -9,51 +8,46 @@ use ray::{Ray, AccelRay};
 use surface::SurfaceIntersection;
 
 pub struct Tracer<'a> {
-    root: &'a Assembly,
-    rays: UnsafeCell<Vec<AccelRay>>, // Should only be used from trace(), not any other methods
-    xform_stack: TransformStack,
-    isects: Vec<SurfaceIntersection>,
+    rays: Vec<AccelRay>,
+    inner: TracerInner<'a>,
 }
 
 impl<'a> Tracer<'a> {
     pub fn from_assembly(assembly: &'a Assembly) -> Tracer<'a> {
         Tracer {
-            root: assembly,
-            rays: UnsafeCell::new(Vec::new()),
-            xform_stack: TransformStack::new(),
-            isects: Vec::new(),
+            rays: Vec::new(),
+            inner: TracerInner {
+                root: assembly,
+                xform_stack: TransformStack::new(),
+                isects: Vec::new(),
+            },
         }
     }
 
     pub fn trace<'b>(&'b mut self, wrays: &[Ray]) -> &'b [SurfaceIntersection] {
-        // Ready the rays
-        let rays_ptr = self.rays.get();
-        unsafe {
-            (*rays_ptr).clear();
-            (*rays_ptr).reserve(wrays.len());
-            let mut ids = 0..(wrays.len() as u32);
-            (*rays_ptr).extend(wrays.iter().map(|wr| AccelRay::new(wr, ids.next().unwrap())));
-        }
+        self.rays.clear();
+        self.rays.reserve(wrays.len());
+        let mut ids = 0..(wrays.len() as u32);
+        self.rays.extend(wrays.iter().map(|wr| AccelRay::new(wr, ids.next().unwrap())));
 
+        return self.inner.trace(wrays, &mut self.rays[..]);
+    }
+}
+
+struct TracerInner<'a> {
+    root: &'a Assembly,
+    xform_stack: TransformStack,
+    isects: Vec<SurfaceIntersection>,
+}
+
+impl<'a> TracerInner<'a> {
+    fn trace<'b>(&'b mut self, wrays: &[Ray], rays: &mut [AccelRay]) -> &'b [SurfaceIntersection] {
         // Ready the isects
         self.isects.clear();
         self.isects.reserve(wrays.len());
         self.isects.extend(iter::repeat(SurfaceIntersection::Miss).take(wrays.len()));
 
-        // Start tracing
-        let ray_refs = unsafe {
-            // IMPORTANT NOTE:
-            // We're creating an unsafe non-lifetime-bound slice of self.rays
-            // here so that we can pass it to trace_assembly() without
-            // conflicting with self.
-            // Because of this, it is absolutely CRITICAL that self.rays
-            // NOT be used in any other methods.  The rays should only be
-            // accessed in other methods via the mutable slice passed directly
-            // to them in their function parameters.
-            &mut (*rays_ptr)[..]
-        };
-
-        let mut ray_sets = split_rays_by_direction(&mut ray_refs[..]);
+        let mut ray_sets = split_rays_by_direction(&mut rays[..]);
         for ray_set in ray_sets.iter_mut().filter(|ray_set| ray_set.len() > 0) {
             self.trace_assembly(self.root, wrays, ray_set);
         }
