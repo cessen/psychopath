@@ -16,53 +16,94 @@ impl Float4 {
     }
 
     pub fn h_sum(&self) -> f32 {
-        unsafe {
-            *self.data.get_unchecked(0) + *self.data.get_unchecked(1) +
-            *self.data.get_unchecked(2) + *self.data.get_unchecked(3)
-        }
+        self.get_0() + self.get_1() + self.get_2() + self.get_3()
     }
 
     pub fn h_product(&self) -> f32 {
-        unsafe {
-            *self.data.get_unchecked(0) * *self.data.get_unchecked(1) *
-            *self.data.get_unchecked(2) * *self.data.get_unchecked(3)
-        }
+        self.get_0() * self.get_1() * self.get_2() * self.get_3()
     }
 
     pub fn h_min(&self) -> f32 {
-        unsafe {
-            self.data
-                .get_unchecked(0)
-                .min(*self.data.get_unchecked(1))
-                .min(self.data.get_unchecked(2).min(*self.data.get_unchecked(3)))
+        let n1 = if self.get_0() < self.get_1() {
+            self.get_0()
+        } else {
+            self.get_1()
+        };
+        let n2 = if self.get_2() < self.get_3() {
+            self.get_2()
+        } else {
+            self.get_3()
+        };
+        if n1 < n2 {
+            n1
+        } else {
+            n2
         }
     }
 
     pub fn h_max(&self) -> f32 {
-        unsafe {
-            self.data
-                .get_unchecked(0)
-                .max(*self.data.get_unchecked(1))
-                .max(self.data.get_unchecked(2).max(*self.data.get_unchecked(3)))
+        let n1 = if self.get_0() > self.get_1() {
+            self.get_0()
+        } else {
+            self.get_1()
+        };
+        let n2 = if self.get_2() > self.get_3() {
+            self.get_2()
+        } else {
+            self.get_3()
+        };
+        if n1 > n2 {
+            n1
+        } else {
+            n2
         }
     }
 
     pub fn v_min(&self, other: Float4) -> Float4 {
-        unsafe {
-            Float4::new(self.data.get_unchecked(0).min(*other.data.get_unchecked(0)),
-                        self.data.get_unchecked(1).min(*other.data.get_unchecked(1)),
-                        self.data.get_unchecked(2).min(*other.data.get_unchecked(2)),
-                        self.data.get_unchecked(3).min(*other.data.get_unchecked(3)))
-        }
+        Float4::new(if self.get_0() < other.get_0() {
+                        self.get_0()
+                    } else {
+                        other.get_0()
+                    },
+                    if self.get_1() < other.get_1() {
+                        self.get_1()
+                    } else {
+                        other.get_1()
+                    },
+                    if self.get_2() < other.get_2() {
+                        self.get_2()
+                    } else {
+                        other.get_2()
+                    },
+                    if self.get_3() < other.get_3() {
+                        self.get_3()
+                    } else {
+                        other.get_3()
+                    })
+
     }
 
     pub fn v_max(&self, other: Float4) -> Float4 {
-        unsafe {
-            Float4::new(self.data.get_unchecked(0).max(*other.data.get_unchecked(0)),
-                        self.data.get_unchecked(1).max(*other.data.get_unchecked(1)),
-                        self.data.get_unchecked(2).max(*other.data.get_unchecked(2)),
-                        self.data.get_unchecked(3).max(*other.data.get_unchecked(3)))
-        }
+        Float4::new(if self.get_0() > other.get_0() {
+                        self.get_0()
+                    } else {
+                        other.get_0()
+                    },
+                    if self.get_1() > other.get_1() {
+                        self.get_1()
+                    } else {
+                        other.get_1()
+                    },
+                    if self.get_2() > other.get_2() {
+                        self.get_2()
+                    } else {
+                        other.get_2()
+                    },
+                    if self.get_3() > other.get_3() {
+                        self.get_3()
+                    } else {
+                        other.get_3()
+                    })
     }
 
     pub fn set_0(&mut self, n: f32) {
@@ -124,12 +165,8 @@ impl IndexMut<usize> for Float4 {
 
 impl PartialEq for Float4 {
     fn eq(&self, other: &Float4) -> bool {
-        unsafe {
-            *self.data.get_unchecked(0) == *other.data.get_unchecked(0) &&
-            *self.data.get_unchecked(1) == *other.data.get_unchecked(1) &&
-            *self.data.get_unchecked(2) == *other.data.get_unchecked(2) &&
-            *self.data.get_unchecked(3) == *other.data.get_unchecked(3)
-        }
+        self.get_0() == other.get_0() && self.get_1() == other.get_1() &&
+        self.get_2() == other.get_2() && self.get_3() == other.get_3()
     }
 }
 
@@ -138,13 +175,11 @@ impl Add for Float4 {
     type Output = Float4;
 
     fn add(self, other: Float4) -> Float4 {
-        unsafe {
-            Float4 {
-                data: [*self.data.get_unchecked(0) + *other.data.get_unchecked(0),
-                       *self.data.get_unchecked(1) + *other.data.get_unchecked(1),
-                       *self.data.get_unchecked(2) + *other.data.get_unchecked(2),
-                       *self.data.get_unchecked(3) + *other.data.get_unchecked(3)],
-            }
+        Float4 {
+            data: [self.get_0() + other.get_0(),
+                   self.get_1() + other.get_1(),
+                   self.get_2() + other.get_2(),
+                   self.get_3() + other.get_3()],
         }
     }
 }
@@ -154,13 +189,11 @@ impl Sub for Float4 {
     type Output = Float4;
 
     fn sub(self, other: Float4) -> Float4 {
-        unsafe {
-            Float4 {
-                data: [*self.data.get_unchecked(0) - *other.data.get_unchecked(0),
-                       *self.data.get_unchecked(1) - *other.data.get_unchecked(1),
-                       *self.data.get_unchecked(2) - *other.data.get_unchecked(2),
-                       *self.data.get_unchecked(3) - *other.data.get_unchecked(3)],
-            }
+        Float4 {
+            data: [self.get_0() - other.get_0(),
+                   self.get_1() - other.get_1(),
+                   self.get_2() - other.get_2(),
+                   self.get_3() - other.get_3()],
         }
     }
 }
@@ -170,13 +203,11 @@ impl Mul for Float4 {
     type Output = Float4;
 
     fn mul(self, other: Float4) -> Float4 {
-        unsafe {
-            Float4 {
-                data: [*self.data.get_unchecked(0) * *other.data.get_unchecked(0),
-                       *self.data.get_unchecked(1) * *other.data.get_unchecked(1),
-                       *self.data.get_unchecked(2) * *other.data.get_unchecked(2),
-                       *self.data.get_unchecked(3) * *other.data.get_unchecked(3)],
-            }
+        Float4 {
+            data: [self.get_0() * other.get_0(),
+                   self.get_1() * other.get_1(),
+                   self.get_2() * other.get_2(),
+                   self.get_3() * other.get_3()],
         }
     }
 }
@@ -185,13 +216,11 @@ impl Mul<f32> for Float4 {
     type Output = Float4;
 
     fn mul(self, other: f32) -> Float4 {
-        unsafe {
-            Float4 {
-                data: [*self.data.get_unchecked(0) * other,
-                       *self.data.get_unchecked(1) * other,
-                       *self.data.get_unchecked(2) * other,
-                       *self.data.get_unchecked(3) * other],
-            }
+        Float4 {
+            data: [self.get_0() * other,
+                   self.get_1() * other,
+                   self.get_2() * other,
+                   self.get_3() * other],
         }
     }
 }
@@ -201,13 +230,11 @@ impl Div for Float4 {
     type Output = Float4;
 
     fn div(self, other: Float4) -> Float4 {
-        unsafe {
-            Float4 {
-                data: [*self.data.get_unchecked(0) / *other.data.get_unchecked(0),
-                       *self.data.get_unchecked(1) / *other.data.get_unchecked(1),
-                       *self.data.get_unchecked(2) / *other.data.get_unchecked(2),
-                       *self.data.get_unchecked(3) / *other.data.get_unchecked(3)],
-            }
+        Float4 {
+            data: [self.get_0() / other.get_0(),
+                   self.get_1() / other.get_1(),
+                   self.get_2() / other.get_2(),
+                   self.get_3() / other.get_3()],
         }
     }
 }
@@ -216,13 +243,11 @@ impl Div<f32> for Float4 {
     type Output = Float4;
 
     fn div(self, other: f32) -> Float4 {
-        unsafe {
-            Float4 {
-                data: [*self.data.get_unchecked(0) / other,
-                       *self.data.get_unchecked(1) / other,
-                       *self.data.get_unchecked(2) / other,
-                       *self.data.get_unchecked(3) / other],
-            }
+        Float4 {
+            data: [self.get_0() / other,
+                   self.get_1() / other,
+                   self.get_2() / other,
+                   self.get_3() / other],
         }
     }
 }
