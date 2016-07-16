@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::io::{self, Write};
 use std::path::Path;
 use std::cmp::min;
@@ -378,21 +376,4 @@ fn hash_u32(n: u32, seed: u32) -> u32 {
     }
 
     return hash;
-}
-
-
-fn srgb_gamma(n: f32) -> f32 {
-    if n < 0.0031308 {
-        n * 12.92
-    } else {
-        (1.055 * n.powf(1.0 / 2.4)) - 0.055
-    }
-}
-
-fn srgb_inv_gamma(n: f32) -> f32 {
-    if n < 0.04045 {
-        n / 12.92
-    } else {
-        ((n + 0.055) / 1.055).powf(2.4)
-    }
 }
