@@ -306,8 +306,8 @@ impl LightPath {
                 }
             } else {
                 // Didn't hit anything, so background color
-                let xyz = XYZ::new(0.0, 0.0, 0.0);
-                self.color += xyz.to_spectral_sample(self.wavelength);
+                self.color += scene.background_color.to_spectral_sample(self.wavelength) *
+                              self.light_attenuation;
                 return false;
             }
         }

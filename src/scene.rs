@@ -1,11 +1,12 @@
 use camera::Camera;
 use assembly::Assembly;
+use color::XYZ;
 
 
 #[derive(Debug)]
 pub struct Scene {
     pub name: Option<String>,
-    pub background_color: (f32, f32, f32),
+    pub background_color: XYZ,
     pub camera: Camera,
     pub root: Assembly,
 }

@@ -13,6 +13,7 @@ use math::Matrix4x4;
 use camera::Camera;
 use renderer::Renderer;
 use scene::Scene;
+use color::{XYZ, rec709e_to_xyz};
 
 #[derive(Copy, Clone, Debug)]
 pub enum PsyParseError {
@@ -264,10 +265,9 @@ fn parse_camera(tree: &DataTree) -> Result<Camera, PsyParseError> {
 
 
 
-fn parse_world(tree: &DataTree) -> Result<(f32, f32, f32), PsyParseError> {
+fn parse_world(tree: &DataTree) -> Result<XYZ, PsyParseError> {
     if tree.is_internal() {
-        let mut found_background_color = false;
-        let mut background_color = (0.0, 0.0, 0.0);
+        let background_color;
 
         // Parse background shader
         let bgs = {
@@ -296,8 +296,9 @@ fn parse_world(tree: &DataTree) -> Result<(f32, f32, f32), PsyParseError> {
                                                                      ws_f32,
                                                                      ws_f32))(contents.trim()
                         .as_bytes()) {
-                        found_background_color = true;
-                        background_color = color;
+                        // TODO: proper color space management, not just assuming
+                        // rec.709.
+                        background_color = XYZ::from_tuple(rec709e_to_xyz(color));
                     } else {
                         return Err(PsyParseError::UnknownError);
                     }
