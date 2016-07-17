@@ -38,6 +38,68 @@ pub fn fast_ln(x: f32) -> f32 {
     return y - 87.989971088;
 }
 
+pub fn fast_pow2(p: f32) -> f32 {
+    use std::mem::transmute_copy;
+
+    let offset: f32 = if p < 0.0 {
+        1.0
+    } else {
+        0.0
+    };
+    let clipp: f32 = if p < -126.0 {
+        -126.0
+    } else {
+        p
+    };
+    let w: i32 = clipp as i32;
+    let z: f32 = clipp - w as f32 + offset;
+
+    let i: u32 = ((1 << 23) as f32 *
+                  (clipp + 121.2740575 + 27.7280233 / (4.84252568 - z) -
+                   1.49012907 * z)) as u32;
+
+    unsafe { transmute_copy::<u32, f32>(&i) }
+}
+
+pub fn fast_exp(p: f32) -> f32 {
+    fast_pow2(1.442695040 * p)
+}
+
+pub fn faster_pow2(p: f32) -> f32 {
+    use std::mem::transmute_copy;
+
+    let clipp: f32 = if p < -126.0 {
+        -126.0
+    } else {
+        p
+    };
+    let i: u32 = ((1 << 23) as f32 * (clipp + 126.94269504)) as u32;
+
+    unsafe { transmute_copy::<u32, f32>(&i) }
+}
+
+pub fn faster_exp(p: f32) -> f32 {
+    faster_pow2(1.442695040 * p)
+}
+
+// The stdlib min function is slower than a simple if statement for some reason.
+pub fn fast_minf32(a: f32, b: f32) -> f32 {
+    if a < b {
+        a
+    } else {
+        b
+    }
+}
+
+// The stdlib max function is slower than a simple if statement for some reason.
+pub fn fast_maxf32(a: f32, b: f32) -> f32 {
+    if a > b {
+        a
+    } else {
+        b
+    }
+}
+
 
 /// Rounds an integer up to the next power of two.
 pub fn upper_power_of_two(mut v: u32) -> u32 {

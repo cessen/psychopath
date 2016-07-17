@@ -2,6 +2,7 @@ mod spectra_xyz;
 
 use std::ops::{Add, AddAssign, Mul, MulAssign, Div, DivAssign};
 
+use math::faster_exp;
 use float4::Float4;
 use lerp::Lerp;
 use self::spectra_xyz::{spectrum_xyz_to_p, EQUAL_ENERGY_REFLECTANCE};
@@ -323,8 +324,8 @@ fn x_1931(wavelength: f32) -> f32 {
     } else {
         0.0382
     });
-    (0.362 * (-0.5 * t1 * t1).exp()) + (1.056 * (-0.5 * t2 * t2).exp()) -
-    (0.065 * (-0.5 * t3 * t3).exp())
+    (0.362 * faster_exp(-0.5 * t1 * t1)) + (1.056 * faster_exp(-0.5 * t2 * t2)) -
+    (0.065 * faster_exp(-0.5 * t3 * t3))
 }
 
 #[allow(dead_code)]
@@ -341,7 +342,7 @@ fn y_1931(wavelength: f32) -> f32 {
     } else {
         0.0322
     });
-    (0.821 * (-0.5 * t1 * t1).exp()) + (0.286 * (-0.5 * t2 * t2).exp())
+    (0.821 * faster_exp(-0.5 * t1 * t1)) + (0.286 * faster_exp(-0.5 * t2 * t2))
 }
 
 #[allow(dead_code)]
@@ -358,7 +359,7 @@ fn z_1931(wavelength: f32) -> f32 {
     } else {
         0.0725
     });
-    (1.217 * (-0.5 * t1 * t1).exp()) + (0.681 * (-0.5 * t2 * t2).exp())
+    (1.217 * faster_exp(-0.5 * t1 * t1)) + (0.681 * faster_exp(-0.5 * t2 * t2))
 }
 
 #[cfg(test)]
