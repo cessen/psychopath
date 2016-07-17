@@ -4,7 +4,7 @@ use std;
 use std::ops::{BitOr, BitOrAssign};
 use std::iter::Iterator;
 
-use math::{Point, Matrix4x4};
+use math::{Point, Matrix4x4, fast_minf32, fast_maxf32};
 use lerp::{lerp, lerp_slice, Lerp};
 use ray::AccelRay;
 
@@ -52,7 +52,7 @@ impl BBox {
         let hitt1 = far_t.h_min() * BBOX_MAXT_ADJUST;
 
         // Did we hit?
-        return hitt0.max(0.0) <= hitt1.min(ray.max_t);
+        return fast_maxf32(hitt0, 0.0) <= fast_minf32(hitt1, ray.max_t);
     }
 
     // Creates a new BBox transformed into a different space.
