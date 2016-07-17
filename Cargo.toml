@@ -3,6 +3,9 @@ name = "psychopath"
 version = "0.1.0"
 authors = ["Nathan Vegdahl <cessen@cessen.com>"]
 
+[features]
+simd_perf = ["simd"]
+
 [profile.release]
 debug = true
 
@@ -15,3 +18,5 @@ crossbeam = "0.2"
 num_cpus = "0.2"
 quickersort = "2.0"
 lodepng = "0.8"
+
+simd = { version = "0.1.1", optional = true }

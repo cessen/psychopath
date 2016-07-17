@@ -3,16 +3,40 @@
 use std::ops::{Index, IndexMut, Add, Sub, Mul, Div};
 use std::cmp::PartialEq;
 
+#[cfg(feature = "simd_perf")]
+use simd::f32x4;
+
 /// Essentially a tuple of four floats, which will use SIMD operations
 /// where possible on a platform.
+#[cfg(feature = "simd_perf")]
+#[derive(Debug, Copy, Clone)]
+pub struct Float4 {
+    data: f32x4,
+}
+
+#[cfg(not(feature = "simd_perf"))]
 #[derive(Debug, Copy, Clone)]
 pub struct Float4 {
     data: [f32; 4],
 }
 
 impl Float4 {
+    #[cfg(feature = "simd_perf")]
+    pub fn new(a: f32, b: f32, c: f32, d: f32) -> Float4 {
+        Float4 { data: f32x4::new(a, b, c, d) }
+    }
+    #[cfg(not(feature = "simd_perf"))]
     pub fn new(a: f32, b: f32, c: f32, d: f32) -> Float4 {
         Float4 { data: [a, b, c, d] }
+    }
+
+    #[cfg(feature = "simd_perf")]
+    pub fn splat(n: f32) -> Float4 {
+        Float4 { data: f32x4::splat(n) }
+    }
+    #[cfg(not(feature = "simd_perf"))]
+    pub fn splat(n: f32) -> Float4 {
+        Float4 { data: [n, n, n, n] }
     }
 
     pub fn h_sum(&self) -> f32 {
@@ -59,6 +83,11 @@ impl Float4 {
         }
     }
 
+    #[cfg(feature = "simd_perf")]
+    pub fn v_min(&self, other: Float4) -> Float4 {
+        Float4 { data: self.data.min(other.data) }
+    }
+    #[cfg(not(feature = "simd_perf"))]
     pub fn v_min(&self, other: Float4) -> Float4 {
         Float4::new(if self.get_0() < other.get_0() {
                         self.get_0()
@@ -83,6 +112,11 @@ impl Float4 {
 
     }
 
+    #[cfg(feature = "simd_perf")]
+    pub fn v_max(&self, other: Float4) -> Float4 {
+        Float4 { data: self.data.max(other.data) }
+    }
+    #[cfg(not(feature = "simd_perf"))]
     pub fn v_max(&self, other: Float4) -> Float4 {
         Float4::new(if self.get_0() > other.get_0() {
                         self.get_0()
@@ -106,42 +140,90 @@ impl Float4 {
                     })
     }
 
+    /// Set the 0th element to the given value.
+    #[cfg(feature = "simd_perf")]
+    pub fn set_0(&mut self, n: f32) {
+        self.data = self.data.replace(0, n);
+    }
+    #[cfg(not(feature = "simd_perf"))]
     pub fn set_0(&mut self, n: f32) {
         unsafe {
             *self.data.get_unchecked_mut(0) = n;
         }
     }
 
+    /// Set the 1th element to the given value.
+    #[cfg(feature = "simd_perf")]
+    pub fn set_1(&mut self, n: f32) {
+        self.data = self.data.replace(1, n);
+    }
+    #[cfg(not(feature = "simd_perf"))]
     pub fn set_1(&mut self, n: f32) {
         unsafe {
             *self.data.get_unchecked_mut(1) = n;
         }
     }
 
+    /// Set the 2th element to the given value.
+    #[cfg(feature = "simd_perf")]
+    pub fn set_2(&mut self, n: f32) {
+        self.data = self.data.replace(2, n);
+    }
+    #[cfg(not(feature = "simd_perf"))]
     pub fn set_2(&mut self, n: f32) {
         unsafe {
             *self.data.get_unchecked_mut(2) = n;
         }
     }
 
+    /// Set the 3th element to the given value.
+    #[cfg(feature = "simd_perf")]
+    pub fn set_3(&mut self, n: f32) {
+        self.data = self.data.replace(3, n);
+    }
+    #[cfg(not(feature = "simd_perf"))]
     pub fn set_3(&mut self, n: f32) {
         unsafe {
             *self.data.get_unchecked_mut(3) = n;
         }
     }
 
+    /// Returns the value of the 0th element.
+    #[cfg(feature = "simd_perf")]
+    pub fn get_0(&self) -> f32 {
+        self.data.extract(0)
+    }
+    #[cfg(not(feature = "simd_perf"))]
     pub fn get_0(&self) -> f32 {
         unsafe { *self.data.get_unchecked(0) }
     }
 
+    /// Returns the value of the 1th element.
+    #[cfg(feature = "simd_perf")]
+    pub fn get_1(&self) -> f32 {
+        self.data.extract(1)
+    }
+    #[cfg(not(feature = "simd_perf"))]
     pub fn get_1(&self) -> f32 {
         unsafe { *self.data.get_unchecked(1) }
     }
 
+    /// Returns the value of the 2th element.
+    #[cfg(feature = "simd_perf")]
+    pub fn get_2(&self) -> f32 {
+        self.data.extract(2)
+    }
+    #[cfg(not(feature = "simd_perf"))]
     pub fn get_2(&self) -> f32 {
         unsafe { *self.data.get_unchecked(2) }
     }
 
+    /// Returns the value of the 3th element.
+    #[cfg(feature = "simd_perf")]
+    pub fn get_3(&self) -> f32 {
+        self.data.extract(3)
+    }
+    #[cfg(not(feature = "simd_perf"))]
     pub fn get_3(&self) -> f32 {
         unsafe { *self.data.get_unchecked(3) }
     }
@@ -151,12 +233,31 @@ impl Float4 {
 impl Index<usize> for Float4 {
     type Output = f32;
 
+    #[cfg(feature = "simd_perf")]
+    fn index(&self, index: usize) -> &f32 {
+        // TODO: this might not be correct!  It works, but need to make sure
+        // to do this in a way with proper defined behavior.
+        use std::mem::transmute;
+        let vs: &[f32; 4] = unsafe { transmute(&self.data) };
+        &vs[index]
+    }
+    #[cfg(not(feature = "simd_perf"))]
     fn index(&self, index: usize) -> &f32 {
         &self.data[index]
     }
 }
 
+
 impl IndexMut<usize> for Float4 {
+    #[cfg(feature = "simd_perf")]
+    fn index_mut(&mut self, index: usize) -> &mut f32 {
+        // TODO: this might not be correct!  It works, but need to make sure
+        // to do this in a way with proper defined behavior.
+        use std::mem::transmute;
+        let vs: &mut [f32; 4] = unsafe { transmute(&mut self.data) };
+        &mut vs[index]
+    }
+    #[cfg(not(feature = "simd_perf"))]
     fn index_mut(&mut self, index: usize) -> &mut f32 {
         &mut self.data[index]
     }
@@ -174,6 +275,11 @@ impl PartialEq for Float4 {
 impl Add for Float4 {
     type Output = Float4;
 
+    #[cfg(feature = "simd_perf")]
+    fn add(self, other: Float4) -> Float4 {
+        Float4 { data: self.data + other.data }
+    }
+    #[cfg(not(feature = "simd_perf"))]
     fn add(self, other: Float4) -> Float4 {
         Float4 {
             data: [self.get_0() + other.get_0(),
@@ -188,6 +294,11 @@ impl Add for Float4 {
 impl Sub for Float4 {
     type Output = Float4;
 
+    #[cfg(feature = "simd_perf")]
+    fn sub(self, other: Float4) -> Float4 {
+        Float4 { data: self.data - other.data }
+    }
+    #[cfg(not(feature = "simd_perf"))]
     fn sub(self, other: Float4) -> Float4 {
         Float4 {
             data: [self.get_0() - other.get_0(),
@@ -202,6 +313,11 @@ impl Sub for Float4 {
 impl Mul for Float4 {
     type Output = Float4;
 
+    #[cfg(feature = "simd_perf")]
+    fn mul(self, other: Float4) -> Float4 {
+        Float4 { data: self.data * other.data }
+    }
+    #[cfg(not(feature = "simd_perf"))]
     fn mul(self, other: Float4) -> Float4 {
         Float4 {
             data: [self.get_0() * other.get_0(),
@@ -215,6 +331,11 @@ impl Mul for Float4 {
 impl Mul<f32> for Float4 {
     type Output = Float4;
 
+    #[cfg(feature = "simd_perf")]
+    fn mul(self, other: f32) -> Float4 {
+        Float4 { data: self.data * f32x4::splat(other) }
+    }
+    #[cfg(not(feature = "simd_perf"))]
     fn mul(self, other: f32) -> Float4 {
         Float4 {
             data: [self.get_0() * other,
@@ -229,6 +350,11 @@ impl Mul<f32> for Float4 {
 impl Div for Float4 {
     type Output = Float4;
 
+    #[cfg(feature = "simd_perf")]
+    fn div(self, other: Float4) -> Float4 {
+        Float4 { data: self.data / other.data }
+    }
+    #[cfg(not(feature = "simd_perf"))]
     fn div(self, other: Float4) -> Float4 {
         Float4 {
             data: [self.get_0() / other.get_0(),
@@ -242,6 +368,11 @@ impl Div for Float4 {
 impl Div<f32> for Float4 {
     type Output = Float4;
 
+    #[cfg(feature = "simd_perf")]
+    fn div(self, other: f32) -> Float4 {
+        Float4 { data: self.data / f32x4::splat(other) }
+    }
+    #[cfg(not(feature = "simd_perf"))]
     fn div(self, other: f32) -> Float4 {
         Float4 {
             data: [self.get_0() / other,
