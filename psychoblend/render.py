@@ -53,8 +53,8 @@ class PsychopathRender(bpy.types.RenderEngine):
 
         # Start Rendering!
         try:
-            self._process = subprocess.Popen([psy_binary] + args,
-                                             stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+            self._process = subprocess.Popen([psy_binary] + args, bufsize=1,
+                                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         except OSError:
             # TODO, report api
             print("Psychopath: could not execute '%s'" % psy_binary)
@@ -120,16 +120,31 @@ class PsychopathRender(bpy.types.RenderEngine):
         lay = result.layers[0]
 
         # TODO: Update viewport with render result while rendering
+        output = b""
         while self._process.poll() == None:
             # Wait for self.DELAY seconds, but check for render cancels
-            # while waiting.
+            # and progress updates while waiting.
             t = 0.0
             while t < self.DELAY:
+                # Check for render cancel
                 if self.test_break():
                     self._process.terminate()
                     break
+
+                # Update render progress bar
+                output += self._process.stdout.read1(2**16)
+                outputs = output.rsplit(b'\r')
+                if len(outputs) > 0 and outputs[-1][-1] == b"%"[0]:
+                    try:
+                        progress = float(outputs[-1][:-1])
+                    except ValueError:
+                        pass
+                    finally:
+                        self.update_progress(progress/100)
+
                 time.sleep(0.05)
                 t += 0.05
+
             # # Update viewport image with latest render output
             # if os.path.exists(render_image_path):
             #     # This assumes the file has been fully written We wait a bit, just in case!
