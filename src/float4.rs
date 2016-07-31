@@ -40,11 +40,11 @@ impl Float4 {
     }
 
     pub fn h_sum(&self) -> f32 {
-        self.get_0() + self.get_1() + self.get_2() + self.get_3()
+        (self.get_0() + self.get_1()) + (self.get_2() + self.get_3())
     }
 
     pub fn h_product(&self) -> f32 {
-        self.get_0() * self.get_1() * self.get_2() * self.get_3()
+        (self.get_0() * self.get_1()) * (self.get_2() * self.get_3())
     }
 
     pub fn h_min(&self) -> f32 {
