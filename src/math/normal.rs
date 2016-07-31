@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::ops::{Index, IndexMut, Add, Sub, Mul, Div, Neg};
+use std::ops::{Add, Sub, Mul, Div, Neg};
 use std::cmp::PartialEq;
 
 use lerp::Lerp;
@@ -33,26 +33,40 @@ impl Normal {
     }
 
     pub fn into_vector(self) -> Vector {
-        Vector::new(self.co[0], self.co[1], self.co[2])
+        Vector::new(self.co.get_0(), self.co.get_1(), self.co.get_2())
     }
-}
 
-
-impl Index<usize> for Normal {
-    type Output = f32;
-
-    fn index(&self, index: usize) -> &f32 {
-        debug_assert!(index < 3);
-
-        &self.co[index]
+    pub fn get_n(&self, n: usize) -> f32 {
+        match n {
+            0 => self.x(),
+            1 => self.y(),
+            2 => self.z(),
+            _ => panic!("Attempt to access dimension beyond z."),
+        }
     }
-}
 
-impl IndexMut<usize> for Normal {
-    fn index_mut(&mut self, index: usize) -> &mut f32 {
-        debug_assert!(index < 3);
+    pub fn x(&self) -> f32 {
+        self.co.get_0()
+    }
 
-        &mut self.co[index]
+    pub fn y(&self) -> f32 {
+        self.co.get_1()
+    }
+
+    pub fn z(&self) -> f32 {
+        self.co.get_2()
+    }
+
+    pub fn set_x(&mut self, x: f32) {
+        self.co.set_0(x);
+    }
+
+    pub fn set_y(&mut self, y: f32) {
+        self.co.set_1(y);
+    }
+
+    pub fn set_z(&mut self, z: f32) {
+        self.co.set_2(z);
     }
 }
 
@@ -96,9 +110,9 @@ impl Mul<Matrix4x4> for Normal {
     fn mul(self, other: Matrix4x4) -> Normal {
         let mat = other.inverse().transposed();
         Normal {
-            co: Float4::new((self[0] * mat[0][0]) + (self[1] * mat[0][1]) + (self[2] * mat[0][2]),
-                            (self[0] * mat[1][0]) + (self[1] * mat[1][1]) + (self[2] * mat[1][2]),
-                            (self[0] * mat[2][0]) + (self[1] * mat[2][1]) + (self[2] * mat[2][2]),
+            co: Float4::new((self.co * mat[0]).h_sum(),
+                            (self.co * mat[1]).h_sum(),
+                            (self.co * mat[2]).h_sum(),
                             0.0),
         }
     }
@@ -140,9 +154,12 @@ impl DotProduct for Normal {
 impl CrossProduct for Normal {
     fn cross(self, other: Normal) -> Normal {
         Normal {
-            co: Float4::new((self[1] * other[2]) - (self[2] * other[1]),
-                            (self[2] * other[0]) - (self[0] * other[2]),
-                            (self[0] * other[1]) - (self[1] * other[0]),
+            co: Float4::new((self.co.get_1() * other.co.get_2()) -
+                            (self.co.get_2() * other.co.get_1()),
+                            (self.co.get_2() * other.co.get_0()) -
+                            (self.co.get_0() * other.co.get_2()),
+                            (self.co.get_0() * other.co.get_1()) -
+                            (self.co.get_1() * other.co.get_0()),
                             0.0),
         }
     }
@@ -231,9 +248,9 @@ mod tests {
         let n1 = Normal::new(1.0, 2.0, 3.0);
         let n2 = Normal::new(0.2672612419124244, 0.5345224838248488, 0.8017837257372732);
         let n3 = n1.normalized();
-        assert!((n3[0] - n2[0]).abs() < 0.000001);
-        assert!((n3[1] - n2[1]).abs() < 0.000001);
-        assert!((n3[2] - n2[2]).abs() < 0.000001);
+        assert!((n3.x() - n2.x()).abs() < 0.000001);
+        assert!((n3.y() - n2.y()).abs() < 0.000001);
+        assert!((n3.z() - n2.z()).abs() < 0.000001);
     }
 
     #[test]

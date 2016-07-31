@@ -138,7 +138,6 @@ fn take_decimal_real(i: &[u8]) -> IResult<&[u8], &[u8]> {
 
 #[cfg(test)]
 mod test {
-    use nom::IResult;
     use nom::IResult::*;
     use super::take_decimal_real;
     use super::*;

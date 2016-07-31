@@ -59,9 +59,9 @@ impl Matrix4x4 {
 
     pub fn from_location(loc: Point) -> Matrix4x4 {
         Matrix4x4 {
-            values: [Float4::new(1.0, 0.0, 0.0, loc[0]),
-                     Float4::new(0.0, 1.0, 0.0, loc[1]),
-                     Float4::new(0.0, 0.0, 1.0, loc[2]),
+            values: [Float4::new(1.0, 0.0, 0.0, loc.x()),
+                     Float4::new(0.0, 1.0, 0.0, loc.y()),
+                     Float4::new(0.0, 0.0, 1.0, loc.z()),
                      Float4::new(0.0, 0.0, 0.0, 1.0)],
         }
     }
@@ -79,8 +79,8 @@ impl Matrix4x4 {
                 // http://floating-point-gui.de/errors/comparison/
                 // It might be worth breaking this out into a separate funcion,
                 // but I'm not entirely sure where to put it.
-                let a = self[y][x];
-                let b = other[y][x];
+                let a = self[y].get_n(x);
+                let b = other[y].get_n(x);
                 let aabs = a.abs();
                 let babs = b.abs();
                 let diff = (a - b).abs();
@@ -102,10 +102,22 @@ impl Matrix4x4 {
     pub fn transposed(&self) -> Matrix4x4 {
         Matrix4x4 {
             values: {
-                [Float4::new(self[0][0], self[1][0], self[2][0], self[3][0]),
-                 Float4::new(self[0][1], self[1][1], self[2][1], self[3][1]),
-                 Float4::new(self[0][2], self[1][2], self[2][2], self[3][2]),
-                 Float4::new(self[0][3], self[1][3], self[2][3], self[3][3])]
+                [Float4::new(self[0].get_0(),
+                             self[1].get_0(),
+                             self[2].get_0(),
+                             self[3].get_0()),
+                 Float4::new(self[0].get_1(),
+                             self[1].get_1(),
+                             self[2].get_1(),
+                             self[3].get_1()),
+                 Float4::new(self[0].get_2(),
+                             self[1].get_2(),
+                             self[2].get_2(),
+                             self[3].get_2()),
+                 Float4::new(self[0].get_3(),
+                             self[1].get_3(),
+                             self[2].get_3(),
+                             self[3].get_3())]
             },
         }
     }
@@ -113,19 +125,19 @@ impl Matrix4x4 {
 
     /// Returns the inverse of the Matrix
     pub fn inverse(&self) -> Matrix4x4 {
-        let s0 = (self[0][0] * self[1][1]) - (self[1][0] * self[0][1]);
-        let s1 = (self[0][0] * self[1][2]) - (self[1][0] * self[0][2]);
-        let s2 = (self[0][0] * self[1][3]) - (self[1][0] * self[0][3]);
-        let s3 = (self[0][1] * self[1][2]) - (self[1][1] * self[0][2]);
-        let s4 = (self[0][1] * self[1][3]) - (self[1][1] * self[0][3]);
-        let s5 = (self[0][2] * self[1][3]) - (self[1][2] * self[0][3]);
+        let s0 = (self[0].get_0() * self[1].get_1()) - (self[1].get_0() * self[0].get_1());
+        let s1 = (self[0].get_0() * self[1].get_2()) - (self[1].get_0() * self[0].get_2());
+        let s2 = (self[0].get_0() * self[1].get_3()) - (self[1].get_0() * self[0].get_3());
+        let s3 = (self[0].get_1() * self[1].get_2()) - (self[1].get_1() * self[0].get_2());
+        let s4 = (self[0].get_1() * self[1].get_3()) - (self[1].get_1() * self[0].get_3());
+        let s5 = (self[0].get_2() * self[1].get_3()) - (self[1].get_2() * self[0].get_3());
 
-        let c5 = (self[2][2] * self[3][3]) - (self[3][2] * self[2][3]);
-        let c4 = (self[2][1] * self[3][3]) - (self[3][1] * self[2][3]);
-        let c3 = (self[2][1] * self[3][2]) - (self[3][1] * self[2][2]);
-        let c2 = (self[2][0] * self[3][3]) - (self[3][0] * self[2][3]);
-        let c1 = (self[2][0] * self[3][2]) - (self[3][0] * self[2][2]);
-        let c0 = (self[2][0] * self[3][1]) - (self[3][0] * self[2][1]);
+        let c5 = (self[2].get_2() * self[3].get_3()) - (self[3].get_2() * self[2].get_3());
+        let c4 = (self[2].get_1() * self[3].get_3()) - (self[3].get_1() * self[2].get_3());
+        let c3 = (self[2].get_1() * self[3].get_2()) - (self[3].get_1() * self[2].get_2());
+        let c2 = (self[2].get_0() * self[3].get_3()) - (self[3].get_0() * self[2].get_3());
+        let c1 = (self[2].get_0() * self[3].get_2()) - (self[3].get_0() * self[2].get_2());
+        let c0 = (self[2].get_0() * self[3].get_1()) - (self[3].get_0() * self[2].get_1());
 
         // TODO: handle 0.0 determinant
         let det = (s0 * c5) - (s1 * c4) + (s2 * c3) + (s3 * c2) - (s4 * c1) + (s5 * c0);
@@ -133,25 +145,41 @@ impl Matrix4x4 {
 
         Matrix4x4 {
             values: {
-                [Float4::new(((self[1][1] * c5) - (self[1][2] * c4) + (self[1][3] * c3)) * invdet,
-                             ((-self[0][1] * c5) + (self[0][2] * c4) - (self[0][3] * c3)) * invdet,
-                             ((self[3][1] * s5) - (self[3][2] * s4) + (self[3][3] * s3)) * invdet,
-                             ((-self[2][1] * s5) + (self[2][2] * s4) - (self[2][3] * s3)) * invdet),
+                [Float4::new(((self[1].get_1() * c5) - (self[1].get_2() * c4) +
+                              (self[1].get_3() * c3)) * invdet,
+                             ((-self[0].get_1() * c5) + (self[0].get_2() * c4) -
+                              (self[0].get_3() * c3)) * invdet,
+                             ((self[3].get_1() * s5) - (self[3].get_2() * s4) +
+                              (self[3].get_3() * s3)) * invdet,
+                             ((-self[2].get_1() * s5) + (self[2].get_2() * s4) -
+                              (self[2].get_3() * s3)) * invdet),
 
-                 Float4::new(((-self[1][0] * c5) + (self[1][2] * c2) - (self[1][3] * c1)) * invdet,
-                             ((self[0][0] * c5) - (self[0][2] * c2) + (self[0][3] * c1)) * invdet,
-                             ((-self[3][0] * s5) + (self[3][2] * s2) - (self[3][3] * s1)) * invdet,
-                             ((self[2][0] * s5) - (self[2][2] * s2) + (self[2][3] * s1)) * invdet),
+                 Float4::new(((-self[1].get_0() * c5) + (self[1].get_2() * c2) -
+                              (self[1].get_3() * c1)) * invdet,
+                             ((self[0].get_0() * c5) - (self[0].get_2() * c2) +
+                              (self[0].get_3() * c1)) * invdet,
+                             ((-self[3].get_0() * s5) + (self[3].get_2() * s2) -
+                              (self[3].get_3() * s1)) * invdet,
+                             ((self[2].get_0() * s5) - (self[2].get_2() * s2) +
+                              (self[2].get_3() * s1)) * invdet),
 
-                 Float4::new(((self[1][0] * c4) - (self[1][1] * c2) + (self[1][3] * c0)) * invdet,
-                             ((-self[0][0] * c4) + (self[0][1] * c2) - (self[0][3] * c0)) * invdet,
-                             ((self[3][0] * s4) - (self[3][1] * s2) + (self[3][3] * s0)) * invdet,
-                             ((-self[2][0] * s4) + (self[2][1] * s2) - (self[2][3] * s0)) * invdet),
+                 Float4::new(((self[1].get_0() * c4) - (self[1].get_1() * c2) +
+                              (self[1].get_3() * c0)) * invdet,
+                             ((-self[0].get_0() * c4) + (self[0].get_1() * c2) -
+                              (self[0].get_3() * c0)) * invdet,
+                             ((self[3].get_0() * s4) - (self[3].get_1() * s2) +
+                              (self[3].get_3() * s0)) * invdet,
+                             ((-self[2].get_0() * s4) + (self[2].get_1() * s2) -
+                              (self[2].get_3() * s0)) * invdet),
 
-                 Float4::new(((-self[1][0] * c3) + (self[1][1] * c1) - (self[1][2] * c0)) * invdet,
-                             ((self[0][0] * c3) - (self[0][1] * c1) + (self[0][2] * c0)) * invdet,
-                             ((-self[3][0] * s3) + (self[3][1] * s1) - (self[3][2] * s0)) * invdet,
-                             ((self[2][0] * s3) - (self[2][1] * s1) + (self[2][2] * s0)) * invdet)]
+                 Float4::new(((-self[1].get_0() * c3) + (self[1].get_1() * c1) -
+                              (self[1].get_2() * c0)) * invdet,
+                             ((self[0].get_0() * c3) - (self[0].get_1() * c1) +
+                              (self[0].get_2() * c0)) * invdet,
+                             ((-self[3].get_0() * s3) + (self[3].get_1() * s1) -
+                              (self[3].get_2() * s0)) * invdet,
+                             ((self[2].get_0() * s3) - (self[2].get_1() * s1) +
+                              (self[2].get_2() * s0)) * invdet)]
             },
         }
     }
@@ -180,7 +208,7 @@ impl PartialEq for Matrix4x4 {
 
         for y in 0..4 {
             for x in 0..4 {
-                result = result && (self[y][x] == other[y][x]);
+                result = result && (self[y].get_n(x) == other[y].get_n(x));
             }
         }
 
@@ -224,25 +252,10 @@ impl Lerp for Matrix4x4 {
     fn lerp(self, other: Matrix4x4, alpha: f32) -> Matrix4x4 {
         let alpha_minus = 1.0 - alpha;
         Matrix4x4 {
-            values: [Float4::new((self[0][0] * alpha_minus) + (other[0][0] * alpha),
-                                 (self[0][1] * alpha_minus) + (other[0][1] * alpha),
-                                 (self[0][2] * alpha_minus) + (other[0][2] * alpha),
-                                 (self[0][3] * alpha_minus) + (other[0][3] * alpha)),
-
-                     Float4::new((self[1][0] * alpha_minus) + (other[1][0] * alpha),
-                                 (self[1][1] * alpha_minus) + (other[1][1] * alpha),
-                                 (self[1][2] * alpha_minus) + (other[1][2] * alpha),
-                                 (self[1][3] * alpha_minus) + (other[1][3] * alpha)),
-
-                     Float4::new((self[2][0] * alpha_minus) + (other[2][0] * alpha),
-                                 (self[2][1] * alpha_minus) + (other[2][1] * alpha),
-                                 (self[2][2] * alpha_minus) + (other[2][2] * alpha),
-                                 (self[2][3] * alpha_minus) + (other[2][3] * alpha)),
-
-                     Float4::new((self[3][0] * alpha_minus) + (other[3][0] * alpha),
-                                 (self[3][1] * alpha_minus) + (other[3][1] * alpha),
-                                 (self[3][2] * alpha_minus) + (other[3][2] * alpha),
-                                 (self[3][3] * alpha_minus) + (other[3][3] * alpha))],
+            values: [(self[0] * alpha_minus) + (other[0] * alpha),
+                     (self[1] * alpha_minus) + (other[1] * alpha),
+                     (self[2] * alpha_minus) + (other[2] * alpha),
+                     (self[3] * alpha_minus) + (other[3] * alpha)],
         }
     }
 }

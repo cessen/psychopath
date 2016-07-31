@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::ops::{Index, IndexMut, Add, Sub, Mul};
+use std::ops::{Add, Sub, Mul};
 use std::cmp::PartialEq;
 
 use lerp::Lerp;
@@ -23,7 +23,7 @@ impl Point {
     /// Returns the point in standardized coordinates, where the
     /// fourth homogeneous component has been normalized to 1.0.
     pub fn norm(&self) -> Point {
-        Point { co: self.co / self.co[3] }
+        Point { co: self.co / self.co.get_3() }
     }
 
     pub fn min(&self, other: Point) -> Point {
@@ -41,26 +41,40 @@ impl Point {
     }
 
     pub fn into_vector(self) -> Vector {
-        Vector::new(self[0], self[1], self[2])
+        Vector::new(self.co.get_0(), self.co.get_1(), self.co.get_2())
     }
-}
 
-
-impl Index<usize> for Point {
-    type Output = f32;
-
-    fn index(&self, index: usize) -> &f32 {
-        debug_assert!(index < 3);
-
-        &self.co[index]
+    pub fn get_n(&self, n: usize) -> f32 {
+        match n {
+            0 => self.x(),
+            1 => self.y(),
+            2 => self.z(),
+            _ => panic!("Attempt to access dimension beyond z."),
+        }
     }
-}
 
-impl IndexMut<usize> for Point {
-    fn index_mut(&mut self, index: usize) -> &mut f32 {
-        debug_assert!(index < 3);
+    pub fn x(&self) -> f32 {
+        self.co.get_0()
+    }
 
-        &mut self.co[index]
+    pub fn y(&self) -> f32 {
+        self.co.get_1()
+    }
+
+    pub fn z(&self) -> f32 {
+        self.co.get_2()
+    }
+
+    pub fn set_x(&mut self, x: f32) {
+        self.co.set_0(x);
+    }
+
+    pub fn set_y(&mut self, y: f32) {
+        self.co.set_1(y);
+    }
+
+    pub fn set_z(&mut self, z: f32) {
+        self.co.set_2(z);
     }
 }
 
@@ -130,7 +144,7 @@ mod tests {
     fn norm() {
         let mut p1 = Point::new(1.0, 2.0, 3.0);
         let p2 = Point::new(2.0, 4.0, 6.0);
-        p1.co[3] = 0.5;
+        p1.co.set_3(0.5);
 
         assert_eq!(p2, p1.norm());
     }
@@ -196,7 +210,7 @@ mod tests {
                                            1.0,
                                            5.0);
         let mut pm = Point::new(15.5, 54.0, 70.0);
-        pm.co[3] = 18.5;
+        pm.co.set_3(18.5);
         assert_eq!(p * m, pm);
     }
 

@@ -70,8 +70,8 @@ impl Camera {
         };
 
         // Ray direction
-        let dir = Vector::new((x * tfov) - (orig[0] / focus_distance),
-                              (y * tfov) - (orig[1] / focus_distance),
+        let dir = Vector::new((x * tfov) - (orig.x() / focus_distance),
+                              (y * tfov) - (orig.y() / focus_distance),
                               1.0)
             .normalized();
 

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::ops::{Index, IndexMut, Add, Sub, Mul, Div, Neg};
+use std::ops::{Add, Sub, Mul, Div, Neg};
 use std::cmp::PartialEq;
 
 use lerp::Lerp;
@@ -33,26 +33,40 @@ impl Vector {
     }
 
     pub fn into_normal(self) -> Normal {
-        Normal::new(self.co[0], self.co[1], self.co[2])
+        Normal::new(self.x(), self.y(), self.z())
     }
-}
 
-
-impl Index<usize> for Vector {
-    type Output = f32;
-
-    fn index(&self, index: usize) -> &f32 {
-        debug_assert!(index < 3);
-
-        &self.co[index]
+    pub fn get_n(&self, n: usize) -> f32 {
+        match n {
+            0 => self.x(),
+            1 => self.y(),
+            2 => self.z(),
+            _ => panic!("Attempt to access dimension beyond z."),
+        }
     }
-}
 
-impl IndexMut<usize> for Vector {
-    fn index_mut(&mut self, index: usize) -> &mut f32 {
-        debug_assert!(index < 3);
+    pub fn x(&self) -> f32 {
+        self.co.get_0()
+    }
 
-        &mut self.co[index]
+    pub fn y(&self) -> f32 {
+        self.co.get_1()
+    }
+
+    pub fn z(&self) -> f32 {
+        self.co.get_2()
+    }
+
+    pub fn set_x(&mut self, x: f32) {
+        self.co.set_0(x);
+    }
+
+    pub fn set_y(&mut self, y: f32) {
+        self.co.set_1(y);
+    }
+
+    pub fn set_z(&mut self, z: f32) {
+        self.co.set_2(z);
     }
 }
 
@@ -140,9 +154,12 @@ impl DotProduct for Vector {
 impl CrossProduct for Vector {
     fn cross(self, other: Vector) -> Vector {
         Vector {
-            co: Float4::new((self[1] * other[2]) - (self[2] * other[1]),
-                            (self[2] * other[0]) - (self[0] * other[2]),
-                            (self[0] * other[1]) - (self[1] * other[0]),
+            co: Float4::new((self.co.get_1() * other.co.get_2()) -
+                            (self.co.get_2() * other.co.get_1()),
+                            (self.co.get_2() * other.co.get_0()) -
+                            (self.co.get_0() * other.co.get_2()),
+                            (self.co.get_0() * other.co.get_1()) -
+                            (self.co.get_1() * other.co.get_0()),
                             0.0),
         }
     }
@@ -202,7 +219,7 @@ mod tests {
                                            15.0,
                                            3.0);
         let mut vm = Vector::new(14.0, 46.0, 58.0);
-        vm.co[3] = 90.5;
+        vm.co.set_3(90.5);
         assert_eq!(v * m, vm);
     }
 
@@ -255,9 +272,9 @@ mod tests {
         let v1 = Vector::new(1.0, 2.0, 3.0);
         let v2 = Vector::new(0.2672612419124244, 0.5345224838248488, 0.8017837257372732);
         let v3 = v1.normalized();
-        assert!((v3[0] - v2[0]).abs() < 0.000001);
-        assert!((v3[1] - v2[1]).abs() < 0.000001);
-        assert!((v3[2] - v2[2]).abs() < 0.000001);
+        assert!((v3.x() - v2.x()).abs() < 0.000001);
+        assert!((v3.y() - v2.y()).abs() < 0.000001);
+        assert!((v3.z() - v2.z()).abs() < 0.000001);
     }
 
     #[test]

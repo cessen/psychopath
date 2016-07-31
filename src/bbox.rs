@@ -58,14 +58,14 @@ impl BBox {
     // Creates a new BBox transformed into a different space.
     pub fn transformed(&self, xform: Matrix4x4) -> BBox {
         // BBox corners
-        let vs = [Point::new(self.min[0], self.min[1], self.min[2]),
-                  Point::new(self.min[0], self.min[1], self.max[2]),
-                  Point::new(self.min[0], self.max[1], self.min[2]),
-                  Point::new(self.min[0], self.max[1], self.max[2]),
-                  Point::new(self.max[0], self.min[1], self.min[2]),
-                  Point::new(self.max[0], self.min[1], self.max[2]),
-                  Point::new(self.max[0], self.max[1], self.min[2]),
-                  Point::new(self.max[0], self.max[1], self.max[2])];
+        let vs = [Point::new(self.min.x(), self.min.y(), self.min.z()),
+                  Point::new(self.min.x(), self.min.y(), self.max.z()),
+                  Point::new(self.min.x(), self.max.y(), self.min.z()),
+                  Point::new(self.min.x(), self.max.y(), self.max.z()),
+                  Point::new(self.max.x(), self.min.y(), self.min.z()),
+                  Point::new(self.max.x(), self.min.y(), self.max.z()),
+                  Point::new(self.max.x(), self.max.y(), self.min.z()),
+                  Point::new(self.max.x(), self.max.y(), self.max.z())];
 
         // Transform BBox corners and make new bbox
         let mut b = BBox::new();
@@ -79,9 +79,9 @@ impl BBox {
     }
 
     pub fn surface_area(&self) -> f32 {
-        let x = self.max[0] - self.min[0];
-        let y = self.max[1] - self.min[1];
-        let z = self.max[2] - self.min[2];
+        let x = self.max.x() - self.min.x();
+        let y = self.max.y() - self.min.y();
+        let z = self.max.z() - self.min.z();
 
         ((x * y) + (y * z) + (z * x)) * 2.0
     }

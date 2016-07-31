@@ -210,7 +210,7 @@ impl SurfaceClosure for LambertClosure {
         // Generate a random ray direction in the hemisphere
         // of the surface.
         let dir = cosine_sample_hemisphere(uv.0, uv.1);
-        let pdf = dir[2] * INV_PI;
+        let pdf = dir.z() * INV_PI;
         let out = zup_to_vec(dir, nn);
         let filter = self.evaluate(inc, out, nor, wavelength);
 

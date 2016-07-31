@@ -134,12 +134,12 @@ pub fn log2_64(value: u64) -> u64 {
 
 /// Creates a coordinate system from a single vector.
 pub fn coordinate_system_from_vector(v: Vector) -> (Vector, Vector, Vector) {
-    let v2 = if v[0].abs() > v[1].abs() {
-        let invlen = 1.0 / ((v[0] * v[0]) + (v[2] * v[2])).sqrt();
-        Vector::new(-v[2] * invlen, 0.0, v[0] * invlen)
+    let v2 = if v.x().abs() > v.y().abs() {
+        let invlen = 1.0 / ((v.x() * v.x()) + (v.z() * v.z())).sqrt();
+        Vector::new(-v.z() * invlen, 0.0, v.x() * invlen)
     } else {
-        let invlen = 1.0 / ((v[1] * v[1]) + (v[2] * v[2])).sqrt();
-        Vector::new(0.0, v[2] * invlen, -v[1] * invlen)
+        let invlen = 1.0 / ((v.y() * v.y()) + (v.z() * v.z())).sqrt();
+        Vector::new(0.0, v.z() * invlen, -v.y() * invlen)
     };
 
     let v3 = cross(v, v2);
@@ -164,7 +164,7 @@ pub fn zup_to_vec(from: Vector, toz: Vector) -> Vector {
     // Use simple linear algebra to convert the "from"
     // vector to a space composed of tox, toy, and toz
     // as the x, y, and z axes.
-    (tox * from[0]) + (toy * from[1]) + (toz * from[2])
+    (tox * from.x()) + (toy * from.y()) + (toz * from.z())
 }
 
 /// The logit function, scaled to approximate the probit function.

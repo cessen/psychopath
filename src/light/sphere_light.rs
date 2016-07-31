@@ -69,7 +69,7 @@ impl LightSource for SphereLight {
             // Sample the cone subtended by the sphere and calculate
             // useful data from that.
             let sample = uniform_sample_cone(u, v, cos_theta_max).normalized();
-            let cos_theta: f64 = sample[2] as f64;
+            let cos_theta: f64 = sample.z() as f64;
             let cos_theta2: f64 = cos_theta * cos_theta;
             let sin_theta2: f64 = (1.0 - cos_theta2).max(0.0);
             let sin_theta: f64 = sin_theta2.sqrt();
@@ -90,7 +90,7 @@ impl LightSource for SphereLight {
                                      (d - (cos_a * radius)) as f32);
 
             // Calculate the final values and return everything.
-            let shadow_vec = (x * sample[0]) + (y * sample[1]) + (z * sample[2]);
+            let shadow_vec = (x * sample.x()) + (y * sample.y()) + (z * sample.z());
             let pdf = uniform_sample_cone_pdf(cos_theta_max);
             let spectral_sample = (col * surface_area_inv as f32).to_spectral_sample(wavelength);
             return (spectral_sample, shadow_vec, pdf as f32);

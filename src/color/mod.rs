@@ -52,7 +52,7 @@ impl SpectralSample {
     pub fn new(wavelength: f32) -> SpectralSample {
         debug_assert!(wavelength >= WL_MIN && wavelength <= WL_MAX);
         SpectralSample {
-            e: Float4::new(0.0, 0.0, 0.0, 0.0),
+            e: Float4::splat(0.0),
             hero_wavelength: wavelength,
         }
     }
@@ -60,7 +60,7 @@ impl SpectralSample {
     pub fn from_value(value: f32, wavelength: f32) -> SpectralSample {
         debug_assert!(wavelength >= WL_MIN && wavelength <= WL_MAX);
         SpectralSample {
-            e: Float4::new(value, value, value, value),
+            e: Float4::splat(value),
             hero_wavelength: wavelength,
         }
     }
@@ -174,10 +174,10 @@ impl XYZ {
     }
 
     pub fn from_spectral_sample(ss: &SpectralSample) -> XYZ {
-        let xyz0 = XYZ::from_wavelength(ss.wl_n(0), ss.e[0]);
-        let xyz1 = XYZ::from_wavelength(ss.wl_n(1), ss.e[1]);
-        let xyz2 = XYZ::from_wavelength(ss.wl_n(2), ss.e[2]);
-        let xyz3 = XYZ::from_wavelength(ss.wl_n(3), ss.e[3]);
+        let xyz0 = XYZ::from_wavelength(ss.wl_n(0), ss.e.get_0());
+        let xyz1 = XYZ::from_wavelength(ss.wl_n(1), ss.e.get_1());
+        let xyz2 = XYZ::from_wavelength(ss.wl_n(2), ss.e.get_2());
+        let xyz3 = XYZ::from_wavelength(ss.wl_n(3), ss.e.get_3());
         (xyz0 + xyz1 + xyz2 + xyz3) * 0.75
     }
 

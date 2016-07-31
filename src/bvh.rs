@@ -145,10 +145,10 @@ impl BVH {
                 let sah_divs = {
                     let mut sah_divs = [[0.0f32; SAH_BIN_COUNT - 1]; 3];
                     for d in 0..3 {
-                        let extent = bounds.max[d] - bounds.min[d];
+                        let extent = bounds.max.get_n(d) - bounds.min.get_n(d);
                         for div in 0..(SAH_BIN_COUNT - 1) {
                             let part = extent * ((div + 1) as f32 / SAH_BIN_COUNT as f32);
-                            sah_divs[d][div] = bounds.min[d] + part;
+                            sah_divs[d][div] = bounds.min.get_n(d) + part;
                         }
                     }
                     sah_divs
@@ -163,7 +163,7 @@ impl BVH {
 
                         for d in 0..3 {
                             for div in 0..(SAH_BIN_COUNT - 1) {
-                                if centroid[d] <= sah_divs[d][div] {
+                                if centroid.get_n(d) <= sah_divs[d][div] {
                                     sah_bins[d][div].0 |= tb;
                                     sah_bins[d][div].2 += 1;
                                 } else {
@@ -203,7 +203,7 @@ impl BVH {
                 // Partition
                 let mut split_i = partition(&mut objects[..], |obj| {
                     let tb = lerp_slice(bounder(obj), 0.5);
-                    let centroid = (tb.min[split_axis] + tb.max[split_axis]) * 0.5;
+                    let centroid = (tb.min.get_n(split_axis) + tb.max.get_n(split_axis)) * 0.5;
                     centroid < div
                 });
                 if split_i < 1 {
@@ -219,7 +219,7 @@ impl BVH {
                     let mut axis = 0;
                     let mut largest = std::f32::NEG_INFINITY;
                     for i in 0..3 {
-                        let extent = bounds.max[i] - bounds.min[i];
+                        let extent = bounds.max.get_n(i) - bounds.min.get_n(i);
                         if extent > largest {
                             largest = extent;
                             axis = i;
@@ -234,8 +234,10 @@ impl BVH {
                         &|a, b| {
                     let tb_a = lerp_slice(bounder(a), 0.5);
                     let tb_b = lerp_slice(bounder(b), 0.5);
-                    let centroid_a = (tb_a.min[split_axis] + tb_a.max[split_axis]) * 0.5;
-                    let centroid_b = (tb_b.min[split_axis] + tb_b.max[split_axis]) * 0.5;
+                    let centroid_a = (tb_a.min.get_n(split_axis) + tb_a.max.get_n(split_axis)) *
+                                     0.5;
+                    let centroid_b = (tb_b.min.get_n(split_axis) + tb_b.max.get_n(split_axis)) *
+                                     0.5;
 
                     if centroid_a < centroid_b {
                         Ordering::Less
@@ -307,7 +309,7 @@ impl BVH {
                         i_stack[stack_ptr + 1] = second_child_index;
                         ray_i_stack[stack_ptr] = part;
                         ray_i_stack[stack_ptr + 1] = part;
-                        if rays[0].dir_inv[split_axis as usize].is_sign_positive() {
+                        if rays[0].dir_inv.get_n(split_axis as usize).is_sign_positive() {
                             i_stack.swap(stack_ptr, stack_ptr + 1);
                         }
                         stack_ptr += 1;

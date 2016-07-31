@@ -79,11 +79,15 @@ impl LightSource for RectangleLight {
         // Project shadow_vec back onto the light's surface
         let arr_local = arr * *space;
         let shadow_vec_local = shadow_vec * *space;
-        let shadow_vec_local = shadow_vec_local * (-arr_local[2] / shadow_vec_local[2]);
+        let shadow_vec_local = shadow_vec_local * (-arr_local.z() / shadow_vec_local.z());
         let mut sample_point_local = arr_local + shadow_vec_local;
-        sample_point_local[0] = sample_point_local[0].max(dim.0 * -0.5).min(dim.0 * 0.5);
-        sample_point_local[1] = sample_point_local[1].max(dim.1 * -0.5).min(dim.1 * 0.5);
-        sample_point_local[2] = 0.0;
+        {
+            let x = sample_point_local.x().max(dim.0 * -0.5).min(dim.0 * 0.5);
+            let y = sample_point_local.y().max(dim.1 * -0.5).min(dim.1 * 0.5);
+            sample_point_local.set_x(x);
+            sample_point_local.set_y(y);
+            sample_point_local.set_z(0.0);
+        }
         let sample_point = sample_point_local * space_inv;
         let shadow_vec = sample_point - arr;
 

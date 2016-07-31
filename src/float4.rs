@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::ops::{Index, IndexMut, Add, Sub, Mul, Div};
+use std::ops::{Add, Sub, Mul, Div};
 use std::cmp::PartialEq;
 
 #[cfg(feature = "simd_perf")]
@@ -140,11 +140,25 @@ impl Float4 {
                     })
     }
 
+    /// Set the nth element to the given value.
+    #[inline]
+    pub fn set_n(&mut self, n: usize, v: f32) {
+        match n {
+            0 => self.set_0(v),
+            1 => self.set_1(v),
+            2 => self.set_2(v),
+            3 => self.set_3(v),
+            _ => panic!("Attempted to set element of Float4 outside of bounds."),
+        }
+    }
+
     /// Set the 0th element to the given value.
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn set_0(&mut self, n: f32) {
         self.data = self.data.replace(0, n);
     }
+    #[inline(always)]
     #[cfg(not(feature = "simd_perf"))]
     pub fn set_0(&mut self, n: f32) {
         unsafe {
@@ -154,10 +168,12 @@ impl Float4 {
 
     /// Set the 1th element to the given value.
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn set_1(&mut self, n: f32) {
         self.data = self.data.replace(1, n);
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     pub fn set_1(&mut self, n: f32) {
         unsafe {
             *self.data.get_unchecked_mut(1) = n;
@@ -166,10 +182,12 @@ impl Float4 {
 
     /// Set the 2th element to the given value.
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn set_2(&mut self, n: f32) {
         self.data = self.data.replace(2, n);
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     pub fn set_2(&mut self, n: f32) {
         unsafe {
             *self.data.get_unchecked_mut(2) = n;
@@ -178,88 +196,76 @@ impl Float4 {
 
     /// Set the 3th element to the given value.
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn set_3(&mut self, n: f32) {
         self.data = self.data.replace(3, n);
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     pub fn set_3(&mut self, n: f32) {
         unsafe {
             *self.data.get_unchecked_mut(3) = n;
         }
     }
 
+    /// Returns the value of the nth element.
+    #[inline]
+    pub fn get_n(&self, n: usize) -> f32 {
+        match n {
+            0 => self.get_0(),
+            1 => self.get_1(),
+            2 => self.get_2(),
+            3 => self.get_3(),
+            _ => panic!("Attempted to access element of Float4 outside of bounds."),
+        }
+    }
+
     /// Returns the value of the 0th element.
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn get_0(&self) -> f32 {
         self.data.extract(0)
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     pub fn get_0(&self) -> f32 {
         unsafe { *self.data.get_unchecked(0) }
     }
 
     /// Returns the value of the 1th element.
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn get_1(&self) -> f32 {
         self.data.extract(1)
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     pub fn get_1(&self) -> f32 {
         unsafe { *self.data.get_unchecked(1) }
     }
 
     /// Returns the value of the 2th element.
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn get_2(&self) -> f32 {
         self.data.extract(2)
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     pub fn get_2(&self) -> f32 {
         unsafe { *self.data.get_unchecked(2) }
     }
 
     /// Returns the value of the 3th element.
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn get_3(&self) -> f32 {
         self.data.extract(3)
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     pub fn get_3(&self) -> f32 {
         unsafe { *self.data.get_unchecked(3) }
-    }
-}
-
-
-impl Index<usize> for Float4 {
-    type Output = f32;
-
-    #[cfg(feature = "simd_perf")]
-    fn index(&self, index: usize) -> &f32 {
-        // TODO: this might not be correct!  It works, but need to make sure
-        // to do this in a way with proper defined behavior.
-        use std::mem::transmute;
-        let vs: &[f32; 4] = unsafe { transmute(&self.data) };
-        &vs[index]
-    }
-    #[cfg(not(feature = "simd_perf"))]
-    fn index(&self, index: usize) -> &f32 {
-        &self.data[index]
-    }
-}
-
-
-impl IndexMut<usize> for Float4 {
-    #[cfg(feature = "simd_perf")]
-    fn index_mut(&mut self, index: usize) -> &mut f32 {
-        // TODO: this might not be correct!  It works, but need to make sure
-        // to do this in a way with proper defined behavior.
-        use std::mem::transmute;
-        let vs: &mut [f32; 4] = unsafe { transmute(&mut self.data) };
-        &mut vs[index]
-    }
-    #[cfg(not(feature = "simd_perf"))]
-    fn index_mut(&mut self, index: usize) -> &mut f32 {
-        &mut self.data[index]
     }
 }
 
@@ -389,27 +395,51 @@ mod tests {
     use super::*;
 
     #[test]
-    fn index() {
+    fn get() {
         let f = Float4::new(1.0, 2.0, 3.0, 4.0);
 
-        assert_eq!(f[0], 1.0);
-        assert_eq!(f[1], 2.0);
-        assert_eq!(f[2], 3.0);
-        assert_eq!(f[3], 4.0);
+        assert_eq!(f.get_0(), 1.0);
+        assert_eq!(f.get_1(), 2.0);
+        assert_eq!(f.get_2(), 3.0);
+        assert_eq!(f.get_3(), 4.0);
     }
 
     #[test]
-    fn index_mut() {
-        let mut f = Float4::new(1.0, 2.0, 3.0, 4.0);
-        f[0] = 5.0;
-        f[1] = 6.0;
-        f[2] = 7.0;
-        f[3] = 8.0;
+    fn get_n() {
+        let f = Float4::new(1.0, 2.0, 3.0, 4.0);
 
-        assert_eq!(f[0], 5.0);
-        assert_eq!(f[1], 6.0);
-        assert_eq!(f[2], 7.0);
-        assert_eq!(f[3], 8.0);
+        assert_eq!(f.get_n(0), 1.0);
+        assert_eq!(f.get_n(1), 2.0);
+        assert_eq!(f.get_n(2), 3.0);
+        assert_eq!(f.get_n(3), 4.0);
+    }
+
+    #[test]
+    fn set() {
+        let mut f = Float4::new(1.0, 2.0, 3.0, 4.0);
+        f.set_0(5.0);
+        f.set_1(6.0);
+        f.set_2(7.0);
+        f.set_3(8.0);
+
+        assert_eq!(f.get_0(), 5.0);
+        assert_eq!(f.get_1(), 6.0);
+        assert_eq!(f.get_2(), 7.0);
+        assert_eq!(f.get_3(), 8.0);
+    }
+
+    #[test]
+    fn set_n() {
+        let mut f = Float4::new(1.0, 2.0, 3.0, 4.0);
+        f.set_n(0, 5.0);
+        f.set_n(1, 6.0);
+        f.set_n(2, 7.0);
+        f.set_n(3, 8.0);
+
+        assert_eq!(f.get_0(), 5.0);
+        assert_eq!(f.get_1(), 6.0);
+        assert_eq!(f.get_2(), 7.0);
+        assert_eq!(f.get_3(), 8.0);
     }
 
     #[test]
