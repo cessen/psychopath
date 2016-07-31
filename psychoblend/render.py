@@ -134,6 +134,7 @@ class PsychopathRender(bpy.types.RenderEngine):
                 # Update render progress bar
                 output += self._process.stdout.read1(2**16)
                 outputs = output.rsplit(b'\r')
+                progress = 0.0
                 if len(outputs) > 0 and outputs[-1][-1] == b"%"[0]:
                     try:
                         progress = float(outputs[-1][:-1])
