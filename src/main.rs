@@ -1,4 +1,5 @@
 extern crate rustc_serialize;
+extern crate time;
 extern crate docopt;
 extern crate scoped_threadpool;
 extern crate crossbeam;
@@ -12,6 +13,7 @@ extern crate simd;
 #[macro_use]
 extern crate nom;
 
+mod timer;
 mod math;
 mod hilbert;
 mod algorithm;
@@ -45,6 +47,7 @@ use std::fs::File;
 
 use docopt::Docopt;
 
+use timer::Timer;
 use ray::{Ray, AccelRay};
 use renderer::LightPath;
 use parse::{parse_scene, DataTree};
@@ -82,6 +85,8 @@ struct Args {
 // ----------------------------------------------------------------
 
 fn main() {
+    let mut t = Timer::new();
+
     // Parse command line arguments.
     let args: Args = Docopt::new(USAGE.replace("<VERSION>", VERSION))
         .and_then(|d| d.decode())
@@ -93,7 +98,13 @@ fn main() {
         return;
     }
 
+    // Print some misc useful dev info.
+    println!("Ray size:       {} bytes", mem::size_of::<Ray>());
+    println!("AccelRay size:  {} bytes", mem::size_of::<AccelRay>());
+    println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
+
     // Parse data tree of scene file
+    t.tick();
     let mut s = String::new();
     let dt = if let Some(fp) = args.flag_input {
         let mut f = io::BufReader::new(File::open(fp).unwrap());
@@ -103,16 +114,15 @@ fn main() {
     } else {
         panic!()
     };
+    println!("Parsed scene file in {:.3}s\n", t.tick());
 
-    println!("Ray size:       {} bytes", mem::size_of::<Ray>());
-    println!("AccelRay size:  {} bytes", mem::size_of::<AccelRay>());
-    println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
 
     // Iterate through scenes and render them
     if let DataTree::Internal { ref children, .. } = dt {
         for child in children {
+            t.tick();
             if child.type_name() == "Scene" {
-                println!("Parsing scene...");
+                println!("Building scene...");
                 let mut r = parse_scene(child).unwrap();
 
                 if let Some(spp) = args.flag_spp {
@@ -126,8 +136,11 @@ fn main() {
                     num_cpus::get() as u32
                 };
 
+                println!("Built scene in {:.3}s\n", t.tick());
+
                 println!("Rendering scene with {} threads...", thread_count);
                 r.render(thread_count);
+                println!("Rendered scene in {:.3}s", t.tick());
             }
         }
     }
