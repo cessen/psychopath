@@ -24,6 +24,7 @@ pub struct LightArray {
 }
 
 impl LightArray {
+    #[allow(dead_code)]
     pub fn new<'a, T, F>(things: &mut [T], q: F) -> LightArray
         where F: 'a + Fn(&T) -> Option<(&'a [BBox], f32)>
     {

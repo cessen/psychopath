@@ -1,7 +1,7 @@
 use bbox::BBox;
 use sah::sah_split;
 use lerp::lerp_slice;
-use algorithm::{partition, merge_slices_append};
+use algorithm::merge_slices_append;
 use math::{Vector, Point, Normal};
 use shading::surface_closure::SurfaceClosure;
 
@@ -80,19 +80,8 @@ impl LightTree {
                 child_index: 0,
             });
 
-            // Get combined object bounds
-            let bounds = {
-                let mut bb = BBox::new();
-                for obj in &objects[..] {
-                    bb |= lerp_slice(info_getter(obj).0, 0.5);
-                }
-                bb
-            };
-
-
-
             // Partition objects.
-            let (split_index, split_axis) = sah_split(objects, &|obj_ref| info_getter(obj_ref).0);
+            let (split_index, _) = sah_split(objects, &|obj_ref| info_getter(obj_ref).0);
 
             // Create child nodes
             let (_, c1_bounds) =
