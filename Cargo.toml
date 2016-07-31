@@ -15,7 +15,7 @@ rustc-serialize = "0.3"
 nom = "1.2"
 scoped_threadpool = "0.1"
 crossbeam = "0.2"
-num_cpus = "0.2"
+num_cpus = "1.0"
 quickersort = "2.0"
 lodepng = "0.8"
 
