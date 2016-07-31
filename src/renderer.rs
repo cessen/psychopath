@@ -218,8 +218,8 @@ impl Renderer {
         // Write rendered image to disk
         let _ = image.write_png(Path::new(&self.output_file));
 
-        // End output with a new line
-        println!("");
+        // Clear percentage progress print
+        print!("\r                \r");
     }
 }
 

@@ -197,7 +197,6 @@ impl AssemblyBuilder {
         let object_accel = BVH::from_objects(&mut self.instances[..],
                                              1,
                                              |inst| &bbs[bis[inst.id]..bis[inst.id + 1]]);
-        println!("Assembly BVH Depth: {}", object_accel.tree_depth());
 
         // Get list of instances that are for light sources.
         // TODO: include assemblies that themselves contain light sources.

@@ -39,7 +39,9 @@ impl Camera {
 
         // Can't have focus distance of zero.
         if focus_distances.iter().any(|d| *d == 0.0) {
-            println!("WARNING: camera focal distance is zero or less.  Disabling focal blur.");
+            if aperture_radii.iter().any(|a| *a > 0.0) {
+                println!("WARNING: camera focal distance is zero or less.  Disabling focal blur.");
+            }
             aperture_radii = vec![0.0];
             focus_distances = vec![1.0];
         }

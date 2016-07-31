@@ -61,6 +61,7 @@ Psychopath <VERSION>
 
 Usage:
   psychopath [options] -i <file>
+  psychopath --dev
   psychopath (-h | --help)
   psychopath --version
 
@@ -69,6 +70,7 @@ Options:
   -s <n>, --spp <n>             Number of samples per pixel.
   -t <n>, --threads <n>         Number of threads to render with.  Defaults
                                 to the number of logical cores on the system.
+  --dev                         Show useful dev/debug info.
   -h, --help                    Show this screen.
   --version                     Show version.
 "#;
@@ -78,6 +80,7 @@ struct Args {
     flag_input: Option<String>,
     flag_spp: Option<usize>,
     flag_threads: Option<usize>,
+    flag_dev: bool,
     flag_version: bool,
 }
 
@@ -99,11 +102,15 @@ fn main() {
     }
 
     // Print some misc useful dev info.
-    println!("Ray size:       {} bytes", mem::size_of::<Ray>());
-    println!("AccelRay size:  {} bytes", mem::size_of::<AccelRay>());
-    println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
+    if args.flag_dev {
+        println!("Ray size:       {} bytes", mem::size_of::<Ray>());
+        println!("AccelRay size:  {} bytes", mem::size_of::<AccelRay>());
+        println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
+        return;
+    }
 
     // Parse data tree of scene file
+    println!("Parsing scene file...");
     t.tick();
     let mut s = String::new();
     let dt = if let Some(fp) = args.flag_input {
@@ -114,7 +121,7 @@ fn main() {
     } else {
         panic!()
     };
-    println!("Parsed scene file in {:.3}s\n", t.tick());
+    println!("\tParsed scene file in {:.3}s", t.tick());
 
 
     // Iterate through scenes and render them
@@ -126,7 +133,7 @@ fn main() {
                 let mut r = parse_scene(child).unwrap();
 
                 if let Some(spp) = args.flag_spp {
-                    println!("Overriding scene spp: {}", spp);
+                    println!("\tOverriding scene spp: {}", spp);
                     r.spp = spp;
                 }
 
@@ -136,11 +143,11 @@ fn main() {
                     num_cpus::get() as u32
                 };
 
-                println!("Built scene in {:.3}s\n", t.tick());
+                println!("\tBuilt scene in {:.3}s", t.tick());
 
                 println!("Rendering scene with {} threads...", thread_count);
                 r.render(thread_count);
-                println!("Rendered scene in {:.3}s", t.tick());
+                println!("\tRendered scene in {:.3}s", t.tick());
             }
         }
     }
