@@ -85,6 +85,14 @@ impl BBox {
 
         ((x * y) + (y * z) + (z * x)) * 2.0
     }
+
+    pub fn center(&self) -> Point {
+        self.min.lerp(self.max, 0.5)
+    }
+
+    pub fn diagonal(&self) -> f32 {
+        (self.max - self.min).length()
+    }
 }
 
 

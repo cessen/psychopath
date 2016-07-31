@@ -68,11 +68,16 @@ pub trait LightSource: Boundable + Debug + Sync {
                 -> SpectralSample;
 
 
-
     /// Returns whether the light has a delta distribution.
     ///
     /// If a light has no chance of a ray hitting it through random process
     /// then it is a delta light source.  For example, point light sources,
     /// lights that only emit in a single direction, etc.
     fn is_delta(&self) -> bool;
+
+
+    /// Returns an approximation of the total energy emitted by the light
+    /// source.  Note that this does not need to be exact: it is used for
+    /// importance sampling.
+    fn approximate_energy(&self) -> f32;
 }

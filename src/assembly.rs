@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use math::{Matrix4x4, Vector};
 use lerp::lerp_slice;
 use bvh::BVH;
-use light_accel::{LightAccel, LightArray};
+use light_accel::{LightAccel, LightTree};
 use boundable::Boundable;
 use surface::{Surface, SurfaceIntersection};
 use light::LightSource;
@@ -28,7 +28,7 @@ pub struct Assembly {
     pub object_accel: BVH,
 
     // Light accel
-    pub light_accel: LightArray,
+    pub light_accel: LightTree,
 }
 
 impl Assembly {
@@ -40,8 +40,9 @@ impl Assembly {
                          time: f32,
                          intr: &SurfaceIntersection)
                          -> Option<(SpectralSample, Vector, f32)> {
-        if let &SurfaceIntersection::Hit { pos, .. } = intr {
-            if let Some((light_i, sel_pdf, _)) = self.light_accel.select(n) {
+        if let &SurfaceIntersection::Hit { pos, incoming, nor, closure, .. } = intr {
+            if let Some((light_i, sel_pdf, _)) = self.light_accel
+                .select(incoming, pos, nor, closure.as_surface_closure(), time, n) {
                 let inst = self.light_instances[light_i];
                 match inst.instance_type {
                     InstanceType::Object => {
@@ -198,20 +199,42 @@ impl AssemblyBuilder {
                                              |inst| &bbs[bis[inst.id]..bis[inst.id + 1]]);
         println!("Assembly BVH Depth: {}", object_accel.tree_depth());
 
+        // Get list of instances that are for light sources.
+        // TODO: include assemblies that themselves contain light sources.
+        let mut light_instances: Vec<_> = self.instances
+            .iter()
+            .filter(|inst| {
+                match inst.instance_type {
+                    InstanceType::Object => {
+                        if let Object::Light(_) = self.objects[inst.data_index] {
+                            true
+                        } else {
+                            false
+                        }
+                    }
+
+                    _ => false,
+                }
+            })
+            .map(|&a| a)
+            .collect();
+
         // Build light accel
-        let mut light_instances = self.instances.clone();
-        let light_accel = LightArray::new(&mut light_instances[..], |inst| {
-            match inst.instance_type {
+        let light_accel = LightTree::from_objects(&mut light_instances[..], |inst| {
+            let bounds = &bbs[bis[inst.id]..bis[inst.id + 1]];
+            let energy = match inst.instance_type {
                 InstanceType::Object => {
-                    if let Object::Light(_) = self.objects[inst.data_index] {
-                        Some((&bbs[bis[inst.id]..bis[inst.id + 1]], 1.0))
+                    if let Object::Light(ref light) = self.objects[inst.data_index] {
+                        light.approximate_energy()
                     } else {
-                        None
+                        0.0
                     }
                 }
 
-                _ => None,
-            }
+                // TODO: handle assemblies.
+                _ => 0.0,
+            };
+            (bounds, energy)
         });
 
         Assembly {

@@ -3,6 +3,7 @@ use color::{XYZ, SpectralSample, Color};
 use sampling::cosine_sample_hemisphere;
 use std::f32::consts::PI as PI_32;
 const INV_PI: f32 = 1.0 / PI_32;
+const H_PI: f32 = PI_32 / 2.0;
 
 #[derive(Debug, Copy, Clone)]
 pub enum SurfaceClosureUnion {
@@ -57,6 +58,18 @@ pub trait SurfaceClosure {
     /// out: The outgoing light direction.
     /// nor: The surface normal of the reflecting/transmitting surface point.
     fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal) -> f32;
+
+    /// Returns an estimate of the sum total energy that evaluate() would return
+    /// when 'out' is evaluated over a circular solid angle.
+    /// This is used for importance sampling, so does not need to be exact,
+    /// but it does need to be non-zero anywhere that an exact solution would
+    /// be non-zero.
+    fn estimate_eval_over_solid_angle(&self,
+                                      inc: Vector,
+                                      out: Vector,
+                                      nor: Normal,
+                                      cos_theta: f32)
+                                      -> f32;
 }
 
 
@@ -174,6 +187,18 @@ impl SurfaceClosure for EmitClosure {
 
         1.0
     }
+
+    fn estimate_eval_over_solid_angle(&self,
+                                      inc: Vector,
+                                      out: Vector,
+                                      nor: Normal,
+                                      cos_theta: f32)
+                                      -> f32 {
+        let _ = (inc, out, nor, cos_theta); // Not using these, silence warning
+
+        // TODO: what to do here?
+        unimplemented!()
+    }
 }
 
 
@@ -240,5 +265,64 @@ impl SurfaceClosure for LambertClosure {
             .into_vector();
 
         dot(nn, v).max(0.0) * INV_PI
+    }
+
+    fn estimate_eval_over_solid_angle(&self,
+                                      inc: Vector,
+                                      out: Vector,
+                                      nor: Normal,
+                                      cos_theta: f32)
+                                      -> f32 {
+        assert!(cos_theta >= -1.0 && cos_theta <= 1.0);
+
+        // Analytically calculates lambert shading from a uniform light source
+        // subtending a circular solid angle.
+        // Only works for solid angle subtending equal to or less than a hemisphere.
+        //
+        // Formula taken from "Area Light Sources for Real-Time Graphics"
+        // by John M. Snyder
+        fn sphere_lambert(nlcos: f32, rcos: f32) -> f32 {
+            assert!(nlcos >= -1.0 && nlcos <= 1.0);
+            assert!(rcos >= 0.0 && rcos <= 1.0);
+
+            let nlsin: f32 = (1.0 - (nlcos * nlcos)).sqrt();
+            let rsin2: f32 = 1.0 - (rcos * rcos);
+            let rsin: f32 = rsin2.sqrt();
+            let ysin: f32 = rcos / nlsin;
+            let ycos2: f32 = 1.0 - (ysin * ysin);
+            let ycos: f32 = ycos2.sqrt();
+
+            let g: f32 = (-2.0 * nlsin * rcos * ycos) + H_PI - ysin.asin() + (ysin * ycos);
+            let h: f32 = nlcos * ((ycos * (rsin2 - ycos2).sqrt()) + (rsin2 * (ycos / rsin).asin()));
+
+            let nl: f32 = nlcos.acos();
+            let r: f32 = rcos.acos();
+
+            if nl < (H_PI - r) {
+                nlcos * rsin2
+            } else if nl < H_PI {
+                (nlcos * rsin2) + g - h
+            } else if nl < (H_PI + r) {
+                (g + h) * INV_PI
+            } else {
+                0.0
+            }
+        }
+
+        if cos_theta < 0.0 {
+            return 1.0;
+        } else {
+            let v = out.normalized();
+            let nn = if dot(nor.into_vector(), inc) <= 0.0 {
+                    nor.normalized()
+                } else {
+                    -nor.normalized()
+                }
+                .into_vector();
+
+            let cos_nv = dot(nn, v);
+
+            return sphere_lambert(cos_nv, cos_theta);
+        }
     }
 }

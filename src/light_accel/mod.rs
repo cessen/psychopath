@@ -1,8 +1,21 @@
+mod light_tree;
+
+use math::{Vector, Point, Normal};
 use bbox::BBox;
+use shading::surface_closure::SurfaceClosure;
+
+pub use self::light_tree::LightTree;
 
 pub trait LightAccel {
     /// Returns (index_of_light, selection_pdf, whittled_n)
-    fn select(&self, n: f32) -> Option<(usize, f32, f32)>;
+    fn select(&self,
+              inc: Vector,
+              pos: Point,
+              nor: Normal,
+              sc: &SurfaceClosure,
+              time: f32,
+              n: f32)
+              -> Option<(usize, f32, f32)>;
 }
 
 #[derive(Debug, Clone)]
@@ -28,7 +41,16 @@ impl LightArray {
 }
 
 impl LightAccel for LightArray {
-    fn select(&self, n: f32) -> Option<(usize, f32, f32)> {
+    fn select(&self,
+              inc: Vector,
+              pos: Point,
+              nor: Normal,
+              sc: &SurfaceClosure,
+              time: f32,
+              n: f32)
+              -> Option<(usize, f32, f32)> {
+        let _ = (inc, pos, nor, sc, time); // Not using these, silence warnings
+
         assert!(n >= 0.0 && n <= 1.0);
 
         if self.indices.len() == 0 {

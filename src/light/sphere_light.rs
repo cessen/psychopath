@@ -155,6 +155,12 @@ impl LightSource for SphereLight {
     fn is_delta(&self) -> bool {
         false
     }
+
+    fn approximate_energy(&self) -> f32 {
+        let color: XYZ = self.colors.iter().fold(XYZ::new(0.0, 0.0, 0.0), |a, &b| a + b) /
+                         self.colors.len() as f32;
+        color.y
+    }
 }
 
 impl Boundable for SphereLight {
