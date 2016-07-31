@@ -29,6 +29,7 @@ mod triangle;
 mod surface;
 mod light;
 mod bvh;
+mod sah;
 mod light_accel;
 mod scene;
 mod assembly;
