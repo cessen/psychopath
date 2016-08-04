@@ -2,6 +2,6 @@
 //- Implement light tree.
 - Implement proper light source selection for hierarchical instancing.
 - Implement shader parsing, and use in rendering.
-- Add gui display of rendering in progress.
 - Implement floating point accuracy stuff.
+- Add gui display of rendering in progress.
 - Unit tests for scene parsing.
