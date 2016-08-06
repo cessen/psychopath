@@ -1,6 +1,7 @@
 use std::iter;
+use std::cmp;
 
-use algorithm::{partition, merge_slices_append};
+use algorithm::{partition, merge_slices_to};
 use math::Matrix4x4;
 use lerp::lerp_slice;
 use assembly::{Assembly, Object, InstanceType};
@@ -179,7 +180,6 @@ fn split_rays_by_direction(rays: &mut [AccelRay]) -> [&mut [AccelRay]; 8] {
 struct TransformStack {
     stack: Vec<Matrix4x4>,
     stack_indices: Vec<usize>,
-    scratch_space: Vec<Matrix4x4>,
 }
 
 impl TransformStack {
@@ -187,7 +187,6 @@ impl TransformStack {
         let mut ts = TransformStack {
             stack: Vec::new(),
             stack_indices: Vec::new(),
-            scratch_space: Vec::new(),
         };
 
         ts.stack_indices.push(0);
@@ -205,14 +204,17 @@ impl TransformStack {
             let sil = self.stack_indices.len();
             let i1 = self.stack_indices[sil - 2];
             let i2 = self.stack_indices[sil - 1];
-
-            self.scratch_space.clear();
-            merge_slices_append(&self.stack[i1..i2],
-                                xforms,
-                                &mut self.scratch_space,
-                                |xf1, xf2| *xf1 * *xf2);
-
-            self.stack.extend(&self.scratch_space);
+            // Reserve stack space for the new transforms.
+            // Note this leaves exposed uninitialized memory.  The subsequent call to
+            // merge_slices_to() fills that memory in.
+            {
+                let maxlen = cmp::max(xforms.len(), i2 - i1);
+                self.stack.reserve(maxlen);
+                let l = self.stack.len();
+                unsafe { self.stack.set_len(l + maxlen) };
+            }
+            let (xfs1, xfs2) = self.stack.split_at_mut(i2);
+            merge_slices_to(&xfs1[i1..i2], xforms, xfs2, |xf1, xf2| *xf1 * *xf2);
         }
 
         self.stack_indices.push(self.stack.len());

@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std;
+use std::cmp;
 
 use lerp::{Lerp, lerp_slice};
 
@@ -137,6 +138,39 @@ pub fn merge_slices_append<T: Lerp + Copy, F>(slice1: &[T],
         for (i, xf2) in slice2.iter().enumerate() {
             let xf1 = lerp_slice(slice1, i as f32 / s);
             vec_out.push(merge(&xf1, xf2));
+        }
+    }
+}
+
+/// Merges two slices of things, storing the result in slice_out.
+/// Panics if slice_out is not the right size.
+pub fn merge_slices_to<T: Lerp + Copy, F>(slice1: &[T],
+                                          slice2: &[T],
+                                          slice_out: &mut [T],
+                                          merge: F)
+    where F: Fn(&T, &T) -> T
+{
+    assert!(slice_out.len() == cmp::max(slice1.len(), slice2.len()));
+
+    // Transform the bounding boxes
+    if slice1.len() == 0 || slice2.len() == 0 {
+        return;
+    } else if slice1.len() == slice2.len() {
+        for (xfo, (xf1, xf2)) in Iterator::zip(slice_out.iter_mut(),
+                                               Iterator::zip(slice1.iter(), slice2.iter())) {
+            *xfo = merge(xf1, xf2);
+        }
+    } else if slice1.len() > slice2.len() {
+        let s = (slice1.len() - 1) as f32;
+        for (i, (xfo, xf1)) in Iterator::zip(slice_out.iter_mut(), slice1.iter()).enumerate() {
+            let xf2 = lerp_slice(slice2, i as f32 / s);
+            *xfo = merge(xf1, &xf2);
+        }
+    } else if slice1.len() < slice2.len() {
+        let s = (slice2.len() - 1) as f32;
+        for (i, (xfo, xf2)) in Iterator::zip(slice_out.iter_mut(), slice2.iter()).enumerate() {
+            let xf1 = lerp_slice(slice1, i as f32 / s);
+            *xfo = merge(&xf1, xf2);
         }
     }
 }
