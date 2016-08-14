@@ -4,6 +4,7 @@ use std;
 use std::cmp;
 use std::cmp::Ordering;
 use lerp::{Lerp, lerp_slice};
+use hash::hash_u64;
 
 /// Partitions a slice in-place with the given unary predicate, returning
 /// the index of the first element for which the predicate evaluates
@@ -120,9 +121,10 @@ pub fn quick_select<T, F>(slc: &mut [T], n: usize, mut order: F)
 {
     let mut left = 0;
     let mut right = slc.len();
+    let mut seed = n as u64;
 
     loop {
-        let i = (left + right) / 2;
+        let i = left + (hash_u64(right as u64, seed) as usize % (right - left));
 
         slc.swap(i, right - 1);
         let ii = left +
@@ -139,6 +141,8 @@ pub fn quick_select<T, F>(slc: &mut [T], n: usize, mut order: F)
         } else {
             left = ii + 1;
         }
+
+        seed += 1;
     }
 }
 
@@ -240,5 +244,12 @@ mod tests {
         let mut list = [8, 9, 7, 4, 6, 1, 0, 5, 3, 2];
         quick_select_ints(&mut list, 0);
         assert_eq!(list[0], 0);
+    }
+
+    #[test]
+    fn quick_select_4() {
+        let mut list = [8, 9, 7, 4, 6, 1, 0, 5, 3, 2];
+        quick_select_ints(&mut list, 9);
+        assert_eq!(list[9], 9);
     }
 }

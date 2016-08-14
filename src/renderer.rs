@@ -12,6 +12,7 @@ use ray::Ray;
 use tracer::Tracer;
 use halton;
 use hilbert;
+use hash::hash_u32;
 use math::{fast_logit, upper_power_of_two};
 use image::Image;
 use surface;
@@ -372,17 +373,4 @@ struct BucketJob {
     y: u32,
     w: u32,
     h: u32,
-}
-
-
-fn hash_u32(n: u32, seed: u32) -> u32 {
-    let mut hash = n;
-
-    for _ in 0..3 {
-        hash = hash.wrapping_mul(1936502639);
-        hash ^= hash.wrapping_shr(16);
-        hash = hash.wrapping_add(seed);
-    }
-
-    return hash;
 }

@@ -36,6 +36,7 @@ mod scene;
 mod assembly;
 mod halton;
 mod sampling;
+mod hash;
 mod color;
 mod shading;
 
