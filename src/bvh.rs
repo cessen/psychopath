@@ -2,12 +2,11 @@
 
 use std;
 use std::cmp::Ordering;
-use quickersort::sort_by;
 use lerp::lerp_slice;
 use bbox::BBox;
 use boundable::Boundable;
 use ray::AccelRay;
-use algorithm::{partition, merge_slices_append};
+use algorithm::{partition, quick_select, merge_slices_append};
 use math::log2_64;
 use sah::sah_split;
 
@@ -156,10 +155,15 @@ impl BVH {
                     axis
                 };
 
-                // TODO: use a select algorithm like introselect instead of a
-                // full sort.
-                sort_by(objects,
-                        &|a, b| {
+                let place = {
+                    let place = objects.len() / 2;
+                    if place > 0 {
+                        place
+                    } else {
+                        1
+                    }
+                };
+                quick_select(objects, place, |a, b| {
                     let tb_a = lerp_slice(bounder(a), 0.5);
                     let tb_b = lerp_slice(bounder(b), 0.5);
                     let centroid_a = (tb_a.min.get_n(split_axis) + tb_a.max.get_n(split_axis)) *
@@ -176,7 +180,7 @@ impl BVH {
                     }
                 });
 
-                (objects.len() / 2, split_axis)
+                (place, split_axis)
             };
 
             // Create child nodes

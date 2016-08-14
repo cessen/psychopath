@@ -2,7 +2,7 @@
 
 use std;
 use std::cmp;
-
+use std::cmp::Ordering;
 use lerp::{Lerp, lerp_slice};
 
 /// Partitions a slice in-place with the given unary predicate, returning
@@ -113,6 +113,35 @@ pub fn partition_pair<A, B, F>(slc1: &mut [A], slc2: &mut [B], mut pred: F) -> u
     }
 }
 
+/// Partitions the slice of items to place the nth-ordered item in the nth place,
+/// and the items less than it before and the items more than it after.
+pub fn quick_select<T, F>(slc: &mut [T], n: usize, mut order: F)
+    where F: FnMut(&T, &T) -> Ordering
+{
+    let mut left = 0;
+    let mut right = slc.len();
+
+    loop {
+        let i = (left + right) / 2;
+
+        slc.swap(i, right - 1);
+        let ii = left +
+                 {
+            let (val, list) = (&mut slc[left..right]).split_last_mut().unwrap();
+            partition(list, |n| order(n, val) == Ordering::Less)
+        };
+        slc.swap(ii, right - 1);
+
+        if ii == n {
+            return;
+        } else if ii > n {
+            right = ii;
+        } else {
+            left = ii + 1;
+        }
+    }
+}
+
 /// Merges two slices of things, appending the result to vec_out
 pub fn merge_slices_append<T: Lerp + Copy, F>(slice1: &[T],
                                               slice2: &[T],
@@ -172,5 +201,44 @@ pub fn merge_slices_to<T: Lerp + Copy, F>(slice1: &[T],
             let xf1 = lerp_slice(slice1, i as f32 / s);
             *xfo = merge(&xf1, xf2);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cmp::Ordering;
+    use super::*;
+
+    fn quick_select_ints(list: &mut [i32], i: usize) {
+        quick_select(list, i, |a, b| {
+            if a < b {
+                Ordering::Less
+            } else if a == b {
+                Ordering::Equal
+            } else {
+                Ordering::Greater
+            }
+        });
+    }
+
+    #[test]
+    fn quick_select_1() {
+        let mut list = [8, 9, 7, 4, 6, 1, 0, 5, 3, 2];
+        quick_select_ints(&mut list, 5);
+        assert_eq!(list[5], 5);
+    }
+
+    #[test]
+    fn quick_select_2() {
+        let mut list = [8, 9, 7, 4, 6, 1, 0, 5, 3, 2];
+        quick_select_ints(&mut list, 3);
+        assert_eq!(list[3], 3);
+    }
+
+    #[test]
+    fn quick_select_3() {
+        let mut list = [8, 9, 7, 4, 6, 1, 0, 5, 3, 2];
+        quick_select_ints(&mut list, 0);
+        assert_eq!(list[0], 0);
     }
 }

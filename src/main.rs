@@ -4,7 +4,6 @@ extern crate docopt;
 extern crate scoped_threadpool;
 extern crate crossbeam;
 extern crate num_cpus;
-extern crate quickersort;
 extern crate lodepng;
 
 #[cfg(feature = "simd_perf")]
