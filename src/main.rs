@@ -44,6 +44,7 @@ use std::mem;
 use std::io;
 use std::io::Read;
 use std::fs::File;
+use std::path::Path;
 
 use docopt::Docopt;
 
@@ -146,8 +147,12 @@ fn main() {
                 println!("\tBuilt scene in {:.3}s", t.tick());
 
                 println!("Rendering scene with {} threads...", thread_count);
-                r.render(thread_count);
+                let mut image = r.render(thread_count);
                 println!("\tRendered scene in {:.3}s", t.tick());
+
+                println!("Writing image to disk...");
+                let _ = image.write_png(Path::new(&r.output_file));
+                println!("\tWrote image in {:.3}s", t.tick());
             }
         }
     }

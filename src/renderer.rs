@@ -1,6 +1,5 @@
 use std::cmp;
 use std::io::{self, Write};
-use std::path::Path;
 use std::cmp::min;
 use std::cell::Cell;
 use std::sync::{RwLock, Mutex};
@@ -29,10 +28,10 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn render(&self, thread_count: u32) {
+    pub fn render(&self, thread_count: u32) -> Image {
         let mut tpool = Pool::new(thread_count);
 
-        let mut image = Image::new(self.resolution.0, self.resolution.1);
+        let image = Image::new(self.resolution.0, self.resolution.1);
         let (img_width, img_height) = (image.width(), image.height());
 
         let all_jobs_queued = RwLock::new(false);
@@ -215,12 +214,11 @@ impl Renderer {
             *all_jobs_queued.write().unwrap() = true;
         });
 
-
-        // Write rendered image to disk
-        let _ = image.write_png(Path::new(&self.output_file));
-
         // Clear percentage progress print
         print!("\r                \r");
+
+        // Return the rendered image
+        return image;
     }
 }
 
