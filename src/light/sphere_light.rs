@@ -44,8 +44,10 @@ impl LightSource for SphereLight {
               wavelength: f32,
               time: f32)
               -> (SpectralSample, Vector, f32) {
-        // TODO: use transform space correctly
-        let pos = Point::new(0.0, 0.0, 0.0) * space.inverse();
+        // TODO: track fp error due to transforms
+        let arr = arr * *space;
+        let pos = Point::new(0.0, 0.0, 0.0);
+
         // Calculate time interpolated values
         let radius: f64 = lerp_slice(&self.radii, time) as f64;
         let col = lerp_slice(&self.colors, time);
@@ -93,13 +95,14 @@ impl LightSource for SphereLight {
                                      (d - (cos_a * radius)) as f32);
 
             // Calculate the final values and return everything.
-            let shadow_vec = (x * sample.x()) + (y * sample.y()) + (z * sample.z());
+            let shadow_vec = ((x * sample.x()) + (y * sample.y()) + (z * sample.z())) *
+                             space.inverse();
             let pdf = uniform_sample_cone_pdf(cos_theta_max);
             let spectral_sample = (col * surface_area_inv as f32).to_spectral_sample(wavelength);
             return (spectral_sample, shadow_vec, pdf as f32);
         } else {
             // If we're inside the sphere, there's light from every direction.
-            let shadow_vec = uniform_sample_sphere(u, v);
+            let shadow_vec = uniform_sample_sphere(u, v) * space.inverse();
             let pdf = 1.0 / (4.0 * PI_64);
             let spectral_sample = (col * surface_area_inv as f32).to_spectral_sample(wavelength);
             return (spectral_sample, shadow_vec, pdf as f32);
@@ -118,8 +121,8 @@ impl LightSource for SphereLight {
         // We're not using these, silence warnings
         let _ = (sample_dir, sample_u, sample_v, wavelength);
 
-        // TODO: use transform space correctly
-        let pos = Point::new(0.0, 0.0, 0.0) * space.inverse();
+        let arr = arr * *space;
+        let pos = Point::new(0.0, 0.0, 0.0);
         let radius: f64 = lerp_slice(&self.radii, time) as f64;
 
         let d2: f64 = (pos - arr).length2() as f64;  // Distance from center of sphere squared

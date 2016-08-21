@@ -9,6 +9,7 @@ use light_accel::{LightAccel, LightTree};
 use light::LightSource;
 use math::{Matrix4x4, Vector};
 use surface::{Surface, SurfaceIntersection};
+use transform_stack::TransformStack;
 
 
 #[derive(Debug)]
@@ -32,30 +33,56 @@ pub struct Assembly {
 }
 
 impl Assembly {
-    // Returns (light_color, shadow_vector, selection_pdf)
+    // Returns (light_color, shadow_vector, pdf, selection_pdf)
     pub fn sample_lights(&self,
+                         xform_stack: &mut TransformStack,
                          n: f32,
                          uvw: (f32, f32, f32),
                          wavelength: f32,
                          time: f32,
                          intr: &SurfaceIntersection)
-                         -> Option<(SpectralSample, Vector, f32)> {
+                         -> Option<(SpectralSample, Vector, f32, f32)> {
         if let &SurfaceIntersection::Hit { pos, incoming, nor, closure, .. } = intr {
-            if let Some((light_i, sel_pdf, _)) = self.light_accel
-                .select(incoming, pos, nor, closure.as_surface_closure(), time, n) {
+            let sel_xform = if xform_stack.top().len() > 0 {
+                lerp_slice(xform_stack.top(), time)
+            } else {
+                Matrix4x4::new()
+            };
+            if let Some((light_i, sel_pdf, whittled_n)) = self.light_accel
+                .select(incoming * sel_xform,
+                        pos * sel_xform,
+                        nor * sel_xform,
+                        closure.as_surface_closure(),
+                        time,
+                        n) {
                 let inst = self.light_instances[light_i];
                 match inst.instance_type {
+
                     InstanceType::Object => {
                         match &self.objects[inst.data_index] {
                             &Object::Light(ref light) => {
+                                // Get the world-to-object space transform of the light
                                 let xform = if let Some((a, b)) = inst.transform_indices {
-                                    lerp_slice(&self.xforms[a..b], time)
+                                    let pxforms = xform_stack.top();
+                                    let xform = lerp_slice(&self.xforms[a..b], time);
+                                    if pxforms.len() > 0 {
+                                        lerp_slice(pxforms, time) * xform
+                                    } else {
+                                        xform
+                                    }
                                 } else {
-                                    Matrix4x4::new()
+                                    let pxforms = xform_stack.top();
+                                    if pxforms.len() > 0 {
+                                        lerp_slice(pxforms, time)
+                                    } else {
+                                        Matrix4x4::new()
+                                    }
                                 };
+
+                                // Sample the light
                                 let (color, shadow_vec, pdf) =
                                     light.sample(&xform, pos, uvw.0, uvw.1, wavelength, time);
-                                return Some((color, shadow_vec, pdf * sel_pdf));
+                                return Some((color, shadow_vec, pdf, sel_pdf));
                             }
 
                             _ => unimplemented!(),
@@ -63,9 +90,23 @@ impl Assembly {
                     }
 
                     InstanceType::Assembly => {
-                        // TODO: recursive light selection inside assemblies
-                        unimplemented!()
+                        // Push the world-to-object space transforms of the assembly onto
+                        // the transform stack.
+                        if let Some((a, b)) = inst.transform_indices {
+                            xform_stack.push(&self.xforms[a..b]);
+                        }
 
+                        // Sample sub-assembly lights
+                        let sample = self.assemblies[inst.data_index]
+                            .sample_lights(xform_stack, whittled_n, uvw, wavelength, time, intr);
+
+                        // Pop the assembly's transforms off the transform stack.
+                        if let Some(_) = inst.transform_indices {
+                            xform_stack.pop();
+                        }
+
+                        // Return sample
+                        return sample.map(|(ss, v, pdf, spdf)| (ss, v, pdf, spdf * sel_pdf));
                     }
                 }
             } else {
@@ -190,8 +231,7 @@ impl AssemblyBuilder {
         self.objects.shrink_to_fit();
         self.assemblies.shrink_to_fit();
 
-        // Calculate instance bounds, used for building object accel and
-        // (TODO) light accel.
+        // Calculate instance bounds, used for building object accel and light accel.
         let (bis, bbs) = self.instance_bounds();
 
         // Build object accel
@@ -199,8 +239,8 @@ impl AssemblyBuilder {
                                              1,
                                              |inst| &bbs[bis[inst.id]..bis[inst.id + 1]]);
 
-        // Get list of instances that are for light sources.
-        // TODO: include assemblies that themselves contain light sources.
+        // Get list of instances that are for light sources or assemblies that contain light
+        // sources.
         let mut light_instances: Vec<_> = self.instances
             .iter()
             .filter(|inst| {
@@ -213,7 +253,9 @@ impl AssemblyBuilder {
                         }
                     }
 
-                    _ => false,
+                    InstanceType::Assembly => {
+                        self.assemblies[inst.data_index].light_accel.approximate_energy() > 0.0
+                    }
                 }
             })
             .map(|&a| a)
@@ -231,8 +273,9 @@ impl AssemblyBuilder {
                     }
                 }
 
-                // TODO: handle assemblies.
-                _ => 0.0,
+                InstanceType::Assembly => {
+                    self.assemblies[inst.data_index].light_accel.approximate_energy()
+                }
             };
             (bounds, energy)
         });

@@ -2,7 +2,7 @@ use algorithm::merge_slices_append;
 use bbox::BBox;
 use lerp::lerp_slice;
 use math::{Vector, Point, Normal};
-use sah::sah_split;
+use objects_split::sah_split;
 use shading::surface_closure::SurfaceClosure;
 
 use super::LightAccel;
@@ -186,5 +186,13 @@ impl LightAccel for LightTree {
 
         // Found our light!
         Some((self.nodes[node_index].child_index, tot_prob, n))
+    }
+
+    fn approximate_energy(&self) -> f32 {
+        if self.nodes.len() > 0 {
+            self.nodes[0].energy
+        } else {
+            0.0
+        }
     }
 }

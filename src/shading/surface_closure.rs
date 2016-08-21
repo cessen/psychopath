@@ -323,7 +323,7 @@ impl SurfaceClosure for LambertClosure {
                 }
                 .into_vector();
 
-            let cos_nv = dot(nn, v);
+            let cos_nv = dot(nn, v).max(-1.0).min(1.0);
 
             return sphere_lambert(cos_nv, cos_theta);
         }

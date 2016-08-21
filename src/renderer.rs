@@ -18,6 +18,7 @@ use ray::Ray;
 use scene::Scene;
 use surface;
 use tracer::Tracer;
+use transform_stack::TransformStack;
 
 
 #[derive(Debug)]
@@ -67,6 +68,7 @@ impl Renderer {
                     let mut paths = Vec::new();
                     let mut rays = Vec::new();
                     let mut tracer = Tracer::from_assembly(&self.scene.root);
+                    let mut xform_stack = TransformStack::new();
 
                     loop {
                         paths.clear();
@@ -130,7 +132,7 @@ impl Renderer {
                             // Determine next rays to shoot based on result
                             pi =
                                 partition_pair(&mut paths[..pi], &mut rays[..pi], |i, path, ray| {
-                                    path.next(&self.scene, &isects[i], &mut *ray)
+                                    path.next(&mut xform_stack, &self.scene, &isects[i], &mut *ray)
                                 });
                         }
 
@@ -274,7 +276,12 @@ impl LightPath {
         s
     }
 
-    fn next(&mut self, scene: &Scene, isect: &surface::SurfaceIntersection, ray: &mut Ray) -> bool {
+    fn next(&mut self,
+            xform_stack: &mut TransformStack,
+            scene: &Scene,
+            isect: &surface::SurfaceIntersection,
+            ray: &mut Ray)
+            -> bool {
         self.round += 1;
 
         // Result of shading ray, prepare light ray
@@ -291,14 +298,20 @@ impl LightPath {
                 // Prepare light ray
                 let light_n = self.next_lds_samp();
                 let light_uvw = (self.next_lds_samp(), self.next_lds_samp(), self.next_lds_samp());
-                if let Some((light_color, shadow_vec, light_pdf)) = scene.root
-                    .sample_lights(light_n, light_uvw, self.wavelength, self.time, isect) {
+                xform_stack.clear();
+                if let Some((light_color, shadow_vec, light_pdf, light_sel_pdf)) = scene.root
+                    .sample_lights(xform_stack,
+                                   light_n,
+                                   light_uvw,
+                                   self.wavelength,
+                                   self.time,
+                                   isect) {
                     // Calculate and store the light that will be contributed
                     // to the film plane if the light is not in shadow.
                     self.pending_color_addition = {
                         let material = closure.as_surface_closure();
                         let la = material.evaluate(ray.dir, shadow_vec, nor, self.wavelength);
-                        light_color * la * self.light_attenuation / light_pdf
+                        light_color * la * self.light_attenuation / (light_pdf * light_sel_pdf)
                     };
 
                     // Calculate the shadow ray for testing if the light is

@@ -1,6 +1,6 @@
 //- Implement support for multiple light sources in a scene.
 //- Implement light tree.
-- Implement proper light source selection for hierarchical instancing.
+//- Implement proper light source selection for hierarchical instancing.
 - Implement shader parsing, and use in rendering.
 - Implement floating point accuracy stuff.
 - Add gui display of rendering in progress.

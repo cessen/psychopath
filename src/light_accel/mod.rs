@@ -17,11 +17,14 @@ pub trait LightAccel {
               time: f32,
               n: f32)
               -> Option<(usize, f32, f32)>;
+
+    fn approximate_energy(&self) -> f32;
 }
 
 #[derive(Debug, Clone)]
 pub struct LightArray {
     indices: Vec<usize>,
+    aprx_energy: f32,
 }
 
 impl LightArray {
@@ -30,15 +33,20 @@ impl LightArray {
         where F: 'a + Fn(&T) -> Option<(&'a [BBox], f32)>
     {
         let mut indices = Vec::new();
+        let mut aprx_energy = 0.0;
         for (i, thing) in things.iter().enumerate() {
             if let Some((_, power)) = q(thing) {
                 if power > 0.0 {
                     indices.push(i);
+                    aprx_energy += power;
                 }
             }
         }
 
-        LightArray { indices: indices }
+        LightArray {
+            indices: indices,
+            aprx_energy: aprx_energy,
+        }
     }
 }
 
@@ -70,5 +78,9 @@ impl LightAccel for LightArray {
         let pdf = 1.0 / self.indices.len() as f32;
 
         Some((i, pdf, whittled_n))
+    }
+
+    fn approximate_energy(&self) -> f32 {
+        self.aprx_energy
     }
 }

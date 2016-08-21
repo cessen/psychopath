@@ -1,15 +1,12 @@
 #![allow(dead_code)]
 
-use std;
-use std::cmp::Ordering;
-
-use algorithm::{partition, quick_select, merge_slices_append};
+use algorithm::{partition, merge_slices_append};
 use bbox::BBox;
 use boundable::Boundable;
 use lerp::lerp_slice;
 use math::log2_64;
 use ray::AccelRay;
-use sah::sah_split;
+use objects_split::{sah_split, median_split};
 
 
 const BVH_MAX_DEPTH: usize = 64;
@@ -125,15 +122,6 @@ impl BVH {
                 split_axis: 0,
             });
 
-            // Get combined object bounds
-            let bounds = {
-                let mut bb = BBox::new();
-                for obj in &objects[..] {
-                    bb |= lerp_slice(bounder(obj), 0.5);
-                }
-                bb
-            };
-
             // Partition objects.
             // If we're too near the max depth, we do balanced building to
             // avoid exceeding max depth.
@@ -144,45 +132,7 @@ impl BVH {
                 sah_split(objects, &bounder)
             } else {
                 // Balanced splitting, when we don't have room to play
-                let split_axis = {
-                    let mut axis = 0;
-                    let mut largest = std::f32::NEG_INFINITY;
-                    for i in 0..3 {
-                        let extent = bounds.max.get_n(i) - bounds.min.get_n(i);
-                        if extent > largest {
-                            largest = extent;
-                            axis = i;
-                        }
-                    }
-                    axis
-                };
-
-                let place = {
-                    let place = objects.len() / 2;
-                    if place > 0 {
-                        place
-                    } else {
-                        1
-                    }
-                };
-                quick_select(objects, place, |a, b| {
-                    let tb_a = lerp_slice(bounder(a), 0.5);
-                    let tb_b = lerp_slice(bounder(b), 0.5);
-                    let centroid_a = (tb_a.min.get_n(split_axis) + tb_a.max.get_n(split_axis)) *
-                                     0.5;
-                    let centroid_b = (tb_b.min.get_n(split_axis) + tb_b.max.get_n(split_axis)) *
-                                     0.5;
-
-                    if centroid_a < centroid_b {
-                        Ordering::Less
-                    } else if centroid_a == centroid_b {
-                        Ordering::Equal
-                    } else {
-                        Ordering::Greater
-                    }
-                });
-
-                (place, split_axis)
+                median_split(objects, &bounder)
             };
 
             // Create child nodes
