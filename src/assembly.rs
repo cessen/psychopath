@@ -65,6 +65,7 @@ impl Assembly {
                     InstanceType::Assembly => {
                         // TODO: recursive light selection inside assemblies
                         unimplemented!()
+
                     }
                 }
             } else {

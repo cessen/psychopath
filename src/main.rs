@@ -39,6 +39,7 @@ mod sampling;
 mod hash;
 mod color;
 mod shading;
+mod transform_stack;
 
 use std::mem;
 use std::io;

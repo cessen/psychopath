@@ -1,12 +1,11 @@
 use std::iter;
-use std::cmp;
 
-use algorithm::{partition, merge_slices_to};
-use math::Matrix4x4;
+use algorithm::partition;
 use lerp::lerp_slice;
 use assembly::{Assembly, Object, InstanceType};
 use ray::{Ray, AccelRay};
 use surface::SurfaceIntersection;
+use transform_stack::TransformStack;
 
 pub struct Tracer<'a> {
     rays: Vec<AccelRay>,
@@ -174,69 +173,4 @@ fn split_rays_by_direction(rays: &mut [AccelRay]) -> [&mut [AccelRay]; 8] {
     let (rs0, rs1) = rest.split_at_mut(s1);
 
     [rs0, rs1, rs2, rs3, rs4, rs5, rs6, rs7]
-}
-
-
-struct TransformStack {
-    stack: Vec<Matrix4x4>,
-    stack_indices: Vec<usize>,
-}
-
-impl TransformStack {
-    fn new() -> TransformStack {
-        let mut ts = TransformStack {
-            stack: Vec::new(),
-            stack_indices: Vec::new(),
-        };
-
-        ts.stack_indices.push(0);
-        ts.stack_indices.push(0);
-
-        ts
-    }
-
-    fn push(&mut self, xforms: &[Matrix4x4]) {
-        assert!(xforms.len() > 0);
-
-        if self.stack.len() == 0 {
-            self.stack.extend(xforms);
-        } else {
-            let sil = self.stack_indices.len();
-            let i1 = self.stack_indices[sil - 2];
-            let i2 = self.stack_indices[sil - 1];
-            // Reserve stack space for the new transforms.
-            // Note this leaves exposed uninitialized memory.  The subsequent call to
-            // merge_slices_to() fills that memory in.
-            {
-                let maxlen = cmp::max(xforms.len(), i2 - i1);
-                self.stack.reserve(maxlen);
-                let l = self.stack.len();
-                unsafe { self.stack.set_len(l + maxlen) };
-            }
-            let (xfs1, xfs2) = self.stack.split_at_mut(i2);
-            merge_slices_to(&xfs1[i1..i2], xforms, xfs2, |xf1, xf2| *xf1 * *xf2);
-        }
-
-        self.stack_indices.push(self.stack.len());
-    }
-
-    fn pop(&mut self) {
-        assert!(self.stack_indices.len() > 1);
-
-        let sl = self.stack.len();
-        let sil = self.stack_indices.len();
-        let i1 = self.stack_indices[sil - 2];
-        let i2 = self.stack_indices[sil - 1];
-
-        self.stack.truncate(sl - (i2 - i1));
-        self.stack_indices.pop();
-    }
-
-    fn top<'a>(&'a self) -> &'a [Matrix4x4] {
-        let sil = self.stack_indices.len();
-        let i1 = self.stack_indices[sil - 2];
-        let i2 = self.stack_indices[sil - 1];
-
-        &self.stack[i1..i2]
-    }
 }
