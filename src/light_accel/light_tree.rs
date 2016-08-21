@@ -141,19 +141,30 @@ impl LightAccel for LightTree {
             let d = bbox.center() - pos;
             let dist2 = d.length2();
             let r = bbox.diagonal() * 0.5;
-            let r2 = r * r;
-            let inv_surface_area = 1.0 / r2;
-
-            let cos_theta_max = if dist2 <= r2 {
-                -1.0
-            } else {
-                let sin_theta_max2 = (r2 / dist2).min(1.0);
-                (1.0 - sin_theta_max2).sqrt()
-            };
+            let inv_surface_area = 1.0 / (r * r);
 
             // Get the approximate amount of light contribution from the
             // composite light source.
-            let approx_contrib = sc.estimate_eval_over_solid_angle(inc, d, nor, cos_theta_max);
+            let approx_contrib = {
+                let mut approx_contrib = 0.0;
+                let steps = 2;
+                let fstep = 1.0 / (steps as f32);
+                for i in 0..steps {
+                    let r2 = {
+                        let step = fstep * (i + 1) as f32;
+                        let r = r * step;
+                        r * r
+                    };
+                    let cos_theta_max = if dist2 <= r2 {
+                        -1.0
+                    } else {
+                        let sin_theta_max2 = (r2 / dist2).min(1.0);
+                        (1.0 - sin_theta_max2).sqrt()
+                    };
+                    approx_contrib += sc.estimate_eval_over_solid_angle(inc, d, nor, cos_theta_max);
+                }
+                approx_contrib * fstep
+            };
 
             node_ref.energy * inv_surface_area * approx_contrib
         };
