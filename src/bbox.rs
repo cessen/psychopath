@@ -113,6 +113,22 @@ impl BitOrAssign for BBox {
     }
 }
 
+/// Expand BBox by a point.
+impl BitOr<Point> for BBox {
+    type Output = BBox;
+
+    fn bitor(self, rhs: Point) -> BBox {
+        BBox::from_points(Point { co: self.min.co.v_min(rhs.co) },
+                          Point { co: self.max.co.v_max(rhs.co) })
+    }
+}
+
+impl BitOrAssign<Point> for BBox {
+    fn bitor_assign(&mut self, rhs: Point) {
+        *self = *self | rhs;
+    }
+}
+
 
 impl Lerp for BBox {
     fn lerp(self, other: BBox, alpha: f32) -> BBox {
