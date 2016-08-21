@@ -4,12 +4,13 @@ use std::result::Result;
 
 use nom::IResult;
 
-use super::DataTree;
+use math::Point;
+use surface::triangle_mesh::TriangleMesh;
+
 use super::basics::{ws_usize, ws_f32};
+use super::DataTree;
 use super::psy::PsyParseError;
 
-use surface::triangle_mesh::TriangleMesh;
-use math::Point;
 
 // pub struct TriangleMesh {
 //    time_samples: usize,

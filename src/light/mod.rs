@@ -1,14 +1,15 @@
-mod sphere_light;
 mod rectangle_light;
+mod sphere_light;
 
 use std::fmt::Debug;
 
-pub use self::sphere_light::SphereLight;
-pub use self::rectangle_light::RectangleLight;
-
-use math::{Vector, Point, Matrix4x4};
-use color::SpectralSample;
 use boundable::Boundable;
+use color::SpectralSample;
+use math::{Vector, Point, Matrix4x4};
+
+pub use self::rectangle_light::RectangleLight;
+pub use self::sphere_light::SphereLight;
+
 
 pub trait LightSource: Boundable + Debug + Sync {
     /// Samples the light source for a given point to be illuminated.

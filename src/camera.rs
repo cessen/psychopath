@@ -1,9 +1,10 @@
 #![allow(dead_code)]
 
-use math::{Vector, Point, Matrix4x4};
-use sampling::square_to_circle;
-use ray::Ray;
 use lerp::lerp_slice;
+use math::{Vector, Point, Matrix4x4};
+use ray::Ray;
+use sampling::square_to_circle;
+
 
 #[derive(Debug)]
 pub struct Camera {

@@ -2,13 +2,15 @@
 
 use std;
 use std::cmp::Ordering;
-use lerp::lerp_slice;
+
+use algorithm::{partition, quick_select, merge_slices_append};
 use bbox::BBox;
 use boundable::Boundable;
-use ray::AccelRay;
-use algorithm::{partition, quick_select, merge_slices_append};
+use lerp::lerp_slice;
 use math::log2_64;
+use ray::AccelRay;
 use sah::sah_split;
+
 
 const BVH_MAX_DEPTH: usize = 64;
 

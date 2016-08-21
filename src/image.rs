@@ -1,18 +1,19 @@
 #![allow(dead_code)]
 
+use std::cell::{RefCell, UnsafeCell};
+use std::cmp;
+use std::fs::File;
 use std::io;
 use std::io::Write;
-use std::path::Path;
-use std::fs::File;
 use std::marker::PhantomData;
-use std::sync::Mutex;
-use std::cell::{RefCell, UnsafeCell};
 use std::mem;
-use std::cmp;
+use std::path::Path;
+use std::sync::Mutex;
 
 use lodepng;
 
 use color::{XYZ, xyz_to_rec709e};
+
 
 #[derive(Debug)]
 pub struct Image {

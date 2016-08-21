@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 
-use std::result::Result;
 use std::iter::Iterator;
+use std::result::Result;
 use std::slice;
+
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum DataTree<'a> {

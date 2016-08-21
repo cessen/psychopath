@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
-use std::ops::{Add, Sub, Mul, Div};
 use std::cmp::PartialEq;
+use std::ops::{Add, Sub, Mul, Div};
 
 #[cfg(feature = "simd_perf")]
 use simd::f32x4;
+
 
 /// Essentially a tuple of four floats, which will use SIMD operations
 /// where possible on a platform.

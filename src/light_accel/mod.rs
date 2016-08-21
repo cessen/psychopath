@@ -1,10 +1,11 @@
 mod light_tree;
 
-use math::{Vector, Point, Normal};
 use bbox::BBox;
+use math::{Vector, Point, Normal};
 use shading::surface_closure::SurfaceClosure;
 
 pub use self::light_tree::LightTree;
+
 
 pub trait LightAccel {
     /// Returns (index_of_light, selection_pdf, whittled_n)

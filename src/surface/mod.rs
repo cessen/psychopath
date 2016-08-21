@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
-use std::fmt::Debug;
-
 pub mod triangle_mesh;
 
-use shading::surface_closure::SurfaceClosureUnion;
-use ray::{Ray, AccelRay};
-use math::{Point, Vector, Normal, Matrix4x4};
+use std::fmt::Debug;
+
 use boundable::Boundable;
+use math::{Point, Vector, Normal, Matrix4x4};
+use ray::{Ray, AccelRay};
+use shading::surface_closure::SurfaceClosureUnion;
 
 
 #[derive(Debug, Copy, Clone)]

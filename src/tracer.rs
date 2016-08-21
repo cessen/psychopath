@@ -1,11 +1,12 @@
 use std::iter;
 
 use algorithm::partition;
-use lerp::lerp_slice;
 use assembly::{Assembly, Object, InstanceType};
+use lerp::lerp_slice;
 use ray::{Ray, AccelRay};
 use surface::SurfaceIntersection;
 use transform_stack::TransformStack;
+
 
 pub struct Tracer<'a> {
     rays: Vec<AccelRay>,

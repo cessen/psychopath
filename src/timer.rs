@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
-use time;
-use std::time::Duration;
 use std::thread;
+use std::time::Duration;
+
+use time;
+
 
 #[derive(Copy, Clone)]
 pub struct Timer {

@@ -2,10 +2,12 @@ mod spectra_xyz;
 
 use std::ops::{Add, AddAssign, Mul, MulAssign, Div, DivAssign};
 
-use math::faster_exp;
 use float4::Float4;
 use lerp::Lerp;
+use math::faster_exp;
+
 use self::spectra_xyz::{spectrum_xyz_to_p, EQUAL_ENERGY_REFLECTANCE};
+
 
 // Minimum and maximum wavelength of light we care about, in nanometers
 const WL_MIN: f32 = 380.0;

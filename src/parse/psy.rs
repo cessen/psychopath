@@ -5,15 +5,16 @@ use std::result::Result;
 use nom;
 use nom::IResult;
 
-use super::DataTree;
-use super::basics::{ws_u32, ws_f32};
-use super::psy_assembly::parse_assembly;
-
-use math::Matrix4x4;
 use camera::Camera;
+use color::{XYZ, rec709e_to_xyz};
+use math::Matrix4x4;
 use renderer::Renderer;
 use scene::Scene;
-use color::{XYZ, rec709e_to_xyz};
+
+use super::basics::{ws_u32, ws_f32};
+use super::DataTree;
+use super::psy_assembly::parse_assembly;
+
 
 #[derive(Copy, Clone, Debug)]
 pub enum PsyParseError {

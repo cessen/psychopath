@@ -3,8 +3,10 @@
 use std;
 use std::cmp;
 use std::cmp::Ordering;
-use lerp::{Lerp, lerp_slice};
+
 use hash::hash_u64;
+use lerp::{Lerp, lerp_slice};
+
 
 /// Partitions a slice in-place with the given unary predicate, returning
 /// the index of the first element for which the predicate evaluates

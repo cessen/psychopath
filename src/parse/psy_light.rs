@@ -4,12 +4,13 @@ use std::result::Result;
 
 use nom::IResult;
 
-use super::DataTree;
+use color::{XYZ, rec709e_to_xyz};
+use light::{SphereLight, RectangleLight};
+
 use super::basics::ws_f32;
+use super::DataTree;
 use super::psy::PsyParseError;
 
-use light::{SphereLight, RectangleLight};
-use color::{XYZ, rec709e_to_xyz};
 
 pub fn parse_sphere_light(tree: &DataTree) -> Result<SphereLight, PsyParseError> {
     if let &DataTree::Internal { ref children, .. } = tree {

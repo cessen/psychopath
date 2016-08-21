@@ -1,8 +1,9 @@
 use std;
 
+use algorithm::partition;
 use bbox::BBox;
 use lerp::lerp_slice;
-use algorithm::partition;
+
 
 const SAH_BIN_COUNT: usize = 13; // Prime numbers work best, for some reason
 

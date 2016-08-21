@@ -1,11 +1,12 @@
-use bbox::BBox;
-use sah::sah_split;
-use lerp::lerp_slice;
 use algorithm::merge_slices_append;
+use bbox::BBox;
+use lerp::lerp_slice;
 use math::{Vector, Point, Normal};
+use sah::sah_split;
 use shading::surface_closure::SurfaceClosure;
 
 use super::LightAccel;
+
 
 #[derive(Debug)]
 pub struct LightTree {

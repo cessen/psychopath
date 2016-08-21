@@ -1,10 +1,12 @@
-use math::{Vector, Point, Matrix4x4};
 use bbox::BBox;
 use boundable::Boundable;
 use color::{XYZ, SpectralSample, Color};
-use super::LightSource;
 use lerp::lerp_slice;
+use math::{Vector, Point, Matrix4x4};
 use sampling::{spherical_triangle_solid_angle, uniform_sample_spherical_triangle};
+
+use super::LightSource;
+
 
 #[derive(Debug)]
 pub struct RectangleLight {

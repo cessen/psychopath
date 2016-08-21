@@ -2,12 +2,13 @@
 
 use std::result::Result;
 
-use super::DataTree;
-use super::psy::{parse_matrix, PsyParseError};
-use super::psy_mesh_surface::parse_mesh_surface;
-use super::psy_light::{parse_sphere_light, parse_rectangle_light};
-
 use assembly::{Assembly, AssemblyBuilder, Object};
+
+use super::DataTree;
+use super::psy_light::{parse_sphere_light, parse_rectangle_light};
+use super::psy_mesh_surface::parse_mesh_surface;
+use super::psy::{parse_matrix, PsyParseError};
+
 
 pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
     let mut builder = AssemblyBuilder::new();

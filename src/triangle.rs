@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
 use std;
-use ray::Ray;
+
 use math::{Point, cross, dot};
+use ray::Ray;
+
 
 /// Intersects ray with tri, returning (t, u, v), or None if no intersection.
 pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32, f32)> {

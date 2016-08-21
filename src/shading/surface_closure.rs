@@ -1,7 +1,10 @@
-use math::{Vector, Normal, dot, zup_to_vec};
-use color::{XYZ, SpectralSample, Color};
-use sampling::cosine_sample_hemisphere;
 use std::f32::consts::PI as PI_32;
+
+use color::{XYZ, SpectralSample, Color};
+use math::{Vector, Normal, dot, zup_to_vec};
+use sampling::cosine_sample_hemisphere;
+
+
 const INV_PI: f32 = 1.0 / PI_32;
 const H_PI: f32 = PI_32 / 2.0;
 

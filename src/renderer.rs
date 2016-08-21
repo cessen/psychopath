@@ -1,22 +1,24 @@
-use std::cmp;
-use std::io::{self, Write};
-use std::cmp::min;
 use std::cell::Cell;
+use std::cmp;
+use std::cmp::min;
+use std::io::{self, Write};
 use std::sync::{RwLock, Mutex};
-use scoped_threadpool::Pool;
+
 use crossbeam::sync::MsQueue;
+use scoped_threadpool::Pool;
 
 use algorithm::partition_pair;
-use ray::Ray;
-use tracer::Tracer;
-use halton;
-use hilbert;
-use hash::hash_u32;
-use math::{fast_logit, upper_power_of_two};
-use image::Image;
-use surface;
-use scene::Scene;
 use color::{Color, XYZ, SpectralSample, map_0_1_to_wavelength};
+use halton;
+use hash::hash_u32;
+use hilbert;
+use image::Image;
+use math::{fast_logit, upper_power_of_two};
+use ray::Ray;
+use scene::Scene;
+use surface;
+use tracer::Tracer;
+
 
 #[derive(Debug)]
 pub struct Renderer {

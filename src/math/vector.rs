@@ -1,13 +1,14 @@
 #![allow(dead_code)]
 
-use std::ops::{Add, Sub, Mul, Div, Neg};
 use std::cmp::PartialEq;
+use std::ops::{Add, Sub, Mul, Div, Neg};
 
-use lerp::Lerp;
 use float4::Float4;
+use lerp::Lerp;
 
 use super::{DotProduct, CrossProduct};
 use super::{Matrix4x4, Normal};
+
 
 /// A direction vector in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]

@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
+use std::f32::consts::FRAC_PI_4 as QPI_32;
+use std::f32::consts::PI as PI_32;
+use std::f64::consts::PI as PI_64;
+
 use math::{Vector, dot};
 
-use std::f64::consts::PI as PI_64;
-use std::f32::consts::PI as PI_32;
-use std::f32::consts::FRAC_PI_4 as QPI_32;
 
 /// Maps the unit square to the unit circle.
 /// NOTE: x and y should be distributed within [-1, 1],

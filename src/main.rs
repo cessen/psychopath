@@ -1,58 +1,59 @@
-extern crate rustc_serialize;
-extern crate time;
-extern crate docopt;
-extern crate scoped_threadpool;
 extern crate crossbeam;
-extern crate num_cpus;
+extern crate docopt;
 extern crate lodepng;
-
-#[cfg(feature = "simd_perf")]
-extern crate simd;
+extern crate num_cpus;
+extern crate rustc_serialize;
+extern crate scoped_threadpool;
+extern crate time;
 
 #[macro_use]
 extern crate nom;
 
-mod timer;
-mod math;
-mod hilbert;
-mod algorithm;
-mod lerp;
-mod float4;
-mod ray;
-mod bbox;
-mod camera;
-mod parse;
-mod renderer;
-mod tracer;
-mod image;
-mod boundable;
-mod triangle;
-mod surface;
-mod light;
-mod bvh;
-mod sah;
-mod light_accel;
-mod scene;
-mod assembly;
-mod halton;
-mod sampling;
-mod hash;
-mod color;
-mod shading;
-mod transform_stack;
+#[cfg(feature = "simd_perf")]
+extern crate simd;
 
-use std::mem;
+mod algorithm;
+mod assembly;
+mod bbox;
+mod boundable;
+mod bvh;
+mod camera;
+mod color;
+mod float4;
+mod halton;
+mod hash;
+mod hilbert;
+mod image;
+mod lerp;
+mod light_accel;
+mod light;
+mod math;
+mod parse;
+mod ray;
+mod renderer;
+mod sah;
+mod sampling;
+mod scene;
+mod shading;
+mod surface;
+mod timer;
+mod tracer;
+mod transform_stack;
+mod triangle;
+
+use std::fs::File;
 use std::io;
 use std::io::Read;
-use std::fs::File;
+use std::mem;
 use std::path::Path;
 
 use docopt::Docopt;
 
-use timer::Timer;
+use parse::{parse_scene, DataTree};
 use ray::{Ray, AccelRay};
 use renderer::LightPath;
-use parse::{parse_scene, DataTree};
+use timer::Timer;
+
 
 // ----------------------------------------------------------------
 

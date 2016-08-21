@@ -1,5 +1,5 @@
-use camera::Camera;
 use assembly::Assembly;
+use camera::Camera;
 use color::XYZ;
 
 

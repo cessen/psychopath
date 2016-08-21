@@ -1,7 +1,8 @@
 use std::cmp;
 
-use math::Matrix4x4;
 use algorithm::merge_slices_to;
+use math::Matrix4x4;
+
 
 pub struct TransformStack {
     stack: Vec<Matrix4x4>,

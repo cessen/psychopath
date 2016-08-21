@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
-use math::{Matrix4x4, Vector};
-use lerp::lerp_slice;
-use bvh::BVH;
-use light_accel::{LightAccel, LightTree};
-use boundable::Boundable;
-use surface::{Surface, SurfaceIntersection};
-use light::LightSource;
-use color::SpectralSample;
 use bbox::{BBox, transform_bbox_slice_from};
+use boundable::Boundable;
+use bvh::BVH;
+use color::SpectralSample;
+use lerp::lerp_slice;
+use light_accel::{LightAccel, LightTree};
+use light::LightSource;
+use math::{Matrix4x4, Vector};
+use surface::{Surface, SurfaceIntersection};
 
 
 #[derive(Debug)]

@@ -1,12 +1,13 @@
 #![allow(dead_code)]
 
 use std;
-use std::ops::{BitOr, BitOrAssign};
 use std::iter::Iterator;
+use std::ops::{BitOr, BitOrAssign};
 
-use math::{Point, Matrix4x4, fast_minf32, fast_maxf32};
 use lerp::{lerp, lerp_slice, Lerp};
+use math::{Point, Matrix4x4, fast_minf32, fast_maxf32};
 use ray::AccelRay;
+
 
 const BBOX_MAXT_ADJUST: f32 = 1.00000024;
 

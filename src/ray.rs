@@ -5,6 +5,7 @@ use std;
 use float4::Float4;
 use math::{Vector, Point, Matrix4x4};
 
+
 const OCCLUSION_FLAG: u32 = 1;
 const DONE_FLAG: u32 = 1 << 1;
 

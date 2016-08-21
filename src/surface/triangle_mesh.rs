@@ -1,16 +1,17 @@
 #![allow(dead_code)]
 
-use lerp::{lerp, lerp_slice, lerp_slice_with};
-use math::{Point, Matrix4x4, cross};
-use ray::{Ray, AccelRay};
-use triangle;
 use bbox::BBox;
 use boundable::Boundable;
 use bvh::BVH;
-use shading::surface_closure::{SurfaceClosureUnion, LambertClosure};
 use color::XYZ;
+use lerp::{lerp, lerp_slice, lerp_slice_with};
+use math::{Point, Matrix4x4, cross};
+use ray::{Ray, AccelRay};
+use shading::surface_closure::{SurfaceClosureUnion, LambertClosure};
+use triangle;
 
 use super::{Surface, SurfaceIntersection};
+
 
 #[derive(Debug)]
 pub struct TriangleMesh {

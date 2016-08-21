@@ -1,11 +1,14 @@
-use math::{Vector, Point, Matrix4x4, coordinate_system_from_vector};
+use std::f64::consts::PI as PI_64;
+
 use bbox::BBox;
 use boundable::Boundable;
 use color::{XYZ, SpectralSample, Color};
-use super::LightSource;
 use lerp::lerp_slice;
+use math::{Vector, Point, Matrix4x4, coordinate_system_from_vector};
 use sampling::{uniform_sample_cone, uniform_sample_cone_pdf, uniform_sample_sphere};
-use std::f64::consts::PI as PI_64;
+
+use super::LightSource;
+
 
 #[derive(Debug)]
 pub struct SphereLight {
