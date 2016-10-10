@@ -36,11 +36,7 @@ pub trait Color {
 
 fn nth_wavelength(hero_wavelength: f32, n: usize) -> f32 {
     let wl = hero_wavelength + (WL_RANGE_Q * n as f32);
-    if wl > WL_MAX {
-        wl - WL_RANGE
-    } else {
-        wl
-    }
+    if wl > WL_MAX { wl - WL_RANGE } else { wl }
 }
 
 
@@ -70,11 +66,7 @@ impl SpectralSample {
     /// Returns the nth wavelength
     fn wl_n(&self, n: usize) -> f32 {
         let wl = self.hero_wavelength + (WL_RANGE_Q * n as f32);
-        if wl > WL_MAX {
-            wl - WL_RANGE
-        } else {
-            wl
-        }
+        if wl > WL_MAX { wl - WL_RANGE } else { wl }
     }
 }
 
@@ -308,59 +300,24 @@ fn xyz_to_spectrum(xyz: (f32, f32, f32), wavelength: f32) -> f32 {
 /// Functions" by Wyman et al.
 #[allow(dead_code)]
 fn x_1931(wavelength: f32) -> f32 {
-    let t1 = (wavelength - 442.0) *
-             (if wavelength < 442.0 {
-        0.0624
-    } else {
-        0.0374
-    });
-    let t2 = (wavelength - 599.8) *
-             (if wavelength < 599.8 {
-        0.0264
-    } else {
-        0.0323
-    });
-    let t3 = (wavelength - 501.1) *
-             (if wavelength < 501.1 {
-        0.0490
-    } else {
-        0.0382
-    });
+    let t1 = (wavelength - 442.0) * (if wavelength < 442.0 { 0.0624 } else { 0.0374 });
+    let t2 = (wavelength - 599.8) * (if wavelength < 599.8 { 0.0264 } else { 0.0323 });
+    let t3 = (wavelength - 501.1) * (if wavelength < 501.1 { 0.0490 } else { 0.0382 });
     (0.362 * faster_exp(-0.5 * t1 * t1)) + (1.056 * faster_exp(-0.5 * t2 * t2)) -
     (0.065 * faster_exp(-0.5 * t3 * t3))
 }
 
 #[allow(dead_code)]
 fn y_1931(wavelength: f32) -> f32 {
-    let t1 = (wavelength - 568.8) *
-             (if wavelength < 568.8 {
-        0.0213
-    } else {
-        0.0247
-    });
-    let t2 = (wavelength - 530.9) *
-             (if wavelength < 530.9 {
-        0.0613
-    } else {
-        0.0322
-    });
+    let t1 = (wavelength - 568.8) * (if wavelength < 568.8 { 0.0213 } else { 0.0247 });
+    let t2 = (wavelength - 530.9) * (if wavelength < 530.9 { 0.0613 } else { 0.0322 });
     (0.821 * faster_exp(-0.5 * t1 * t1)) + (0.286 * faster_exp(-0.5 * t2 * t2))
 }
 
 #[allow(dead_code)]
 fn z_1931(wavelength: f32) -> f32 {
-    let t1 = (wavelength - 437.0) *
-             (if wavelength < 437.0 {
-        0.0845
-    } else {
-        0.0278
-    });
-    let t2 = (wavelength - 459.0) *
-             (if wavelength < 459.0 {
-        0.0385
-    } else {
-        0.0725
-    });
+    let t1 = (wavelength - 437.0) * (if wavelength < 437.0 { 0.0845 } else { 0.0278 });
+    let t2 = (wavelength - 459.0) * (if wavelength < 459.0 { 0.0385 } else { 0.0725 });
     (1.217 * faster_exp(-0.5 * t1 * t1)) + (0.681 * faster_exp(-0.5 * t2 * t2))
 }
 

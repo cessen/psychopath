@@ -99,7 +99,7 @@ class PsychopathRender(bpy.types.RenderEngine):
             export_path = get_temp_filename('.psy')
 
         # Create a temporary file to render into
-        render_image_path = get_temp_filename('.png')
+        render_image_path = get_temp_filename('.exr')
 
         # start export
         self.update_stats("", "Psychopath: Exporting data from Blender")

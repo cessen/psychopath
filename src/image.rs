@@ -11,6 +11,7 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use lodepng;
+use openexr;
 
 use color::{XYZ, xyz_to_rec709e};
 
@@ -152,6 +153,35 @@ impl Image {
 
         // Done
         Ok(())
+    }
+
+    pub fn write_exr(&mut self, path: &Path) {
+        let mut image = Vec::new();
+
+        // Convert pixels
+        for y in 0..self.res.1 {
+            for x in 0..self.res.0 {
+                let (r, g, b) = xyz_to_rec709e(self.get(x, y).to_tuple());
+                image.push((r, g, b));
+            }
+        }
+
+        let mut wr = openexr::ExrWriterBuilder::new(path)
+            .display_window((0, 0), ((self.res.0 - 1) as i32, (self.res.1 - 1) as i32))
+            .data_window((0, 0), ((self.res.0 - 1) as i32, (self.res.1 - 1) as i32))
+            .insert_channel("R", openexr::Channel::with_type(openexr::PixelType::F32))
+            .insert_channel("G", openexr::Channel::with_type(openexr::PixelType::F32))
+            .insert_channel("B", openexr::Channel::with_type(openexr::PixelType::F32))
+            .open();
+
+        let mut fb = {
+            // Create the frame buffer
+            let mut fb = openexr::FrameBuffer::new(self.res.0, self.res.1);
+            fb.add_structured_slice(&mut image, &[("R", 0.0), ("G", 0.0), ("B", 0.0)]);
+            fb
+        };
+
+        wr.write_pixels(&mut fb);
     }
 }
 

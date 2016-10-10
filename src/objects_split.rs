@@ -314,11 +314,7 @@ pub fn median_split<'a, T, F>(objects: &mut [T], bounder: &F) -> (usize, usize)
 
     let place = {
         let place = objects.len() / 2;
-        if place > 0 {
-            place
-        } else {
-            1
-        }
+        if place > 0 { place } else { 1 }
     };
     quick_select(objects, place, |a, b| {
         let tb_a = lerp_slice(bounder(a), 0.5);

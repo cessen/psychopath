@@ -59,11 +59,7 @@ impl Float4 {
         } else {
             self.get_3()
         };
-        if n1 < n2 {
-            n1
-        } else {
-            n2
-        }
+        if n1 < n2 { n1 } else { n2 }
     }
 
     pub fn h_max(&self) -> f32 {
@@ -77,11 +73,7 @@ impl Float4 {
         } else {
             self.get_3()
         };
-        if n1 > n2 {
-            n1
-        } else {
-            n2
-        }
+        if n1 > n2 { n1 } else { n2 }
     }
 
     #[cfg(feature = "simd_perf")]

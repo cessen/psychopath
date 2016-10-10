@@ -184,11 +184,7 @@ impl AssemblyBuilder {
 
         // Map zero-length transforms to None
         let xforms = if let Some(xf) = xforms {
-            if xf.len() > 0 {
-                Some(xf)
-            } else {
-                None
-            }
+            if xf.len() > 0 { Some(xf) } else { None }
         } else {
             None
         };

@@ -2,6 +2,7 @@ extern crate crossbeam;
 extern crate docopt;
 extern crate lodepng;
 extern crate num_cpus;
+extern crate openexr;
 extern crate rustc_serialize;
 extern crate scoped_threadpool;
 extern crate time;
@@ -153,7 +154,13 @@ fn main() {
                 println!("\tRendered scene in {:.3}s", t.tick());
 
                 println!("Writing image to disk...");
-                let _ = image.write_png(Path::new(&r.output_file));
+                if r.output_file.ends_with(".png") {
+                    let _ = image.write_png(Path::new(&r.output_file));
+                } else if r.output_file.ends_with(".exr") {
+                    image.write_exr(Path::new(&r.output_file));
+                } else {
+                    panic!("Unknown output file extension.");
+                }
                 println!("\tWrote image in {:.3}s", t.tick());
             }
         }

@@ -29,16 +29,8 @@ pub fn xy2d(x: u32, y: u32) -> u32 {
     let mut d = 0;
     let mut s = N >> 1;
     while s > 0 {
-        let rx = if (x & s) > 0 {
-            1
-        } else {
-            0
-        };
-        let ry = if (y & s) > 0 {
-            1
-        } else {
-            0
-        };
+        let rx = if (x & s) > 0 { 1 } else { 0 };
+        let ry = if (y & s) > 0 { 1 } else { 0 };
         d += s * s * ((3 * rx) ^ ry);
         hil_rot(s, rx, ry, &mut x, &mut y);
 
