@@ -40,6 +40,11 @@ class RenderPsychopathSettingsScene(PropertyGroup):
         min=1, max=65536, default=16
         )
 
+    max_samples_per_bucket = IntProperty(
+        name="Max Samples Per Bucket", description="How many samples to simultaneously calculate per thread; indirectly determines bucket size",
+        min=1, max=2**28, soft_max=2**16, default=4096
+        )
+
     dicing_rate = FloatProperty(
         name="Dicing Rate", description="The target microgeometry width in pixels",
         min=0.0001, max=100.0, soft_min=0.125, soft_max=1.0, default=0.25
@@ -86,24 +91,24 @@ class PsychopathMaterial(bpy.types.PropertyGroup):
         items=[('Emit', 'Emit', ""), ('Lambert', 'Lambert', ""), ('GTR', 'GTR', "")],
         default="Lambert"
         )
-        
+
     color = FloatVectorProperty(
         name="Color", description="",
         subtype='COLOR',
         min=0.0, soft_min=0.0, soft_max = 1.0,
         default=[0.8,0.8,0.8]
         )
-    
+
     roughness = FloatProperty(
         name="Roughness", description="",
         min=-1.0, max=1.0, soft_min=0.0, soft_max=1.0, default=0.1
         )
-    
+
     tail_shape = FloatProperty(
         name="Tail Shape", description="",
         min=0.0, max=8.0, soft_min=1.0, soft_max=3.0, default=2.0
         )
-    
+
     fresnel = FloatProperty(
         name="Fresnel", description="",
         min=0.0, max=1.0, soft_min=0.0, soft_max=1.0, default=0.9

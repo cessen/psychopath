@@ -31,7 +31,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn render(&self, thread_count: u32) -> Image {
+    pub fn render(&self, max_samples_per_bucket: u32, thread_count: u32) -> Image {
         let mut tpool = Pool::new(thread_count);
 
         let image = Image::new(self.resolution.0, self.resolution.1);
@@ -174,12 +174,10 @@ impl Renderer {
             print!("0.00%");
             let _ = io::stdout().flush();
 
-            // Determine bucket size based on a target number of samples
-            // per bucket.
-            // TODO: make target samples per bucket configurable
-            let target_samples_per_bucket = 1usize << 12;
+            // Determine bucket size based on the per-thread maximum number of samples to
+            // calculate at a time.
             let (bucket_w, bucket_h) = {
-                let target_pixels_per_bucket = target_samples_per_bucket as f64 / self.spp as f64;
+                let target_pixels_per_bucket = max_samples_per_bucket as f64 / self.spp as f64;
                 let target_bucket_dim = if target_pixels_per_bucket.sqrt() < 1.0 {
                     1usize
                 } else {

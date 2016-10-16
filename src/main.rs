@@ -72,6 +72,7 @@ Usage:
 Options:
   -i <file>, --input <file>     Input .psy file.
   -s <n>, --spp <n>             Number of samples per pixel.
+  -b <n>, --spb <n>             Maxmimum number of samples per bucket (determines bucket size).
   -t <n>, --threads <n>         Number of threads to render with.  Defaults
                                 to the number of logical cores on the system.
   --dev                         Show useful dev/debug info.
@@ -83,6 +84,7 @@ Options:
 struct Args {
     flag_input: Option<String>,
     flag_spp: Option<usize>,
+    flag_spb: Option<usize>,
     flag_threads: Option<usize>,
     flag_dev: bool,
     flag_version: bool,
@@ -141,6 +143,12 @@ fn main() {
                     r.spp = spp;
                 }
 
+                let max_samples_per_bucket = if let Some(max_samples_per_bucket) = args.flag_spb {
+                    max_samples_per_bucket as u32
+                } else {
+                    4096
+                };
+
                 let thread_count = if let Some(threads) = args.flag_threads {
                     threads as u32
                 } else {
@@ -150,7 +158,7 @@ fn main() {
                 println!("\tBuilt scene in {:.3}s", t.tick());
 
                 println!("Rendering scene with {} threads...", thread_count);
-                let mut image = r.render(thread_count);
+                let mut image = r.render(max_samples_per_bucket, thread_count);
                 println!("\tRendered scene in {:.3}s", t.tick());
 
                 println!("Writing image to disk...");

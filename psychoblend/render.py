@@ -49,7 +49,7 @@ class PsychopathRender(bpy.types.RenderEngine):
             return False
 
         # TODO: figure out command line options
-        args = ["-i", psy_filepath]
+        args = ["--spb", str(scene.psychopath.max_samples_per_bucket), "-i", psy_filepath]
 
         # Start Rendering!
         try:

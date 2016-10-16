@@ -46,6 +46,9 @@ class RENDER_PT_psychopath_render_settings(PsychopathPanel, bpy.types.Panel):
         col.prop(scene.psychopath, "shutter_start")
         col.prop(scene.psychopath, "shutter_end")
 
+        col.label(text="Performance")
+        col.prop(scene.psychopath, "max_samples_per_bucket")
+
 
 class RENDER_PT_psychopath_export_settings(PsychopathPanel, bpy.types.Panel):
     bl_label = "Export Settings"
@@ -66,14 +69,14 @@ class WORLD_PT_psychopath_background(PsychopathPanel, bpy.types.Panel):
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "world"
-    
+
     @classmethod
     def poll(cls, context):
         return context.world and PsychopathPanel.poll(context)
-    
+
     def draw(self, context):
         layout = self.layout
-    
+
         world = context.world
         layout.prop(world, "horizon_color", text="Color")
 
@@ -131,22 +134,22 @@ class DATA_PT_psychopath_area_lamp(PsychopathPanel, bpy.types.Panel):
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "data"
-    
+
     @classmethod
     def poll(cls, context):
         lamp = context.lamp
         engine = context.scene.render.engine
         return (lamp and lamp.type == 'AREA') and (engine in cls.COMPAT_ENGINES)
-    
+
     def draw(self, context):
         layout = self.layout
-    
+
         lamp = context.lamp
-    
+
         col = layout.column()
         col.row().prop(lamp, "shape", expand=True)
         sub = col.row(align=True)
-    
+
         if lamp.shape == 'SQUARE':
             sub.prop(lamp, "size")
         elif lamp.shape == 'RECTANGLE':
@@ -159,19 +162,19 @@ class DATA_PT_psychopath_mesh(PsychopathPanel, bpy.types.Panel):
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "data"
-    
+
     @classmethod
     def poll(cls, context):
         engine = context.scene.render.engine
         return context.mesh and (engine in cls.COMPAT_ENGINES)
-    
+
     def draw(self, context):
         layout = self.layout
-    
+
         mesh = context.mesh
-    
+
         layout.row().prop(mesh.psychopath, "is_subdivision_surface")
-        
+
 
 class MATERIAL_PT_psychopath_context_material(PsychopathPanel, bpy.types.Panel):
     bl_label = ""
@@ -179,42 +182,42 @@ class MATERIAL_PT_psychopath_context_material(PsychopathPanel, bpy.types.Panel):
     bl_region_type = "WINDOW"
     bl_context = "material"
     bl_options = {'HIDE_HEADER'}
-    
+
     @classmethod
     def poll(cls, context):
         return (context.material or context.object) and PsychopathPanel.poll(context)
-    
+
     def draw(self, context):
         layout = self.layout
-    
+
         mat = context.material
         ob = context.object
         slot = context.material_slot
         space = context.space_data
-    
+
         if ob:
             row = layout.row()
-    
+
             row.template_list("MATERIAL_UL_matslots", "", ob, "material_slots", ob, "active_material_index", rows=1)
-    
+
             col = row.column(align=True)
             col.operator("object.material_slot_add", icon='ZOOMIN', text="")
             col.operator("object.material_slot_remove", icon='ZOOMOUT', text="")
-    
+
             col.menu("MATERIAL_MT_specials", icon='DOWNARROW_HLT', text="")
-    
+
             if ob.mode == 'EDIT':
                 row = layout.row(align=True)
                 row.operator("object.material_slot_assign", text="Assign")
                 row.operator("object.material_slot_select", text="Select")
                 row.operator("object.material_slot_deselect", text="Deselect")
-    
+
         split = layout.split(percentage=0.65)
-    
+
         if ob:
             split.template_ID(ob, "active_material", new="material.new")
             row = split.row()
-    
+
             if slot:
                 row.prop(slot, "link", text="")
             else:
@@ -229,18 +232,18 @@ class MATERIAL_PT_psychopath_surface(PsychopathPanel, bpy.types.Panel):
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_context = "material"
-    
+
     @classmethod
     def poll(cls, context):
         return context.material and PsychopathPanel.poll(context)
-    
+
     def draw(self, context):
         layout = self.layout
-    
+
         mat = context.material
         layout.prop(mat.psychopath, "surface_shader_type")
         layout.prop(mat.psychopath, "color")
-        
+
         if mat.psychopath.surface_shader_type == 'GTR':
             layout.prop(mat.psychopath, "roughness")
             layout.prop(mat.psychopath, "tail_shape")
