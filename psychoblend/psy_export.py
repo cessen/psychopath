@@ -83,7 +83,7 @@ class IndentedWriter:
             self.f.write(' '*self.indent_level + text)
         else:
             self.f.write(text)
-            
+
 
 
 class PsychoExporter:
@@ -182,7 +182,7 @@ class PsychoExporter:
         # Camera section end
         self.w.unindent()
         self.w.write("}\n")
-        
+
         #######################
         # World section begin
         self.w.write("World {\n")
@@ -197,6 +197,11 @@ class PsychoExporter:
             self.w.write("Color [%f %f %f]\n" % (world.horizon_color[0], world.horizon_color[1], world.horizon_color[2]))
             self.w.unindent();
             self.w.write("}\n")
+
+        # Infinite light sources
+        for ob in self.scene.objects:
+            if ob.type == 'LAMP' and ob.data.type == 'SUN':
+                self.export_world_distant_disk_lamp(ob, "")
 
         # World section end
         self.w.unindent()
@@ -246,7 +251,7 @@ class PsychoExporter:
                 continue
 
             name = None
-            
+
             # Write object data
             if ob.type == 'EMPTY':
                 if ob.dupli_type == 'GROUP':
@@ -266,11 +271,11 @@ class PsychoExporter:
                 name = self.export_sphere_lamp(ob, group_prefix)
             elif ob.type == 'LAMP' and ob.data.type == 'AREA':
                 name = self.export_area_lamp(ob, group_prefix)
-            
+
             # Write object instance, with transforms
             if name != None:
                 time_mats = []
-                
+
                 if needs_xform_mb(ob):
                     for i in range(self.time_samples):
                         self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
@@ -285,7 +290,7 @@ class PsychoExporter:
                     mat[1][3] += translation_offset[1]
                     mat[2][3] += translation_offset[2]
                     time_mats += [mat]
-                
+
                 self.w.write("Instance {\n")
                 self.w.indent()
                 self.w.write("Data [$%s]\n" % name)
@@ -297,7 +302,7 @@ class PsychoExporter:
                 self.w.unindent()
                 self.w.write("}\n")
 
-                
+
     def export_mesh_object(self, ob, group_prefix):
         # Determine if and how to export the mesh data
         has_modifiers = len(ob.modifiers) > 0
@@ -327,37 +332,37 @@ class PsychoExporter:
                 self.mesh_names[mesh_name] = True
                 self.w.write("SubdivisionSurface $%s {\n" % escape_name(mesh_name))
                 self.w.indent()
-            
+
             # Write vertices
             for ti in range(len(time_meshes)):
                 self.w.write("Vertices [")
                 for v in time_meshes[ti].vertices:
                     self.w.write("%f %f %f " % (v.co[0], v.co[1], v.co[2]), False)
                 self.w.write("]\n", False)
-            
+
             # Write face vertex counts
             self.w.write("FaceVertCounts [")
             for p in time_meshes[0].polygons:
                 self.w.write("%d " % len(p.vertices), False)
             self.w.write("]\n", False)
-            
+
             # Write face vertex indices
             self.w.write("FaceVertIndices [")
             for p in time_meshes[0].polygons:
                 for v in p.vertices:
                     self.w.write("%d " % v, False)
             self.w.write("]\n", False)
-            
+
             # MeshSurface/SubdivisionSurface section end
             self.w.unindent()
             self.w.write("}\n")
-            
+
         return mesh_name
 
-            
+
     def export_surface_object(self, ob, group_prefix):
         name = group_prefix + "__" + escape_name(ob.name)
-        
+
         # Collect time samples
         time_surfaces = []
         for i in range(self.time_samples):
@@ -377,13 +382,13 @@ class PsychoExporter:
             bpy.data.curves.remove(s)
         self.w.unindent()
         self.w.write("}\n")
-        
+
         return name
-    
-    
+
+
     def export_sphere_lamp(self, ob, group_prefix):
         name = group_prefix + "__" + escape_name(ob.name)
-        
+
         # Collect data over time
         time_col = []
         time_rad = []
@@ -402,12 +407,12 @@ class PsychoExporter:
 
         self.w.unindent()
         self.w.write("}\n")
-        
+
         return name
-    
+
     def export_area_lamp(self, ob, group_prefix):
         name = group_prefix + "__" + escape_name(ob.name)
-        
+
         # Collect data over time
         time_col = []
         time_dim = []
@@ -418,8 +423,8 @@ class PsychoExporter:
                 time_dim += [(ob.data.size, ob.data.size_y)]
             else:
                 time_dim += [(ob.data.size, ob.data.size)]
-                
-    
+
+
         # Write out sphere light
         self.w.write("RectangleLight $%s {\n" % name)
         self.w.indent()
@@ -427,9 +432,36 @@ class PsychoExporter:
             self.w.write("Color [%f %f %f]\n" % (col[0], col[1], col[2]))
         for dim in time_dim:
             self.w.write("Dimensions [%f %f]\n" % dim)
-    
+
         self.w.unindent()
         self.w.write("}\n")
-        
+
         return name
-    
+
+    def export_world_distant_disk_lamp(self, ob, group_prefix):
+        name = group_prefix + "__" + escape_name(ob.name)
+
+        # Collect data over time
+        time_dir = []
+        time_col = []
+        time_rad = []
+        for i in range(self.time_samples):
+            self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
+            time_dir += [tuple(ob.matrix_world * Vector((0, 0, -1)))]
+            time_col += [ob.data.color * ob.data.energy]
+            time_rad += [ob.data.shadow_soft_size]
+
+        # Write out sphere light
+        self.w.write("DistantDiskLight $%s {\n" % name)
+        self.w.indent()
+        for direc in time_dir:
+            self.w.write("Direction [%f %f %f]\n" % (direc[0], direc[1], direc[2]))
+        for col in time_col:
+            self.w.write("Color [%f %f %f]\n" % (col[0], col[1], col[2]))
+        for rad in time_rad:
+            self.w.write("Radius [%f]\n" % rad)
+
+        self.w.unindent()
+        self.w.write("}\n")
+
+        return name
