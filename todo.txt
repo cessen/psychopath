@@ -1,5 +1,7 @@
 - Implement shader parsing, and use in rendering.
-- Implement sun light sources
+- Implement sun light sources:
+    // - Implement sun light export in Psychoblend
+    - Implement sun light sources in Psychopath
 - Implement floating point accuracy stuff.
 // Add OpenEXR support.
 - Add gui display of rendering in progress.
