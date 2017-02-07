@@ -25,7 +25,7 @@ impl<'a> DataTree<'a> {
         let mut items = Vec::new();
         let mut remaining_text = (0, source_text);
 
-        while let Some((item, text)) = try!(parse_node(remaining_text)) {
+        while let Some((item, text)) = parse_node(remaining_text)? {
             remaining_text = text;
             items.push(item);
         }
@@ -281,7 +281,7 @@ fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
                 if let (Token::OpenInner, text3) = next_token(text2) {
                     let mut children = Vec::new();
                     let mut text_remaining = text3;
-                    while let Some((node, text4)) = try!(parse_node(text_remaining)) {
+                    while let Some((node, text4)) = parse_node(text_remaining)? {
                         text_remaining = text4;
                         children.push(node);
                     }
@@ -304,7 +304,7 @@ fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
             (Token::OpenInner, text2) => {
                 let mut children = Vec::new();
                 let mut text_remaining = text2;
-                while let Some((node, text3)) = try!(parse_node(text_remaining)) {
+                while let Some((node, text3)) = parse_node(text_remaining)? {
                     text_remaining = text3;
                     children.push(node);
                 }

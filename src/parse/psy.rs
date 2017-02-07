@@ -49,23 +49,23 @@ pub fn parse_scene(tree: &DataTree) -> Result<Renderer, PsyParseError> {
     }
 
     // Parse output info
-    let output_info = try!(parse_output_info(tree.iter_children_with_type("Output")
+    let output_info = parse_output_info(tree.iter_children_with_type("Output")
         .nth(0)
-        .unwrap()));
+        .unwrap())?;
 
     // Parse render settings
-    let render_settings = try!(parse_render_settings(tree.iter_children_with_type("RenderSettings")
+    let render_settings = parse_render_settings(tree.iter_children_with_type("RenderSettings")
         .nth(0)
-        .unwrap()));
+        .unwrap())?;
 
     // Parse camera
-    let camera = try!(parse_camera(tree.iter_children_with_type("Camera").nth(0).unwrap()));
+    let camera = parse_camera(tree.iter_children_with_type("Camera").nth(0).unwrap())?;
 
     // Parse world
-    let world = try!(parse_world(tree.iter_children_with_type("World").nth(0).unwrap()));
+    let world = parse_world(tree.iter_children_with_type("World").nth(0).unwrap())?;
 
     // Parse root scene assembly
-    let assembly = try!(parse_assembly(tree.iter_children_with_type("Assembly").nth(0).unwrap()));
+    let assembly = parse_assembly(tree.iter_children_with_type("Assembly").nth(0).unwrap())?;
 
     // Put scene together
     let scene_name = if let &DataTree::Internal { ident, .. } = tree {

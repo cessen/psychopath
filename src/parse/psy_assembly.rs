@@ -19,7 +19,7 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                 // Sub-Assembly
                 "Assembly" => {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
-                        builder.add_assembly(ident, try!(parse_assembly(&child)));
+                        builder.add_assembly(ident, parse_assembly(&child)?);
                     } else {
                         // TODO: error condition of some kind, because no ident
                         panic!();
@@ -46,7 +46,7 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                     // Get xforms
                     let mut xforms = Vec::new();
                     for (_, contents) in child.iter_leaf_children_with_type("Transform") {
-                        xforms.push(try!(parse_matrix(contents)));
+                        xforms.push(parse_matrix(contents)?);
                     }
 
                     // Add instance
@@ -62,10 +62,8 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                 // MeshSurface
                 "MeshSurface" => {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
-                        builder.add_object(
-                            ident,
-                            Object::Surface(Box::new(try!(parse_mesh_surface(&child))))
-                        );
+                        builder.add_object(ident,
+                                           Object::Surface(Box::new(parse_mesh_surface(&child)?)));
                     } else {
                         // TODO: error condition of some kind, because no ident
                         panic!();
@@ -76,7 +74,7 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                 "SphereLight" => {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
                         builder.add_object(ident,
-                                        Object::Light(Box::new(try!(parse_sphere_light(&child)))));
+                                           Object::Light(Box::new(parse_sphere_light(&child)?)));
                     } else {
                         // TODO: error condition of some kind, because no ident
                         panic!();
@@ -87,9 +85,7 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                 "RectangleLight" => {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
                         builder.add_object(ident,
-                                        Object::Light(Box::new(
-                                            try!(parse_rectangle_light(&child))
-                                        )));
+                                           Object::Light(Box::new(parse_rectangle_light(&child)?)));
                     } else {
                         // TODO: error condition of some kind, because no ident
                         panic!();
