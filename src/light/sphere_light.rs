@@ -9,6 +9,7 @@ use sampling::{uniform_sample_cone, uniform_sample_cone_pdf, uniform_sample_sphe
 
 use super::LightSource;
 
+// TODO: handle case where radius = 0.0.
 
 #[derive(Debug)]
 pub struct SphereLight {
@@ -57,7 +58,7 @@ impl LightSource for SphereLight {
         // Create a coordinate system from the vector between the
         // point and the center of the light
         let z = pos - arr;
-        let d2: f64 = z.length2() as f64;  // Distance from center of sphere squared
+        let d2: f64 = z.length2() as f64; // Distance from center of sphere squared
         let d = d2.sqrt(); // Distance from center of sphere
         let (z, x, y) = coordinate_system_from_vector(z);
         let (x, y, z) = (x.normalized(), y.normalized(), z.normalized());
@@ -125,7 +126,7 @@ impl LightSource for SphereLight {
         let pos = Point::new(0.0, 0.0, 0.0);
         let radius: f64 = lerp_slice(&self.radii, time) as f64;
 
-        let d2: f64 = (pos - arr).length2() as f64;  // Distance from center of sphere squared
+        let d2: f64 = (pos - arr).length2() as f64; // Distance from center of sphere squared
         let d: f64 = d2.sqrt(); // Distance from center of sphere
 
         if d > radius {

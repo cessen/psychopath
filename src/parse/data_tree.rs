@@ -287,10 +287,10 @@ fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
                     }
                     if let (Token::CloseInner, text4) = next_token(text_remaining) {
                         return Ok(Some((DataTree::Internal {
-                            type_name: type_name,
-                            ident: Some(n),
-                            children: children,
-                        },
+                                            type_name: type_name,
+                                            ident: Some(n),
+                                            children: children,
+                                        },
                                         text4)));
                     } else {
                         return Err(ParseError::MissingCloseInternal(text_remaining.0));
@@ -311,10 +311,10 @@ fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
 
                 if let (Token::CloseInner, text3) = next_token(text_remaining) {
                     return Ok(Some((DataTree::Internal {
-                        type_name: type_name,
-                        ident: None,
-                        children: children,
-                    },
+                                        type_name: type_name,
+                                        ident: None,
+                                        children: children,
+                                    },
                                     text3)));
                 } else {
                     return Err(ParseError::MissingCloseInternal(text_remaining.0));
@@ -326,9 +326,9 @@ fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
                 let (contents, text3) = parse_leaf_content(text2);
                 if let (Token::CloseLeaf, text4) = next_token(text3) {
                     return Ok(Some((DataTree::Leaf {
-                        type_name: type_name,
-                        contents: contents,
-                    },
+                                        type_name: type_name,
+                                        contents: contents,
+                                    },
                                     text4)));
                 } else {
                     return Err(ParseError::MissingCloseLeaf(text3.0));

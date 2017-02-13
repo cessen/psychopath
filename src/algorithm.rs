@@ -191,8 +191,9 @@ pub fn merge_slices_to<T: Lerp + Copy, F>(slice1: &[T],
     if slice1.len() == 0 || slice2.len() == 0 {
         return;
     } else if slice1.len() == slice2.len() {
-        for (xfo, (xf1, xf2)) in Iterator::zip(slice_out.iter_mut(),
-                                               Iterator::zip(slice1.iter(), slice2.iter())) {
+        for (xfo, (xf1, xf2)) in
+            Iterator::zip(slice_out.iter_mut(),
+                          Iterator::zip(slice1.iter(), slice2.iter())) {
             *xfo = merge(xf1, xf2);
         }
     } else if slice1.len() > slice2.len() {
@@ -216,14 +217,12 @@ mod tests {
     use super::*;
 
     fn quick_select_ints(list: &mut [i32], i: usize) {
-        quick_select(list, i, |a, b| {
-            if a < b {
-                Ordering::Less
-            } else if a == b {
-                Ordering::Equal
-            } else {
-                Ordering::Greater
-            }
+        quick_select(list, i, |a, b| if a < b {
+            Ordering::Less
+        } else if a == b {
+            Ordering::Equal
+        } else {
+            Ordering::Greater
         });
     }
 

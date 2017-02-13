@@ -41,6 +41,7 @@ mod timer;
 mod tracer;
 mod transform_stack;
 mod triangle;
+mod world;
 
 use std::fs::File;
 use std::io;

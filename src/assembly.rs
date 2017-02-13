@@ -48,13 +48,14 @@ impl Assembly {
             } else {
                 Matrix4x4::new()
             };
-            if let Some((light_i, sel_pdf, whittled_n)) = self.light_accel
-                .select(incoming * sel_xform,
-                        pos * sel_xform,
-                        nor * sel_xform,
-                        closure.as_surface_closure(),
-                        time,
-                        n) {
+            if let Some((light_i, sel_pdf, whittled_n)) =
+                self.light_accel
+                    .select(incoming * sel_xform,
+                            pos * sel_xform,
+                            nor * sel_xform,
+                            closure.as_surface_closure(),
+                            time,
+                            n) {
                 let inst = self.light_instances[light_i];
                 match inst.instance_type {
 
@@ -239,19 +240,17 @@ impl AssemblyBuilder {
         // sources.
         let mut light_instances: Vec<_> = self.instances
             .iter()
-            .filter(|inst| {
-                match inst.instance_type {
-                    InstanceType::Object => {
-                        if let Object::Light(_) = self.objects[inst.data_index] {
-                            true
-                        } else {
-                            false
-                        }
+            .filter(|inst| match inst.instance_type {
+                InstanceType::Object => {
+                    if let Object::Light(_) = self.objects[inst.data_index] {
+                        true
+                    } else {
+                        false
                     }
+                }
 
-                    InstanceType::Assembly => {
-                        self.assemblies[inst.data_index].light_accel.approximate_energy() > 0.0
-                    }
+                InstanceType::Assembly => {
+                    self.assemblies[inst.data_index].light_accel.approximate_energy() > 0.0
                 }
             })
             .map(|&a| a)

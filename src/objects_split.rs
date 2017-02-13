@@ -64,8 +64,8 @@ pub fn free_sah_split<'a, T, F>(seed: u32, objects: &mut [T], bounder: &F) -> (u
 
     // Build SAH bins
     let sah_bins = {
-        let mut sah_bins =
-            [[(BBox::new(), BBox::new(), 0, 0); SAH_BIN_COUNT - 1]; SPLIT_PLANE_COUNT];
+        let mut sah_bins = [[(BBox::new(), BBox::new(), 0, 0); SAH_BIN_COUNT - 1];
+                            SPLIT_PLANE_COUNT];
         for obj in objects.iter() {
             let tb = lerp_slice(bounder(obj), 0.5);
             let centroid = tb.center().into_vector();

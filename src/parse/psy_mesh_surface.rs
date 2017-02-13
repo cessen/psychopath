@@ -35,9 +35,8 @@ pub fn parse_mesh_surface(tree: &DataTree) -> Result<TriangleMesh, PsyParseError
 
         // Collect verts for this time sample
         let mut vert_count = 0;
-        while let IResult::Done(remaining, vert) = closure!(tuple!(ws_f32,
-                                                                   ws_f32,
-                                                                   ws_f32))(raw_text) {
+        while let IResult::Done(remaining, vert) =
+            closure!(tuple!(ws_f32, ws_f32, ws_f32))(raw_text) {
             raw_text = remaining;
 
             verts.push(Point::new(vert.0, vert.1, vert.2));

@@ -113,9 +113,10 @@ impl Renderer {
                                                        (halton::sample(0, offset + si as u32),
                                                         halton::sample(1, offset + si as u32)),
                                                        halton::sample(2, offset + si as u32),
-                                                       map_0_1_to_wavelength(
-                                                           halton::sample(3, offset + si as u32)
-                                                       ),
+                                                       map_0_1_to_wavelength(halton::sample(3,
+                                                                                            offset +
+                                                                                            si as
+                                                                                            u32)),
                                                        offset + si as u32);
                                     paths.push(path);
                                     rays.push(ray);
@@ -249,17 +250,17 @@ impl LightPath {
            lds_offset: u32)
            -> (LightPath, Ray) {
         (LightPath {
-            pixel_co: pixel_co,
-            lds_offset: lds_offset,
-            dim_offset: 6,
-            round: 0,
-            time: time,
-            wavelength: wavelength,
-            interaction: surface::SurfaceIntersection::Miss,
-            light_attenuation: SpectralSample::from_value(1.0, wavelength),
-            pending_color_addition: SpectralSample::new(wavelength),
-            color: SpectralSample::new(wavelength),
-        },
+             pixel_co: pixel_co,
+             lds_offset: lds_offset,
+             dim_offset: 6,
+             round: 0,
+             time: time,
+             wavelength: wavelength,
+             interaction: surface::SurfaceIntersection::Miss,
+             light_attenuation: SpectralSample::from_value(1.0, wavelength),
+             pending_color_addition: SpectralSample::new(wavelength),
+             color: SpectralSample::new(wavelength),
+         },
 
          scene.camera.generate_ray(image_plane_co.0,
                                    image_plane_co.1,
@@ -297,13 +298,14 @@ impl LightPath {
                 let light_n = self.next_lds_samp();
                 let light_uvw = (self.next_lds_samp(), self.next_lds_samp(), self.next_lds_samp());
                 xform_stack.clear();
-                if let Some((light_color, shadow_vec, light_pdf, light_sel_pdf)) = scene.root
-                    .sample_lights(xform_stack,
-                                   light_n,
-                                   light_uvw,
-                                   self.wavelength,
-                                   self.time,
-                                   isect) {
+                if let Some((light_color, shadow_vec, light_pdf, light_sel_pdf)) =
+                    scene.root
+                        .sample_lights(xform_stack,
+                                       light_n,
+                                       light_uvw,
+                                       self.wavelength,
+                                       self.time,
+                                       isect) {
                     // Calculate and store the light that will be contributed
                     // to the film plane if the light is not in shadow.
                     self.pending_color_addition = {
@@ -327,7 +329,7 @@ impl LightPath {
                 }
             } else {
                 // Didn't hit anything, so background color
-                self.color += scene.background_color.to_spectral_sample(self.wavelength) *
+                self.color += scene.world.background_color.to_spectral_sample(self.wavelength) *
                               self.light_attenuation;
                 return false;
             }

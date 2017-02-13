@@ -9,11 +9,14 @@ use camera::Camera;
 use color::{XYZ, rec709e_to_xyz};
 use math::Matrix4x4;
 use renderer::Renderer;
+use world::World;
 use scene::Scene;
+use light::WorldLightSource;
 
 use super::basics::{ws_u32, ws_f32};
 use super::DataTree;
 use super::psy_assembly::parse_assembly;
+use super::psy_light::parse_distant_disk_light;
 
 
 #[derive(Copy, Clone, Debug)]
@@ -24,7 +27,6 @@ pub enum PsyParseError {
 
 
 /// Takes in a DataTree representing a Scene node and returns
-/// a renderer.
 pub fn parse_scene(tree: &DataTree) -> Result<Renderer, PsyParseError> {
     // Verify we have the right number of each section
     if tree.iter_children_with_type("Output").count() != 1 {
@@ -79,8 +81,8 @@ pub fn parse_scene(tree: &DataTree) -> Result<Renderer, PsyParseError> {
     };
     let scene = Scene {
         name: scene_name,
-        background_color: world,
         camera: camera,
+        world: world,
         root: assembly,
     };
 
@@ -266,9 +268,10 @@ fn parse_camera(tree: &DataTree) -> Result<Camera, PsyParseError> {
 
 
 
-fn parse_world(tree: &DataTree) -> Result<XYZ, PsyParseError> {
+fn parse_world(tree: &DataTree) -> Result<World, PsyParseError> {
     if tree.is_internal() {
         let background_color;
+        let mut lights: Vec<Box<WorldLightSource>> = Vec::new();
 
         // Parse background shader
         let bgs = {
@@ -281,9 +284,10 @@ fn parse_world(tree: &DataTree) -> Result<XYZ, PsyParseError> {
             if bgs.iter_children_with_type("Type").count() != 1 {
                 return Err(PsyParseError::UnknownError);
             }
-            if let &DataTree::Leaf { contents, .. } = bgs.iter_children_with_type("Type")
-                .nth(0)
-                .unwrap() {
+            if let &DataTree::Leaf { contents, .. } =
+                bgs.iter_children_with_type("Type")
+                    .nth(0)
+                    .unwrap() {
                 contents.trim()
             } else {
                 return Err(PsyParseError::UnknownError);
@@ -291,12 +295,12 @@ fn parse_world(tree: &DataTree) -> Result<XYZ, PsyParseError> {
         };
         match bgs_type {
             "Color" => {
-                if let Some(&DataTree::Leaf { contents, .. }) = bgs.iter_children_with_type("Color")
-                    .nth(0) {
-                    if let IResult::Done(_, color) = closure!(tuple!(ws_f32,
-                                                                     ws_f32,
-                                                                     ws_f32))(contents.trim()
-                        .as_bytes()) {
+                if let Some(&DataTree::Leaf { contents, .. }) =
+                    bgs.iter_children_with_type("Color")
+                        .nth(0) {
+                    if let IResult::Done(_, color) =
+                        closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.trim()
+                            .as_bytes()) {
                         // TODO: proper color space management, not just assuming
                         // rec.709.
                         background_color = XYZ::from_tuple(rec709e_to_xyz(color));
@@ -311,7 +315,22 @@ fn parse_world(tree: &DataTree) -> Result<XYZ, PsyParseError> {
             _ => return Err(PsyParseError::UnknownError),
         }
 
-        return Ok(background_color);
+        // Parse light sources
+        for child in tree.iter_children() {
+            match child {
+                &DataTree::Internal { type_name, .. } if type_name == "DistantDiskLight" => {
+                    lights.push(Box::new(parse_distant_disk_light(&child)?));
+                }
+
+                _ => {}
+            }
+        }
+
+        // Build and return the world
+        return Ok(World {
+            background_color: background_color,
+            lights: lights,
+        });
     } else {
         return Err(PsyParseError::UnknownError);
     }
@@ -321,23 +340,24 @@ fn parse_world(tree: &DataTree) -> Result<XYZ, PsyParseError> {
 
 
 pub fn parse_matrix(contents: &str) -> Result<Matrix4x4, PsyParseError> {
-    if let IResult::Done(_, ns) = closure!(terminated!(tuple!(ws_f32,
-                                                              ws_f32,
-                                                              ws_f32,
-                                                              ws_f32,
-                                                              ws_f32,
-                                                              ws_f32,
-                                                              ws_f32,
-                                                              ws_f32,
-                                                              ws_f32,
-                                                              ws_f32,
-                                                              ws_f32,
-                                                              ws_f32,
-                                                              ws_f32,
-                                                              ws_f32,
-                                                              ws_f32,
-                                                              ws_f32),
-                                                       nom::eof))(contents.as_bytes()) {
+    if let IResult::Done(_, ns) =
+        closure!(terminated!(tuple!(ws_f32,
+                                    ws_f32,
+                                    ws_f32,
+                                    ws_f32,
+                                    ws_f32,
+                                    ws_f32,
+                                    ws_f32,
+                                    ws_f32,
+                                    ws_f32,
+                                    ws_f32,
+                                    ws_f32,
+                                    ws_f32,
+                                    ws_f32,
+                                    ws_f32,
+                                    ws_f32,
+                                    ws_f32),
+                             nom::eof))(contents.as_bytes()) {
         return Ok(Matrix4x4::new_from_values(ns.0,
                                              ns.4,
                                              ns.8,
