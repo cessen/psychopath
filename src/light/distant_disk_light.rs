@@ -36,19 +36,17 @@ impl WorldLightSource for DistantDiskLight {
 
         // Create a coordinate system from the vector pointing at the center of
         // of the light.
-        let (z, x, y) = coordinate_system_from_vector(-direction);
-        let (x, y, z) = (x.normalized(), y.normalized(), z.normalized());
-
-        // Calculate the radius in terms of cosine
-        let cos_theta_max: f64 = radius.cos();
+        let (z, x, y) = coordinate_system_from_vector(-direction.normalized());
 
         // Sample the cone subtended by the light.
+        let cos_theta_max: f64 = radius.cos();
         let sample = uniform_sample_cone(u, v, cos_theta_max).normalized();
 
         // Calculate the final values and return everything.
+        let spectral_sample = (col * solid_angle_inv as f32).to_spectral_sample(wavelength);
         let shadow_vec = (x * sample.x()) + (y * sample.y()) + (z * sample.z());
         let pdf = uniform_sample_cone_pdf(cos_theta_max);
-        let spectral_sample = (col * solid_angle_inv as f32).to_spectral_sample(wavelength);
+
         return (spectral_sample, shadow_vec, pdf as f32);
     }
 

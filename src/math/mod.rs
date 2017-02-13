@@ -114,6 +114,10 @@ pub fn log2_64(value: u64) -> u64 {
 
 
 /// Creates a coordinate system from a single vector.
+///
+/// The input vector, v, becomes the first vector of the
+/// returned tuple, with the other two vectors in the returned
+/// tuple defining the orthoganal axes.
 pub fn coordinate_system_from_vector(v: Vector) -> (Vector, Vector, Vector) {
     let v2 = if v.x().abs() > v.y().abs() {
         let invlen = 1.0 / ((v.x() * v.x()) + (v.z() * v.z())).sqrt();

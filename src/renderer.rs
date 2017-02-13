@@ -1,3 +1,4 @@
+use std;
 use std::cell::Cell;
 use std::cmp;
 use std::cmp::min;
@@ -298,14 +299,13 @@ impl LightPath {
                 let light_n = self.next_lds_samp();
                 let light_uvw = (self.next_lds_samp(), self.next_lds_samp(), self.next_lds_samp());
                 xform_stack.clear();
-                if let Some((light_color, shadow_vec, light_pdf, light_sel_pdf)) =
-                    scene.root
-                        .sample_lights(xform_stack,
-                                       light_n,
-                                       light_uvw,
-                                       self.wavelength,
-                                       self.time,
-                                       isect) {
+                if let Some((light_color, shadow_vec, light_pdf, light_sel_pdf, is_infinite)) =
+                    scene.sample_lights(xform_stack,
+                                        light_n,
+                                        light_uvw,
+                                        self.wavelength,
+                                        self.time,
+                                        isect) {
                     // Calculate and store the light that will be contributed
                     // to the film plane if the light is not in shadow.
                     self.pending_color_addition = {
@@ -322,6 +322,11 @@ impl LightPath {
                                     shadow_vec,
                                     self.time,
                                     true);
+
+                    // For distant lights
+                    if is_infinite {
+                        ray.max_t = std::f32::INFINITY;
+                    }
 
                     return true;
                 } else {

@@ -447,7 +447,7 @@ class PsychoExporter:
         time_rad = []
         for i in range(self.time_samples):
             self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
-            time_dir += [tuple(ob.matrix_world * Vector((0, 0, -1)))]
+            time_dir += [tuple(ob.matrix_world.to_3x3() * Vector((0, 0, -1)))]
             time_col += [ob.data.color * ob.data.energy]
             time_rad += [ob.data.shadow_soft_size]
 

@@ -58,6 +58,12 @@ pub fn uniform_sample_sphere(u: f32, v: f32) -> Vector {
     Vector::new(x, y, z)
 }
 
+/// Samples a solid angle defined by a cone originating from (0,0,0)
+/// and pointing down the positive z-axis.
+///
+/// u, v: sampling variables, should each be in the interval [0,1]
+/// cos_theta_max: cosine of the max angle from the z-axis, defining
+///                the outer extent of the cone.
 pub fn uniform_sample_cone(u: f32, v: f32, cos_theta_max: f64) -> Vector {
     let cos_theta = (1.0 - u as f64) + (u as f64 * cos_theta_max);
     let sin_theta = (1.0 - (cos_theta * cos_theta)).sqrt();

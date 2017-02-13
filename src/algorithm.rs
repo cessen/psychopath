@@ -8,6 +8,31 @@ use hash::hash_u64;
 use lerp::{Lerp, lerp_slice};
 
 
+/// Selects an item from a slice based on a weighting function and a
+/// number (n) between 0.0 and 1.0.  Returns the index of the selected
+/// item and the probability that it would have been selected with a
+/// random n.
+pub fn weighted_choice<T, F>(slc: &[T], n: f32, weight: F) -> (usize, f32)
+    where F: Fn(&T) -> f32
+{
+    assert!(slc.len() > 0);
+
+    let total_weight = slc.iter().fold(0.0, |sum, v| sum + weight(v));
+    let n = n * total_weight;
+
+    let mut x = 0.0;
+    for (i, v) in slc.iter().enumerate() {
+        let w = weight(v);
+        x += w;
+        if x > n || i == slc.len() {
+            return (i, w / total_weight);
+        }
+    }
+
+    unreachable!()
+}
+
+
 /// Partitions a slice in-place with the given unary predicate, returning
 /// the index of the first element for which the predicate evaluates
 /// false.
