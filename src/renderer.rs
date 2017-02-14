@@ -10,12 +10,12 @@ use scoped_threadpool::Pool;
 
 use algorithm::partition_pair;
 use color::{Color, XYZ, SpectralSample, map_0_1_to_wavelength};
-use halton;
 use hash::hash_u32;
 use hilbert;
 use image::Image;
 use math::{fast_logit, upper_power_of_two};
 use ray::Ray;
+use sampling::halton;
 use scene::Scene;
 use surface;
 use tracer::Tracer;

@@ -2,7 +2,7 @@
 
 use std::result::Result;
 
-use assembly::{Assembly, AssemblyBuilder, Object};
+use scene::{Assembly, AssemblyBuilder, Object};
 
 use super::DataTree;
 use super::psy_light::{parse_sphere_light, parse_rectangle_light};

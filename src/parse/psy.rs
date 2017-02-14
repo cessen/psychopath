@@ -7,11 +7,11 @@ use nom::IResult;
 
 use camera::Camera;
 use color::{XYZ, rec709e_to_xyz};
+use light::WorldLightSource;
 use math::Matrix4x4;
 use renderer::Renderer;
-use world::World;
 use scene::Scene;
-use light::WorldLightSource;
+use scene::World;
 
 use super::basics::{ws_u32, ws_f32};
 use super::DataTree;

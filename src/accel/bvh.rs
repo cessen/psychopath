@@ -6,7 +6,8 @@ use boundable::Boundable;
 use lerp::lerp_slice;
 use math::log2_64;
 use ray::AccelRay;
-use objects_split::{sah_split, median_split};
+
+use super::objects_split::{sah_split, median_split};
 
 
 const BVH_MAX_DEPTH: usize = 64;

@@ -13,23 +13,19 @@ extern crate nom;
 #[cfg(feature = "simd_perf")]
 extern crate simd;
 
+mod accel;
 mod algorithm;
-mod assembly;
 mod bbox;
 mod boundable;
-mod bvh;
 mod camera;
 mod color;
 mod float4;
-mod halton;
 mod hash;
 mod hilbert;
 mod image;
 mod lerp;
-mod light_accel;
 mod light;
 mod math;
-mod objects_split;
 mod parse;
 mod ray;
 mod renderer;
@@ -40,8 +36,6 @@ mod surface;
 mod timer;
 mod tracer;
 mod transform_stack;
-mod triangle;
-mod world;
 
 use std::fs::File;
 use std::io;

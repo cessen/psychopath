@@ -1,13 +1,13 @@
-use assembly::Assembly;
-use camera::Camera;
-use world::World;
+use accel::LightAccel;
 use algorithm::weighted_choice;
-use transform_stack::TransformStack;
+use camera::Camera;
 use color::SpectralSample;
-use surface::SurfaceIntersection;
 use math::Vector;
-use light_accel::LightAccel;
+use surface::SurfaceIntersection;
+use transform_stack::TransformStack;
 
+use super::Assembly;
+use super::World;
 
 
 #[derive(Debug)]

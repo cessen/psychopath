@@ -2,10 +2,10 @@ use algorithm::merge_slices_append;
 use bbox::BBox;
 use lerp::lerp_slice;
 use math::{Vector, Point, Normal};
-use objects_split::sah_split;
 use shading::surface_closure::SurfaceClosure;
 
 use super::LightAccel;
+use super::objects_split::sah_split;
 
 
 #[derive(Debug)]

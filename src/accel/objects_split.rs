@@ -5,9 +5,9 @@ use std::cmp::Ordering;
 
 use algorithm::{partition, quick_select};
 use bbox::BBox;
-use halton;
 use lerp::lerp_slice;
 use math::{Vector, dot};
+use sampling::halton;
 use sampling::uniform_sample_hemisphere;
 
 

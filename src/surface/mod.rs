@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+mod triangle;
 pub mod triangle_mesh;
 
 use std::fmt::Debug;

@@ -1,9 +1,9 @@
 use std::iter;
 
 use algorithm::partition;
-use assembly::{Assembly, Object, InstanceType};
 use lerp::lerp_slice;
 use ray::{Ray, AccelRay};
+use scene::{Assembly, Object, InstanceType};
 use surface::SurfaceIntersection;
 use transform_stack::TransformStack;
 

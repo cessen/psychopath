@@ -1,16 +1,16 @@
 #![allow(dead_code)]
 
+use accel::BVH;
 use bbox::BBox;
 use boundable::Boundable;
-use bvh::BVH;
 use color::XYZ;
 use lerp::{lerp, lerp_slice, lerp_slice_with};
 use math::{Point, Matrix4x4, cross};
 use ray::{Ray, AccelRay};
 use shading::surface_closure::{SurfaceClosureUnion, LambertClosure};
-use triangle;
 
 use super::{Surface, SurfaceIntersection};
+use super::triangle;
 
 
 #[derive(Debug)]
