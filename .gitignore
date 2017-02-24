@@ -6,5 +6,6 @@ __pycache__/
 *.py[cod]
 
 .zedstate
+.vscode
 test_renders
 perf.data*
