@@ -42,7 +42,7 @@ fn nth_wavelength(hero_wavelength: f32, n: usize) -> f32 {
 
 #[derive(Copy, Clone, Debug)]
 pub struct SpectralSample {
-    e: Float4,
+    pub e: Float4,
     hero_wavelength: f32,
 }
 

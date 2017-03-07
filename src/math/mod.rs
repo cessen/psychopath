@@ -30,6 +30,18 @@ pub fn cross<T: CrossProduct>(a: T, b: T) -> T {
     a.cross(b)
 }
 
+
+/// Clamps a value between a min and max.
+pub fn clamp<T: PartialOrd>(v: T, lower: T, upper: T) -> T {
+    if v < lower {
+        lower
+    } else if v > upper {
+        upper
+    } else {
+        v
+    }
+}
+
 // Adapted from from http://fastapprox.googlecode.com
 pub fn fast_ln(x: f32) -> f32 {
     use std::mem::transmute_copy;

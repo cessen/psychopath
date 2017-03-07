@@ -1,8 +1,11 @@
+#![allow(dead_code)]
+
 use std::f32::consts::PI as PI_32;
 
 use color::{XYZ, SpectralSample, Color};
-use math::{Vector, Normal, dot, zup_to_vec};
+use math::{Vector, Normal, dot, clamp, zup_to_vec};
 use sampling::cosine_sample_hemisphere;
+use lerp::lerp;
 
 
 const INV_PI: f32 = 1.0 / PI_32;
@@ -12,6 +15,7 @@ const H_PI: f32 = PI_32 / 2.0;
 pub enum SurfaceClosureUnion {
     EmitClosure(EmitClosure),
     LambertClosure(LambertClosure),
+    GTRClosure(GTRClosure),
 }
 
 impl SurfaceClosureUnion {
@@ -19,6 +23,7 @@ impl SurfaceClosureUnion {
         match self {
             &SurfaceClosureUnion::EmitClosure(ref closure) => closure as &SurfaceClosure,
             &SurfaceClosureUnion::LambertClosure(ref closure) => closure as &SurfaceClosure,
+            &SurfaceClosureUnion::GTRClosure(ref closure) => closure as &SurfaceClosure,
         }
     }
 }
@@ -327,5 +332,294 @@ impl SurfaceClosure for LambertClosure {
 
             return sphere_lambert(cos_nv, cos_theta);
         }
+    }
+}
+
+
+/// The GTR microfacet BRDF from the Disney Principled BRDF paper.
+#[derive(Debug, Copy, Clone)]
+pub struct GTRClosure {
+    col: XYZ,
+    roughness: f32,
+    tail_shape: f32,
+    fresnel: f32,
+    normalization_factor: f32,
+}
+
+impl GTRClosure {
+    pub fn new(col: XYZ, roughness: f32, tail_shape: f32, fresnel: f32) -> GTRClosure {
+        let mut closure = GTRClosure {
+            col: col,
+            roughness: roughness,
+            tail_shape: tail_shape,
+            fresnel: fresnel,
+            normalization_factor: GTRClosure::normalization(roughness, tail_shape),
+        };
+
+        closure.validate();
+
+        closure
+    }
+
+    // Returns the normalization factor for the distribution function
+    // of the BRDF.
+    fn normalization(r: f32, t: f32) -> f32 {
+        let r2 = r * r;
+        let top = (t - 1.0) * (r2 - 1.0);
+        let bottom = PI_32 * (1.0 - r2.powf(1.0 - t));
+        top / bottom
+    }
+
+    // Makes sure values are in a valid range
+    fn validate(&mut self) {
+        // Clamp values to valid ranges
+        self.roughness = clamp(self.roughness, 0.0, 0.9999);
+        self.tail_shape = (0.0001f32).max(self.tail_shape);
+
+        // When roughness is too small, but not zero, there are floating point accuracy issues
+        if self.roughness < 0.000244140625 {
+            // (2^-12)
+            self.roughness = 0.0;
+        }
+
+        // If tail_shape is too near 1.0, push it away a tiny bit.
+        // This avoids having to have a special form of various equations
+        // due to a singularity at tail_shape = 1.0
+        // That in turn avoids some branches in the code, and the effect of
+        // tail_shape is sufficiently subtle that there is no visible
+        // difference in renders.
+        const TAIL_EPSILON: f32 = 0.0001;
+        if (self.tail_shape - 1.0).abs() < TAIL_EPSILON {
+            self.tail_shape = 1.0 + TAIL_EPSILON;
+        }
+
+        // Precalculate normalization factor
+        self.normalization_factor = GTRClosure::normalization(self.roughness, self.tail_shape);
+    }
+
+    // Returns the cosine of the half-angle that should be sampled, given
+    // a random variable in [0,1]
+    fn half_theta_sample(&self, u: f32) -> f32 {
+        let roughness2 = self.roughness * self.roughness;
+
+        // Calculate top half of equation
+        let top = 1.0 -
+                  ((roughness2.powf(1.0 - self.tail_shape) * (1.0 - u)) + u)
+            .powf(1.0 / (1.0 - self.tail_shape));
+
+        // Calculate bottom half of equation
+        let bottom = 1.0 - roughness2;
+
+        (top / bottom).sqrt()
+    }
+
+    fn dist(&self, nh: f32, rough: f32) -> f32 {
+        // Other useful numbers
+        let roughness2 = rough * rough;
+
+        // Calculate D - Distribution
+        let dist = if nh <= 0.0 {
+            0.0
+        } else {
+            let nh2 = nh * nh;
+            self.normalization_factor / (1.0 + ((roughness2 - 1.0) * nh2)).powf(self.tail_shape)
+        };
+
+        dist
+    }
+}
+
+impl SurfaceClosure for GTRClosure {
+    fn is_delta(&self) -> bool {
+        self.roughness == 0.0
+    }
+
+
+    fn sample(&self,
+              inc: Vector,
+              nor: Normal,
+              uv: (f32, f32),
+              wavelength: f32)
+              -> (Vector, SpectralSample, f32) {
+        // Get normalized surface normal
+        let nn = if dot(nor.into_vector(), inc) <= 0.0 {
+                nor.normalized()
+            } else {
+                -nor.normalized() // If back-facing, flip normal
+            }
+            .into_vector();
+
+        // Generate a random ray direction in the hemisphere
+        // of the surface.
+        let theta_cos = self.half_theta_sample(uv.0);
+        let theta_sin = (1.0 - (theta_cos * theta_cos)).sqrt();
+        let angle = uv.1 * PI_32 * 2.0;
+        let mut half_dir = Vector::new(angle.cos() * theta_sin, angle.sin() * theta_sin, theta_cos);
+        half_dir = zup_to_vec(half_dir, nn).normalized();
+
+        let out = inc - (half_dir * 2.0 * dot(inc, half_dir));
+        let filter = self.evaluate(inc, out, nor, wavelength);
+        let pdf = self.sample_pdf(inc, out, nor);
+
+        (out, filter, pdf)
+    }
+
+
+    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, wavelength: f32) -> SpectralSample {
+        // Calculate needed vectors, normalized
+        let aa = -inc.normalized(); // Vector pointing to where "in" came from
+        let bb = out.normalized(); // Out
+        let hh = (aa + bb).normalized(); // Half-way between aa and bb
+
+        // Surface normal
+        let nn = if dot(nor.into_vector(), hh) <= 0.0 {
+                nor.normalized()
+            } else {
+                -nor.normalized() // If back-facing, flip normal
+            }
+            .into_vector();
+
+        // Calculate needed dot products
+        let na = clamp(dot(nn, aa), -1.0, 1.0);
+        let nb = clamp(dot(nn, bb), -1.0, 1.0);
+        let ha = clamp(dot(hh, aa), -1.0, 1.0);
+        let hb = clamp(dot(hh, bb), -1.0, 1.0);
+        let nh = clamp(dot(nn, hh), -1.0, 1.0);
+
+        // Other useful numbers
+        let roughness2 = self.roughness * self.roughness;
+
+        // Calculate F - Fresnel
+        let col_f = {
+            let mut col_f = self.col.to_spectral_sample(wavelength);
+
+            let rev_fresnel = 1.0 - self.fresnel;
+            let c0 = lerp(schlick_fresnel_from_fac(col_f.e.get_0(), hb),
+                          col_f.e.get_0(),
+                          rev_fresnel);
+            let c1 = lerp(schlick_fresnel_from_fac(col_f.e.get_1(), hb),
+                          col_f.e.get_1(),
+                          rev_fresnel);
+            let c2 = lerp(schlick_fresnel_from_fac(col_f.e.get_2(), hb),
+                          col_f.e.get_2(),
+                          rev_fresnel);
+            let c3 = lerp(schlick_fresnel_from_fac(col_f.e.get_3(), hb),
+                          col_f.e.get_3(),
+                          rev_fresnel);
+
+            col_f.e.set_0(c0);
+            col_f.e.set_1(c1);
+            col_f.e.set_2(c2);
+            col_f.e.set_3(c3);
+
+            col_f
+        };
+
+        // Calculate everything else
+        if self.roughness == 0.0 {
+            // If sharp mirror, just return col * fresnel factor
+            return col_f;
+        } else {
+            // Calculate D - Distribution
+            let dist = if nh > 0.0 {
+                let nh2 = nh * nh;
+                self.normalization_factor / (1.0 + ((roughness2 - 1.0) * nh2)).powf(self.tail_shape)
+            } else {
+                0.0
+            };
+
+            // Calculate G1 - Geometric microfacet shadowing
+            let g1 = {
+                let na2 = na * na;
+                let tan_na = ((1.0 - na2) / na2).sqrt();
+                let g1_pos_char = if (ha * na) > 0.0 { 1.0 } else { 0.0 };
+                let g1_a = roughness2 * tan_na;
+                let g1_b = ((1.0 + (g1_a * g1_a)).sqrt() - 1.0) * 0.5;
+                g1_pos_char / (1.0 + g1_b)
+            };
+
+            // Calculate G2 - Geometric microfacet shadowing
+            let g2 = {
+                let nb2 = nb * nb;
+                let tan_nb = ((1.0 - nb2) / nb2).sqrt();
+                let g2_pos_char = if (hb * nb) > 0.0 { 1.0 } else { 0.0 };
+                let g2_a = roughness2 * tan_nb;
+                let g2_b = ((1.0 + (g2_a * g2_a)).sqrt() - 1.0) * 0.5;
+                g2_pos_char / (1.0 + g2_b)
+            };
+
+            // Final result
+            return col_f * (dist * g1 * g2) * INV_PI;
+        }
+    }
+
+
+    fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal) -> f32 {
+        // Calculate needed vectors, normalized
+        let aa = -inc.normalized(); // Vector pointing to where "in" came from
+        let bb = out.normalized(); // Out
+        let hh = (aa + bb).normalized(); // Half-way between aa and bb
+
+        // Surface normal
+        let nn = if dot(nor.into_vector(), hh) <= 0.0 {
+                nor.normalized()
+            } else {
+                -nor.normalized() // If back-facing, flip normal
+            }
+            .into_vector();
+
+        // Calculate needed dot products
+        let nh = clamp(dot(nn, hh), -1.0, 1.0);
+
+        return self.dist(nh, self.roughness) * INV_PI;
+    }
+
+
+    fn estimate_eval_over_solid_angle(&self,
+                                      inc: Vector,
+                                      out: Vector,
+                                      nor: Normal,
+                                      cos_theta: f32)
+                                      -> f32 {
+        // TODO: all of the stuff in this function is horribly hacky.
+        // Find a proper way to approximate the light contribution from a
+        // solid angle.
+        assert!(cos_theta >= -1.0);
+        assert!(cos_theta <= 1.0);
+
+        // Surface normal
+        let nn = if dot(nor.into_vector(), inc) <= 0.0 {
+                nor.normalized()
+            } else {
+                -nor.normalized() // If back-facing, flip normal
+            }
+            .into_vector();
+
+        let aa = -inc.normalized(); // Vector pointing to where "in" came from
+        let bb = out.normalized(); // Out
+
+        // Brute-force method
+        //let mut fac = 0.0;
+        //const N: usize = 256;
+        //for i in 0..N {
+        //    let uu = Halton::sample(0, i);
+        //    let vv = Halton::sample(1, i);
+        //    let mut samp = uniform_sample_cone(uu, vv, cos_theta);
+        //    samp = zup_to_vec(samp, bb).normalized();
+        //    if dot(nn, samp) > 0.0 {
+        //        let hh = (aa+samp).normalized();
+        //        fac += self.dist(dot(nn, hh), roughness);
+        //    }
+        //}
+        //fac /= N * N;
+
+        // Approximate method
+        let theta = cos_theta.acos();
+        let hh = (aa + bb).normalized();
+        let nh = clamp(dot(nn, hh), -1.0, 1.0);
+        let fac = self.dist(nh,
+                            (1.0f32).min(self.roughness.sqrt() + (2.0 * theta / PI_32)));
+
+        return fac * (1.0f32).min(1.0 - cos_theta) * INV_PI;
     }
 }
