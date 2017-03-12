@@ -7,7 +7,7 @@ use color::XYZ;
 use lerp::{lerp, lerp_slice, lerp_slice_with};
 use math::{Point, Matrix4x4, cross};
 use ray::{Ray, AccelRay};
-use shading::surface_closure::{SurfaceClosureUnion, LambertClosure};
+use shading::surface_closure::{SurfaceClosureUnion, GTRClosure};
 
 use super::{Surface, SurfaceIntersection};
 use super::triangle;
@@ -97,10 +97,17 @@ impl Surface for TriangleMesh {
                                 incoming: wr.dir,
                                 nor: cross(tri.0 - tri.1, tri.0 - tri.2).into_normal(),
                                 local_space: mat_space,
-                                // TODO
-                                closure: SurfaceClosureUnion::LambertClosure(
-                                    LambertClosure::new(XYZ::new(0.8, 0.8, 0.8))
-                                ),
+                                // TODO: get surface closure from surface shader.
+                                //closure: SurfaceClosureUnion::LambertClosure(
+                                //    LambertClosure::new(XYZ::new(0.8, 0.8, 0.8))
+                                //),
+                                closure:
+                                    SurfaceClosureUnion::GTRClosure(GTRClosure::new(XYZ::new(0.8,
+                                                                                             0.8,
+                                                                                             0.8),
+                                                                                    0.1,
+                                                                                    2.0,
+                                                                                    1.2)),
                             };
                             r.max_t = t;
                         }

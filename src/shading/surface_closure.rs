@@ -413,6 +413,9 @@ impl GTRClosure {
         (top / bottom).sqrt()
     }
 
+    /// Microfacet distribution function.
+    ///
+    /// nh: cosine of the angle between the surface normal and the microfacet normal.
     fn dist(&self, nh: f32, rough: f32) -> f32 {
         // Other useful numbers
         let roughness2 = rough * rough;
@@ -442,7 +445,7 @@ impl SurfaceClosure for GTRClosure {
               wavelength: f32)
               -> (Vector, SpectralSample, f32) {
         // Get normalized surface normal
-        let nn = if dot(nor.into_vector(), inc) <= 0.0 {
+        let nn = if dot(nor.into_vector(), inc) < 0.0 {
                 nor.normalized()
             } else {
                 -nor.normalized() // If back-facing, flip normal
@@ -472,10 +475,10 @@ impl SurfaceClosure for GTRClosure {
         let hh = (aa + bb).normalized(); // Half-way between aa and bb
 
         // Surface normal
-        let nn = if dot(nor.into_vector(), hh) <= 0.0 {
-                nor.normalized()
-            } else {
+        let nn = if dot(nor.into_vector(), hh) < 0.0 {
                 -nor.normalized() // If back-facing, flip normal
+            } else {
+                nor.normalized()
             }
             .into_vector();
 
@@ -561,10 +564,10 @@ impl SurfaceClosure for GTRClosure {
         let hh = (aa + bb).normalized(); // Half-way between aa and bb
 
         // Surface normal
-        let nn = if dot(nor.into_vector(), hh) <= 0.0 {
-                nor.normalized()
-            } else {
+        let nn = if dot(nor.into_vector(), hh) < 0.0 {
                 -nor.normalized() // If back-facing, flip normal
+            } else {
+                nor.normalized()
             }
             .into_vector();
 
@@ -588,7 +591,7 @@ impl SurfaceClosure for GTRClosure {
         assert!(cos_theta <= 1.0);
 
         // Surface normal
-        let nn = if dot(nor.into_vector(), inc) <= 0.0 {
+        let nn = if dot(nor.into_vector(), inc) < 0.0 {
                 nor.normalized()
             } else {
                 -nor.normalized() // If back-facing, flip normal
