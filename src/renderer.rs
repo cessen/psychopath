@@ -286,12 +286,8 @@ impl LightPath {
 
         // Result of shading ray, prepare light ray
         if self.round % 2 == 1 {
-            if let &surface::SurfaceIntersection::Hit { t: _,
-                                                        incoming: _,
-                                                        pos,
-                                                        nor,
-                                                        local_space: _,
-                                                        closure } = isect {
+            if let &surface::SurfaceIntersection::Hit { intersection_data: idata, closure } =
+                isect {
                 // Hit something!  Do the stuff
                 self.interaction = *isect; // Store interaction for use in next phase
 
@@ -310,7 +306,7 @@ impl LightPath {
                     // to the film plane if the light is not in shadow.
                     self.pending_color_addition = {
                         let material = closure.as_surface_closure();
-                        let la = material.evaluate(ray.dir, shadow_vec, nor, self.wavelength);
+                        let la = material.evaluate(ray.dir, shadow_vec, idata.nor, self.wavelength);
                         light_color * la * self.light_attenuation / (light_pdf * light_sel_pdf)
                     };
 
@@ -318,7 +314,7 @@ impl LightPath {
                     // in shadow or not.
                     // TODO: use proper ray offsets for avoiding self-shadowing
                     // rather than this hacky stupid stuff.
-                    *ray = Ray::new(pos + shadow_vec.normalized() * 0.001,
+                    *ray = Ray::new(idata.pos + shadow_vec.normalized() * 0.001,
                                     shadow_vec,
                                     self.time,
                                     true);
@@ -349,18 +345,14 @@ impl LightPath {
 
             // Calculate bounced lighting!
             if self.round < 6 {
-                if let surface::SurfaceIntersection::Hit { t: _,
-                                                           pos,
-                                                           incoming,
-                                                           nor,
-                                                           local_space: _,
-                                                           closure } = self.interaction {
+                if let surface::SurfaceIntersection::Hit { intersection_data: idata, closure } =
+                    self.interaction {
                     // Sample material
                     let (dir, filter, pdf) = {
                         let material = closure.as_surface_closure();
                         let u = self.next_lds_samp();
                         let v = self.next_lds_samp();
-                        material.sample(incoming, nor, (u, v), self.wavelength)
+                        material.sample(idata.incoming, idata.nor, (u, v), self.wavelength)
                     };
 
                     // Account for the additional light attenuation from
@@ -368,7 +360,7 @@ impl LightPath {
                     self.light_attenuation *= filter / pdf;
 
                     // Calculate the ray for this bounce
-                    *ray = Ray::new(pos + dir.normalized() * 0.0001, dir, self.time, false);
+                    *ray = Ray::new(idata.pos + dir.normalized() * 0.0001, dir, self.time, false);
 
                     return true;
                 } else {

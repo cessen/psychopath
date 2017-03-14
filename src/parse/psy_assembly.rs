@@ -81,11 +81,22 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                     }
                 }
 
-                // Sphere Light
+                // Rectangle Light
                 "RectangleLight" => {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
                         builder.add_object(ident,
                                            Object::Light(Box::new(parse_rectangle_light(&child)?)));
+                    } else {
+                        // TODO: error condition of some kind, because no ident
+                        panic!();
+                    }
+                }
+
+                // Surface shader
+                "SurfaceShader" => {
+                    if let &DataTree::Internal { ident: Some(ident), .. } = child {
+                        // TODO
+                        unimplemented!()
                     } else {
                         // TODO: error condition of some kind, because no ident
                         panic!();
@@ -119,12 +130,6 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                 // // Surface shader
                 // else if (child.type == "SurfaceShader") {
                 //     assembly->add_surface_shader(child.name, parse_surface_shader(child));
-                // }
-                //
-                //
-                // // Rectangle Light
-                // else if (child.type == "RectangleLight") {
-                //     assembly->add_object(child.name, parse_rectangle_light(child));
                 // }
                 //
             }

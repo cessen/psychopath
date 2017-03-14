@@ -42,7 +42,7 @@ impl Assembly {
                          time: f32,
                          intr: &SurfaceIntersection)
                          -> Option<(SpectralSample, Vector, f32, f32)> {
-        if let &SurfaceIntersection::Hit { pos, incoming, nor, closure, .. } = intr {
+        if let &SurfaceIntersection::Hit { intersection_data: idata, closure } = intr {
             let sel_xform = if xform_stack.top().len() > 0 {
                 lerp_slice(xform_stack.top(), time)
             } else {
@@ -50,9 +50,9 @@ impl Assembly {
             };
             if let Some((light_i, sel_pdf, whittled_n)) =
                 self.light_accel
-                    .select(incoming * sel_xform,
-                            pos * sel_xform,
-                            nor * sel_xform,
+                    .select(idata.incoming * sel_xform,
+                            idata.pos * sel_xform,
+                            idata.nor * sel_xform,
                             closure.as_surface_closure(),
                             time,
                             n) {
@@ -82,7 +82,7 @@ impl Assembly {
 
                                 // Sample the light
                                 let (color, shadow_vec, pdf) =
-                                    light.sample(&xform, pos, uvw.0, uvw.1, wavelength, time);
+                                    light.sample(&xform, idata.pos, uvw.0, uvw.1, wavelength, time);
                                 return Some((color, shadow_vec, pdf, sel_pdf));
                             }
 

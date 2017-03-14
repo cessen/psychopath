@@ -9,7 +9,7 @@ use math::{Point, Matrix4x4, cross};
 use ray::{Ray, AccelRay};
 use shading::surface_closure::{SurfaceClosureUnion, GTRClosure};
 
-use super::{Surface, SurfaceIntersection};
+use super::{Surface, SurfaceIntersection, SurfaceIntersectionData};
 use super::triangle;
 
 
@@ -92,11 +92,15 @@ impl Surface for TriangleMesh {
                             r.mark_done();
                         } else {
                             isects[r.id as usize] = SurfaceIntersection::Hit {
-                                t: t,
-                                pos: wr.orig + (wr.dir * t),
-                                incoming: wr.dir,
-                                nor: cross(tri.0 - tri.1, tri.0 - tri.2).into_normal(),
-                                local_space: mat_space,
+                                intersection_data: SurfaceIntersectionData {
+                                    incoming: wr.dir,
+                                    t: t,
+                                    pos: wr.orig + (wr.dir * t),
+                                    nor: cross(tri.0 - tri.1, tri.0 - tri.2).into_normal(), // TODO
+                                    nor_g: cross(tri.0 - tri.1, tri.0 - tri.2).into_normal(),
+                                    uv: (0.0, 0.0), // TODO
+                                    local_space: mat_space,
+                                },
                                 // TODO: get surface closure from surface shader.
                                 //closure: SurfaceClosureUnion::LambertClosure(
                                 //    LambertClosure::new(XYZ::new(0.8, 0.8, 0.8))
