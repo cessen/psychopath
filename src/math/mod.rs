@@ -130,16 +130,14 @@ pub fn log2_64(value: u64) -> u64 {
 /// The input vector, v, becomes the first vector of the
 /// returned tuple, with the other two vectors in the returned
 /// tuple defining the orthoganal axes.
+///
+/// Algorithm taken from "Building an Orthonormal Basis, Revisited" by Duff et al.
 pub fn coordinate_system_from_vector(v: Vector) -> (Vector, Vector, Vector) {
-    let v2 = if v.x().abs() > v.y().abs() {
-        let invlen = 1.0 / ((v.x() * v.x()) + (v.z() * v.z())).sqrt();
-        Vector::new(-v.z() * invlen, 0.0, v.x() * invlen)
-    } else {
-        let invlen = 1.0 / ((v.y() * v.y()) + (v.z() * v.z())).sqrt();
-        Vector::new(0.0, v.z() * invlen, -v.y() * invlen)
-    };
-
-    let v3 = cross(v, v2);
+    let sign = v.z().signum();
+    let a = -1.0 / (sign + v.z());
+    let b = v.x() * v.y() * a;
+    let v2 = Vector::new(1.0 + sign * v.x() * v.x() * a, sign * b, -sign * v.x());
+    let v3 = Vector::new(b, sign + v.y() * v.y() * a, -v.y());
 
     (v, v2, v3)
 }
