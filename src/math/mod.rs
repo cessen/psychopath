@@ -152,7 +152,7 @@ pub fn coordinate_system_from_vector(v: Vector) -> (Vector, Vector, Vector) {
 /// from: The vector we're transforming.
 /// toz: The vector whose space we are transforming "from" into.
 ///
-/// Returns he transformed vector.
+/// Returns the transformed vector.
 pub fn zup_to_vec(from: Vector, toz: Vector) -> Vector {
     let (toz, tox, toy) = coordinate_system_from_vector(toz.normalized());
 
