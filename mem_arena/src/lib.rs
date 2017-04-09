@@ -19,6 +19,7 @@ fn alignment_offset(addr: usize, alignment: usize) -> usize {
 /// size (the large allocation threshold) are given their own block.
 ///
 /// The block size and large allocation threshold size are configurable.
+#[derive(Debug)]
 pub struct MemArena {
     blocks: Vec<Vec<u8>>,
     block_size: usize,
