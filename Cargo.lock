@@ -5,6 +5,7 @@ dependencies = [
  "crossbeam 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt 0.6.86 (registry+https://github.com/rust-lang/crates.io-index)",
  "lodepng 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mem_arena 0.1.0",
  "nom 1.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "openexr 0.1.0 (git+https://github.com/cessen/openexr-rs?rev=612fc6c81c031970ffddcab15509236711613de8)",
@@ -84,6 +85,10 @@ dependencies = [
  "libc 0.2.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "mem_arena"
+version = "0.1.0"
 
 [[package]]
 name = "memchr"
