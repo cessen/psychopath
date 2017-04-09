@@ -19,26 +19,26 @@ fn alignment_offset(addr: usize, alignment: usize) -> usize {
 /// size (the large allocation threshold) are given their own block.
 ///
 /// The block size and large allocation threshold size are configurable.
-pub struct Arena {
+pub struct MemArena {
     blocks: Vec<Vec<u8>>,
     block_size: usize,
     large_alloc_threshold: usize,
 }
 
-impl Arena {
+impl MemArena {
     /// Create a new arena, with default block size and large allocation threshold
-    pub fn new() -> Arena {
-        Arena {
+    pub fn new() -> MemArena {
+        MemArena {
             blocks: vec![Vec::with_capacity(DEFAULT_BLOCK_SIZE)],
             block_size: DEFAULT_BLOCK_SIZE,
             large_alloc_threshold: DEFAULT_LARGE_ALLOCATION_THRESHOLD,
         }
     }
 
-    pub fn new_with_settings(block_size: usize, large_alloc_threshold: usize) -> Arena {
+    pub fn new_with_settings(block_size: usize, large_alloc_threshold: usize) -> MemArena {
         assert!(large_alloc_threshold <= block_size);
 
-        Arena {
+        MemArena {
             blocks: vec![Vec::with_capacity(block_size)],
             block_size: block_size,
             large_alloc_threshold: large_alloc_threshold,
