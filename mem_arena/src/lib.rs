@@ -17,7 +17,8 @@ fn alignment_offset(addr: usize, alignment: usize) -> usize {
 /// block.
 ///
 /// Additionally, to minimize unused space in blocks, allocations above a specified
-/// size (the large allocation threshold) are given their own block.
+/// size (the large allocation threshold) are given their own block if they won't
+/// fit in the remainder of the current block.
 ///
 /// The block size and large allocation threshold are configurable.
 #[derive(Debug)]
@@ -142,7 +143,6 @@ impl MemArena {
 
             // If it will fit in the current block, use the current block.
             if (start_index + size) <= blocks.first().unwrap().capacity() {
-                println!("In-Block, alloc size: {}", size);
                 blocks.first_mut().unwrap().set_len(start_index + size);
 
                 let block_ptr = blocks.first_mut().unwrap().as_mut_ptr();
@@ -152,7 +152,6 @@ impl MemArena {
             else {
                 // If it's a "large allocation", give it its own memory block.
                 if size > self.large_alloc_threshold {
-                    println!("Large Allocation, alloc size: {}", size);
                     blocks.push(Vec::with_capacity(size + alignment - 1));
                     blocks.last_mut().unwrap().set_len(size + alignment - 1);
 
@@ -164,7 +163,6 @@ impl MemArena {
                 }
                 // Otherwise create a new shared block.
                 else {
-                    println!("New Block, alloc size: {}", size);
                     blocks.push(Vec::with_capacity(self.block_size));
                     let block_count = blocks.len();
                     blocks.swap(0, block_count - 1);
