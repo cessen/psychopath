@@ -308,9 +308,9 @@ class PsychoExporter:
         has_modifiers = len(ob.modifiers) > 0
         deform_mb = needs_def_mb(ob)
         if has_modifiers or deform_mb:
-            mesh_name = group_prefix + "__" + ob.name + "__" + ob.data.name + "_"
+            mesh_name = group_prefix + escape_name("__" + ob.name + "__" + ob.data.name + "_")
         else:
-            mesh_name = group_prefix + "__" + ob.data.name + "_"
+            mesh_name = group_prefix + escape_name("__" + ob.data.name + "_")
         export_mesh = (mesh_name not in self.mesh_names) or has_modifiers or deform_mb
 
         # Collect time samples
@@ -325,12 +325,12 @@ class PsychoExporter:
             if ob.data.psychopath.is_subdivision_surface == False:
                 # Exporting normal mesh
                 self.mesh_names[mesh_name] = True
-                self.w.write("MeshSurface $%s {\n" % escape_name(mesh_name))
+                self.w.write("MeshSurface $%s {\n" % mesh_name)
                 self.w.indent()
             elif ob.data.psychopath.is_subdivision_surface == True:
                 # Exporting subdivision surface cage
                 self.mesh_names[mesh_name] = True
-                self.w.write("SubdivisionSurface $%s {\n" % escape_name(mesh_name))
+                self.w.write("SubdivisionSurface $%s {\n" % mesh_name)
                 self.w.indent()
 
             # Write vertices
