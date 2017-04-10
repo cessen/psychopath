@@ -4,6 +4,8 @@ use std::result::Result;
 
 use nom::IResult;
 
+use mem_arena::MemArena;
+
 use math::Vector;
 use color::{XYZ, rec709e_to_xyz};
 use light::{DistantDiskLight, SphereLight, RectangleLight};
@@ -13,7 +15,9 @@ use super::DataTree;
 use super::psy::PsyParseError;
 
 
-pub fn parse_distant_disk_light(tree: &DataTree) -> Result<DistantDiskLight, PsyParseError> {
+pub fn parse_distant_disk_light<'a>(arena: &'a MemArena,
+                                    tree: &'a DataTree)
+                                    -> Result<DistantDiskLight<'a>, PsyParseError> {
     if let &DataTree::Internal { ref children, .. } = tree {
         let mut radii = Vec::new();
         let mut directions = Vec::new();
@@ -61,7 +65,7 @@ pub fn parse_distant_disk_light(tree: &DataTree) -> Result<DistantDiskLight, Psy
             }
         }
 
-        return Ok(DistantDiskLight::new(radii, directions, colors));
+        return Ok(DistantDiskLight::new(arena, radii, directions, colors));
     } else {
         return Err(PsyParseError::UnknownError);
     }

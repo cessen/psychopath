@@ -18,7 +18,7 @@ pub struct Camera<'a> {
 }
 
 impl<'a> Camera<'a> {
-    pub fn new(arena: &'a mut MemArena,
+    pub fn new(arena: &'a MemArena,
                transforms: Vec<Matrix4x4>,
                fovs: Vec<f32>,
                mut aperture_radii: Vec<f32>,

@@ -1,5 +1,7 @@
 use std::f64::consts::PI as PI_64;
 
+use mem_arena::MemArena;
+
 use color::{XYZ, SpectralSample, Color};
 use lerp::lerp_slice;
 use math::{Vector, coordinate_system_from_vector};
@@ -9,24 +11,28 @@ use super::WorldLightSource;
 
 // TODO: handle case where radius = 0.0.
 
-#[derive(Debug)]
-pub struct DistantDiskLight {
-    radii: Vec<f32>,
-    directions: Vec<Vector>,
-    colors: Vec<XYZ>,
+#[derive(Copy, Clone, Debug)]
+pub struct DistantDiskLight<'a> {
+    radii: &'a [f32],
+    directions: &'a [Vector],
+    colors: &'a [XYZ],
 }
 
-impl DistantDiskLight {
-    pub fn new(radii: Vec<f32>, directions: Vec<Vector>, colors: Vec<XYZ>) -> DistantDiskLight {
+impl<'a> DistantDiskLight<'a> {
+    pub fn new(arena: &'a MemArena,
+               radii: Vec<f32>,
+               directions: Vec<Vector>,
+               colors: Vec<XYZ>)
+               -> DistantDiskLight<'a> {
         DistantDiskLight {
-            radii: radii,
-            directions: directions,
-            colors: colors,
+            radii: arena.copy_slice(&radii),
+            directions: arena.copy_slice(&directions),
+            colors: arena.copy_slice(&colors),
         }
     }
 }
 
-impl WorldLightSource for DistantDiskLight {
+impl<'a> WorldLightSource for DistantDiskLight<'a> {
     fn sample(&self, u: f32, v: f32, wavelength: f32, time: f32) -> (SpectralSample, Vector, f32) {
         // Calculate time interpolated values
         let radius: f64 = lerp_slice(&self.radii, time) as f64;

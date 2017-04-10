@@ -29,7 +29,7 @@ pub enum PsyParseError {
 
 
 /// Takes in a DataTree representing a Scene node and returns
-pub fn parse_scene<'a>(arena: &'a mut MemArena,
+pub fn parse_scene<'a>(arena: &'a MemArena,
                        tree: &'a DataTree)
                        -> Result<Renderer<'a>, PsyParseError> {
     // Verify we have the right number of each section
@@ -69,7 +69,7 @@ pub fn parse_scene<'a>(arena: &'a mut MemArena,
                               tree.iter_children_with_type("Camera").nth(0).unwrap())?;
 
     // Parse world
-    let world = parse_world(tree.iter_children_with_type("World").nth(0).unwrap())?;
+    let world = parse_world(arena, tree.iter_children_with_type("World").nth(0).unwrap())?;
 
     // Parse root scene assembly
     let assembly = parse_assembly(tree.iter_children_with_type("Assembly").nth(0).unwrap())?;
@@ -210,9 +210,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
 
 
 
-fn parse_camera<'a>(arena: &'a mut MemArena,
-                    tree: &'a DataTree)
-                    -> Result<Camera<'a>, PsyParseError> {
+fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a>, PsyParseError> {
     if let &DataTree::Internal { ref children, .. } = tree {
         let mut mats = Vec::new();
         let mut fovs = Vec::new();
@@ -275,10 +273,10 @@ fn parse_camera<'a>(arena: &'a mut MemArena,
 
 
 
-fn parse_world(tree: &DataTree) -> Result<World, PsyParseError> {
+fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>, PsyParseError> {
     if tree.is_internal() {
         let background_color;
-        let mut lights: Vec<Box<WorldLightSource>> = Vec::new();
+        let mut lights: Vec<&WorldLightSource> = Vec::new();
 
         // Parse background shader
         let bgs = {
@@ -326,7 +324,7 @@ fn parse_world(tree: &DataTree) -> Result<World, PsyParseError> {
         for child in tree.iter_children() {
             match child {
                 &DataTree::Internal { type_name, .. } if type_name == "DistantDiskLight" => {
-                    lights.push(Box::new(parse_distant_disk_light(&child)?));
+                    lights.push(arena.alloc(parse_distant_disk_light(arena, &child)?));
                 }
 
                 _ => {}
@@ -336,7 +334,7 @@ fn parse_world(tree: &DataTree) -> Result<World, PsyParseError> {
         // Build and return the world
         return Ok(World {
             background_color: background_color,
-            lights: lights,
+            lights: arena.copy_slice(&lights),
         });
     } else {
         return Err(PsyParseError::UnknownError);

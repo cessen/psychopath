@@ -2,7 +2,7 @@ use color::XYZ;
 use light::WorldLightSource;
 
 #[derive(Debug)]
-pub struct World {
+pub struct World<'a> {
     pub background_color: XYZ,
-    pub lights: Vec<Box<WorldLightSource>>,
+    pub lights: &'a [&'a WorldLightSource],
 }
