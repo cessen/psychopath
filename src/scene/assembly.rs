@@ -14,7 +14,7 @@ use surface::{Surface, SurfaceIntersection};
 use transform_stack::TransformStack;
 
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct Assembly<'a> {
     // Instance list
     pub instances: &'a [Instance],
@@ -22,16 +22,16 @@ pub struct Assembly<'a> {
     pub xforms: &'a [Matrix4x4],
 
     // Object list
-    pub objects: Vec<Object<'a>>,
+    pub objects: &'a [Object<'a>],
 
     // Assembly list
-    pub assemblies: Vec<Assembly<'a>>,
+    pub assemblies: &'a [Assembly<'a>],
 
     // Object accel
     pub object_accel: BVH<'a>,
 
     // Light accel
-    pub light_accel: LightTree,
+    pub light_accel: LightTree<'a>,
 }
 
 impl<'a> Assembly<'a> {
@@ -257,7 +257,7 @@ impl<'a> AssemblyBuilder<'a> {
             .collect();
 
         // Build light accel
-        let light_accel = LightTree::from_objects(&mut light_instances[..], |inst| {
+        let light_accel = LightTree::from_objects(self.arena, &mut light_instances[..], |inst| {
             let bounds = &bbs[bis[inst.id]..bis[inst.id + 1]];
             let energy = match inst.instance_type {
                 InstanceType::Object => {
@@ -279,8 +279,8 @@ impl<'a> AssemblyBuilder<'a> {
             instances: self.arena.copy_slice(&self.instances),
             light_instances: self.arena.copy_slice(&light_instances),
             xforms: self.arena.copy_slice(&self.xforms),
-            objects: self.objects,
-            assemblies: self.assemblies,
+            objects: self.arena.copy_slice(&self.objects),
+            assemblies: self.arena.copy_slice(&self.assemblies),
             object_accel: object_accel,
             light_accel: light_accel,
         }
@@ -335,7 +335,7 @@ impl<'a> AssemblyBuilder<'a> {
 
 
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum Object<'a> {
     Surface(&'a Surface),
     Light(&'a LightSource),

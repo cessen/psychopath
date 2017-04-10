@@ -43,7 +43,7 @@ impl<'a> BVH<'a> {
                                   -> BVH<'a>
         where F: 'b + Fn(&T) -> &'b [BBox]
     {
-        let mut builder = BVHBuilder::new_empty();
+        let mut builder = BVHBuilder::new();
 
         builder.recursive_build(0, 0, objects_per_leaf, objects, &bounder);
 
@@ -129,7 +129,7 @@ struct BVHBuilder {
 }
 
 impl BVHBuilder {
-    fn new_empty() -> BVHBuilder {
+    fn new() -> BVHBuilder {
         BVHBuilder {
             nodes: Vec::new(),
             bounds: Vec::new(),

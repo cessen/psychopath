@@ -1,3 +1,5 @@
+use mem_arena::MemArena;
+
 use algorithm::merge_slices_append;
 use bbox::BBox;
 use lerp::lerp_slice;
@@ -8,15 +10,14 @@ use super::LightAccel;
 use super::objects_split::sah_split;
 
 
-#[derive(Debug)]
-pub struct LightTree {
-    nodes: Vec<Node>,
-    bounds: Vec<BBox>,
+#[derive(Copy, Clone, Debug)]
+pub struct LightTree<'a> {
+    nodes: &'a [Node],
+    bounds: &'a [BBox],
     depth: usize,
-    bounds_cache: Vec<BBox>,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 struct Node {
     is_leaf: bool,
     bounds_range: (usize, usize),
@@ -24,100 +25,26 @@ struct Node {
     child_index: usize,
 }
 
-impl LightTree {
-    pub fn from_objects<'a, T, F>(objects: &mut [T], info_getter: F) -> LightTree
-        where F: 'a + Fn(&T) -> (&'a [BBox], f32)
+impl<'a> LightTree<'a> {
+    pub fn from_objects<'b, T, F>(arena: &'a MemArena,
+                                  objects: &mut [T],
+                                  info_getter: F)
+                                  -> LightTree<'a>
+        where F: 'b + Fn(&T) -> (&'b [BBox], f32)
     {
-        let mut tree = LightTree {
-            nodes: Vec::new(),
-            bounds: Vec::new(),
+        let mut builder = LightTreeBuilder::new();
+        builder.recursive_build(0, 0, objects, &info_getter);
+
+        LightTree {
+            nodes: arena.copy_slice(&builder.nodes),
+            bounds: arena.copy_slice(&builder.bounds),
             depth: 0,
-            bounds_cache: Vec::new(),
-        };
-
-        tree.recursive_build(0, 0, objects, &info_getter);
-        tree.bounds_cache.clear();
-        tree.bounds_cache.shrink_to_fit();
-
-        tree
-    }
-
-
-    fn recursive_build<'a, T, F>(&mut self,
-                                 offset: usize,
-                                 depth: usize,
-                                 objects: &mut [T],
-                                 info_getter: &F)
-                                 -> (usize, (usize, usize))
-        where F: 'a + Fn(&T) -> (&'a [BBox], f32)
-    {
-        let me_index = self.nodes.len();
-
-        if objects.len() == 0 {
-            return (0, (0, 0));
-        } else if objects.len() == 1 {
-            // Leaf node
-            let bi = self.bounds.len();
-            let (obj_bounds, energy) = info_getter(&objects[0]);
-            self.bounds.extend(obj_bounds);
-            self.nodes.push(Node {
-                is_leaf: true,
-                bounds_range: (bi, self.bounds.len()),
-                energy: energy,
-                child_index: offset,
-            });
-
-            if self.depth < depth {
-                self.depth = depth;
-            }
-
-            return (me_index, (bi, self.bounds.len()));
-        } else {
-            // Not a leaf node
-            self.nodes.push(Node {
-                is_leaf: false,
-                bounds_range: (0, 0),
-                energy: 0.0,
-                child_index: 0,
-            });
-
-            // Partition objects.
-            let (split_index, _) = sah_split(objects, &|obj_ref| info_getter(obj_ref).0);
-
-            // Create child nodes
-            let (_, c1_bounds) =
-                self.recursive_build(offset, depth + 1, &mut objects[..split_index], info_getter);
-            let (c2_index, c2_bounds) = self.recursive_build(offset + split_index,
-                                                             depth + 1,
-                                                             &mut objects[split_index..],
-                                                             info_getter);
-
-            // Determine bounds
-            // TODO: do merging without the temporary vec.
-            let bi = self.bounds.len();
-            let mut merged = Vec::new();
-            merge_slices_append(&self.bounds[c1_bounds.0..c1_bounds.1],
-                                &self.bounds[c2_bounds.0..c2_bounds.1],
-                                &mut merged,
-                                |b1, b2| *b1 | *b2);
-            self.bounds.extend(merged.drain(0..));
-
-            // Set node
-            let energy = self.nodes[me_index + 1].energy + self.nodes[c2_index].energy;
-            self.nodes[me_index] = Node {
-                is_leaf: false,
-                bounds_range: (bi, self.bounds.len()),
-                energy: energy,
-                child_index: c2_index,
-            };
-
-            return (me_index, (bi, self.bounds.len()));
         }
     }
 }
 
 
-impl LightAccel for LightTree {
+impl<'a> LightAccel for LightTree<'a> {
     fn select(&self,
               inc: Vector,
               pos: Point,
@@ -204,6 +131,97 @@ impl LightAccel for LightTree {
             self.nodes[0].energy
         } else {
             0.0
+        }
+    }
+}
+
+
+struct LightTreeBuilder {
+    nodes: Vec<Node>,
+    bounds: Vec<BBox>,
+    depth: usize,
+    bounds_cache: Vec<BBox>,
+}
+
+impl LightTreeBuilder {
+    fn new() -> LightTreeBuilder {
+        LightTreeBuilder {
+            nodes: Vec::new(),
+            bounds: Vec::new(),
+            depth: 0,
+            bounds_cache: Vec::new(),
+        }
+    }
+
+    fn recursive_build<'a, T, F>(&mut self,
+                                 offset: usize,
+                                 depth: usize,
+                                 objects: &mut [T],
+                                 info_getter: &F)
+                                 -> (usize, (usize, usize))
+        where F: 'a + Fn(&T) -> (&'a [BBox], f32)
+    {
+        let me_index = self.nodes.len();
+
+        if objects.len() == 0 {
+            return (0, (0, 0));
+        } else if objects.len() == 1 {
+            // Leaf node
+            let bi = self.bounds.len();
+            let (obj_bounds, energy) = info_getter(&objects[0]);
+            self.bounds.extend(obj_bounds);
+            self.nodes.push(Node {
+                is_leaf: true,
+                bounds_range: (bi, self.bounds.len()),
+                energy: energy,
+                child_index: offset,
+            });
+
+            if self.depth < depth {
+                self.depth = depth;
+            }
+
+            return (me_index, (bi, self.bounds.len()));
+        } else {
+            // Not a leaf node
+            self.nodes.push(Node {
+                is_leaf: false,
+                bounds_range: (0, 0),
+                energy: 0.0,
+                child_index: 0,
+            });
+
+            // Partition objects.
+            let (split_index, _) = sah_split(objects, &|obj_ref| info_getter(obj_ref).0);
+
+            // Create child nodes
+            let (_, c1_bounds) =
+                self.recursive_build(offset, depth + 1, &mut objects[..split_index], info_getter);
+            let (c2_index, c2_bounds) = self.recursive_build(offset + split_index,
+                                                             depth + 1,
+                                                             &mut objects[split_index..],
+                                                             info_getter);
+
+            // Determine bounds
+            // TODO: do merging without the temporary vec.
+            let bi = self.bounds.len();
+            let mut merged = Vec::new();
+            merge_slices_append(&self.bounds[c1_bounds.0..c1_bounds.1],
+                                &self.bounds[c2_bounds.0..c2_bounds.1],
+                                &mut merged,
+                                |b1, b2| *b1 | *b2);
+            self.bounds.extend(merged.drain(0..));
+
+            // Set node
+            let energy = self.nodes[me_index + 1].energy + self.nodes[c2_index].energy;
+            self.nodes[me_index] = Node {
+                is_leaf: false,
+                bounds_range: (bi, self.bounds.len()),
+                energy: energy,
+                child_index: c2_index,
+            };
+
+            return (me_index, (bi, self.bounds.len()));
         }
     }
 }
