@@ -71,6 +71,8 @@ impl MemArena {
     ///
     /// CAUTION: the memory returned is uninitialized.  Make sure to initalize before using!
     pub unsafe fn alloc_uninitialized<'a, T: Copy>(&'a self) -> &'a mut T {
+        assert!(size_of::<T>() > 0);
+
         let memory = self.alloc_raw(size_of::<T>(), align_of::<T>()) as *mut T;
 
         memory.as_mut().unwrap()
@@ -103,6 +105,8 @@ impl MemArena {
     /// Allocates memory for `len` values of type `T`, returning a mutable slice to it.
     /// All elements are initialized to the given `value`.
     pub unsafe fn alloc_array_uninitialized<'a, T: Copy>(&'a self, len: usize) -> &'a mut [T] {
+        assert!(size_of::<T>() > 0);
+
         let array_mem_size = {
             let alignment_padding = alignment_offset(size_of::<T>(), align_of::<T>());
             let aligned_type_size = size_of::<T>() + alignment_padding;
@@ -119,13 +123,17 @@ impl MemArena {
     /// CAUTION: this returns uninitialized memory.  Make sure to initialize the
     /// memory after calling.
     unsafe fn alloc_raw(&self, size: usize, alignment: usize) -> *mut u8 {
-        assert!(size > 0);
         assert!(alignment > 0);
 
         let mut blocks = self.blocks.borrow_mut();
 
+
+        // If it's a zero-size allocation, just point to the beginning of the curent block.
+        if size == 0 {
+            return blocks.first_mut().unwrap().as_mut_ptr();
+        }
         // If the desired size is considered a "large allocation", give it its own memory block.
-        if size > self.large_alloc_threshold {
+        else if size > self.large_alloc_threshold {
             blocks.push(Vec::with_capacity(size + alignment - 1));
             blocks.last_mut().unwrap().set_len(size + alignment - 1);
 

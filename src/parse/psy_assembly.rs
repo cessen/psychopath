@@ -2,6 +2,8 @@
 
 use std::result::Result;
 
+use mem_arena::MemArena;
+
 use scene::{Assembly, AssemblyBuilder, Object};
 
 use super::DataTree;
@@ -10,8 +12,10 @@ use super::psy_mesh_surface::parse_mesh_surface;
 use super::psy::{parse_matrix, PsyParseError};
 
 
-pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
-    let mut builder = AssemblyBuilder::new();
+pub fn parse_assembly<'a>(arena: &'a MemArena,
+                          tree: &'a DataTree)
+                          -> Result<Assembly<'a>, PsyParseError> {
+    let mut builder = AssemblyBuilder::new(arena);
 
     if tree.is_internal() {
         for child in tree.iter_children() {
@@ -19,7 +23,7 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                 // Sub-Assembly
                 "Assembly" => {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
-                        builder.add_assembly(ident, parse_assembly(&child)?);
+                        builder.add_assembly(ident, parse_assembly(arena, &child)?);
                     } else {
                         // TODO: error condition of some kind, because no ident
                         panic!();

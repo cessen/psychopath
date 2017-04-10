@@ -36,7 +36,7 @@ impl<'a> Tracer<'a> {
 }
 
 struct TracerInner<'a> {
-    root: &'a Assembly,
+    root: &'a Assembly<'a>,
     xform_stack: TransformStack,
     isects: Vec<SurfaceIntersection>,
 }

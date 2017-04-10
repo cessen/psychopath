@@ -15,7 +15,7 @@ pub struct Scene<'a> {
     pub name: Option<String>,
     pub camera: Camera<'a>,
     pub world: World<'a>,
-    pub root: Assembly,
+    pub root: Assembly<'a>,
 }
 
 impl<'a> Scene<'a> {

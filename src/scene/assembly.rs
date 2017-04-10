@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use mem_arena::MemArena;
+
 use accel::{LightAccel, LightTree};
 use accel::BVH;
 use bbox::{BBox, transform_bbox_slice_from};
@@ -13,17 +15,17 @@ use transform_stack::TransformStack;
 
 
 #[derive(Debug)]
-pub struct Assembly {
+pub struct Assembly<'a> {
     // Instance list
-    pub instances: Vec<Instance>,
-    pub light_instances: Vec<Instance>,
-    pub xforms: Vec<Matrix4x4>,
+    pub instances: &'a [Instance],
+    pub light_instances: &'a [Instance],
+    pub xforms: &'a [Matrix4x4],
 
     // Object list
     pub objects: Vec<Object>,
 
     // Assembly list
-    pub assemblies: Vec<Assembly>,
+    pub assemblies: Vec<Assembly<'a>>,
 
     // Object accel
     pub object_accel: BVH,
@@ -32,7 +34,7 @@ pub struct Assembly {
     pub light_accel: LightTree,
 }
 
-impl Assembly {
+impl<'a> Assembly<'a> {
     // Returns (light_color, shadow_vector, pdf, selection_pdf)
     pub fn sample_lights(&self,
                          xform_stack: &mut TransformStack,
@@ -119,15 +121,17 @@ impl Assembly {
     }
 }
 
-impl Boundable for Assembly {
-    fn bounds<'a>(&'a self) -> &'a [BBox] {
+impl<'a> Boundable for Assembly<'a> {
+    fn bounds<'b>(&'b self) -> &'b [BBox] {
         self.object_accel.bounds()
     }
 }
 
 
 #[derive(Debug)]
-pub struct AssemblyBuilder {
+pub struct AssemblyBuilder<'a> {
+    arena: &'a MemArena,
+
     // Instance list
     instances: Vec<Instance>,
     xforms: Vec<Matrix4x4>,
@@ -137,14 +141,15 @@ pub struct AssemblyBuilder {
     object_map: HashMap<String, usize>, // map Name -> Index
 
     // Assembly list
-    assemblies: Vec<Assembly>,
+    assemblies: Vec<Assembly<'a>>,
     assembly_map: HashMap<String, usize>, // map Name -> Index
 }
 
 
-impl AssemblyBuilder {
-    pub fn new() -> AssemblyBuilder {
+impl<'a> AssemblyBuilder<'a> {
+    pub fn new(arena: &'a MemArena) -> AssemblyBuilder<'a> {
         AssemblyBuilder {
+            arena: arena,
             instances: Vec::new(),
             xforms: Vec::new(),
             objects: Vec::new(),
@@ -165,7 +170,7 @@ impl AssemblyBuilder {
         self.objects.push(obj);
     }
 
-    pub fn add_assembly(&mut self, name: &str, asmb: Assembly) {
+    pub fn add_assembly(&mut self, name: &str, asmb: Assembly<'a>) {
         // Make sure the name hasn't already been used.
         if self.name_exists(name) {
             panic!("Attempted to add assembly to another assembly with a name that already \
@@ -221,13 +226,7 @@ impl AssemblyBuilder {
         self.object_map.contains_key(name) || self.assembly_map.contains_key(name)
     }
 
-    pub fn build(mut self) -> Assembly {
-        // Shrink storage to minimum.
-        self.instances.shrink_to_fit();
-        self.xforms.shrink_to_fit();
-        self.objects.shrink_to_fit();
-        self.assemblies.shrink_to_fit();
-
+    pub fn build(mut self) -> Assembly<'a> {
         // Calculate instance bounds, used for building object accel and light accel.
         let (bis, bbs) = self.instance_bounds();
 
@@ -276,9 +275,9 @@ impl AssemblyBuilder {
         });
 
         Assembly {
-            instances: self.instances,
-            light_instances: light_instances,
-            xforms: self.xforms,
+            instances: self.arena.copy_slice(&self.instances),
+            light_instances: self.arena.copy_slice(&light_instances),
+            xforms: self.arena.copy_slice(&self.xforms),
             objects: self.objects,
             assemblies: self.assemblies,
             object_accel: object_accel,

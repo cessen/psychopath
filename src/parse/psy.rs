@@ -72,7 +72,8 @@ pub fn parse_scene<'a>(arena: &'a MemArena,
     let world = parse_world(arena, tree.iter_children_with_type("World").nth(0).unwrap())?;
 
     // Parse root scene assembly
-    let assembly = parse_assembly(tree.iter_children_with_type("Assembly").nth(0).unwrap())?;
+    let assembly = parse_assembly(arena,
+                                  tree.iter_children_with_type("Assembly").nth(0).unwrap())?;
 
     // Put scene together
     let scene_name = if let &DataTree::Internal { ident, .. } = tree {
