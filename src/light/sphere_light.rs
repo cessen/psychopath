@@ -1,5 +1,7 @@
 use std::f64::consts::PI as PI_64;
 
+use mem_arena::MemArena;
+
 use bbox::BBox;
 use boundable::Boundable;
 use color::{XYZ, SpectralSample, Color};
@@ -11,16 +13,16 @@ use super::LightSource;
 
 // TODO: handle case where radius = 0.0.
 
-#[derive(Debug)]
-pub struct SphereLight {
-    radii: Vec<f32>,
-    colors: Vec<XYZ>,
-    bounds_: Vec<BBox>,
+#[derive(Copy, Clone, Debug)]
+pub struct SphereLight<'a> {
+    radii: &'a [f32],
+    colors: &'a [XYZ],
+    bounds_: &'a [BBox],
 }
 
-impl SphereLight {
-    pub fn new(radii: Vec<f32>, colors: Vec<XYZ>) -> SphereLight {
-        let bbs = radii.iter()
+impl<'a> SphereLight<'a> {
+    pub fn new<'b>(arena: &'b MemArena, radii: Vec<f32>, colors: Vec<XYZ>) -> SphereLight<'b> {
+        let bbs: Vec<_> = radii.iter()
             .map(|r| {
                 BBox {
                     min: Point::new(-*r, -*r, -*r),
@@ -29,14 +31,14 @@ impl SphereLight {
             })
             .collect();
         SphereLight {
-            radii: radii,
-            colors: colors,
-            bounds_: bbs,
+            radii: arena.copy_slice(&radii),
+            colors: arena.copy_slice(&colors),
+            bounds_: arena.copy_slice(&bbs),
         }
     }
 }
 
-impl LightSource for SphereLight {
+impl<'a> LightSource for SphereLight<'a> {
     fn sample(&self,
               space: &Matrix4x4,
               arr: Point,
@@ -170,8 +172,8 @@ impl LightSource for SphereLight {
     }
 }
 
-impl Boundable for SphereLight {
-    fn bounds<'a>(&'a self) -> &'a [BBox] {
+impl<'a> Boundable for SphereLight<'a> {
+    fn bounds<'b>(&'b self) -> &'b [BBox] {
         &self.bounds_
     }
 }

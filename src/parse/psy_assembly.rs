@@ -67,7 +67,9 @@ pub fn parse_assembly<'a>(arena: &'a MemArena,
                 "MeshSurface" => {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
                         builder.add_object(ident,
-                                           Object::Surface(Box::new(parse_mesh_surface(&child)?)));
+                                           Object::Surface(arena.alloc(
+                                               parse_mesh_surface(arena, &child)?
+                                           )));
                     } else {
                         // TODO: error condition of some kind, because no ident
                         panic!();
@@ -78,7 +80,9 @@ pub fn parse_assembly<'a>(arena: &'a MemArena,
                 "SphereLight" => {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
                         builder.add_object(ident,
-                                           Object::Light(Box::new(parse_sphere_light(&child)?)));
+                                           Object::Light(arena.alloc(
+                                               parse_sphere_light(arena, &child)?
+                                           )));
                     } else {
                         // TODO: error condition of some kind, because no ident
                         panic!();
@@ -89,7 +93,9 @@ pub fn parse_assembly<'a>(arena: &'a MemArena,
                 "RectangleLight" => {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
                         builder.add_object(ident,
-                                           Object::Light(Box::new(parse_rectangle_light(&child)?)));
+                                           Object::Light(arena.alloc(
+                                               parse_rectangle_light(arena, &child)?
+                                           )));
                     } else {
                         // TODO: error condition of some kind, because no ident
                         panic!();

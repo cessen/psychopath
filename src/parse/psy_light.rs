@@ -72,7 +72,9 @@ pub fn parse_distant_disk_light<'a>(arena: &'a MemArena,
 }
 
 
-pub fn parse_sphere_light(tree: &DataTree) -> Result<SphereLight, PsyParseError> {
+pub fn parse_sphere_light<'a>(arena: &'a MemArena,
+                              tree: &'a DataTree)
+                              -> Result<SphereLight<'a>, PsyParseError> {
     if let &DataTree::Internal { ref children, .. } = tree {
         let mut radii = Vec::new();
         let mut colors = Vec::new();
@@ -108,13 +110,15 @@ pub fn parse_sphere_light(tree: &DataTree) -> Result<SphereLight, PsyParseError>
             }
         }
 
-        return Ok(SphereLight::new(radii, colors));
+        return Ok(SphereLight::new(arena, radii, colors));
     } else {
         return Err(PsyParseError::UnknownError);
     }
 }
 
-pub fn parse_rectangle_light(tree: &DataTree) -> Result<RectangleLight, PsyParseError> {
+pub fn parse_rectangle_light<'a>(arena: &'a MemArena,
+                                 tree: &'a DataTree)
+                                 -> Result<RectangleLight<'a>, PsyParseError> {
     if let &DataTree::Internal { ref children, .. } = tree {
         let mut dimensions = Vec::new();
         let mut colors = Vec::new();
@@ -151,7 +155,7 @@ pub fn parse_rectangle_light(tree: &DataTree) -> Result<RectangleLight, PsyParse
             }
         }
 
-        return Ok(RectangleLight::new(dimensions, colors));
+        return Ok(RectangleLight::new(arena, dimensions, colors));
     } else {
         return Err(PsyParseError::UnknownError);
     }

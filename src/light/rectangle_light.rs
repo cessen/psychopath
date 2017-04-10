@@ -1,3 +1,5 @@
+use mem_arena::MemArena;
+
 use bbox::BBox;
 use boundable::Boundable;
 use color::{XYZ, SpectralSample, Color};
@@ -8,16 +10,19 @@ use sampling::{spherical_triangle_solid_angle, uniform_sample_spherical_triangle
 use super::LightSource;
 
 
-#[derive(Debug)]
-pub struct RectangleLight {
-    dimensions: Vec<(f32, f32)>,
-    colors: Vec<XYZ>,
-    bounds_: Vec<BBox>,
+#[derive(Copy, Clone, Debug)]
+pub struct RectangleLight<'a> {
+    dimensions: &'a [(f32, f32)],
+    colors: &'a [XYZ],
+    bounds_: &'a [BBox],
 }
 
-impl RectangleLight {
-    pub fn new(dimensions: Vec<(f32, f32)>, colors: Vec<XYZ>) -> RectangleLight {
-        let bbs = dimensions.iter()
+impl<'a> RectangleLight<'a> {
+    pub fn new<'b>(arena: &'b MemArena,
+                   dimensions: Vec<(f32, f32)>,
+                   colors: Vec<XYZ>)
+                   -> RectangleLight<'b> {
+        let bbs: Vec<_> = dimensions.iter()
             .map(|d| {
                 BBox {
                     min: Point::new(d.0 * -0.5, d.1 * -0.5, 0.0),
@@ -26,14 +31,14 @@ impl RectangleLight {
             })
             .collect();
         RectangleLight {
-            dimensions: dimensions,
-            colors: colors,
-            bounds_: bbs,
+            dimensions: arena.copy_slice(&dimensions),
+            colors: arena.copy_slice(&colors),
+            bounds_: arena.copy_slice(&bbs),
         }
     }
 }
 
-impl LightSource for RectangleLight {
+impl<'a> LightSource for RectangleLight<'a> {
     fn sample(&self,
               space: &Matrix4x4,
               arr: Point,
@@ -166,8 +171,8 @@ impl LightSource for RectangleLight {
     }
 }
 
-impl Boundable for RectangleLight {
-    fn bounds<'a>(&'a self) -> &'a [BBox] {
+impl<'a> Boundable for RectangleLight<'a> {
+    fn bounds<'b>(&'b self) -> &'b [BBox] {
         &self.bounds_
     }
 }

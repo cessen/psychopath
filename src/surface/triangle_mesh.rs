@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use mem_arena::MemArena;
+
 use accel::BVH;
 use bbox::BBox;
 use boundable::Boundable;
@@ -13,18 +15,19 @@ use super::{Surface, SurfaceIntersection, SurfaceIntersectionData};
 use super::triangle;
 
 
-#[derive(Debug)]
-pub struct TriangleMesh {
+#[derive(Copy, Clone, Debug)]
+pub struct TriangleMesh<'a> {
     time_samples: usize,
-    geo: Vec<(Point, Point, Point)>,
-    indices: Vec<usize>,
-    accel: BVH,
+    geo: &'a [(Point, Point, Point)],
+    indices: &'a [usize],
+    accel: BVH<'a>,
 }
 
-impl TriangleMesh {
-    pub fn from_triangles(time_samples: usize,
-                          triangles: Vec<(Point, Point, Point)>)
-                          -> TriangleMesh {
+impl<'a> TriangleMesh<'a> {
+    pub fn from_triangles<'b>(arena: &'b MemArena,
+                              time_samples: usize,
+                              triangles: Vec<(Point, Point, Point)>)
+                              -> TriangleMesh<'b> {
         assert!(triangles.len() % time_samples == 0);
 
         let mut indices: Vec<usize> = (0..(triangles.len() / time_samples))
@@ -41,27 +44,28 @@ impl TriangleMesh {
             bounds
         };
 
-        let accel = BVH::from_objects(&mut indices[..],
+        let accel = BVH::from_objects(arena,
+                                      &mut indices[..],
                                       3,
                                       |tri_i| &bounds[*tri_i..(*tri_i + time_samples)]);
 
         TriangleMesh {
             time_samples: time_samples,
-            geo: triangles,
-            indices: indices,
+            geo: arena.copy_slice(&triangles),
+            indices: arena.copy_slice(&indices),
             accel: accel,
         }
     }
 }
 
-impl Boundable for TriangleMesh {
-    fn bounds<'a>(&'a self) -> &'a [BBox] {
+impl<'a> Boundable for TriangleMesh<'a> {
+    fn bounds<'b>(&'b self) -> &'b [BBox] {
         self.accel.bounds()
     }
 }
 
 
-impl Surface for TriangleMesh {
+impl<'a> Surface for TriangleMesh<'a> {
     fn intersect_rays(&self,
                       accel_rays: &mut [AccelRay],
                       wrays: &[Ray],

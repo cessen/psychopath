@@ -22,13 +22,13 @@ pub struct Assembly<'a> {
     pub xforms: &'a [Matrix4x4],
 
     // Object list
-    pub objects: Vec<Object>,
+    pub objects: Vec<Object<'a>>,
 
     // Assembly list
     pub assemblies: Vec<Assembly<'a>>,
 
     // Object accel
-    pub object_accel: BVH,
+    pub object_accel: BVH<'a>,
 
     // Light accel
     pub light_accel: LightTree,
@@ -137,7 +137,7 @@ pub struct AssemblyBuilder<'a> {
     xforms: Vec<Matrix4x4>,
 
     // Object list
-    objects: Vec<Object>,
+    objects: Vec<Object<'a>>,
     object_map: HashMap<String, usize>, // map Name -> Index
 
     // Assembly list
@@ -159,7 +159,7 @@ impl<'a> AssemblyBuilder<'a> {
         }
     }
 
-    pub fn add_object(&mut self, name: &str, obj: Object) {
+    pub fn add_object(&mut self, name: &str, obj: Object<'a>) {
         // Make sure the name hasn't already been used.
         if self.name_exists(name) {
             panic!("Attempted to add object to assembly with a name that already exists.");
@@ -231,7 +231,8 @@ impl<'a> AssemblyBuilder<'a> {
         let (bis, bbs) = self.instance_bounds();
 
         // Build object accel
-        let object_accel = BVH::from_objects(&mut self.instances[..],
+        let object_accel = BVH::from_objects(self.arena,
+                                             &mut self.instances[..],
                                              1,
                                              |inst| &bbs[bis[inst.id]..bis[inst.id + 1]]);
 
@@ -335,9 +336,9 @@ impl<'a> AssemblyBuilder<'a> {
 
 
 #[derive(Debug)]
-pub enum Object {
-    Surface(Box<Surface>),
-    Light(Box<LightSource>),
+pub enum Object<'a> {
+    Surface(&'a Surface),
+    Light(&'a LightSource),
 }
 
 

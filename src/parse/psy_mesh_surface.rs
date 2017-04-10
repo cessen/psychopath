@@ -4,6 +4,8 @@ use std::result::Result;
 
 use nom::IResult;
 
+use mem_arena::MemArena;
+
 use math::Point;
 use surface::triangle_mesh::TriangleMesh;
 
@@ -19,7 +21,9 @@ use super::psy::PsyParseError;
 //    accel: BVH,
 // }
 
-pub fn parse_mesh_surface(tree: &DataTree) -> Result<TriangleMesh, PsyParseError> {
+pub fn parse_mesh_surface<'a>(arena: &'a MemArena,
+                              tree: &'a DataTree)
+                              -> Result<TriangleMesh<'a>, PsyParseError> {
     let mut verts = Vec::new();
     let mut face_vert_counts = Vec::new();
     let mut face_vert_indices = Vec::new();
@@ -100,5 +104,5 @@ pub fn parse_mesh_surface(tree: &DataTree) -> Result<TriangleMesh, PsyParseError
         ii += *fvc;
     }
 
-    Ok(TriangleMesh::from_triangles(time_samples, triangles))
+    Ok(TriangleMesh::from_triangles(arena, time_samples, triangles))
 }
