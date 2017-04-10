@@ -132,18 +132,7 @@ impl MemArena {
         if size == 0 {
             return blocks.first_mut().unwrap().as_mut_ptr();
         }
-        // If the desired size is considered a "large allocation", give it its own memory block.
-        else if size > self.large_alloc_threshold {
-            blocks.push(Vec::with_capacity(size + alignment - 1));
-            blocks.last_mut().unwrap().set_len(size + alignment - 1);
-
-            let start_index = alignment_offset(blocks.last().unwrap().as_ptr() as usize, alignment);
-
-            let block_ptr = blocks.last_mut().unwrap().as_mut_ptr();
-            return block_ptr.offset(start_index as isize);
-        }
-        // If the desired size is not a "large allocation", try to fit it into the current
-        // block, and only create a new block if doesn't fit.
+        // If it's non-zero-size.
         else {
             let start_index = {
                 let block_addr = blocks.first().unwrap().as_ptr() as usize;
@@ -153,6 +142,7 @@ impl MemArena {
 
             // If it will fit in the current block, use the current block.
             if (start_index + size) <= blocks.first().unwrap().capacity() {
+                println!("In-Block, alloc size: {}", size);
                 blocks.first_mut().unwrap().set_len(start_index + size);
 
                 let block_ptr = blocks.first_mut().unwrap().as_mut_ptr();
@@ -160,17 +150,33 @@ impl MemArena {
             }
             // If it won't fit in the current block, create a new block and use that.
             else {
-                blocks.push(Vec::with_capacity(self.block_size));
-                let block_count = blocks.len();
-                blocks.swap(0, block_count - 1);
+                // If it's a "large allocation", give it its own memory block.
+                if size > self.large_alloc_threshold {
+                    println!("Large Allocation, alloc size: {}", size);
+                    blocks.push(Vec::with_capacity(size + alignment - 1));
+                    blocks.last_mut().unwrap().set_len(size + alignment - 1);
 
-                let start_index = alignment_offset(blocks.first().unwrap().as_ptr() as usize,
-                                                   alignment);
+                    let start_index = alignment_offset(blocks.last().unwrap().as_ptr() as usize,
+                                                       alignment);
 
-                blocks.first_mut().unwrap().set_len(start_index + size);
+                    let block_ptr = blocks.last_mut().unwrap().as_mut_ptr();
+                    return block_ptr.offset(start_index as isize);
+                }
+                // Otherwise create a new shared block.
+                else {
+                    println!("New Block, alloc size: {}", size);
+                    blocks.push(Vec::with_capacity(self.block_size));
+                    let block_count = blocks.len();
+                    blocks.swap(0, block_count - 1);
 
-                let block_ptr = blocks.first_mut().unwrap().as_mut_ptr();
-                return block_ptr.offset(start_index as isize);
+                    let start_index = alignment_offset(blocks.first().unwrap().as_ptr() as usize,
+                                                       alignment);
+
+                    blocks.first_mut().unwrap().set_len(start_index + size);
+
+                    let block_ptr = blocks.first_mut().unwrap().as_mut_ptr();
+                    return block_ptr.offset(start_index as isize);
+                }
             }
         }
     }
