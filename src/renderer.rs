@@ -23,15 +23,15 @@ use transform_stack::TransformStack;
 
 
 #[derive(Debug)]
-pub struct Renderer {
+pub struct Renderer<'a> {
     pub output_file: String,
     pub resolution: (usize, usize),
     pub spp: usize,
     pub seed: u32,
-    pub scene: Scene,
+    pub scene: Scene<'a>,
 }
 
-impl Renderer {
+impl<'a> Renderer<'a> {
     pub fn render(&self, max_samples_per_bucket: u32, thread_count: u32) -> Image {
         let mut tpool = Pool::new(thread_count);
 

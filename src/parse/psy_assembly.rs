@@ -96,7 +96,7 @@ pub fn parse_assembly(tree: &DataTree) -> Result<Assembly, PsyParseError> {
                 "SurfaceShader" => {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
                         // TODO
-                        unimplemented!()
+                        //unimplemented!()
                     } else {
                         // TODO: error condition of some kind, because no ident
                         panic!();

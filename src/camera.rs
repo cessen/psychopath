@@ -1,26 +1,29 @@
 #![allow(dead_code)]
 
+use mem_arena::MemArena;
+
 use lerp::lerp_slice;
 use math::{Vector, Point, Matrix4x4};
 use ray::Ray;
 use sampling::square_to_circle;
 
 
-#[derive(Debug)]
-pub struct Camera {
-    transforms: Vec<Matrix4x4>,
-    fovs: Vec<f32>,
-    tfovs: Vec<f32>,
-    aperture_radii: Vec<f32>,
-    focus_distances: Vec<f32>,
+#[derive(Copy, Clone, Debug)]
+pub struct Camera<'a> {
+    transforms: &'a [Matrix4x4],
+    fovs: &'a [f32],
+    tfovs: &'a [f32],
+    aperture_radii: &'a [f32],
+    focus_distances: &'a [f32],
 }
 
-impl Camera {
-    pub fn new(transforms: Vec<Matrix4x4>,
+impl<'a> Camera<'a> {
+    pub fn new(arena: &'a mut MemArena,
+               transforms: Vec<Matrix4x4>,
                fovs: Vec<f32>,
                mut aperture_radii: Vec<f32>,
                mut focus_distances: Vec<f32>)
-               -> Camera {
+               -> Camera<'a> {
         assert!(transforms.len() != 0, "Camera has no transform(s)!");
         assert!(fovs.len() != 0, "Camera has no fov(s)!");
 
@@ -48,14 +51,14 @@ impl Camera {
         }
 
         // Convert angle fov into linear fov.
-        let tfovs = fovs.iter().map(|n| (n / 2.0).sin() / (n / 2.0).cos()).collect();
+        let tfovs: Vec<f32> = fovs.iter().map(|n| (n / 2.0).sin() / (n / 2.0).cos()).collect();
 
         Camera {
-            transforms: transforms,
-            fovs: fovs,
-            tfovs: tfovs,
-            aperture_radii: aperture_radii,
-            focus_distances: focus_distances,
+            transforms: arena.copy_slice(&transforms),
+            fovs: arena.copy_slice(&fovs),
+            tfovs: arena.copy_slice(&tfovs),
+            aperture_radii: arena.copy_slice(&aperture_radii),
+            focus_distances: arena.copy_slice(&focus_distances),
         }
     }
 

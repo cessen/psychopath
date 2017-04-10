@@ -5,6 +5,8 @@ use std::result::Result;
 use nom;
 use nom::IResult;
 
+use mem_arena::MemArena;
+
 use camera::Camera;
 use color::{XYZ, rec709e_to_xyz};
 use light::WorldLightSource;
@@ -27,7 +29,9 @@ pub enum PsyParseError {
 
 
 /// Takes in a DataTree representing a Scene node and returns
-pub fn parse_scene(tree: &DataTree) -> Result<Renderer, PsyParseError> {
+pub fn parse_scene<'a>(arena: &'a mut MemArena,
+                       tree: &'a DataTree)
+                       -> Result<Renderer<'a>, PsyParseError> {
     // Verify we have the right number of each section
     if tree.iter_children_with_type("Output").count() != 1 {
         let count = tree.iter_children_with_type("Output").count();
@@ -61,7 +65,8 @@ pub fn parse_scene(tree: &DataTree) -> Result<Renderer, PsyParseError> {
         .unwrap())?;
 
     // Parse camera
-    let camera = parse_camera(tree.iter_children_with_type("Camera").nth(0).unwrap())?;
+    let camera = parse_camera(arena,
+                              tree.iter_children_with_type("Camera").nth(0).unwrap())?;
 
     // Parse world
     let world = parse_world(tree.iter_children_with_type("World").nth(0).unwrap())?;
@@ -205,7 +210,9 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
 
 
 
-fn parse_camera(tree: &DataTree) -> Result<Camera, PsyParseError> {
+fn parse_camera<'a>(arena: &'a mut MemArena,
+                    tree: &'a DataTree)
+                    -> Result<Camera<'a>, PsyParseError> {
     if let &DataTree::Internal { ref children, .. } = tree {
         let mut mats = Vec::new();
         let mut fovs = Vec::new();
@@ -259,7 +266,7 @@ fn parse_camera(tree: &DataTree) -> Result<Camera, PsyParseError> {
             }
         }
 
-        return Ok(Camera::new(mats, fovs, aperture_radii, focus_distances));
+        return Ok(Camera::new(arena, mats, fovs, aperture_radii, focus_distances));
     } else {
         return Err(PsyParseError::UnknownError);
     }

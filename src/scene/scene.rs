@@ -1,3 +1,5 @@
+use mem_arena::MemArena;
+
 use accel::LightAccel;
 use algorithm::weighted_choice;
 use camera::Camera;
@@ -11,14 +13,14 @@ use super::World;
 
 
 #[derive(Debug)]
-pub struct Scene {
+pub struct Scene<'a> {
     pub name: Option<String>,
-    pub camera: Camera,
+    pub camera: Camera<'a>,
     pub world: World,
     pub root: Assembly,
 }
 
-impl Scene {
+impl<'a> Scene<'a> {
     pub fn sample_lights(&self,
                          xform_stack: &mut TransformStack,
                          n: f32,

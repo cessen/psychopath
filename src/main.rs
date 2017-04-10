@@ -1,3 +1,5 @@
+extern crate mem_arena;
+
 extern crate crossbeam;
 extern crate docopt;
 extern crate lodepng;
@@ -44,6 +46,8 @@ use std::mem;
 use std::path::Path;
 
 use docopt::Docopt;
+
+use mem_arena::MemArena;
 
 use parse::{parse_scene, DataTree};
 use ray::{Ray, AccelRay};
@@ -131,7 +135,9 @@ fn main() {
             t.tick();
             if child.type_name() == "Scene" {
                 println!("Building scene...");
-                let mut r = parse_scene(child).unwrap();
+
+                let mut arena = MemArena::new();
+                let mut r = parse_scene(&mut arena, child).unwrap();
 
                 if let Some(spp) = args.flag_spp {
                     println!("\tOverriding scene spp: {}", spp);
