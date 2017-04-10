@@ -27,28 +27,29 @@ pub fn parse_distant_disk_light<'a>(arena: &'a MemArena,
         for child in children.iter() {
             match child {
                 // Radius
-                &DataTree::Leaf { type_name, contents } if type_name == "Radius" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name == "Radius" => {
                     if let IResult::Done(_, radius) = ws_f32(contents.as_bytes()) {
                         radii.push(radius);
                     } else {
                         // Found radius, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        return Err(PsyParseError::UnknownError(byte_offset));
                     }
                 }
 
                 // Direction
-                &DataTree::Leaf { type_name, contents } if type_name == "Direction" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name ==
+                                                                        "Direction" => {
                     if let IResult::Done(_, direction) =
                         closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes()) {
                         directions.push(Vector::new(direction.0, direction.1, direction.2));
                     } else {
-                        // Found color, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        // Found direction, but its contents is not in the right format
+                        return Err(PsyParseError::UnknownError(byte_offset));
                     }
                 }
 
                 // Color
-                &DataTree::Leaf { type_name, contents } if type_name == "Color" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name == "Color" => {
                     if let IResult::Done(_, color) =
                         closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes()) {
                         // TODO: handle color space conversions properly.
@@ -57,7 +58,7 @@ pub fn parse_distant_disk_light<'a>(arena: &'a MemArena,
                         colors.push(XYZ::from_tuple(rec709e_to_xyz(color)));
                     } else {
                         // Found color, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        return Err(PsyParseError::UnknownError(byte_offset));
                     }
                 }
 
@@ -67,7 +68,7 @@ pub fn parse_distant_disk_light<'a>(arena: &'a MemArena,
 
         return Ok(DistantDiskLight::new(arena, radii, directions, colors));
     } else {
-        return Err(PsyParseError::UnknownError);
+        return Err(PsyParseError::UnknownError(tree.byte_offset()));
     }
 }
 
@@ -83,17 +84,17 @@ pub fn parse_sphere_light<'a>(arena: &'a MemArena,
         for child in children.iter() {
             match child {
                 // Radius
-                &DataTree::Leaf { type_name, contents } if type_name == "Radius" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name == "Radius" => {
                     if let IResult::Done(_, radius) = ws_f32(contents.as_bytes()) {
                         radii.push(radius);
                     } else {
                         // Found radius, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        return Err(PsyParseError::UnknownError(byte_offset));
                     }
                 }
 
                 // Color
-                &DataTree::Leaf { type_name, contents } if type_name == "Color" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name == "Color" => {
                     if let IResult::Done(_, color) =
                         closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes()) {
                         // TODO: handle color space conversions properly.
@@ -102,7 +103,7 @@ pub fn parse_sphere_light<'a>(arena: &'a MemArena,
                         colors.push(XYZ::from_tuple(rec709e_to_xyz(color)));
                     } else {
                         // Found color, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        return Err(PsyParseError::UnknownError(byte_offset));
                     }
                 }
 
@@ -112,7 +113,7 @@ pub fn parse_sphere_light<'a>(arena: &'a MemArena,
 
         return Ok(SphereLight::new(arena, radii, colors));
     } else {
-        return Err(PsyParseError::UnknownError);
+        return Err(PsyParseError::UnknownError(tree.byte_offset()));
     }
 }
 
@@ -127,18 +128,19 @@ pub fn parse_rectangle_light<'a>(arena: &'a MemArena,
         for child in children.iter() {
             match child {
                 // Dimensions
-                &DataTree::Leaf { type_name, contents } if type_name == "Dimensions" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name ==
+                                                                        "Dimensions" => {
                     if let IResult::Done(_, radius) =
                         closure!(tuple!(ws_f32, ws_f32))(contents.as_bytes()) {
                         dimensions.push(radius);
                     } else {
                         // Found dimensions, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        return Err(PsyParseError::UnknownError(byte_offset));
                     }
                 }
 
                 // Color
-                &DataTree::Leaf { type_name, contents } if type_name == "Color" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name == "Color" => {
                     if let IResult::Done(_, color) =
                         closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes()) {
                         // TODO: handle color space conversions properly.
@@ -147,7 +149,7 @@ pub fn parse_rectangle_light<'a>(arena: &'a MemArena,
                         colors.push(XYZ::from_tuple(rec709e_to_xyz(color)));
                     } else {
                         // Found color, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        return Err(PsyParseError::UnknownError(byte_offset));
                     }
                 }
 
@@ -157,6 +159,6 @@ pub fn parse_rectangle_light<'a>(arena: &'a MemArena,
 
         return Ok(RectangleLight::new(arena, dimensions, colors));
     } else {
-        return Err(PsyParseError::UnknownError);
+        return Err(PsyParseError::UnknownError(tree.byte_offset()));
     }
 }

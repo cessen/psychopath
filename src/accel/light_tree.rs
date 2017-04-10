@@ -140,7 +140,6 @@ struct LightTreeBuilder {
     nodes: Vec<Node>,
     bounds: Vec<BBox>,
     depth: usize,
-    bounds_cache: Vec<BBox>,
 }
 
 impl LightTreeBuilder {
@@ -149,7 +148,6 @@ impl LightTreeBuilder {
             nodes: Vec::new(),
             bounds: Vec::new(),
             depth: 0,
-            bounds_cache: Vec::new(),
         }
     }
 

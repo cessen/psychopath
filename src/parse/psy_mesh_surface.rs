@@ -34,7 +34,7 @@ pub fn parse_mesh_surface<'a>(arena: &'a MemArena,
     // Get verts
     let mut time_samples = 0;
     let mut first_vert_count = None;
-    for (_, text) in tree.iter_leaf_children_with_type("Vertices") {
+    for (_, text, _) in tree.iter_leaf_children_with_type("Vertices") {
         let mut raw_text = text.trim().as_bytes();
 
         // Collect verts for this time sample
@@ -58,7 +58,7 @@ pub fn parse_mesh_surface<'a>(arena: &'a MemArena,
     }
 
     // Get face vert counts
-    if let Some((_, text)) = tree.iter_leaf_children_with_type("FaceVertCounts").nth(0) {
+    if let Some((_, text, _)) = tree.iter_leaf_children_with_type("FaceVertCounts").nth(0) {
         let mut raw_text = text.trim().as_bytes();
 
         while let IResult::Done(remaining, count) = ws_usize(raw_text) {
@@ -69,7 +69,7 @@ pub fn parse_mesh_surface<'a>(arena: &'a MemArena,
     }
 
     // Get face vert indices
-    if let Some((_, text)) = tree.iter_leaf_children_with_type("FaceVertIndices").nth(0) {
+    if let Some((_, text, _)) = tree.iter_leaf_children_with_type("FaceVertIndices").nth(0) {
         let mut raw_text = text.trim().as_bytes();
 
         while let IResult::Done(remaining, index) = ws_usize(raw_text) {

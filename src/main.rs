@@ -117,12 +117,12 @@ fn main() {
     // Parse data tree of scene file
     println!("Parsing scene file...");
     t.tick();
-    let mut s = String::new();
+    let mut psy_contents = String::new();
     let dt = if let Some(fp) = args.flag_input {
         let mut f = io::BufReader::new(File::open(fp).unwrap());
-        let _ = f.read_to_string(&mut s);
+        let _ = f.read_to_string(&mut psy_contents);
 
-        DataTree::from_str(&s).unwrap()
+        DataTree::from_str(&psy_contents).unwrap()
     } else {
         panic!()
     };
@@ -137,7 +137,10 @@ fn main() {
                 println!("Building scene...");
 
                 let mut arena = MemArena::new();
-                let mut r = parse_scene(&mut arena, child).unwrap();
+                let mut r = parse_scene(&mut arena, child).unwrap_or_else(|e| {
+                    e.print(&psy_contents);
+                    panic!("Parse error.");
+                });
 
                 if let Some(spp) = args.flag_spp {
                     println!("\tOverriding scene spp: {}", spp);

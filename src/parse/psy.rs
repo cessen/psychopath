@@ -21,10 +21,70 @@ use super::psy_assembly::parse_assembly;
 use super::psy_light::parse_distant_disk_light;
 
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug)]
 pub enum PsyParseError {
-    UnknownError,
-    SectionWrongCount(&'static str, usize),
+    // The first usize for all errors is their byte offset
+    // into the psy content where they occured.
+    UnknownError(usize),
+    UnknownVariant(usize, &'static str), // Error message
+    ExpectedInternalNode(usize, &'static str), // Error message
+    ExpectedLeafNode(usize, &'static str), // Error message
+    MissingNode(usize, &'static str), // Error message
+    IncorrectLeafData(usize, &'static str), // Error message
+    WrongNodeCount(usize, &'static str, usize), // Error message, sections found
+    InstancedMissingData(usize, &'static str, String), // Error message, data name
+}
+
+impl PsyParseError {
+    pub fn print(&self, psy_content: &str) {
+        match self {
+            &PsyParseError::UnknownError(offset) => {
+                let line = line_count_to_byte_offset(psy_content, offset);
+                println!("Line {}: Unknown parse error.  If you get this message, please report \
+                          it to the developers so they can improve the error messages.",
+                         line);
+            }
+
+            &PsyParseError::UnknownVariant(offset, error) => {
+                let line = line_count_to_byte_offset(psy_content, offset);
+                println!("Line {}: {}", line, error);
+            }
+
+            &PsyParseError::ExpectedInternalNode(offset, error) => {
+                let line = line_count_to_byte_offset(psy_content, offset);
+                println!("Line {}: {}", line, error);
+            }
+
+            &PsyParseError::ExpectedLeafNode(offset, error) => {
+                let line = line_count_to_byte_offset(psy_content, offset);
+                println!("Line {}: {}", line, error);
+            }
+
+            &PsyParseError::MissingNode(offset, error) => {
+                let line = line_count_to_byte_offset(psy_content, offset);
+                println!("Line {}: {}", line, error);
+            }
+
+            &PsyParseError::IncorrectLeafData(offset, error) => {
+                let line = line_count_to_byte_offset(psy_content, offset);
+                println!("Line {}: {}", line, error);
+            }
+
+            &PsyParseError::WrongNodeCount(offset, error, count) => {
+                let line = line_count_to_byte_offset(psy_content, offset);
+                println!("Line {}: {}  Found: {}", line, error, count);
+            }
+
+            &PsyParseError::InstancedMissingData(offset, error, ref data_name) => {
+                let line = line_count_to_byte_offset(psy_content, offset);
+                println!("Line {}: {} Data name: '{}'", line, error, data_name);
+            }
+        }
+    }
+}
+
+fn line_count_to_byte_offset(text: &str, offset: usize) -> usize {
+    text[..offset].matches("\n").count() + 1
 }
 
 
@@ -35,23 +95,37 @@ pub fn parse_scene<'a>(arena: &'a MemArena,
     // Verify we have the right number of each section
     if tree.iter_children_with_type("Output").count() != 1 {
         let count = tree.iter_children_with_type("Output").count();
-        return Err(PsyParseError::SectionWrongCount("Output", count));
+        return Err(PsyParseError::WrongNodeCount(tree.byte_offset(),
+                                                 "Scene should have precisely one Output \
+                                                  section.",
+                                                 count));
     }
     if tree.iter_children_with_type("RenderSettings").count() != 1 {
         let count = tree.iter_children_with_type("RenderSettings").count();
-        return Err(PsyParseError::SectionWrongCount("RenderSettings", count));
+        return Err(PsyParseError::WrongNodeCount(tree.byte_offset(),
+                                                 "Scene should have precisely one \
+                                                  RenderSettings section.",
+                                                 count));
     }
     if tree.iter_children_with_type("Camera").count() != 1 {
         let count = tree.iter_children_with_type("Camera").count();
-        return Err(PsyParseError::SectionWrongCount("Camera", count));
+        return Err(PsyParseError::WrongNodeCount(tree.byte_offset(),
+                                                 "Scene should have precisely one Camera \
+                                                  section.",
+                                                 count));
     }
     if tree.iter_children_with_type("World").count() != 1 {
         let count = tree.iter_children_with_type("World").count();
-        return Err(PsyParseError::SectionWrongCount("World", count));
+        return Err(PsyParseError::WrongNodeCount(tree.byte_offset(),
+                                                 "Scene should have precisely one World section.",
+                                                 count));
     }
     if tree.iter_children_with_type("Assembly").count() != 1 {
         let count = tree.iter_children_with_type("Assembly").count();
-        return Err(PsyParseError::SectionWrongCount("Root Assembly", count));
+        return Err(PsyParseError::WrongNodeCount(tree.byte_offset(),
+                                                 "Scene should have precisely one Root Assembly \
+                                                  section.",
+                                                 count));
     }
 
     // Parse output info
@@ -114,16 +188,18 @@ fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
 
         for child in children {
             match child {
-                &DataTree::Leaf { type_name, contents } if type_name == "Path" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name == "Path" => {
                     // Trim and validate
                     let tc = contents.trim();
                     if tc.chars().count() < 2 {
-                        // TODO: proper error
-                        panic!();
+                        return Err(PsyParseError::IncorrectLeafData(byte_offset,
+                                                                    "File path format is \
+                                                                     incorrect."));
                     }
                     if tc.chars().nth(0).unwrap() != '"' || tc.chars().last().unwrap() != '"' {
-                        // TODO: proper error
-                        panic!();
+                        return Err(PsyParseError::IncorrectLeafData(byte_offset,
+                                                                    "File paths must be \
+                                                                     surrounded by quotes."));
                     }
                     let len = tc.len();
                     let tc = &tc[1..len - 1];
@@ -141,10 +217,13 @@ fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
         if found_path {
             return Ok((path));
         } else {
-            return Err(PsyParseError::UnknownError);
+            return Err(PsyParseError::MissingNode(tree.byte_offset(),
+                                                  "Output section must contain a Path."));
         }
     } else {
-        return Err(PsyParseError::UnknownError);
+        return Err(PsyParseError::ExpectedInternalNode(tree.byte_offset(),
+                                                       "Output section should be an internal \
+                                                        node, containing at least a Path."));
     };
 }
 
@@ -162,35 +241,45 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
         for child in children {
             match child {
                 // Resolution
-                &DataTree::Leaf { type_name, contents } if type_name == "Resolution" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name ==
+                                                                        "Resolution" => {
                     if let IResult::Done(_, (w, h)) = closure!(terminated!(tuple!(ws_u32, ws_u32),
                                                 nom::eof))(contents.as_bytes()) {
                         found_res = true;
                         res = (w, h);
                     } else {
                         // Found Resolution, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        return Err(PsyParseError::IncorrectLeafData(byte_offset,
+                            "Resolution should be specified with two \
+                             integers in the form '[width height]'."));
                     }
                 }
 
                 // SamplesPerPixel
-                &DataTree::Leaf { type_name, contents } if type_name == "SamplesPerPixel" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name ==
+                                                                        "SamplesPerPixel" => {
                     if let IResult::Done(_, n) = ws_u32(contents.as_bytes()) {
                         found_spp = true;
                         spp = n;
                     } else {
                         // Found SamplesPerPixel, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        return Err(PsyParseError::IncorrectLeafData(byte_offset,
+                                                                    "SamplesPerPixel should be \
+                                                                     an integer specified in \
+                                                                     the form '[samples]'."));
                     }
                 }
 
                 // Seed
-                &DataTree::Leaf { type_name, contents } if type_name == "Seed" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name == "Seed" => {
                     if let IResult::Done(_, n) = ws_u32(contents.as_bytes()) {
                         seed = n;
                     } else {
                         // Found Seed, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        return Err(PsyParseError::IncorrectLeafData(byte_offset,
+                                                                    "Seed should be an integer \
+                                                                     specified in the form \
+                                                                     '[samples]'."));
                     }
                 }
 
@@ -201,10 +290,15 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
         if found_res && found_spp {
             return Ok((res, spp, seed));
         } else {
-            return Err(PsyParseError::UnknownError);
+            return Err(PsyParseError::MissingNode(tree.byte_offset(),
+                                                  "RenderSettings must have both Resolution and \
+                                                   SamplesPerPixel specified."));
         }
     } else {
-        return Err(PsyParseError::UnknownError);
+        return Err(PsyParseError::ExpectedInternalNode(tree.byte_offset(),
+                                                       "RenderSettings section should be an \
+                                                        internal node, containing at least \
+                                                        Resolution and SamplesPerPixel."));
     };
 }
 
@@ -222,42 +316,54 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
         for child in children.iter() {
             match child {
                 // Fov
-                &DataTree::Leaf { type_name, contents } if type_name == "Fov" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name == "Fov" => {
                     if let IResult::Done(_, fov) = ws_f32(contents.as_bytes()) {
                         fovs.push(fov * (3.1415926536 / 180.0));
                     } else {
                         // Found Fov, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        return Err(PsyParseError::IncorrectLeafData(byte_offset,
+                                                                    "Fov should be a decimal \
+                                                                     number specified in the \
+                                                                     form '[fov]'."));
                     }
                 }
 
                 // FocalDistance
-                &DataTree::Leaf { type_name, contents } if type_name == "FocalDistance" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name ==
+                                                                        "FocalDistance" => {
                     if let IResult::Done(_, fd) = ws_f32(contents.as_bytes()) {
                         focus_distances.push(fd);
                     } else {
                         // Found FocalDistance, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        return Err(PsyParseError::IncorrectLeafData(byte_offset,
+                                                                    "FocalDistance should be a \
+                                                                     decimal number specified \
+                                                                     in the form '[fov]'."));
                     }
                 }
 
                 // ApertureRadius
-                &DataTree::Leaf { type_name, contents } if type_name == "ApertureRadius" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name ==
+                                                                        "ApertureRadius" => {
                     if let IResult::Done(_, ar) = ws_f32(contents.as_bytes()) {
                         aperture_radii.push(ar);
                     } else {
                         // Found ApertureRadius, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        return Err(PsyParseError::IncorrectLeafData(byte_offset,
+                                                                    "ApertureRadius should be a \
+                                                                     decimal number specified \
+                                                                     in the form '[fov]'."));
                     }
                 }
 
                 // Transform
-                &DataTree::Leaf { type_name, contents } if type_name == "Transform" => {
+                &DataTree::Leaf { type_name, contents, byte_offset } if type_name ==
+                                                                        "Transform" => {
                     if let Ok(mat) = parse_matrix(contents) {
                         mats.push(mat);
                     } else {
                         // Found Transform, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError);
+                        return Err(make_transform_format_error(byte_offset));
                     }
                 }
 
@@ -267,7 +373,10 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
 
         return Ok(Camera::new(arena, mats, fovs, aperture_radii, focus_distances));
     } else {
-        return Err(PsyParseError::UnknownError);
+        return Err(PsyParseError::ExpectedInternalNode(tree.byte_offset(),
+                                                       "Camera section should be an internal \
+                                                        node, containing at least Fov and \
+                                                        Transform."));
     }
 }
 
@@ -282,13 +391,19 @@ fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>,
         // Parse background shader
         let bgs = {
             if tree.iter_children_with_type("BackgroundShader").count() != 1 {
-                return Err(PsyParseError::UnknownError);
+                return Err(PsyParseError::WrongNodeCount(tree.byte_offset(),
+                    "World should have precisely one BackgroundShader section.",
+                    tree.iter_children_with_type("BackgroundShader").count()));
             }
             tree.iter_children_with_type("BackgroundShader").nth(0).unwrap()
         };
         let bgs_type = {
             if bgs.iter_children_with_type("Type").count() != 1 {
-                return Err(PsyParseError::UnknownError);
+                return Err(PsyParseError::WrongNodeCount(bgs.byte_offset(),
+                                                         "BackgroundShader should have \
+                                                          precisely one Type specified.",
+                                                         bgs.iter_children_with_type("Type")
+                                                             .count()));
             }
             if let &DataTree::Leaf { contents, .. } =
                 bgs.iter_children_with_type("Type")
@@ -296,12 +411,14 @@ fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>,
                     .unwrap() {
                 contents.trim()
             } else {
-                return Err(PsyParseError::UnknownError);
+                return Err(PsyParseError::ExpectedLeafNode(bgs.byte_offset(),
+                                                           "BackgroundShader's Type should be a \
+                                                            leaf node."));
             }
         };
         match bgs_type {
             "Color" => {
-                if let Some(&DataTree::Leaf { contents, .. }) =
+                if let Some(&DataTree::Leaf { contents, byte_offset, .. }) =
                     bgs.iter_children_with_type("Color")
                         .nth(0) {
                     if let IResult::Done(_, color) =
@@ -311,14 +428,23 @@ fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>,
                         // rec.709.
                         background_color = XYZ::from_tuple(rec709e_to_xyz(color));
                     } else {
-                        return Err(PsyParseError::UnknownError);
+                        return Err(PsyParseError::IncorrectLeafData(byte_offset,
+                                                                    "Color should be specified \
+                                                                     with three decimal numbers \
+                                                                     in the form '[R G B]'."));
                     }
                 } else {
-                    return Err(PsyParseError::UnknownError);
+                    return Err(PsyParseError::MissingNode(bgs.byte_offset(),
+                                                          "BackgroundShader's Type is Color, \
+                                                           but no Color is specified."));
                 }
             }
 
-            _ => return Err(PsyParseError::UnknownError),
+            _ => {
+                return Err(PsyParseError::UnknownVariant(bgs.byte_offset(),
+                                                         "The specified BackgroundShader Type \
+                                                          isn't a recognized type."))
+            }
         }
 
         // Parse light sources
@@ -338,7 +464,10 @@ fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>,
             lights: arena.copy_slice(&lights),
         });
     } else {
-        return Err(PsyParseError::UnknownError);
+        return Err(PsyParseError::ExpectedInternalNode(tree.byte_offset(),
+                                                       "World section should be an internal \
+                                                        node, containing at least a \
+                                                        BackgroundShader."));
     }
 }
 
@@ -381,6 +510,12 @@ pub fn parse_matrix(contents: &str) -> Result<Matrix4x4, PsyParseError> {
                                              ns.11,
                                              ns.15));
     } else {
-        return Err(PsyParseError::UnknownError);
+        return Err(PsyParseError::UnknownError(0));
     }
+}
+
+pub fn make_transform_format_error(byte_offset: usize) -> PsyParseError {
+    return PsyParseError::IncorrectLeafData(byte_offset,
+                                            "Transform should be sixteen integers specified in \
+                                             the form '[# # # # # # # # # # # # # # # #]'.");
 }

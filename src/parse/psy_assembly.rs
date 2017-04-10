@@ -25,8 +25,7 @@ pub fn parse_assembly<'a>(arena: &'a MemArena,
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
                         builder.add_assembly(ident, parse_assembly(arena, &child)?);
                     } else {
-                        // TODO: error condition of some kind, because no ident
-                        panic!();
+                        return Err(PsyParseError::UnknownError(child.byte_offset()));
                     }
                 }
 
@@ -34,22 +33,20 @@ pub fn parse_assembly<'a>(arena: &'a MemArena,
                 "Instance" => {
                     // Pre-conditions
                     if !child.is_internal() {
-                        // TODO: proper error
-                        panic!();
+                        return Err(PsyParseError::UnknownError(child.byte_offset()));
                     }
 
                     // Get data name
                     let name = {
                         if child.iter_leaf_children_with_type("Data").count() != 1 {
-                            // TODO: proper error message
-                            panic!();
+                            return Err(PsyParseError::UnknownError(child.byte_offset()));
                         }
                         child.iter_leaf_children_with_type("Data").nth(0).unwrap().1
                     };
 
                     // Get xforms
                     let mut xforms = Vec::new();
-                    for (_, contents) in child.iter_leaf_children_with_type("Transform") {
+                    for (_, contents, _) in child.iter_leaf_children_with_type("Transform") {
                         xforms.push(parse_matrix(contents)?);
                     }
 
@@ -57,9 +54,13 @@ pub fn parse_assembly<'a>(arena: &'a MemArena,
                     if builder.name_exists(name) {
                         builder.add_instance(name, Some(&xforms));
                     } else {
-                        // TODO: proper error message
-                        panic!("Attempted to add instance for data with a name that doesn't \
-                                exist.");
+                        return Err(PsyParseError::InstancedMissingData(
+                            child.iter_leaf_children_with_type("Data").nth(0).unwrap().2,
+                                                                       "Attempted to add \
+                                                                        instance for data with \
+                                                                        a name that doesn't \
+                                                                        exist.",
+                                                                       name.to_string()));
                     }
                 }
 
@@ -72,7 +73,9 @@ pub fn parse_assembly<'a>(arena: &'a MemArena,
                                            )));
                     } else {
                         // TODO: error condition of some kind, because no ident
-                        panic!();
+                        panic!("MeshSurface encountered that was a leaf, but MeshSurfaces cannot \
+                                be a leaf: {}",
+                               child.byte_offset());
                     }
                 }
 
@@ -84,8 +87,8 @@ pub fn parse_assembly<'a>(arena: &'a MemArena,
                                                parse_sphere_light(arena, &child)?
                                            )));
                     } else {
-                        // TODO: error condition of some kind, because no ident
-                        panic!();
+                        // No ident
+                        return Err(PsyParseError::UnknownError(child.byte_offset()));
                     }
                 }
 
@@ -97,8 +100,8 @@ pub fn parse_assembly<'a>(arena: &'a MemArena,
                                                parse_rectangle_light(arena, &child)?
                                            )));
                     } else {
-                        // TODO: error condition of some kind, because no ident
-                        panic!();
+                        // No ident
+                        return Err(PsyParseError::UnknownError(child.byte_offset()));
                     }
                 }
 
@@ -108,8 +111,8 @@ pub fn parse_assembly<'a>(arena: &'a MemArena,
                         // TODO
                         //unimplemented!()
                     } else {
-                        // TODO: error condition of some kind, because no ident
-                        panic!();
+                        // No ident
+                        return Err(PsyParseError::UnknownError(child.byte_offset()));
                     }
                 }
 
@@ -145,7 +148,7 @@ pub fn parse_assembly<'a>(arena: &'a MemArena,
             }
         }
     } else {
-        return Err(PsyParseError::UnknownError);
+        return Err(PsyParseError::UnknownError(tree.byte_offset()));
     }
 
     return Ok(builder.build());

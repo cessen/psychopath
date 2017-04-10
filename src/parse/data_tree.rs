@@ -11,11 +11,13 @@ pub enum DataTree<'a> {
         type_name: &'a str,
         ident: Option<&'a str>,
         children: Vec<DataTree<'a>>,
+        byte_offset: usize,
     },
 
     Leaf {
         type_name: &'a str,
         contents: &'a str,
+        byte_offset: usize,
     },
 }
 
@@ -37,6 +39,7 @@ impl<'a> DataTree<'a> {
                 type_name: "ROOT",
                 ident: None,
                 children: items,
+                byte_offset: 0,
             });
         } else {
             // If the whole text wasn't parsed, something went wrong.
@@ -48,6 +51,13 @@ impl<'a> DataTree<'a> {
         match self {
             &DataTree::Internal { type_name, .. } => type_name,
             &DataTree::Leaf { type_name, .. } => type_name,
+        }
+    }
+
+    pub fn byte_offset(&'a self) -> usize {
+        match self {
+            &DataTree::Internal { byte_offset, .. } => byte_offset,
+            &DataTree::Leaf { byte_offset, .. } => byte_offset,
         }
     }
 
@@ -128,14 +138,14 @@ impl<'a> DataTree<'a> {
 
     // For unit tests
     fn internal_data_or_panic(&'a self) -> (&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>) {
-        if let DataTree::Internal { type_name, ident, ref children } = *self {
+        if let DataTree::Internal { type_name, ident, ref children, byte_offset: _ } = *self {
             (type_name, ident, children)
         } else {
             panic!("Expected DataTree::Internal, found DataTree::Leaf")
         }
     }
     fn leaf_data_or_panic(&'a self) -> (&'a str, &'a str) {
-        if let DataTree::Leaf { type_name, contents } = *self {
+        if let DataTree::Leaf { type_name, contents, byte_offset: _ } = *self {
             (type_name, contents)
         } else {
             panic!("Expected DataTree::Leaf, found DataTree::Internal")
@@ -179,14 +189,14 @@ pub struct DataTreeFilterInternalIter<'a> {
 }
 
 impl<'a> Iterator for DataTreeFilterInternalIter<'a> {
-    type Item = (&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>);
+    type Item = (&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>, usize);
 
-    fn next(&mut self) -> Option<(&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>)> {
+    fn next(&mut self) -> Option<(&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>, usize)> {
         loop {
             match self.iter.next() {
-                Some(&DataTree::Internal { type_name, ident, ref children }) => {
+                Some(&DataTree::Internal { type_name, ident, ref children, byte_offset }) => {
                     if type_name == self.type_name {
-                        return Some((type_name, ident, children));
+                        return Some((type_name, ident, children, byte_offset));
                     } else {
                         continue;
                     }
@@ -214,18 +224,18 @@ pub struct DataTreeFilterLeafIter<'a> {
 }
 
 impl<'a> Iterator for DataTreeFilterLeafIter<'a> {
-    type Item = (&'a str, &'a str);
+    type Item = (&'a str, &'a str, usize);
 
-    fn next(&mut self) -> Option<(&'a str, &'a str)> {
+    fn next(&mut self) -> Option<(&'a str, &'a str, usize)> {
         loop {
             match self.iter.next() {
                 Some(&DataTree::Internal { .. }) => {
                     continue;
                 }
 
-                Some(&DataTree::Leaf { type_name, contents }) => {
+                Some(&DataTree::Leaf { type_name, contents, byte_offset }) => {
                     if type_name == self.type_name {
-                        return Some((type_name, contents));
+                        return Some((type_name, contents, byte_offset));
                     } else {
                         continue;
                     }
@@ -290,6 +300,7 @@ fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
                                             type_name: type_name,
                                             ident: Some(n),
                                             children: children,
+                                            byte_offset: text1.0,
                                         },
                                         text4)));
                     } else {
@@ -314,6 +325,7 @@ fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
                                         type_name: type_name,
                                         ident: None,
                                         children: children,
+                                        byte_offset: text1.0,
                                     },
                                     text3)));
                 } else {
@@ -328,6 +340,7 @@ fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
                     return Ok(Some((DataTree::Leaf {
                                         type_name: type_name,
                                         contents: contents,
+                                        byte_offset: text1.0,
                                     },
                                     text4)));
                 } else {
