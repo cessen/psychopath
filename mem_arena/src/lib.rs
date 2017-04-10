@@ -19,7 +19,7 @@ fn alignment_offset(addr: usize, alignment: usize) -> usize {
 /// Additionally, to minimize unused space in blocks, allocations above a specified
 /// size (the large allocation threshold) are given their own block.
 ///
-/// The block size and large allocation threshold size are configurable.
+/// The block size and large allocation threshold are configurable.
 #[derive(Debug)]
 pub struct MemArena {
     blocks: RefCell<Vec<Vec<u8>>>,
@@ -28,7 +28,7 @@ pub struct MemArena {
 }
 
 impl MemArena {
-    /// Create a new arena, with default block size and large allocation threshold
+    /// Create a new arena, with default block size and large allocation threshold.
     pub fn new() -> MemArena {
         MemArena {
             blocks: RefCell::new(vec![Vec::with_capacity(DEFAULT_BLOCK_SIZE)]),
@@ -37,6 +37,7 @@ impl MemArena {
         }
     }
 
+    /// Create a new arena, with a custom block size and large allocation threshold.
     pub fn new_with_settings(block_size: usize, large_alloc_threshold: usize) -> MemArena {
         assert!(large_alloc_threshold <= block_size);
 
@@ -126,7 +127,6 @@ impl MemArena {
         assert!(alignment > 0);
 
         let mut blocks = self.blocks.borrow_mut();
-
 
         // If it's a zero-size allocation, just point to the beginning of the curent block.
         if size == 0 {
