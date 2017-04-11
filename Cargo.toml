@@ -15,7 +15,7 @@ debug = true
 [dependencies]
 # Crates.io dependencies
 time = "0.1"
-docopt = "0.6"
+clap = "2.23"
 rustc-serialize = "0.3"
 nom = "1.2"
 scoped_threadpool = "0.1"

@@ -1,7 +1,7 @@
 extern crate mem_arena;
 
 extern crate crossbeam;
-extern crate docopt;
+extern crate clap;
 extern crate lodepng;
 extern crate num_cpus;
 extern crate openexr;
@@ -47,8 +47,9 @@ use std::io;
 use std::io::Read;
 use std::mem;
 use std::path::Path;
+use std::str::FromStr;
 
-use docopt::Docopt;
+use clap::{App, Arg};
 
 use mem_arena::MemArena;
 
@@ -58,61 +59,63 @@ use renderer::LightPath;
 use timer::Timer;
 
 
-// ----------------------------------------------------------------
+
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-
-const USAGE: &'static str = r#"
-Psychopath <VERSION>
-
-Usage:
-  psychopath [options] -i <file>
-  psychopath --dev
-  psychopath (-h | --help)
-  psychopath --version
-
-Options:
-  -i <file>, --input <file>     Input .psy file.
-  -s <n>, --spp <n>             Number of samples per pixel.
-  -b <n>, --spb <n>             Maxmimum number of samples per bucket (determines bucket size).
-  -t <n>, --threads <n>         Number of threads to render with.  Defaults
-                                to the number of logical cores on the system.
-  --stats                       Print additional statistics about rendering
-  --dev                         Show useful dev/debug info.
-  -h, --help                    Show this screen.
-  --version                     Show version.
-"#;
-
-#[derive(Debug, RustcDecodable)]
-struct Args {
-    flag_input: Option<String>,
-    flag_spp: Option<usize>,
-    flag_spb: Option<usize>,
-    flag_threads: Option<usize>,
-    flag_stats: bool,
-    flag_dev: bool,
-    flag_version: bool,
-}
-
-
-// ----------------------------------------------------------------
 
 fn main() {
     let mut t = Timer::new();
 
     // Parse command line arguments.
-    let args: Args = Docopt::new(USAGE.replace("<VERSION>", VERSION))
-        .and_then(|d| d.decode())
-        .unwrap_or_else(|e| e.exit());
-
-    // Print version and exit if requested.
-    if args.flag_version {
-        println!("Psychopath {}", VERSION);
-        return;
-    }
+    let args =
+        App::new("Psychopath")
+            .version(VERSION)
+            .about("A slightly psychotic path tracer")
+            .arg(Arg::with_name("input")
+                .short("i")
+                .long("input")
+                .value_name("FILE")
+                .help("Input .psy file")
+                .takes_value(true)
+                .required_unless("dev"))
+            .arg(Arg::with_name("spp")
+                .short("s")
+                .long("spp")
+                .value_name("N")
+                .help("Number of samples per pixel")
+                .takes_value(true)
+                .validator(|s| {
+                    usize::from_str(&s).and(Ok(())).or(Err("must be an integer".to_string()))
+                }))
+            .arg(Arg::with_name("max_bucket_samples")
+                .short("b")
+                .long("spb")
+                .value_name("N")
+                .help("Target number of samples per bucket (determines bucket size)")
+                .takes_value(true)
+                .validator(|s| {
+                    usize::from_str(&s).and(Ok(())).or(Err("must be an integer".to_string()))
+                }))
+            .arg(Arg::with_name("threads")
+                .short("t")
+                .long("threads")
+                .value_name("N")
+                .help("Number of threads to render with.  Defaults to the number of logical \
+                       cores on the system.")
+                .takes_value(true)
+                .validator(|s| {
+                    usize::from_str(&s).and(Ok(())).or(Err("must be an integer".to_string()))
+                }))
+            .arg(Arg::with_name("stats")
+                .long("stats")
+                .help("Print additional statistics about rendering"))
+            .arg(Arg::with_name("dev")
+                .long("dev")
+                .help("Show useful dev/debug info."))
+            .get_matches();
 
     // Print some misc useful dev info.
-    if args.flag_dev {
+    if args.is_present("dev") {
         println!("Ray size:       {} bytes", mem::size_of::<Ray>());
         println!("AccelRay size:  {} bytes", mem::size_of::<AccelRay>());
         println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
@@ -123,16 +126,14 @@ fn main() {
     println!("Parsing scene file...");
     t.tick();
     let mut psy_contents = String::new();
-    let dt = if let Some(fp) = args.flag_input {
+    let dt = {
+        let fp = args.value_of("input").unwrap();
         let mut f = io::BufReader::new(File::open(fp).unwrap());
         let _ = f.read_to_string(&mut psy_contents);
 
         DataTree::from_str(&psy_contents).unwrap()
-    } else {
-        panic!()
     };
     println!("\tParsed scene file in {:.3}s", t.tick());
-
 
     // Iterate through scenes and render them
     if let DataTree::Internal { ref children, .. } = dt {
@@ -147,19 +148,20 @@ fn main() {
                     panic!("Parse error.");
                 });
 
-                if let Some(spp) = args.flag_spp {
+                if let Some(spp) = args.value_of("spp") {
                     println!("\tOverriding scene spp: {}", spp);
-                    r.spp = spp;
+                    r.spp = usize::from_str(&spp).unwrap();
                 }
 
-                let max_samples_per_bucket = if let Some(max_samples_per_bucket) = args.flag_spb {
-                    max_samples_per_bucket as u32
+                let max_samples_per_bucket = if let Some(max_samples_per_bucket) =
+                    args.value_of("spp") {
+                    u32::from_str(&max_samples_per_bucket).unwrap()
                 } else {
                     4096
                 };
 
-                let thread_count = if let Some(threads) = args.flag_threads {
-                    threads as u32
+                let thread_count = if let Some(threads) = args.value_of("threads") {
+                    u32::from_str(&threads).unwrap()
                 } else {
                     num_cpus::get() as u32
                 };
@@ -181,7 +183,7 @@ fn main() {
                 println!("\tWrote image in {:.3}s", t.tick());
 
                 // Print memory stats if stats are wanted.
-                if args.flag_stats {
+                if args.is_present("stats") {
                     let arena_stats = arena.stats();
                     let mib_occupied = arena_stats.0 as f64 / 1048576.0;
                     let mib_allocated = arena_stats.1 as f64 / 1048576.0;
