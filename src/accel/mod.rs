@@ -1,3 +1,4 @@
+mod bvh_base;
 mod bvh;
 mod light_array;
 mod light_tree;

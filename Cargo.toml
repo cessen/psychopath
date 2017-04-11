@@ -22,6 +22,7 @@ scoped_threadpool = "0.1"
 crossbeam = "0.2"
 num_cpus = "1.0"
 lodepng = "0.8"
+lazy_static = "0.2"
 simd = { version = "0.1.1", optional = true }
 
 # Github dependencies

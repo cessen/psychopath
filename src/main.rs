@@ -12,6 +12,9 @@ extern crate time;
 #[macro_use]
 extern crate nom;
 
+#[macro_use]
+extern crate lazy_static;
+
 #[cfg(feature = "simd_perf")]
 extern crate simd;
 
