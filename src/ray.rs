@@ -2,6 +2,7 @@
 
 use std;
 
+use bitstack::BitStack128;
 use float4::Float4;
 use math::{Vector, Point, Matrix4x4};
 
@@ -16,6 +17,7 @@ pub struct Ray {
     pub max_t: f32,
     pub time: f32,
     pub flags: u32,
+    pub trav_stack: BitStack128,
 }
 
 impl Ray {
@@ -27,6 +29,7 @@ impl Ray {
                 max_t: std::f32::INFINITY,
                 time: time,
                 flags: 0,
+                trav_stack: BitStack128::new(),
             }
         } else {
             Ray {
@@ -35,6 +38,7 @@ impl Ray {
                 max_t: 1.0,
                 time: time,
                 flags: OCCLUSION_FLAG,
+                trav_stack: BitStack128::new(),
             }
         }
     }
