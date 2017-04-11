@@ -74,6 +74,7 @@ Options:
   -b <n>, --spb <n>             Maxmimum number of samples per bucket (determines bucket size).
   -t <n>, --threads <n>         Number of threads to render with.  Defaults
                                 to the number of logical cores on the system.
+  --stats                       Print additional statistics about rendering
   --dev                         Show useful dev/debug info.
   -h, --help                    Show this screen.
   --version                     Show version.
@@ -85,6 +86,7 @@ struct Args {
     flag_spp: Option<usize>,
     flag_spb: Option<usize>,
     flag_threads: Option<usize>,
+    flag_stats: bool,
     flag_dev: bool,
     flag_version: bool,
 }
@@ -136,8 +138,8 @@ fn main() {
             if child.type_name() == "Scene" {
                 println!("Building scene...");
 
-                let mut arena = MemArena::new();
-                let mut r = parse_scene(&mut arena, child).unwrap_or_else(|e| {
+                let arena = MemArena::new_with_settings((1 << 20) * 64, (1 << 20) * 4);
+                let mut r = parse_scene(&arena, child).unwrap_or_else(|e| {
                     e.print(&psy_contents);
                     panic!("Parse error.");
                 });
@@ -174,6 +176,18 @@ fn main() {
                     panic!("Unknown output file extension.");
                 }
                 println!("\tWrote image in {:.3}s", t.tick());
+
+                // Print memory stats if dev info is wanted.
+                if args.flag_stats {
+                    let arena_stats = arena.stats();
+                    println!("MemArena stats:");
+                    println!("\tOccupied:      {:.1} MiB",
+                             arena_stats.0 as f64 / 1048576.0);
+                    println!("\tAllocated:     {:.1} MiB",
+                             arena_stats.1 as f64 / 1048576.0);
+                    println!("\tTotal blocks:  {}", arena_stats.2);
+                    println!("\tLarge blocks:  {}", arena_stats.3);
+                }
             }
         }
     }

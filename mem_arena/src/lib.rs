@@ -1,5 +1,5 @@
 use std::slice;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::mem::{size_of, align_of};
 
 const DEFAULT_BLOCK_SIZE: usize = (1 << 20) * 32; // 32 MiB
@@ -26,6 +26,9 @@ pub struct MemArena {
     blocks: RefCell<Vec<Vec<u8>>>,
     block_size: usize,
     large_alloc_threshold: usize,
+    stat_space_occupied: Cell<usize>,
+    stat_space_allocated: Cell<usize>,
+    stat_large_blocks: Cell<usize>,
 }
 
 impl MemArena {
@@ -35,6 +38,9 @@ impl MemArena {
             blocks: RefCell::new(vec![Vec::with_capacity(DEFAULT_BLOCK_SIZE)]),
             block_size: DEFAULT_BLOCK_SIZE,
             large_alloc_threshold: DEFAULT_LARGE_ALLOCATION_THRESHOLD,
+            stat_space_occupied: Cell::new(DEFAULT_BLOCK_SIZE),
+            stat_space_allocated: Cell::new(0),
+            stat_large_blocks: Cell::new(0),
         }
     }
 
@@ -46,7 +52,34 @@ impl MemArena {
             blocks: RefCell::new(vec![Vec::with_capacity(block_size)]),
             block_size: block_size,
             large_alloc_threshold: large_alloc_threshold,
+            stat_space_occupied: Cell::new(block_size),
+            stat_space_allocated: Cell::new(0),
+            stat_large_blocks: Cell::new(0),
         }
+    }
+
+    /// Returns statistics about the current usage as a tuple:
+    /// (space occupied, space allocated, block count, large block count)
+    ///
+    /// Space occupied is the amount of real memory that the MemArena
+    /// is taking up (not counting book keeping).
+    ///
+    /// Space allocated is the amount of the occupied space that is
+    /// actually used.  In other words, it is the sum of the all the
+    /// allocation requests made to the arena by client code.
+    ///
+    /// Block count is the number of blocks that have been allocated.
+    ///
+    /// Large block count is the number of blocks that have beem specifically
+    /// allocated for allocation requests that were above the large
+    /// allocation threshold.
+    pub fn stats(&self) -> (usize, usize, usize, usize) {
+        let occupied = self.stat_space_occupied.get();
+        let allocated = self.stat_space_allocated.get();
+        let blocks = self.blocks.borrow().len();
+        let large_blocks = self.stat_large_blocks.get();
+
+        (occupied, allocated, blocks, large_blocks)
     }
 
     /// Frees all memory currently allocated by the arena, resetting itself to start
@@ -60,6 +93,10 @@ impl MemArena {
         blocks.clear();
         blocks.shrink_to_fit();
         blocks.push(Vec::with_capacity(self.block_size));
+
+        self.stat_space_occupied.set(self.block_size);
+        self.stat_space_allocated.set(0);
+        self.stat_large_blocks.set(0);
     }
 
     /// Allocates memory for and initializes a type T, returning a mutable reference to it.
@@ -127,6 +164,8 @@ impl MemArena {
     unsafe fn alloc_raw(&self, size: usize, alignment: usize) -> *mut u8 {
         assert!(alignment > 0);
 
+        self.stat_space_allocated.set(self.stat_space_allocated.get() + size); // Update stats
+
         let mut blocks = self.blocks.borrow_mut();
 
         // If it's a zero-size allocation, just point to the beginning of the curent block.
@@ -152,6 +191,11 @@ impl MemArena {
             else {
                 // If it's a "large allocation", give it its own memory block.
                 if size > self.large_alloc_threshold {
+                    // Update stats
+                    self.stat_space_occupied
+                        .set(self.stat_space_occupied.get() + size + alignment - 1);
+                    self.stat_large_blocks.set(self.stat_large_blocks.get() + 1);
+
                     blocks.push(Vec::with_capacity(size + alignment - 1));
                     blocks.last_mut().unwrap().set_len(size + alignment - 1);
 
@@ -163,6 +207,9 @@ impl MemArena {
                 }
                 // Otherwise create a new shared block.
                 else {
+                    // Update stats
+                    self.stat_space_occupied.set(self.stat_space_occupied.get() + self.block_size);
+
                     blocks.push(Vec::with_capacity(self.block_size));
                     let block_count = blocks.len();
                     blocks.swap(0, block_count - 1);
