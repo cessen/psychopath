@@ -138,7 +138,7 @@ fn main() {
             if child.type_name() == "Scene" {
                 println!("Building scene...");
 
-                let arena = MemArena::new_with_settings((1 << 20) * 64, (1 << 20) * 4);
+                let arena = MemArena::with_min_block_size((1 << 20) * 4);
                 let mut r = parse_scene(&arena, child).unwrap_or_else(|e| {
                     e.print(&psy_contents);
                     panic!("Parse error.");
@@ -177,16 +177,27 @@ fn main() {
                 }
                 println!("\tWrote image in {:.3}s", t.tick());
 
-                // Print memory stats if dev info is wanted.
+                // Print memory stats if stats are wanted.
                 if args.flag_stats {
                     let arena_stats = arena.stats();
+                    let mib_occupied = arena_stats.0 as f64 / 1048576.0;
+                    let mib_allocated = arena_stats.1 as f64 / 1048576.0;
+
                     println!("MemArena stats:");
-                    println!("\tOccupied:      {:.1} MiB",
-                             arena_stats.0 as f64 / 1048576.0);
-                    println!("\tAllocated:     {:.1} MiB",
-                             arena_stats.1 as f64 / 1048576.0);
+
+                    if mib_occupied >= 1.0 {
+                        println!("\tOccupied:      {:.1} MiB", mib_occupied);
+                    } else {
+                        println!("\tOccupied:      {:.4} MiB", mib_occupied);
+                    }
+
+                    if mib_allocated >= 1.0 {
+                        println!("\tUsed:          {:.1} MiB", mib_allocated);
+                    } else {
+                        println!("\tUsed:          {:.4} MiB", mib_allocated);
+                    }
+
                     println!("\tTotal blocks:  {}", arena_stats.2);
-                    println!("\tLarge blocks:  {}", arena_stats.3);
                 }
             }
         }
