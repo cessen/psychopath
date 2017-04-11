@@ -1,11 +1,12 @@
 #![allow(dead_code)]
 
 use std::cmp::PartialEq;
-use std::ops::{Add, Sub, Mul, Div};
+use std::ops::{Add, Sub, Mul, Div, BitAnd};
 
 #[cfg(feature = "simd_perf")]
-use simd::f32x4;
+use simd::{f32x4, bool32fx4};
 
+use lerp::Lerp;
 
 /// Essentially a tuple of four floats, which will use SIMD operations
 /// where possible on a platform.
@@ -131,6 +132,62 @@ impl Float4 {
                     } else {
                         other.get_3()
                     })
+    }
+
+    #[cfg(feature = "simd_perf")]
+    pub fn lt(&self, other: Float4) -> Bool4 {
+        Bool4 { data: self.data.lt(other.data) }
+    }
+    #[cfg(not(feature = "simd_perf"))]
+    pub fn lt(&self, other: Float4) -> Bool4 {
+        Bool4 {
+            data: [self.data[0] < other.data[0],
+                   self.data[1] < other.data[1],
+                   self.data[2] < other.data[2],
+                   self.data[3] < other.data[3]],
+        }
+    }
+
+    #[cfg(feature = "simd_perf")]
+    pub fn lte(&self, other: Float4) -> Bool4 {
+        Bool4 { data: self.data.lte(other.data) }
+    }
+    #[cfg(not(feature = "simd_perf"))]
+    pub fn lte(&self, other: Float4) -> Bool4 {
+        Bool4 {
+            data: [self.data[0] <= other.data[0],
+                   self.data[1] <= other.data[1],
+                   self.data[2] <= other.data[2],
+                   self.data[3] <= other.data[3]],
+        }
+    }
+
+    #[cfg(feature = "simd_perf")]
+    pub fn gt(&self, other: Float4) -> Bool4 {
+        Bool4 { data: self.data.gt(other.data) }
+    }
+    #[cfg(not(feature = "simd_perf"))]
+    pub fn gt(&self, other: Float4) -> Bool4 {
+        Bool4 {
+            data: [self.data[0] > other.data[0],
+                   self.data[1] > other.data[1],
+                   self.data[2] > other.data[2],
+                   self.data[3] > other.data[3]],
+        }
+    }
+
+    #[cfg(feature = "simd_perf")]
+    pub fn gte(&self, other: Float4) -> Bool4 {
+        Bool4 { data: self.data.gte(other.data) }
+    }
+    #[cfg(not(feature = "simd_perf"))]
+    pub fn gte(&self, other: Float4) -> Bool4 {
+        Bool4 {
+            data: [self.data[0] >= other.data[0],
+                   self.data[1] >= other.data[1],
+                   self.data[2] >= other.data[2],
+                   self.data[3] >= other.data[3]],
+        }
     }
 
     /// Set the nth element to the given value.
@@ -378,6 +435,110 @@ impl Div<f32> for Float4 {
                    self.get_1() / other,
                    self.get_2() / other,
                    self.get_3() / other],
+        }
+    }
+}
+
+impl Lerp for Float4 {
+    fn lerp(self, other: Float4, alpha: f32) -> Float4 {
+        (self * (1.0 - alpha)) + (other * alpha)
+    }
+}
+
+#[inline(always)]
+pub fn v_min(a: Float4, b: Float4) -> Float4 {
+    a.v_min(b)
+}
+
+#[inline(always)]
+pub fn v_max(a: Float4, b: Float4) -> Float4 {
+    a.v_max(b)
+}
+
+
+/// Essentially a tuple of four bools, which will use SIMD operations
+/// where possible on a platform.
+#[cfg(feature = "simd_perf")]
+#[derive(Debug, Copy, Clone)]
+pub struct Bool4 {
+    data: bool32fx4,
+}
+
+#[cfg(not(feature = "simd_perf"))]
+#[derive(Debug, Copy, Clone)]
+pub struct Bool4 {
+    data: [bool; 4],
+}
+
+impl Bool4 {
+    /// Returns the value of the 0th element.
+    #[cfg(feature = "simd_perf")]
+    #[inline(always)]
+    pub fn get_0(&self) -> bool {
+        self.data.extract(0)
+    }
+    #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
+    pub fn get_0(&self) -> bool {
+        unsafe { *self.data.get_unchecked(0) }
+    }
+
+    /// Returns the value of the 1th element.
+    #[cfg(feature = "simd_perf")]
+    #[inline(always)]
+    pub fn get_1(&self) -> bool {
+        self.data.extract(1)
+    }
+    #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
+    pub fn get_1(&self) -> bool {
+        unsafe { *self.data.get_unchecked(1) }
+    }
+
+    /// Returns the value of the 2th element.
+    #[cfg(feature = "simd_perf")]
+    #[inline(always)]
+    pub fn get_2(&self) -> bool {
+        self.data.extract(2)
+    }
+    #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
+    pub fn get_2(&self) -> bool {
+        unsafe { *self.data.get_unchecked(2) }
+    }
+
+    /// Returns the value of the 3th element.
+    #[cfg(feature = "simd_perf")]
+    #[inline(always)]
+    pub fn get_3(&self) -> bool {
+        self.data.extract(3)
+    }
+    #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
+    pub fn get_3(&self) -> bool {
+        unsafe { *self.data.get_unchecked(3) }
+    }
+
+    pub fn to_bitmask(&self) -> u8 {
+        (self.get_0() as u8) & ((self.get_1() as u8) << 1) & ((self.get_2() as u8) << 2) &
+        ((self.get_3() as u8) << 3)
+    }
+}
+
+impl BitAnd for Bool4 {
+    type Output = Bool4;
+
+    #[cfg(feature = "simd_perf")]
+    fn bitand(self, rhs: Bool4) -> Bool4 {
+        Bool4 { data: self.data & rhs.data }
+    }
+    #[cfg(not(feature = "simd_perf"))]
+    fn bitand(self, rhs: Bool4) -> Bool4 {
+        Bool4 {
+            data: [self.data[0] && rhs.data[0],
+                   self.data[1] && rhs.data[1],
+                   self.data[2] && rhs.data[2],
+                   self.data[3] && rhs.data[3]],
         }
     }
 }

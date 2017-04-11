@@ -21,6 +21,7 @@ extern crate simd;
 mod accel;
 mod algorithm;
 mod bbox;
+mod bbox4;
 mod bitstack;
 mod boundable;
 mod camera;
