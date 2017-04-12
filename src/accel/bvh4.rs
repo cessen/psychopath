@@ -1,15 +1,49 @@
+//! This BVH4 implementation pulls a lot of ideas from the paper
+//! "Efficient Ray Tracing Kernels for Modern CPU Architectures"
+//! by Fuetterling et al.
+//!
+//! Specifically, the table-based traversal order approach they
+//! propose is largely followed by this implementation.
+
 #![allow(dead_code)]
 
 use mem_arena::MemArena;
 
 use algorithm::partition;
 use bbox::BBox;
+use bbox4::BBox4;
 use boundable::Boundable;
 use lerp::lerp_slice;
 use ray::AccelRay;
 
 use super::bvh_base::{BVHBase, BVHBaseNode, BVH_MAX_DEPTH};
 
+// TRAVERSAL_TABLE
+include!("bvh4_table.inc");
+
+// Calculates the traversal code for a BVH4 node based on the splits and topology
+// of its children.
+//
+// split_1 is the top split.
+//
+// split_2 is either the left or right split depending on topology, and is only
+// relevant for topologies 0-2.  For topology 3 it should be 0.
+//
+// split_3 is always the right split, and is only relevant for topology 0. For
+// topologies 1-3 it should be 0.
+//
+// topology can be 0-3:
+//     0: All three splits exist, representing 4 BVH4 children.
+//     1: Two splits exist: top split and left split, representing 3 BVH4 children.
+//     2: Two splits exist: top split and right split, representing 3 BVH4 children.
+//     3: Only the top split exists, representing 2 BVH4 children.
+fn calc_traversal_code(split_1: u8, split_2: u8, split_3: u8, topology: u8) -> u8 {
+    debug_assert!(!(topology > 0 && split_3 > 0));
+    debug_assert!(!(topology > 2 && split_2 > 0));
+
+    static T_TABLE: [u8; 4] = [0, 27, 27 + 9, 27 + 9 + 9];
+    split_1 + (split_2 * 3) + (split_3 * 9) + T_TABLE[topology as usize]
+}
 
 #[derive(Copy, Clone, Debug)]
 pub struct BVH4<'a> {
@@ -19,6 +53,12 @@ pub struct BVH4<'a> {
 
 #[derive(Copy, Clone, Debug)]
 enum BVH4Node<'a> {
+    // Internal {
+    //     bounds: &'a [BBox4],
+    //     children: [&'a BVH4Node<'a>; 4],
+    //     children_count: u8,
+    //     traversal_code: u8,
+    // },
     Internal {
         bounds: &'a [BBox],
         children: (&'a BVH4Node<'a>, &'a BVH4Node<'a>),
