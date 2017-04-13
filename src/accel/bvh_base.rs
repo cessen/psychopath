@@ -33,6 +33,15 @@ pub enum BVHBaseNode {
     },
 }
 
+impl BVHBaseNode {
+    pub fn bounds_range(&self) -> (usize, usize) {
+        match self {
+            &BVHBaseNode::Internal { bounds_range, .. } => bounds_range,
+            &BVHBaseNode::Leaf { bounds_range, .. } => bounds_range,
+        }
+    }
+}
+
 impl BVHBase {
     fn new() -> BVHBase {
         BVHBase {

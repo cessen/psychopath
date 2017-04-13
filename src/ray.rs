@@ -17,7 +17,6 @@ pub struct Ray {
     pub max_t: f32,
     pub time: f32,
     pub flags: u32,
-    pub trav_stack: BitStack128,
 }
 
 impl Ray {
@@ -29,7 +28,6 @@ impl Ray {
                 max_t: std::f32::INFINITY,
                 time: time,
                 flags: 0,
-                trav_stack: BitStack128::new(),
             }
         } else {
             Ray {
@@ -38,7 +36,6 @@ impl Ray {
                 max_t: 1.0,
                 time: time,
                 flags: OCCLUSION_FLAG,
-                trav_stack: BitStack128::new(),
             }
         }
     }
@@ -62,6 +59,7 @@ pub struct AccelRay {
     pub time: f32,
     pub flags: u32,
     pub id: u32,
+    pub trav_stack: BitStack128,
 }
 
 impl AccelRay {
@@ -73,6 +71,7 @@ impl AccelRay {
             time: ray.time,
             flags: ray.flags,
             id: id,
+            trav_stack: BitStack128::new_with_1(),
         }
     }
 

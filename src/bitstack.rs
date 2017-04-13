@@ -12,6 +12,10 @@ impl BitStack128 {
         BitStack128 { data: (0, 0) }
     }
 
+    pub fn new_with_1() -> BitStack128 {
+        BitStack128 { data: (1, 0) }
+    }
+
     /// Push a bit onto the top of the stack.
     pub fn push(&mut self, value: bool) {
         debug_assert!((self.data.1 >> (size_of::<u64>() - 1)) == 0); // Verify no stack overflow
@@ -52,6 +56,16 @@ impl BitStack128 {
         debug_assert!(n < size_of::<BitStack128>()); // Can't pop more than we have
         debug_assert!(n < size_of::<u64>()); // Can't pop more than the return type can hold
         let b = self.data.0 & ((1 << n) - 1);
+        self.data.0 = (self.data.0 >> n) | (self.data.1 << (size_of::<u64>() - n));
+        self.data.1 >>= n;
+        return b;
+    }
+
+    /// Pop the top n bits off the stack, returning only the first
+    /// one.
+    pub fn pop_1_remove_n(&mut self, n: usize) -> bool {
+        debug_assert!(n < size_of::<BitStack128>()); // Can't pop more than we have
+        let b = (self.data.0 & 1) != 0;
         self.data.0 = (self.data.0 >> n) | (self.data.1 << (size_of::<u64>() - n));
         self.data.1 >>= n;
         return b;
