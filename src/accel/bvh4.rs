@@ -29,7 +29,7 @@ pub struct BVH4<'a> {
 }
 
 #[derive(Copy, Clone, Debug)]
-enum BVH4Node<'a> {
+pub enum BVH4Node<'a> {
     Internal {
         bounds: &'a [BBox4],
         children: &'a [BVH4Node<'a>],

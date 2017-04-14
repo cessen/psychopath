@@ -58,6 +58,10 @@ use mem_arena::MemArena;
 use parse::{parse_scene, DataTree};
 use ray::{Ray, AccelRay};
 use renderer::LightPath;
+use bbox::BBox;
+use bbox4::BBox4;
+use accel::BVHNode;
+use accel::BVH4Node;
 use timer::Timer;
 
 
@@ -121,6 +125,10 @@ fn main() {
         println!("Ray size:       {} bytes", mem::size_of::<Ray>());
         println!("AccelRay size:  {} bytes", mem::size_of::<AccelRay>());
         println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
+        println!("BBox size: {} bytes", mem::size_of::<BBox>());
+        println!("BBox4 size: {} bytes", mem::size_of::<BBox4>());
+        println!("BVHNode size: {} bytes", mem::size_of::<BVHNode>());
+        println!("BVH4Node size: {} bytes", mem::size_of::<BVH4Node>());
         return;
     }
 

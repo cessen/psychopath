@@ -8,8 +8,8 @@ mod objects_split;
 use math::{Vector, Point, Normal};
 use shading::surface_closure::SurfaceClosure;
 
-pub use self::bvh::BVH;
-pub use self::bvh4::BVH4;
+pub use self::bvh::{BVH, BVHNode};
+pub use self::bvh4::{BVH4, BVH4Node};
 pub use self::light_tree::LightTree;
 
 

@@ -18,7 +18,7 @@ pub struct BVH<'a> {
 }
 
 #[derive(Copy, Clone, Debug)]
-enum BVHNode<'a> {
+pub enum BVHNode<'a> {
     Internal {
         bounds: &'a [BBox],
         children: (&'a BVHNode<'a>, &'a BVHNode<'a>),
