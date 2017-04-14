@@ -56,7 +56,7 @@ impl<'a> BVH4<'a> {
         } else {
             let base = BVHBase::from_objects(objects, objects_per_leaf, bounder);
 
-            let mut fill_node = unsafe { arena.alloc_uninitialized::<BVH4Node>() };
+            let mut fill_node = unsafe { arena.alloc_uninitialized_with_alignment::<BVH4Node>(32) };
             BVH4::construct_from_base(arena, &base, &base.nodes[base.root_node_index()], fill_node);
 
             BVH4 {
@@ -247,7 +247,8 @@ impl<'a> BVH4<'a> {
                         })
                         .max()
                         .unwrap();
-                    let mut bounds = unsafe { arena.alloc_array_uninitialized(bounds_len) };
+                    let mut bounds =
+                        unsafe { arena.alloc_array_uninitialized_with_alignment(bounds_len, 32) };
                     for (i, b) in bounds.iter_mut().enumerate() {
                         let time = i as f32 / (bounds_len - 1) as f32;
 
@@ -274,7 +275,9 @@ impl<'a> BVH4<'a> {
 
                 // Construct child nodes
                 let mut child_nodes =
-                    unsafe { arena.alloc_array_uninitialized::<BVH4Node>(child_count) };
+                    unsafe {
+                        arena.alloc_array_uninitialized_with_alignment::<BVH4Node>(child_count, 32)
+                    };
                 for (i, c) in children[0..child_count].iter().enumerate() {
                     BVH4::construct_from_base(arena, base, c.unwrap(), &mut child_nodes[i]);
                 }

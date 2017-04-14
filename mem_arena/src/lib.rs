@@ -1,6 +1,7 @@
 use std::slice;
 use std::cell::{Cell, RefCell};
 use std::mem::{size_of, align_of};
+use std::cmp::max;
 
 const GROWTH_FRACTION: usize = 8; // 1/N  (smaller number leads to bigger allocations)
 const DEFAULT_MIN_BLOCK_SIZE: usize = 1 << 10; // 1 KiB
@@ -120,6 +121,22 @@ impl MemArena {
         memory.as_mut().unwrap()
     }
 
+    /// Allocates memory for a type `T`, returning a mutable reference to it.
+    ///
+    /// Additionally, the allocation will be made with the given byte alignment or
+    /// the type's inherent alignment, whichever is greater.
+    ///
+    /// CAUTION: the memory returned is uninitialized.  Make sure to initalize before using!
+    pub unsafe fn alloc_uninitialized_with_alignment<'a, T: Copy>(&'a self,
+                                                                  align: usize)
+                                                                  -> &'a mut T {
+        assert!(size_of::<T>() > 0);
+
+        let memory = self.alloc_raw(size_of::<T>(), max(align, align_of::<T>())) as *mut T;
+
+        memory.as_mut().unwrap()
+    }
+
     /// Allocates memory for `len` values of type `T`, returning a mutable slice to it.
     /// All elements are initialized to the given `value`.
     pub fn alloc_array<'a, T: Copy>(&'a self, len: usize, value: T) -> &'a mut [T] {
@@ -145,7 +162,8 @@ impl MemArena {
     }
 
     /// Allocates memory for `len` values of type `T`, returning a mutable slice to it.
-    /// All elements are initialized to the given `value`.
+    ///
+    /// CAUTION: the memory returned is uninitialized.  Make sure to initalize before using!
     pub unsafe fn alloc_array_uninitialized<'a, T: Copy>(&'a self, len: usize) -> &'a mut [T] {
         assert!(size_of::<T>() > 0);
 
@@ -156,6 +174,29 @@ impl MemArena {
         };
 
         let memory = self.alloc_raw(array_mem_size, align_of::<T>()) as *mut T;
+
+        slice::from_raw_parts_mut(memory, len)
+    }
+
+    /// Allocates memory for `len` values of type `T`, returning a mutable slice to it.
+    ///
+    /// Additionally, the allocation will be made with the given byte alignment or
+    /// the type's inherent alignment, whichever is greater.
+    ///
+    /// CAUTION: the memory returned is uninitialized.  Make sure to initalize before using!
+    pub unsafe fn alloc_array_uninitialized_with_alignment<'a, T: Copy>(&'a self,
+                                                                        len: usize,
+                                                                        align: usize)
+                                                                        -> &'a mut [T] {
+        assert!(size_of::<T>() > 0);
+
+        let array_mem_size = {
+            let alignment_padding = alignment_offset(size_of::<T>(), align_of::<T>());
+            let aligned_type_size = size_of::<T>() + alignment_padding;
+            aligned_type_size * len
+        };
+
+        let memory = self.alloc_raw(array_mem_size, max(align, align_of::<T>())) as *mut T;
 
         slice::from_raw_parts_mut(memory, len)
     }
