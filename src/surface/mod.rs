@@ -34,10 +34,10 @@ pub enum SurfaceIntersection {
 #[derive(Debug, Copy, Clone)]
 pub struct SurfaceIntersectionData {
     pub incoming: Vector, // Direction of the incoming ray
-    pub t: f32, // Ray t-value at the intersection point
     pub pos: Point, // Position of the intersection
     pub nor: Normal, // Shading normal
     pub nor_g: Normal, // True geometric normal
-    pub uv: (f32, f32), // 2d surface parameters
     pub local_space: Matrix4x4, // Matrix from global space to local space
+    pub t: f32, // Ray t-value at the intersection point
+    pub uv: (f32, f32), // 2d surface parameters
 }

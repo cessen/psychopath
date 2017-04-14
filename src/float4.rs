@@ -150,7 +150,7 @@ impl Float4 {
 
     #[cfg(feature = "simd_perf")]
     pub fn lte(&self, other: Float4) -> Bool4 {
-        Bool4 { data: self.data.lte(other.data) }
+        Bool4 { data: self.data.le(other.data) }
     }
     #[cfg(not(feature = "simd_perf"))]
     pub fn lte(&self, other: Float4) -> Bool4 {
@@ -178,7 +178,7 @@ impl Float4 {
 
     #[cfg(feature = "simd_perf")]
     pub fn gte(&self, other: Float4) -> Bool4 {
-        Bool4 { data: self.data.gte(other.data) }
+        Bool4 { data: self.data.ge(other.data) }
     }
     #[cfg(not(feature = "simd_perf"))]
     pub fn gte(&self, other: Float4) -> Bool4 {
