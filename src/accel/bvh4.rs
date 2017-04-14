@@ -98,47 +98,41 @@ impl<'a> BVH4<'a> {
                                 TRAVERSAL_TABLE[ray_code as usize][traversal_code as usize]
                             };
 
-                            let mut all_hits = 0; // Accumulate
+                            // Ray testing
                             let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
                                 if (!r.is_done()) && (first_loop || r.trav_stack.pop()) {
                                     let hits = lerp_slice(bounds, r.time)
                                         .intersect_accel_ray(r)
                                         .to_bitmask();
-                                    all_hits |= hits;
 
-                                    // Push hit bits onto ray's traversal stack
-                                    let mut shuffled_hits = 0;
-                                    for i in 0..3 {
-                                        let ii = (node_order_code >> (i * 2)) & 3;
-                                        shuffled_hits |= ((hits >> ii) & 1) << i;
+                                    if hits != 0 {
+                                        // Push hit bits onto ray's traversal stack
+                                        let mut shuffled_hits = 0;
+                                        for i in 0..children.len() {
+                                            let ii = (node_order_code >> (i * 2)) & 3;
+                                            shuffled_hits |= ((hits >> ii) & 1) << i;
+                                        }
+                                        r.trav_stack.push_n(shuffled_hits, children.len() as u8);
+
+                                        true
+                                    } else {
+                                        false
                                     }
-                                    r.trav_stack.push_3(shuffled_hits);
-
-                                    true
                                 } else {
                                     false
                                 }
                             });
-                            if part > 0 {
-                                node_stack[stack_ptr] = {
-                                    Some(&children[(node_order_code & 3) as usize])
-                                };
-                                node_stack[stack_ptr + 1] = {
-                                    Some(&children[((node_order_code >> 2) & 3) as usize])
-                                };
-                                node_stack[stack_ptr + 2] = if children.len() > 2 {
-                                    Some(&children[((node_order_code >> 4) & 3) as usize])
-                                } else {
-                                    None
-                                };
-                                node_stack[stack_ptr + 3] = if children.len() > 3 {
-                                    Some(&children[((node_order_code >> 6) & 3) as usize])
-                                } else {
-                                    None
-                                };
 
-                                ray_i_stack[stack_ptr] = part;
-                                ray_i_stack[stack_ptr + 1] = part;
+                            // Update stack based on ray testing results
+                            if part > 0 {
+                                for i in 0..children.len() {
+                                    let inv_i = (children.len() - 1) - i;
+                                    node_stack[stack_ptr + i] =
+                                        Some(&children[((node_order_code >> (inv_i * 2)) & 3) as
+                                              usize]);
+                                    ray_i_stack[stack_ptr + i] = part;
+                                }
+
                                 stack_ptr += children.len() - 1;
                             } else {
                                 stack_ptr -= 1;
@@ -298,7 +292,11 @@ impl<'a> BVH4<'a> {
                     };
                     calc_traversal_code(split_axis,
                                         split_axis_l.unwrap_or(split_axis_r.unwrap_or(0)),
-                                        split_axis_r.unwrap_or(0),
+                                        if child_count == 4 {
+                                            split_axis_r.unwrap()
+                                        } else {
+                                            0
+                                        },
                                         topology_code)
                 };
                 *fill_node = BVH4Node::Internal {

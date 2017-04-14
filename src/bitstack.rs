@@ -24,20 +24,24 @@ impl BitStack128 {
         self.data.0 |= value as u64;
     }
 
-    /// Push 3 bits onto the top of the stack.  The input
+    /// Push n bits onto the top of the stack.  The input
     /// bits are passed as an integer, with the bit that
     /// will be on top in the least significant digit, and
     /// the rest following in order from there.
     ///
     /// Note that unless you are running a debug build, no
-    /// effort is made to verify that only the first three
+    /// effort is made to verify that only the first n
     /// bits of the passed value are used.  So if other
     /// bits are non-zero this will produce incorrect results.
-    pub fn push_3(&mut self, value: u8) {
-        debug_assert!((self.data.1 >> (size_of::<u64>() - 3)) == 0); // Verify no stack overflow
-        debug_assert!(value & (!((1 << 3) - 1)) == 0); // Verify no bits outside of the 3-bit range
-        self.data.1 = (self.data.1 << 3) | (self.data.0 >> (size_of::<u64>() - 3));
-        self.data.0 <<= 3;
+    pub fn push_n(&mut self, value: u8, count: u8) {
+        // Verify no bitstack overflow
+        debug_assert!((self.data.1 >> (size_of::<u64>() - count as usize)) == 0);
+        // Verify no bits outside of the n-bit range
+        debug_assert!(value & (!((1 << count) - 1)) == 0);
+
+        self.data.1 = (self.data.1 << count as usize) |
+                      (self.data.0 >> (size_of::<u64>() - count as usize));
+        self.data.0 <<= count as u64;
         self.data.0 |= value as u64;
     }
 
@@ -56,16 +60,6 @@ impl BitStack128 {
         debug_assert!(n < size_of::<BitStack128>()); // Can't pop more than we have
         debug_assert!(n < size_of::<u64>()); // Can't pop more than the return type can hold
         let b = self.data.0 & ((1 << n) - 1);
-        self.data.0 = (self.data.0 >> n) | (self.data.1 << (size_of::<u64>() - n));
-        self.data.1 >>= n;
-        return b;
-    }
-
-    /// Pop the top n bits off the stack, returning only the first
-    /// one.
-    pub fn pop_1_remove_n(&mut self, n: usize) -> bool {
-        debug_assert!(n < size_of::<BitStack128>()); // Can't pop more than we have
-        let b = (self.data.0 & 1) != 0;
         self.data.0 = (self.data.0 >> n) | (self.data.1 << (size_of::<u64>() - n));
         self.data.1 >>= n;
         return b;

@@ -2,7 +2,7 @@
 
 use mem_arena::MemArena;
 
-use accel::BVH;
+use accel::BVH4;
 use bbox::BBox;
 use boundable::Boundable;
 use color::XYZ;
@@ -20,7 +20,7 @@ pub struct TriangleMesh<'a> {
     time_samples: usize,
     geo: &'a [(Point, Point, Point)],
     indices: &'a [usize],
-    accel: BVH<'a>,
+    accel: BVH4<'a>,
 }
 
 impl<'a> TriangleMesh<'a> {
@@ -44,10 +44,10 @@ impl<'a> TriangleMesh<'a> {
             bounds
         };
 
-        let accel = BVH::from_objects(arena,
-                                      &mut indices[..],
-                                      3,
-                                      |tri_i| &bounds[*tri_i..(*tri_i + time_samples)]);
+        let accel = BVH4::from_objects(arena,
+                                       &mut indices[..],
+                                       3,
+                                       |tri_i| &bounds[*tri_i..(*tri_i + time_samples)]);
 
         TriangleMesh {
             time_samples: time_samples,

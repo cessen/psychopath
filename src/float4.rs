@@ -520,7 +520,7 @@ impl Bool4 {
     }
 
     pub fn to_bitmask(&self) -> u8 {
-        (self.get_0() as u8) & ((self.get_1() as u8) << 1) & ((self.get_2() as u8) << 2) &
+        (self.get_0() as u8) | ((self.get_1() as u8) << 1) | ((self.get_2() as u8) << 2) |
         ((self.get_3() as u8) << 3)
     }
 }
