@@ -342,7 +342,7 @@ pub struct GTRClosure {
     col: XYZ,
     roughness: f32,
     tail_shape: f32,
-    fresnel: f32,
+    fresnel: f32, // [0.0, 1.0] determines how much fresnel reflection comes into play
     normalization_factor: f32,
 }
 
@@ -372,6 +372,8 @@ impl GTRClosure {
 
     // Makes sure values are in a valid range
     fn validate(&mut self) {
+        debug_assert!(self.fresnel >= 0.0 && self.fresnel <= 1.0);
+
         // Clamp values to valid ranges
         self.roughness = clamp(self.roughness, 0.0, 0.9999);
         self.tail_shape = (0.0001f32).max(self.tail_shape);

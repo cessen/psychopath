@@ -115,7 +115,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                                                                                              0.8),
                                                                                     0.1,
                                                                                     2.0,
-                                                                                    1.2)),
+                                                                                    1.0)),
                             };
                             r.max_t = t;
                         }

@@ -202,8 +202,16 @@ impl<'a> Renderer<'a> {
 
                 let x = bx as usize * bucket_w;
                 let y = by as usize * bucket_h;
-                let w = min(bucket_w, img_width - x);
-                let h = min(bucket_h, img_height - y);
+                let w = if img_width >= x {
+                    min(bucket_w, img_width - x)
+                } else {
+                    bucket_w
+                };
+                let h = if img_height >= y {
+                    min(bucket_h, img_height - y)
+                } else {
+                    bucket_h
+                };
                 if x < img_width && y < img_height && w > 0 && h > 0 {
                     job_queue.push(BucketJob {
                         x: x as u32,
