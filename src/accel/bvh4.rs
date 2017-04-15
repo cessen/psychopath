@@ -241,34 +241,49 @@ impl<'a> BVH4<'a> {
                 let bounds = {
                     let bounds_len = children.iter()
                         .map(|c| if let &Some(n) = c {
-                            n.bounds_range().1 - n.bounds_range().0
+                            let len = n.bounds_range().1 - n.bounds_range().0;
+                            debug_assert!(len >= 1);
+                            len
                         } else {
                             0
                         })
                         .max()
                         .unwrap();
+                    debug_assert!(bounds_len >= 1);
                     let mut bounds =
                         unsafe { arena.alloc_array_uninitialized_with_alignment(bounds_len, 32) };
-                    for (i, b) in bounds.iter_mut().enumerate() {
-                        let time = i as f32 / (bounds_len - 1) as f32;
+                    if bounds_len < 2 {
+                        let b1 = children[0]
+                            .map_or(BBox::new(), |c| base.bounds[c.bounds_range().0]);
+                        let b2 = children[1]
+                            .map_or(BBox::new(), |c| base.bounds[c.bounds_range().0]);
+                        let b3 = children[2]
+                            .map_or(BBox::new(), |c| base.bounds[c.bounds_range().0]);
+                        let b4 = children[3]
+                            .map_or(BBox::new(), |c| base.bounds[c.bounds_range().0]);
+                        bounds[0] = BBox4::from_bboxes(b1, b2, b3, b4);
+                    } else {
+                        for (i, b) in bounds.iter_mut().enumerate() {
+                            let time = i as f32 / (bounds_len - 1) as f32;
 
-                        let b1 = children[0].map_or(BBox::new(), |c| {
-                            let (x, y) = c.bounds_range();
-                            lerp_slice(&base.bounds[x..y], time)
-                        });
-                        let b2 = children[1].map_or(BBox::new(), |c| {
-                            let (x, y) = c.bounds_range();
-                            lerp_slice(&base.bounds[x..y], time)
-                        });
-                        let b3 = children[2].map_or(BBox::new(), |c| {
-                            let (x, y) = c.bounds_range();
-                            lerp_slice(&base.bounds[x..y], time)
-                        });
-                        let b4 = children[3].map_or(BBox::new(), |c| {
-                            let (x, y) = c.bounds_range();
-                            lerp_slice(&base.bounds[x..y], time)
-                        });
-                        *b = BBox4::from_bboxes(b1, b2, b3, b4);
+                            let b1 = children[0].map_or(BBox::new(), |c| {
+                                let (x, y) = c.bounds_range();
+                                lerp_slice(&base.bounds[x..y], time)
+                            });
+                            let b2 = children[1].map_or(BBox::new(), |c| {
+                                let (x, y) = c.bounds_range();
+                                lerp_slice(&base.bounds[x..y], time)
+                            });
+                            let b3 = children[2].map_or(BBox::new(), |c| {
+                                let (x, y) = c.bounds_range();
+                                lerp_slice(&base.bounds[x..y], time)
+                            });
+                            let b4 = children[3].map_or(BBox::new(), |c| {
+                                let (x, y) = c.bounds_range();
+                                lerp_slice(&base.bounds[x..y], time)
+                            });
+                            *b = BBox4::from_bboxes(b1, b2, b3, b4);
+                        }
                     }
                     bounds
                 };
