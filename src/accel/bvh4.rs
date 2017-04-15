@@ -25,6 +25,7 @@ include!("bvh4_table.inc");
 pub struct BVH4<'a> {
     root: Option<&'a BVH4Node<'a>>,
     depth: usize,
+    node_count: usize,
     _bounds: Option<&'a [BBox]>,
 }
 
@@ -51,17 +52,22 @@ impl<'a> BVH4<'a> {
             BVH4 {
                 root: None,
                 depth: 0,
+                node_count: 0,
                 _bounds: None,
             }
         } else {
             let base = BVHBase::from_objects(objects, objects_per_leaf, bounder);
 
             let mut fill_node = unsafe { arena.alloc_uninitialized_with_alignment::<BVH4Node>(32) };
-            BVH4::construct_from_base(arena, &base, &base.nodes[base.root_node_index()], fill_node);
+            let node_count = BVH4::construct_from_base(arena,
+                                                       &base,
+                                                       &base.nodes[base.root_node_index()],
+                                                       fill_node);
 
             BVH4 {
                 root: Some(fill_node),
                 depth: (base.depth / 2) + 1,
+                node_count: node_count,
                 _bounds: {
                     let range = base.nodes[base.root_node_index()].bounds_range();
                     Some(arena.copy_slice(&base.bounds[range.0..range.1]))
@@ -173,7 +179,10 @@ impl<'a> BVH4<'a> {
     fn construct_from_base(arena: &'a MemArena,
                            base: &BVHBase,
                            node: &BVHBaseNode,
-                           fill_node: &mut BVH4Node<'a>) {
+                           fill_node: &mut BVH4Node<'a>)
+                           -> usize {
+        let mut node_count = 0;
+
         match node {
             // Create internal node
             &BVHBaseNode::Internal { bounds_range: _, children_indices, split_axis } => {
@@ -237,6 +246,8 @@ impl<'a> BVH4<'a> {
                     }
                 }
 
+                node_count += child_count;
+
                 // Construct bounds
                 let bounds = {
                     let bounds_len = children.iter()
@@ -294,7 +305,8 @@ impl<'a> BVH4<'a> {
                         arena.alloc_array_uninitialized_with_alignment::<BVH4Node>(child_count, 32)
                     };
                 for (i, c) in children[0..child_count].iter().enumerate() {
-                    BVH4::construct_from_base(arena, base, c.unwrap(), &mut child_nodes[i]);
+                    node_count +=
+                        BVH4::construct_from_base(arena, base, c.unwrap(), &mut child_nodes[i]);
                 }
 
                 // Build this node
@@ -327,8 +339,11 @@ impl<'a> BVH4<'a> {
             // Create internal node
             &BVHBaseNode::Leaf { object_range, .. } => {
                 *fill_node = BVH4Node::Leaf { object_range: object_range };
+                node_count += 1;
             }
         }
+
+        return node_count;
     }
 }
 
