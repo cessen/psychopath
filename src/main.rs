@@ -217,4 +217,7 @@ fn main() {
             }
         }
     }
+
+    // End with blank line
+    println!("");
 }
