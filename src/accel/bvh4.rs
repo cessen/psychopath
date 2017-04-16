@@ -103,6 +103,10 @@ impl<'a> BVH4<'a> {
                             let node_order_code = {
                                 TRAVERSAL_TABLE[ray_code as usize][traversal_code as usize]
                             };
+                            let noc1 = node_order_code & 3;
+                            let noc2 = (node_order_code >> 2) & 3;
+                            let noc3 = (node_order_code >> 4) & 3;
+                            let noc4 = (node_order_code >> 6) & 3;
 
                             // Ray testing
                             let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
@@ -113,20 +117,25 @@ impl<'a> BVH4<'a> {
 
                                     if hits != 0 {
                                         // Push hit bits onto ray's traversal stack
-                                        let mut shuffled_hits = 0;
-                                        for i in 0..children.len() {
-                                            let ii = (node_order_code >> (i * 2)) & 3;
-                                            shuffled_hits |= ((hits >> ii) & 1) << i;
-                                        }
+                                        let shuffled_hits = match children.len() {
+                                            4 => {
+                                                ((hits >> noc1) & 1) | (((hits >> noc2) & 1) << 1) |
+                                                (((hits >> noc3) & 1) << 2) |
+                                                (((hits >> noc4) & 1) << 3)
+                                            }
+                                            3 => {
+                                                ((hits >> noc1) & 1) | (((hits >> noc2) & 1) << 1) |
+                                                (((hits >> noc3) & 1) << 2)
+                                            }
+                                            2 => ((hits >> noc1) & 1) | (((hits >> noc2) & 1) << 1),
+                                            _ => unreachable!(),
+                                        };
                                         r.trav_stack.push_n(shuffled_hits, children.len() as u8);
 
-                                        true
-                                    } else {
-                                        false
+                                        return true;
                                     }
-                                } else {
-                                    false
                                 }
+                                return false;
                             });
 
                             // Update stack based on ray testing results
