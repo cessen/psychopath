@@ -108,12 +108,16 @@ impl<'a> BVH4<'a> {
                             let noc3 = (node_order_code >> 4) & 3;
                             let noc4 = (node_order_code >> 6) & 3;
 
+                            let mut all_hits = 0;
+
                             // Ray testing
                             let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
                                 if (!r.is_done()) && (first_loop || r.trav_stack.pop()) {
                                     let hits = lerp_slice(bounds, r.time)
                                         .intersect_accel_ray(r)
                                         .to_bitmask();
+
+                                    all_hits |= hits;
 
                                     if hits != 0 {
                                         // Push hit bits onto ray's traversal stack
@@ -142,9 +146,13 @@ impl<'a> BVH4<'a> {
                             if part > 0 {
                                 for i in 0..children.len() {
                                     let inv_i = (children.len() - 1) - i;
-                                    node_stack[stack_ptr + i] =
-                                        Some(&children[((node_order_code >> (inv_i * 2)) & 3) as
-                                              usize]);
+                                    let child_i = ((node_order_code >> (inv_i * 2)) & 3) as usize;
+                                    node_stack[stack_ptr + i] = if ((all_hits >> child_i) & 1) ==
+                                                                   0 {
+                                        None
+                                    } else {
+                                        Some(&children[child_i])
+                                    };
                                     ray_i_stack[stack_ptr + i] = part;
                                 }
 
