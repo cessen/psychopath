@@ -83,113 +83,109 @@ impl<'a> BVH4<'a> {
     pub fn traverse<T, F>(&self, rays: &mut [AccelRay], objects: &[T], mut obj_ray_test: F)
         where F: FnMut(&T, &mut [AccelRay])
     {
-        match self.root {
-            None => {}
+        if self.root.is_none() {
+            return;
+        }
 
-            Some(root) => {
-                // +2 of max depth for root and last child
-                let mut node_stack = [Some(root); BVH_MAX_DEPTH + 2];
-                let mut ray_i_stack = [rays.len(); BVH_MAX_DEPTH + 2];
-                let mut stack_ptr = 1;
-                let mut first_loop = true;
+        // +2 of max depth for root and last child
+        let mut node_stack = [self.root; BVH_MAX_DEPTH + 2];
+        let mut ray_i_stack = [rays.len(); BVH_MAX_DEPTH + 2];
+        let mut stack_ptr = 1;
+        let mut first_loop = true;
 
-                let ray_code = (rays[0].dir_inv.x().is_sign_negative() as u8) |
-                               ((rays[0].dir_inv.y().is_sign_negative() as u8) << 1) |
-                               ((rays[0].dir_inv.z().is_sign_negative() as u8) << 2);
+        let ray_code = (rays[0].dir_inv.x().is_sign_negative() as u8) |
+                       ((rays[0].dir_inv.y().is_sign_negative() as u8) << 1) |
+                       ((rays[0].dir_inv.z().is_sign_negative() as u8) << 2);
 
-                while stack_ptr > 0 {
-                    match node_stack[stack_ptr] {
-                        Some(&BVH4Node::Internal { bounds, children, traversal_code }) => {
-                            let node_order_code = {
-                                TRAVERSAL_TABLE[ray_code as usize][traversal_code as usize]
-                            };
-                            let noc1 = node_order_code & 3;
-                            let noc2 = (node_order_code >> 2) & 3;
-                            let noc3 = (node_order_code >> 4) & 3;
-                            let noc4 = (node_order_code >> 6) & 3;
+        while stack_ptr > 0 {
+            match node_stack[stack_ptr] {
+                Some(&BVH4Node::Internal { bounds, children, traversal_code }) => {
+                    let node_order_code = {
+                        TRAVERSAL_TABLE[ray_code as usize][traversal_code as usize]
+                    };
+                    let noc1 = node_order_code & 3;
+                    let noc2 = (node_order_code >> 2) & 3;
+                    let noc3 = (node_order_code >> 4) & 3;
+                    let noc4 = (node_order_code >> 6) & 3;
 
-                            let mut all_hits = 0;
+                    let mut all_hits = 0;
 
-                            // Ray testing
-                            let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
-                                if (!r.is_done()) && (first_loop || r.trav_stack.pop()) {
-                                    let hits = lerp_slice(bounds, r.time)
-                                        .intersect_accel_ray(r)
-                                        .to_bitmask();
+                    // Ray testing
+                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
+                        if (!r.is_done()) && (first_loop || r.trav_stack.pop()) {
+                            let hits = lerp_slice(bounds, r.time)
+                                .intersect_accel_ray(r)
+                                .to_bitmask();
 
-                                    all_hits |= hits;
+                            all_hits |= hits;
 
-                                    if hits != 0 {
-                                        // Push hit bits onto ray's traversal stack
-                                        let shuffled_hits = match children.len() {
-                                            4 => {
-                                                ((hits >> noc1) & 1) | (((hits >> noc2) & 1) << 1) |
-                                                (((hits >> noc3) & 1) << 2) |
-                                                (((hits >> noc4) & 1) << 3)
-                                            }
-                                            3 => {
-                                                ((hits >> noc1) & 1) | (((hits >> noc2) & 1) << 1) |
-                                                (((hits >> noc3) & 1) << 2)
-                                            }
-                                            2 => ((hits >> noc1) & 1) | (((hits >> noc2) & 1) << 1),
-                                            _ => unreachable!(),
-                                        };
-                                        r.trav_stack.push_n(shuffled_hits, children.len() as u8);
-
-                                        return true;
+                            if hits != 0 {
+                                // Push hit bits onto ray's traversal stack
+                                let shuffled_hits = match children.len() {
+                                    4 => {
+                                        ((hits >> noc1) & 1) | (((hits >> noc2) & 1) << 1) |
+                                        (((hits >> noc3) & 1) << 2) |
+                                        (((hits >> noc4) & 1) << 3)
                                     }
-                                }
-                                return false;
-                            });
+                                    3 => {
+                                        ((hits >> noc1) & 1) | (((hits >> noc2) & 1) << 1) |
+                                        (((hits >> noc3) & 1) << 2)
+                                    }
+                                    2 => ((hits >> noc1) & 1) | (((hits >> noc2) & 1) << 1),
+                                    _ => unreachable!(),
+                                };
+                                r.trav_stack.push_n(shuffled_hits, children.len() as u8);
 
-                            // Update stack based on ray testing results
-                            if part > 0 {
-                                for i in 0..children.len() {
-                                    let inv_i = (children.len() - 1) - i;
-                                    let child_i = ((node_order_code >> (inv_i * 2)) & 3) as usize;
-                                    node_stack[stack_ptr + i] = if ((all_hits >> child_i) & 1) ==
-                                                                   0 {
-                                        None
-                                    } else {
-                                        Some(&children[child_i])
-                                    };
-                                    ray_i_stack[stack_ptr + i] = part;
-                                }
-
-                                stack_ptr += children.len() - 1;
-                            } else {
-                                stack_ptr -= 1;
+                                return true;
                             }
                         }
+                        return false;
+                    });
 
-                        Some(&BVH4Node::Leaf { object_range }) => {
-                            let part = if !first_loop {
-                                partition(&mut rays[..ray_i_stack[stack_ptr]],
-                                          |r| r.trav_stack.pop())
+                    // Update stack based on ray testing results
+                    if part > 0 {
+                        for i in 0..children.len() {
+                            let inv_i = (children.len() - 1) - i;
+                            let child_i = ((node_order_code >> (inv_i * 2)) & 3) as usize;
+                            node_stack[stack_ptr + i] = if ((all_hits >> child_i) & 1) == 0 {
+                                None
                             } else {
-                                ray_i_stack[stack_ptr]
+                                Some(&children[child_i])
                             };
-
-                            for obj in &objects[object_range.0..object_range.1] {
-                                obj_ray_test(obj, &mut rays[..part]);
-                            }
-
-                            stack_ptr -= 1;
+                            ray_i_stack[stack_ptr + i] = part;
                         }
 
-                        None => {
-                            if !first_loop {
-                                for r in (&mut rays[..ray_i_stack[stack_ptr]]).iter_mut() {
-                                    r.trav_stack.pop();
-                                }
-                            }
-                            stack_ptr -= 1;
-                        }
+                        stack_ptr += children.len() - 1;
+                    } else {
+                        stack_ptr -= 1;
+                    }
+                }
+
+                Some(&BVH4Node::Leaf { object_range }) => {
+                    let part = if !first_loop {
+                        partition(&mut rays[..ray_i_stack[stack_ptr]], |r| r.trav_stack.pop())
+                    } else {
+                        ray_i_stack[stack_ptr]
+                    };
+
+                    for obj in &objects[object_range.0..object_range.1] {
+                        obj_ray_test(obj, &mut rays[..part]);
                     }
 
-                    first_loop = false;
+                    stack_ptr -= 1;
+                }
+
+                None => {
+                    if !first_loop {
+                        for r in (&mut rays[..ray_i_stack[stack_ptr]]).iter_mut() {
+                            r.trav_stack.pop();
+                        }
+                    }
+                    stack_ptr -= 1;
                 }
             }
+
+            first_loop = false;
         }
     }
 
