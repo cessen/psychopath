@@ -39,7 +39,12 @@ impl BitStack128 {
         // Verify no bitstack overflow
         debug_assert!((self.data.1 >> ((size_of::<u64>() * 8) - count as usize)) == 0);
         // Verify no bits outside of the n-bit range
-        debug_assert!(value & (!((1 << count) - 1)) == 0);
+        debug_assert!(if count < (size_of::<u8>() * 8) as u8 {
+            value & (!((1 << count) - 1)) == 0
+        } else {
+            true
+        });
+        debug_assert!(count <= (size_of::<u8>() * 8) as u8);
 
         self.data.1 = (self.data.1 << count as usize) |
                       (self.data.0 >> ((size_of::<u64>() * 8) - count as usize));
@@ -67,6 +72,17 @@ impl BitStack128 {
         return b;
     }
 
+    /// Pop the top n bits off the stack, but return only the nth bit.
+    pub fn pop_to_nth(&mut self, n: usize) -> bool {
+        debug_assert!(n > 0);
+        debug_assert!(n < (size_of::<BitStack128>() * 8)); // Can't pop more than we have
+        debug_assert!(n < (size_of::<u64>() * 8)); // Can't pop more than the return type can hold
+        let b = (self.data.0 & (1 << (n - 1))) != 0;
+        self.data.0 = (self.data.0 >> n) | (self.data.1 << ((size_of::<u64>() * 8) - n));
+        self.data.1 >>= n;
+        return b;
+    }
+
     /// Read the top bit of the stack without popping it.
     pub fn peek(&self) -> bool {
         (self.data.0 & 1) != 0
@@ -82,5 +98,206 @@ impl BitStack128 {
         debug_assert!(n < (size_of::<u64>() * 8));
 
         self.data.0 & ((1 << n) - 1)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn push() {
+        let mut bs = BitStack128::new();
+        bs.push(true);
+        bs.push(false);
+        bs.push(true);
+        bs.push(true);
+        bs.push(false);
+        bs.push(true);
+        bs.push(true);
+        bs.push(true);
+
+        assert!(bs.data.0 == 0b10110111);
+        assert!(bs.data.1 == 0);
+    }
+
+    #[test]
+    fn push_overflow() {
+        let mut bs = BitStack128::new();
+        for _ in 0..9 {
+            bs.push(true);
+            bs.push(false);
+            bs.push(true);
+            bs.push(true);
+            bs.push(false);
+            bs.push(true);
+            bs.push(true);
+            bs.push(true);
+        }
+
+        assert!(bs.data.0 == 0b1011011110110111101101111011011110110111101101111011011110110111);
+        assert!(bs.data.1 == 0b10110111);
+    }
+
+    #[test]
+    fn pop() {
+        let mut bs = BitStack128::new();
+        bs.data.0 = 0b10110111;
+
+        assert!(bs.pop() == true);
+        assert!(bs.pop() == true);
+        assert!(bs.pop() == true);
+        assert!(bs.pop() == false);
+        assert!(bs.pop() == true);
+        assert!(bs.pop() == true);
+        assert!(bs.pop() == false);
+        assert!(bs.pop() == true);
+    }
+
+    #[test]
+    fn pop_overflow() {
+        let mut bs = BitStack128::new();
+        bs.data.0 = 0b1011011110110111101101111011011110110111101101111011011110110111;
+        bs.data.1 = 0b10110111;
+        for _ in 0..9 {
+            assert!(bs.pop() == true);
+            assert!(bs.pop() == true);
+            assert!(bs.pop() == true);
+            assert!(bs.pop() == false);
+            assert!(bs.pop() == true);
+            assert!(bs.pop() == true);
+            assert!(bs.pop() == false);
+            assert!(bs.pop() == true);
+        }
+    }
+
+    #[test]
+    fn push_n() {
+        let mut bs = BitStack128::new();
+        bs.push_n(0b10110, 5);
+        bs.push_n(0b10110111, 8);
+
+        assert!(bs.data.0 == 0b1011010110111);
+    }
+
+    #[test]
+    fn push_n_overflow() {
+        let mut bs = BitStack128::new();
+        for _ in 0..9 {
+            bs.push_n(0b10110111, 8);
+        }
+
+        assert!(bs.data.0 == 0b1011011110110111101101111011011110110111101101111011011110110111);
+        assert!(bs.data.1 == 0b10110111);
+    }
+
+    #[test]
+    fn pop_n() {
+        let mut bs = BitStack128::new();
+        bs.data.0 = 0b0010_1000_1100_1110_0101_0111;
+
+        assert!(bs.pop_n(4) == 0b0111);
+        assert!(bs.data.0 == 0b0010_1000_1100_1110_0101);
+
+        assert!(bs.pop_n(4) == 0b0101);
+        assert!(bs.data.0 == 0b0010_1000_1100_1110);
+
+        assert!(bs.pop_n(4) == 0b1110);
+        assert!(bs.data.0 == 0b0010_1000_1100);
+
+        assert!(bs.pop_n(4) == 0b1100);
+        assert!(bs.data.0 == 0b0010_1000);
+
+        assert!(bs.pop_n(4) == 0b1000);
+        assert!(bs.data.0 == 0b0010);
+
+        assert!(bs.pop_n(4) == 0b0010);
+        assert!(bs.data.0 == 0);
+    }
+
+    #[test]
+    fn pop_n_overflow() {
+        let mut bs = BitStack128::new();
+        bs.data.0 = 0b1011011110110111101101111011011110110111101101111011011110110111;
+        bs.data.1 = 0b10110111;
+        for _ in 0..9 {
+            assert!(bs.pop_n(8) == 0b10110111);
+        }
+    }
+
+    #[test]
+    fn pop_to_nth() {
+        let mut bs = BitStack128::new();
+        bs.data.0 = 0b0010_1000_1100_1110_0101_0111;
+
+        assert!(bs.pop_to_nth(4) == false);
+        assert!(bs.data.0 == 0b0010_1000_1100_1110_0101);
+
+        assert!(bs.pop_to_nth(4) == false);
+        assert!(bs.data.0 == 0b0010_1000_1100_1110);
+
+        assert!(bs.pop_to_nth(4) == true);
+        assert!(bs.data.0 == 0b0010_1000_1100);
+
+        assert!(bs.pop_to_nth(4) == true);
+        assert!(bs.data.0 == 0b0010_1000);
+
+        assert!(bs.pop_to_nth(4) == true);
+        assert!(bs.data.0 == 0b0010);
+
+        assert!(bs.pop_to_nth(4) == false);
+        assert!(bs.data.0 == 0);
+    }
+
+    #[test]
+    fn pop_to_nth_overflow() {
+        let mut bs = BitStack128::new();
+        bs.data.0 = 0b00110111_10110111_00110111_10110111_00110111_10110111_00110111_10110111;
+        bs.data.1 = 0b00110111_10110111;
+        for _ in 0..5 {
+            assert!(bs.pop_to_nth(8) == true);
+            assert!(bs.pop_to_nth(8) == false);
+        }
+    }
+
+    #[test]
+    fn peek() {
+        let mut bs = BitStack128::new();
+        bs.data.0 = 0b10110111;
+
+        assert!(bs.peek() == true);
+        bs.pop();
+
+        assert!(bs.peek() == true);
+        bs.pop();
+
+        assert!(bs.peek() == true);
+        bs.pop();
+
+        assert!(bs.peek() == false);
+        bs.pop();
+
+        assert!(bs.peek() == true);
+        bs.pop();
+
+        assert!(bs.peek() == true);
+        bs.pop();
+
+        assert!(bs.peek() == false);
+        bs.pop();
+
+        assert!(bs.peek() == true);
+    }
+
+    #[test]
+    fn peek_n() {
+        let mut bs = BitStack128::new();
+        bs.data.0 = 0b10110111;
+
+        assert!(bs.peek_n(4) == 0b0111);
+        bs.pop_n(4);
+
+        assert!(bs.peek_n(4) == 0b1011);
+        bs.pop_n(4);
     }
 }
