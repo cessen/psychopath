@@ -155,15 +155,15 @@ impl<'a> TracerInner<'a> {
 fn split_rays_by_direction(rays: &mut [AccelRay]) -> [&mut [AccelRay]; 8] {
     // |   |   |   |   |   |   |   |   |
     //     s1  s2  s3  s4  s5  s6  s7
-    let s4 = partition(&mut rays[..], |r| r.dir_inv.x().is_sign_positive());
+    let s4 = partition(&mut rays[..], |r| r.dir_inv.x() >= 0.0);
 
-    let s2 = partition(&mut rays[..s4], |r| r.dir_inv.y().is_sign_positive());
-    let s6 = s4 + partition(&mut rays[s4..], |r| r.dir_inv.y().is_sign_positive());
+    let s2 = partition(&mut rays[..s4], |r| r.dir_inv.y() >= 0.0);
+    let s6 = s4 + partition(&mut rays[s4..], |r| r.dir_inv.y() >= 0.0);
 
-    let s1 = partition(&mut rays[..s2], |r| r.dir_inv.z().is_sign_positive());
-    let s3 = s2 + partition(&mut rays[s2..s4], |r| r.dir_inv.z().is_sign_positive());
-    let s5 = s4 + partition(&mut rays[s4..s6], |r| r.dir_inv.z().is_sign_positive());
-    let s7 = s6 + partition(&mut rays[s6..], |r| r.dir_inv.z().is_sign_positive());
+    let s1 = partition(&mut rays[..s2], |r| r.dir_inv.z() >= 0.0);
+    let s3 = s2 + partition(&mut rays[s2..s4], |r| r.dir_inv.z() >= 0.0);
+    let s5 = s4 + partition(&mut rays[s4..s6], |r| r.dir_inv.z() >= 0.0);
+    let s7 = s6 + partition(&mut rays[s6..], |r| r.dir_inv.z() >= 0.0);
 
     let (rest, rs7) = rays.split_at_mut(s7);
     let (rest, rs6) = rest.split_at_mut(s6);
