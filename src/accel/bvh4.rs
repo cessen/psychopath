@@ -9,14 +9,16 @@
 
 use mem_arena::MemArena;
 
-use algorithm::partition;
+use algorithm::partition_with_side;
 use bbox::BBox;
 use bbox4::BBox4;
 use boundable::Boundable;
 use lerp::lerp_slice;
 use ray::AccelRay;
+use timer::Timer;
 
 use super::bvh_base::{BVHBase, BVHBaseNode, BVH_MAX_DEPTH};
+use super::ACCEL_TRAV_TIME;
 
 // TRAVERSAL_TABLE
 include!("bvh4_table.inc");
@@ -87,10 +89,14 @@ impl<'a> BVH4<'a> {
             return;
         }
 
+        let mut trav_time: f64 = 0.0;
+        let mut timer = Timer::new();
+
         // +2 of max depth for root and last child
         let mut node_stack = [self.root; BVH_MAX_DEPTH + 2];
         let mut ray_i_stack = [rays.len(); BVH_MAX_DEPTH + 2];
         let mut stack_ptr = 1;
+        let mut unpopped = 0;
         let mut first_loop = true;
 
         let ray_code = (rays[0].dir_inv.x().is_sign_negative() as u8) |
@@ -111,8 +117,11 @@ impl<'a> BVH4<'a> {
                     let mut all_hits = 0;
 
                     // Ray testing
-                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
-                        if (!r.is_done()) && (first_loop || r.trav_stack.pop()) {
+                    let part = filter_rays(&ray_i_stack[stack_ptr..],
+                                           &mut rays[..ray_i_stack[stack_ptr]],
+                                           unpopped,
+                                           |r, pop_count| {
+                        if (!r.is_done()) && (first_loop || r.trav_stack.pop_to_nth(pop_count)) {
                             let hits = lerp_slice(bounds, r.time)
                                 .intersect_accel_ray(r)
                                 .to_bitmask();
@@ -141,6 +150,7 @@ impl<'a> BVH4<'a> {
                         }
                         return false;
                     });
+                    unpopped = 0;
 
                     // Update stack based on ray testing results
                     if part > 0 {
@@ -163,20 +173,29 @@ impl<'a> BVH4<'a> {
 
                 Some(&BVH4Node::Leaf { object_range }) => {
                     let part = if !first_loop {
-                        partition(&mut rays[..ray_i_stack[stack_ptr]], |r| r.trav_stack.pop())
+                        filter_rays(&ray_i_stack[stack_ptr..],
+                                    &mut rays[..ray_i_stack[stack_ptr]],
+                                    unpopped,
+                                    |r, pop_count| r.trav_stack.pop_to_nth(pop_count))
                     } else {
                         ray_i_stack[stack_ptr]
                     };
+                    unpopped = 0;
+
+                    trav_time += timer.tick() as f64;
 
                     for obj in &objects[object_range.0..object_range.1] {
                         obj_ray_test(obj, &mut rays[..part]);
                     }
+
+                    timer.tick();
 
                     stack_ptr -= 1;
                 }
 
                 None => {
                     if !first_loop {
+                        // unpopped += 1;
                         for r in (&mut rays[..ray_i_stack[stack_ptr]]).iter_mut() {
                             r.trav_stack.pop();
                         }
@@ -187,6 +206,12 @@ impl<'a> BVH4<'a> {
 
             first_loop = false;
         }
+
+        trav_time += timer.tick() as f64;
+        ACCEL_TRAV_TIME.with(|att| {
+            let v = att.get();
+            att.set(v + trav_time);
+        });
     }
 
     fn construct_from_base(arena: &'a MemArena,
@@ -390,4 +415,41 @@ fn calc_traversal_code(split_1: u8, split_2: u8, split_3: u8, topology: u8) -> u
 
     static T_TABLE: [u8; 4] = [0, 27, 27 + 9, 27 + 9 + 9];
     split_1 + (split_2 * 3) + (split_3 * 9) + T_TABLE[topology as usize]
+}
+
+
+fn filter_rays<F>(ray_i_stack: &[usize],
+                  rays: &mut [AccelRay],
+                  unpopped: usize,
+                  mut ray_test: F)
+                  -> usize
+    where F: FnMut(&mut AccelRay, usize) -> bool
+{
+    // let part = if unpopped == 0 {
+    partition_with_side(rays, |r, _| ray_test(r, 1))
+    // } else {
+    //     let mut part_n = [0, rays.len()]; // Where we are in the partition
+    //     let mut part_pop = [unpopped, 0]; // Number of bits to pop on the left and right side
+
+    //     partition_with_side(rays, |r, side| {
+    //         let pop_count = 1 +
+    //                         if side {
+    //             part_n[1] -= 1;
+    //             while part_n[1] < ray_i_stack[part_pop[1] + 1] && part_pop[1] < unpopped {
+    //                 part_pop[1] += 1;
+    //             }
+    //             part_pop[1]
+    //         } else {
+    //             while part_n[0] >= ray_i_stack[part_pop[0]] {
+    //                 part_pop[0] -= 1;
+    //             }
+    //             part_n[0] += 1;
+    //             part_pop[0]
+    //         };
+
+    //         return ray_test(r, pop_count);
+    //     })
+    // };
+
+    // part
 }

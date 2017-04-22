@@ -9,6 +9,7 @@ use crossbeam::sync::MsQueue;
 use scoped_threadpool::Pool;
 
 use algorithm::partition_pair;
+use accel::ACCEL_TRAV_TIME;
 use color::{Color, XYZ, SpectralSample, map_0_1_to_wavelength};
 use hash::hash_u32;
 use hilbert;
@@ -35,6 +36,7 @@ pub struct Renderer<'a> {
 #[derive(Debug, Copy, Clone)]
 pub struct RenderStats {
     pub trace_time: f64,
+    pub accel_traversal_time: f64,
     pub ray_generation_time: f64,
     pub sample_writing_time: f64,
     pub total_time: f64,
@@ -44,6 +46,7 @@ impl RenderStats {
     fn new() -> RenderStats {
         RenderStats {
             trace_time: 0.0,
+            accel_traversal_time: 0.0,
             ray_generation_time: 0.0,
             sample_writing_time: 0.0,
             total_time: 0.0,
@@ -52,6 +55,7 @@ impl RenderStats {
 
     fn collect(&mut self, other: RenderStats) {
         self.trace_time += other.trace_time;
+        self.accel_traversal_time += other.accel_traversal_time;
         self.ray_generation_time += other.ray_generation_time;
         self.sample_writing_time += other.sample_writing_time;
         self.total_time += other.total_time;
@@ -210,6 +214,10 @@ impl<'a> Renderer<'a> {
                     }
 
                     stats.total_time += total_timer.tick() as f64;
+                    ACCEL_TRAV_TIME.with(|att| {
+                        stats.accel_traversal_time = att.get();
+                        att.set(0.0);
+                    });
 
                     // Collect stats
                     cstats.write().unwrap().collect(stats);

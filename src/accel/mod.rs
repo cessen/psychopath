@@ -5,6 +5,8 @@ mod light_array;
 mod light_tree;
 mod objects_split;
 
+use std::cell::Cell;
+
 use math::{Vector, Point, Normal};
 use shading::surface_closure::SurfaceClosure;
 
@@ -12,6 +14,10 @@ pub use self::bvh::{BVH, BVHNode};
 pub use self::bvh4::{BVH4, BVH4Node};
 pub use self::light_tree::LightTree;
 
+// Track BVH traversal time
+thread_local! {
+    pub static ACCEL_TRAV_TIME: Cell<f64> = Cell::new(0.0);
+}
 
 pub trait LightAccel {
     /// Returns (index_of_light, selection_pdf, whittled_n)

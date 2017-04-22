@@ -7,8 +7,10 @@ use bbox::BBox;
 use boundable::Boundable;
 use lerp::lerp_slice;
 use ray::AccelRay;
+use timer::Timer;
 
 use super::bvh_base::{BVHBase, BVHBaseNode, BVH_MAX_DEPTH};
+use super::ACCEL_TRAV_TIME;
 
 
 #[derive(Copy, Clone, Debug)]
@@ -61,51 +63,63 @@ impl<'a> BVH<'a> {
     pub fn traverse<T, F>(&self, rays: &mut [AccelRay], objects: &[T], mut obj_ray_test: F)
         where F: FnMut(&T, &mut [AccelRay])
     {
-        match self.root {
-            None => {}
+        if self.root.is_none() {
+            return;
+        }
 
-            Some(root) => {
-                // +2 of max depth for root and last child
-                let mut node_stack = [root; BVH_MAX_DEPTH + 2];
-                let mut ray_i_stack = [rays.len(); BVH_MAX_DEPTH + 2];
-                let mut stack_ptr = 1;
+        let mut trav_time: f64 = 0.0;
+        let mut timer = Timer::new();
 
-                while stack_ptr > 0 {
-                    match node_stack[stack_ptr] {
-                        &BVHNode::Internal { bounds, children, split_axis } => {
-                            let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
-                                (!r.is_done()) && lerp_slice(bounds, r.time).intersect_accel_ray(r)
-                            });
-                            if part > 0 {
-                                node_stack[stack_ptr] = children.0;
-                                node_stack[stack_ptr + 1] = children.1;
-                                ray_i_stack[stack_ptr] = part;
-                                ray_i_stack[stack_ptr + 1] = part;
-                                if rays[0].dir_inv.get_n(split_axis as usize).is_sign_positive() {
-                                    node_stack.swap(stack_ptr, stack_ptr + 1);
-                                }
-                                stack_ptr += 1;
-                            } else {
-                                stack_ptr -= 1;
-                            }
+        // +2 of max depth for root and last child
+        let mut node_stack = [self.root.unwrap(); BVH_MAX_DEPTH + 2];
+        let mut ray_i_stack = [rays.len(); BVH_MAX_DEPTH + 2];
+        let mut stack_ptr = 1;
+
+        while stack_ptr > 0 {
+            match node_stack[stack_ptr] {
+                &BVHNode::Internal { bounds, children, split_axis } => {
+                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
+                        (!r.is_done()) && lerp_slice(bounds, r.time).intersect_accel_ray(r)
+                    });
+                    if part > 0 {
+                        node_stack[stack_ptr] = children.0;
+                        node_stack[stack_ptr + 1] = children.1;
+                        ray_i_stack[stack_ptr] = part;
+                        ray_i_stack[stack_ptr + 1] = part;
+                        if rays[0].dir_inv.get_n(split_axis as usize) >= 0.0 {
+                            node_stack.swap(stack_ptr, stack_ptr + 1);
                         }
+                        stack_ptr += 1;
+                    } else {
+                        stack_ptr -= 1;
+                    }
+                }
 
-                        &BVHNode::Leaf { bounds, object_range } => {
-                            let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
-                                (!r.is_done()) && lerp_slice(bounds, r.time).intersect_accel_ray(r)
-                            });
-                            if part > 0 {
-                                for obj in &objects[object_range.0..object_range.1] {
-                                    obj_ray_test(obj, &mut rays[..part]);
-                                }
-                            }
+                &BVHNode::Leaf { bounds, object_range } => {
+                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
+                        (!r.is_done()) && lerp_slice(bounds, r.time).intersect_accel_ray(r)
+                    });
 
-                            stack_ptr -= 1;
+                    trav_time += timer.tick() as f64;
+
+                    if part > 0 {
+                        for obj in &objects[object_range.0..object_range.1] {
+                            obj_ray_test(obj, &mut rays[..part]);
                         }
                     }
+
+                    timer.tick();
+
+                    stack_ptr -= 1;
                 }
             }
         }
+
+        trav_time += timer.tick() as f64;
+        ACCEL_TRAV_TIME.with(|att| {
+            let v = att.get();
+            att.set(v + trav_time);
+        });
     }
 
     fn construct_from_base(arena: &'a MemArena,

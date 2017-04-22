@@ -186,6 +186,8 @@ fn main() {
                     let ntime = rtime as f64 / rstats.total_time;
                     println!("\tRendered scene in {:.3}s", rtime);
                     println!("\t\tTrace:          {:.3}s", ntime * rstats.trace_time);
+                    println!("\t\t\tTraversal:    {:.3}s",
+                             ntime * rstats.accel_traversal_time);
                     println!("\t\tRay generation: {:.3}s",
                              ntime * rstats.ray_generation_time);
                     println!("\t\tSample writing: {:.3}s",
