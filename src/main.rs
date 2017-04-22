@@ -164,7 +164,7 @@ fn main() {
                 }
 
                 let max_samples_per_bucket = if let Some(max_samples_per_bucket) =
-                    args.value_of("spp") {
+                    args.value_of("max_bucket_samples") {
                     u32::from_str(&max_samples_per_bucket).unwrap()
                 } else {
                     4096
@@ -192,7 +192,6 @@ fn main() {
                              ntime * rstats.ray_generation_time);
                     println!("\t\tSample writing: {:.3}s",
                              ntime * rstats.sample_writing_time);
-                    println!("\t\tTotal: {:.3}s", ntime * rstats.total_time);
                 }
 
                 println!("Writing image to disk...");
