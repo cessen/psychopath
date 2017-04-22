@@ -8,7 +8,7 @@ use math::log2_64;
 use super::objects_split::{sah_split, median_split};
 
 
-pub const BVH_MAX_DEPTH: usize = 64;
+pub const BVH_MAX_DEPTH: usize = 42;
 
 /// An intermediary structure for creating a BVH.
 #[derive(Debug)]
