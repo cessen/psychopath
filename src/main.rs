@@ -179,8 +179,19 @@ fn main() {
                 println!("\tBuilt scene in {:.3}s", t.tick());
 
                 println!("Rendering scene with {} threads...", thread_count);
-                let mut image = r.render(max_samples_per_bucket, thread_count);
-                println!("\tRendered scene in {:.3}s", t.tick());
+                let (mut image, rstats) = r.render(max_samples_per_bucket, thread_count);
+                // Print render stats
+                {
+                    let rtime = t.tick();
+                    let ntime = rtime as f64 / rstats.total_time;
+                    println!("\tRendered scene in {:.3}s", rtime);
+                    println!("\t\tTrace:          {:.3}s", ntime * rstats.trace_time);
+                    println!("\t\tRay generation: {:.3}s",
+                             ntime * rstats.ray_generation_time);
+                    println!("\t\tSample writing: {:.3}s",
+                             ntime * rstats.sample_writing_time);
+                    println!("\t\tTotal: {:.3}s", ntime * rstats.total_time);
+                }
 
                 println!("Writing image to disk...");
                 if r.output_file.ends_with(".png") {

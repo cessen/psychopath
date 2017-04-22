@@ -18,6 +18,7 @@ use ray::Ray;
 use sampling::halton;
 use scene::Scene;
 use surface;
+use timer::Timer;
 use tracer::Tracer;
 use transform_stack::TransformStack;
 
@@ -31,14 +32,42 @@ pub struct Renderer<'a> {
     pub scene: Scene<'a>,
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct RenderStats {
+    pub trace_time: f64,
+    pub ray_generation_time: f64,
+    pub sample_writing_time: f64,
+    pub total_time: f64,
+}
+
+impl RenderStats {
+    fn new() -> RenderStats {
+        RenderStats {
+            trace_time: 0.0,
+            ray_generation_time: 0.0,
+            sample_writing_time: 0.0,
+            total_time: 0.0,
+        }
+    }
+
+    fn collect(&mut self, other: RenderStats) {
+        self.trace_time += other.trace_time;
+        self.ray_generation_time += other.ray_generation_time;
+        self.sample_writing_time += other.sample_writing_time;
+        self.total_time += other.total_time;
+    }
+}
+
 impl<'a> Renderer<'a> {
-    pub fn render(&self, max_samples_per_bucket: u32, thread_count: u32) -> Image {
+    pub fn render(&self, max_samples_per_bucket: u32, thread_count: u32) -> (Image, RenderStats) {
         let mut tpool = Pool::new(thread_count);
 
         let image = Image::new(self.resolution.0, self.resolution.1);
         let (img_width, img_height) = (image.width(), image.height());
 
         let all_jobs_queued = RwLock::new(false);
+
+        let collective_stats = RwLock::new(RenderStats::new());
 
         // Pre-calculate some useful values related to the image plane
         let cmpx = 1.0 / self.resolution.0 as f32;
@@ -65,13 +94,18 @@ impl<'a> Renderer<'a> {
                 let jq = &job_queue;
                 let ajq = &all_jobs_queued;
                 let img = &image;
+                let cstats = &collective_stats;
                 scope.execute(move || {
+                    let mut stats = RenderStats::new();
+                    let mut timer = Timer::new();
+                    let mut total_timer = Timer::new();
+
                     let mut paths = Vec::new();
                     let mut rays = Vec::new();
                     let mut tracer = Tracer::from_assembly(&self.scene.root);
                     let mut xform_stack = TransformStack::new();
 
-                    loop {
+                    'render_loop: loop {
                         paths.clear();
                         rays.clear();
 
@@ -83,11 +117,12 @@ impl<'a> Renderer<'a> {
                                 break;
                             } else {
                                 if *ajq.read().unwrap() == true {
-                                    return;
+                                    break 'render_loop;
                                 }
                             }
                         }
 
+                        timer.tick();
                         // Generate light paths and initial rays
                         for y in bucket.y..(bucket.y + bucket.h) {
                             for x in bucket.x..(bucket.x + bucket.w) {
@@ -124,18 +159,21 @@ impl<'a> Renderer<'a> {
                                 }
                             }
                         }
+                        stats.ray_generation_time += timer.tick() as f64;
 
                         // Trace the paths!
                         let mut pi = paths.len();
                         while pi > 0 {
                             // Test rays against scene
                             let isects = tracer.trace(&rays);
+                            stats.trace_time += timer.tick() as f64;
 
                             // Determine next rays to shoot based on result
                             pi =
                                 partition_pair(&mut paths[..pi], &mut rays[..pi], |i, path, ray| {
                                     path.next(&mut xform_stack, &self.scene, &isects[i], &mut *ray)
                                 });
+                            stats.ray_generation_time += timer.tick() as f64;
                         }
 
                         // Calculate color based on ray hits and save to image
@@ -148,6 +186,7 @@ impl<'a> Renderer<'a> {
                                 col += XYZ::from_spectral_sample(&path.color) / self.spp as f32;
                                 img_bucket.set(path.pixel_co.0, path.pixel_co.1, col);
                             }
+                            stats.sample_writing_time += timer.tick() as f64;
                         }
 
                         // Print render progress
@@ -169,6 +208,11 @@ impl<'a> Renderer<'a> {
                             }
                         }
                     }
+
+                    stats.total_time += total_timer.tick() as f64;
+
+                    // Collect stats
+                    cstats.write().unwrap().collect(stats);
                 });
             }
 
@@ -229,8 +273,8 @@ impl<'a> Renderer<'a> {
         // Clear percentage progress print
         print!("\r                \r");
 
-        // Return the rendered image
-        return image;
+        // Return the rendered image and stats
+        return (image, *collective_stats.read().unwrap());
     }
 }
 
