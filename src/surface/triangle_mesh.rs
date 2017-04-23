@@ -9,7 +9,7 @@ use color::XYZ;
 use lerp::{lerp, lerp_slice, lerp_slice_with};
 use math::{Point, Matrix4x4, cross};
 use ray::{Ray, AccelRay};
-use shading::surface_closure::{SurfaceClosureUnion, GTRClosure};
+use shading::surface_closure::{SurfaceClosureUnion, GTRClosure, LambertClosure};
 
 use super::{Surface, SurfaceIntersection, SurfaceIntersectionData};
 use super::triangle;
@@ -106,16 +106,15 @@ impl<'a> Surface for TriangleMesh<'a> {
                                     local_space: mat_space,
                                 },
                                 // TODO: get surface closure from surface shader.
-                                //closure: SurfaceClosureUnion::LambertClosure(
-                                //    LambertClosure::new(XYZ::new(0.8, 0.8, 0.8))
-                                //),
-                                closure:
-                                    SurfaceClosureUnion::GTRClosure(GTRClosure::new(XYZ::new(0.8,
-                                                                                             0.8,
-                                                                                             0.8),
-                                                                                    0.1,
-                                                                                    2.0,
-                                                                                    1.0)),
+                                closure: SurfaceClosureUnion::LambertClosure(
+                                   LambertClosure::new(XYZ::new(0.8, 0.8, 0.8))
+                                ),
+                                // closure:
+                                //     SurfaceClosureUnion::GTRClosure(
+                                //         GTRClosure::new(XYZ::new(0.8, 0.8, 0.8),
+                                //                         0.1,
+                                //                         2.0,
+                                //                         1.0)),
                             };
                             r.max_t = t;
                         }

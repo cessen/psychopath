@@ -9,7 +9,7 @@
 
 use mem_arena::MemArena;
 
-use algorithm::partition_with_side;
+use algorithm::{partition, partition_with_side};
 use bbox::BBox;
 use bbox4::BBox4;
 use boundable::Boundable;
@@ -99,9 +99,9 @@ impl<'a> BVH4<'a> {
         let mut unpopped = 0;
         let mut first_loop = true;
 
-        let ray_code = (rays[0].dir_inv.x().is_sign_negative() as u8) |
-                       ((rays[0].dir_inv.y().is_sign_negative() as u8) << 1) |
-                       ((rays[0].dir_inv.z().is_sign_negative() as u8) << 2);
+        let ray_code = ((rays[0].dir_inv.x() < 0.0) as u8) |
+                       (((rays[0].dir_inv.y() < 0.0) as u8) << 1) |
+                       (((rays[0].dir_inv.z() < 0.0) as u8) << 2);
 
         while stack_ptr > 0 {
             match node_stack[stack_ptr] {
@@ -117,11 +117,10 @@ impl<'a> BVH4<'a> {
                     let mut all_hits = 0;
 
                     // Ray testing
-                    let part = filter_rays(&ray_i_stack[stack_ptr..],
-                                           &mut rays[..ray_i_stack[stack_ptr]],
-                                           unpopped,
-                                           |r, pop_count| {
-                        if (!r.is_done()) && (first_loop || r.trav_stack.pop_to_nth(pop_count)) {
+                    let part;
+                    {
+                        // Common code for ray testing below
+                        let mut test_ray = |r: &mut AccelRay| {
                             let hits = lerp_slice(bounds, r.time)
                                 .intersect_accel_ray(r)
                                 .to_bitmask();
@@ -147,9 +146,33 @@ impl<'a> BVH4<'a> {
 
                                 return true;
                             }
-                        }
-                        return false;
-                    });
+
+                            return false;
+                        };
+
+                        // Skip some tests if it's the first loop
+                        part = if first_loop {
+                            filter_rays(&ray_i_stack[stack_ptr..],
+                                        &mut rays[..ray_i_stack[stack_ptr]],
+                                        unpopped,
+                                        |r, _| {
+                                            if !r.is_done() {
+                                                return test_ray(r);
+                                            }
+                                            return false;
+                                        })
+                        } else {
+                            filter_rays(&ray_i_stack[stack_ptr..],
+                                        &mut rays[..ray_i_stack[stack_ptr]],
+                                        unpopped,
+                                        |r, pop_count| {
+                                if (!r.is_done()) && r.trav_stack.pop_to_nth(pop_count) {
+                                    return test_ray(r);
+                                }
+                                return false;
+                            })
+                        };
+                    }
                     unpopped = 0;
 
                     // Update stack based on ray testing results
@@ -176,10 +199,13 @@ impl<'a> BVH4<'a> {
                         filter_rays(&ray_i_stack[stack_ptr..],
                                     &mut rays[..ray_i_stack[stack_ptr]],
                                     unpopped,
-                                    |r, pop_count| r.trav_stack.pop_to_nth(pop_count))
+                                    |r, pop_count| {
+                                        (!r.is_done()) && r.trav_stack.pop_to_nth(pop_count)
+                                    })
                     } else {
                         ray_i_stack[stack_ptr]
                     };
+
                     unpopped = 0;
 
                     trav_time += timer.tick() as f64;
@@ -195,16 +221,22 @@ impl<'a> BVH4<'a> {
 
                 None => {
                     if !first_loop {
-                        // unpopped += 1;
-                        for r in (&mut rays[..ray_i_stack[stack_ptr]]).iter_mut() {
-                            r.trav_stack.pop();
-                        }
+                        unpopped += 1;
+
                     }
                     stack_ptr -= 1;
                 }
             }
 
             first_loop = false;
+        }
+
+        // Pop any unpopped bits of the ray traversal stacks
+        if unpopped > 0 {
+            filter_rays(&ray_i_stack[1..],
+                        &mut rays[..ray_i_stack[1]],
+                        unpopped - 1,
+                        |r, pop_count| r.trav_stack.pop_to_nth(pop_count));
         }
 
         trav_time += timer.tick() as f64;
@@ -425,31 +457,31 @@ fn filter_rays<F>(ray_i_stack: &[usize],
                   -> usize
     where F: FnMut(&mut AccelRay, usize) -> bool
 {
-    // let part = if unpopped == 0 {
-    partition_with_side(rays, |r, _| ray_test(r, 1))
-    // } else {
-    //     let mut part_n = [0, rays.len()]; // Where we are in the partition
-    //     let mut part_pop = [unpopped, 0]; // Number of bits to pop on the left and right side
+    let part = if ray_i_stack[0] == ray_i_stack[unpopped] {
+        let pop_count = unpopped + 1;
+        partition(rays, |r| ray_test(r, pop_count))
+    } else {
+        let mut part_n = [0, rays.len() - 1]; // Where we are in the partition
+        let mut part_pop = [unpopped, 0]; // Number of bits to pop on the left and right side
 
-    //     partition_with_side(rays, |r, side| {
-    //         let pop_count = 1 +
-    //                         if side {
-    //             part_n[1] -= 1;
-    //             while part_n[1] < ray_i_stack[part_pop[1] + 1] && part_pop[1] < unpopped {
-    //                 part_pop[1] += 1;
-    //             }
-    //             part_pop[1]
-    //         } else {
-    //             while part_n[0] >= ray_i_stack[part_pop[0]] {
-    //                 part_pop[0] -= 1;
-    //             }
-    //             part_n[0] += 1;
-    //             part_pop[0]
-    //         };
+        partition_with_side(rays, |r, side| {
+            let pop_count = if !side {
+                while part_n[0] >= ray_i_stack[part_pop[0]] {
+                    part_pop[0] -= 1;
+                }
+                part_n[0] += 1;
+                part_pop[0]
+            } else {
+                while part_n[1] < ray_i_stack[part_pop[1] + 1] && part_pop[1] < unpopped {
+                    part_pop[1] += 1;
+                }
+                part_n[1] -= 1;
+                part_pop[1]
+            };
 
-    //         return ray_test(r, pop_count);
-    //     })
-    // };
+            return ray_test(r, pop_count + 1);
+        })
+    };
 
-    // part
+    part
 }
