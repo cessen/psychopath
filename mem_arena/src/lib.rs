@@ -110,6 +110,16 @@ impl MemArena {
         memory
     }
 
+    /// Allocates memory for and initializes a type T, returning a mutable reference to it.
+    ///
+    /// Additionally, the allocation will be made with the given byte alignment or
+    /// the type's inherent alignment, whichever is greater.
+    pub fn alloc_with_alignment<'a, T: Copy>(&'a self, value: T, align: usize) -> &'a mut T {
+        let mut memory = unsafe { self.alloc_uninitialized_with_alignment(align) };
+        *memory = value;
+        memory
+    }
+
     /// Allocates memory for a type `T`, returning a mutable reference to it.
     ///
     /// CAUTION: the memory returned is uninitialized.  Make sure to initalize before using!
@@ -149,10 +159,47 @@ impl MemArena {
         memory
     }
 
+    /// Allocates memory for `len` values of type `T`, returning a mutable slice to it.
+    /// All elements are initialized to the given `value`.
+    ///
+    /// Additionally, the allocation will be made with the given byte alignment or
+    /// the type's inherent alignment, whichever is greater.
+    pub fn alloc_array_with_alignment<'a, T: Copy>(&'a self,
+                                                   len: usize,
+                                                   value: T,
+                                                   align: usize)
+                                                   -> &'a mut [T] {
+        let memory = unsafe { self.alloc_array_uninitialized_with_alignment(len, align) };
+
+        for v in memory.iter_mut() {
+            *v = value;
+        }
+
+        memory
+    }
+
     /// Allocates and initializes memory to duplicate the given slice, returning a mutable slice
     /// to the new copy.
     pub fn copy_slice<'a, T: Copy>(&'a self, other: &[T]) -> &'a mut [T] {
         let memory = unsafe { self.alloc_array_uninitialized(other.len()) };
+
+        for (v, other) in memory.iter_mut().zip(other.iter()) {
+            *v = *other;
+        }
+
+        memory
+    }
+
+    /// Allocates and initializes memory to duplicate the given slice, returning a mutable slice
+    /// to the new copy.
+    ///
+    /// Additionally, the allocation will be made with the given byte alignment or
+    /// the type's inherent alignment, whichever is greater.
+    pub fn copy_slice_with_alignment<'a, T: Copy>(&'a self,
+                                                  other: &[T],
+                                                  align: usize)
+                                                  -> &'a mut [T] {
+        let memory = unsafe { self.alloc_array_uninitialized_with_alignment(other.len(), align) };
 
         for (v, other) in memory.iter_mut().zip(other.iter()) {
             *v = *other;
