@@ -80,11 +80,8 @@ impl BBox {
     }
 
     pub fn surface_area(&self) -> f32 {
-        let x = self.max.x() - self.min.x();
-        let y = self.max.y() - self.min.y();
-        let z = self.max.z() - self.min.z();
-
-        ((x * y) + (y * z) + (z * x)) * 2.0
+        let d = self.max - self.min;
+        ((d.x() * d.y()) + (d.y() * d.z()) + (d.z() * d.x())) * 2.0
     }
 
     pub fn center(&self) -> Point {

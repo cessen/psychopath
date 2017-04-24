@@ -10,6 +10,11 @@ use super::objects_split::{sah_split, median_split};
 
 pub const BVH_MAX_DEPTH: usize = 42;
 
+// Amount bigger the union of all time samples can be
+// and still use the union rather than preserve the
+// individual time samples.
+const USE_UNION_FACTOR: f32 = 1.4;
+
 /// An intermediary structure for creating a BVH.
 #[derive(Debug)]
 pub struct BVHBase {
@@ -104,11 +109,24 @@ impl BVHBase {
             return (0, (0, 0));
         } else if objects.len() <= objects_per_leaf {
             // Leaf node
-            self.acc_bounds(objects, bounder);
             let bi = self.bounds.len();
-            for b in self.bounds_cache.iter() {
-                self.bounds.push(*b);
+            // Get bounds
+            {
+                // We make sure that it's worth having multiple time samples, and if not
+                // we reduce to the union of the time samples.
+                self.acc_bounds(objects, bounder);
+                let union_bounds = self.bounds_cache.iter().fold(BBox::new(), |b1, b2| (b1 | *b2));
+                let average_area =
+                    self.bounds_cache.iter().fold(0.0, |area, bb| area + bb.surface_area()) /
+                    self.bounds_cache.len() as f32;
+                if union_bounds.surface_area() <= (average_area * USE_UNION_FACTOR) {
+                    self.bounds.push(union_bounds);
+                } else {
+                    self.bounds.extend(&self.bounds_cache);
+                }
             }
+
+            // Create node
             self.nodes.push(BVHBaseNode::Leaf {
                 bounds_range: (bi, self.bounds.len()),
                 object_range: (offset, offset + objects.len()),
@@ -155,12 +173,24 @@ impl BVHBase {
             // Determine bounds
             // TODO: do merging without the temporary vec.
             let bi = self.bounds.len();
-            let mut merged = Vec::new();
-            merge_slices_append(&self.bounds[c1_bounds.0..c1_bounds.1],
-                                &self.bounds[c2_bounds.0..c2_bounds.1],
-                                &mut merged,
-                                |b1, b2| *b1 | *b2);
-            self.bounds.extend(merged.drain(0..));
+            {
+                let mut merged = Vec::new();
+                merge_slices_append(&self.bounds[c1_bounds.0..c1_bounds.1],
+                                    &self.bounds[c2_bounds.0..c2_bounds.1],
+                                    &mut merged,
+                                    |b1, b2| *b1 | *b2);
+                // We make sure that it's worth having multiple time samples, and if not
+                // we reduce to the union of the time samples.
+                let union_bounds = merged.iter().fold(BBox::new(), |b1, b2| (b1 | *b2));
+                let average_area = merged.iter().fold(0.0, |area, bb| area + bb.surface_area()) /
+                                   merged.len() as f32;
+                if union_bounds.surface_area() <= (average_area * USE_UNION_FACTOR) {
+                    self.bounds.push(union_bounds);
+                } else {
+                    self.bounds.extend(merged.drain(0..));
+                }
+            }
+
 
             // Set node
             self.nodes[me] = BVHBaseNode::Internal {

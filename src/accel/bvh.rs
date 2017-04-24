@@ -128,9 +128,11 @@ impl<'a> BVH<'a> {
                            -> &'a mut BVHNode<'a> {
         match &base.nodes[node_index] {
             &BVHBaseNode::Internal { bounds_range, children_indices, split_axis } => {
-                let mut node = unsafe { arena.alloc_uninitialized::<BVHNode>() };
+                let mut node = unsafe { arena.alloc_uninitialized_with_alignment::<BVHNode>(32) };
 
-                let bounds = arena.copy_slice(&base.bounds[bounds_range.0..bounds_range.1]);
+                let bounds =
+                    arena.copy_slice_with_alignment(&base.bounds[bounds_range.0..bounds_range.1],
+                                                    32);
                 let child1 = BVH::construct_from_base(arena, base, children_indices.0);
                 let child2 = BVH::construct_from_base(arena, base, children_indices.1);
 
