@@ -47,13 +47,13 @@ impl BBox {
         // Find the far and near intersection
         let mut near_t = t1.v_min(t2);
         let mut far_t = t1.v_max(t2);
-        near_t.set_3(std::f32::NEG_INFINITY);
+        near_t.set_3(0.0);
         far_t.set_3(std::f32::INFINITY);
         let hitt0 = near_t.h_max();
         let hitt1 = far_t.h_min() * BBOX_MAXT_ADJUST;
 
         // Did we hit?
-        return fast_maxf32(hitt0, 0.0) <= fast_minf32(hitt1, ray.max_t);
+        return hitt0 <= fast_minf32(hitt1, ray.max_t);
     }
 
     // Creates a new BBox transformed into a different space.

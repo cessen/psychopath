@@ -75,7 +75,8 @@ impl BBox4 {
         // Get the minimum and maximum hits
         let mins = v_max(v_max(xlos, ylos), v_max(zlos, Float4::splat(0.0)));
         let maxs = v_max(v_min(v_min(xhis, yhis), zhis),
-                         Float4::splat(std::f32::NEG_INFINITY) * Float4::splat(BBOX_MAXT_ADJUST));
+                         Float4::splat(std::f32::NEG_INFINITY)) *
+                   Float4::splat(BBOX_MAXT_ADJUST);
 
         // Check for hits
         let hits = mins.lt(Float4::splat(ray.max_t)) & mins.lte(maxs);
