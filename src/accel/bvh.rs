@@ -67,8 +67,11 @@ impl<'a> BVH<'a> {
             return;
         }
 
-        let mut trav_time: f64 = 0.0;
         let mut timer = Timer::new();
+        let mut trav_time: f64 = 0.0;
+
+        let ray_sign =
+            [rays[0].dir_inv.x() >= 0.0, rays[0].dir_inv.y() >= 0.0, rays[0].dir_inv.z() >= 0.0];
 
         // +2 of max depth for root and last child
         let mut node_stack = [self.root.unwrap(); BVH_MAX_DEPTH + 2];
@@ -82,12 +85,14 @@ impl<'a> BVH<'a> {
                         (!r.is_done()) && lerp_slice(bounds, r.time).intersect_accel_ray(r)
                     });
                     if part > 0 {
-                        node_stack[stack_ptr] = children.0;
-                        node_stack[stack_ptr + 1] = children.1;
                         ray_i_stack[stack_ptr] = part;
                         ray_i_stack[stack_ptr + 1] = part;
-                        if rays[0].dir_inv.get_n(split_axis as usize) >= 0.0 {
-                            node_stack.swap(stack_ptr, stack_ptr + 1);
+                        if ray_sign[split_axis as usize] {
+                            node_stack[stack_ptr] = children.1;
+                            node_stack[stack_ptr + 1] = children.0;
+                        } else {
+                            node_stack[stack_ptr] = children.0;
+                            node_stack[stack_ptr + 1] = children.1;
                         }
                         stack_ptr += 1;
                     } else {
