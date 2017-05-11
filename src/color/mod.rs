@@ -63,6 +63,14 @@ impl SpectralSample {
         }
     }
 
+    pub fn from_parts(e: Float4, wavelength: f32) -> SpectralSample {
+        debug_assert!(wavelength >= WL_MIN && wavelength <= WL_MAX);
+        SpectralSample {
+            e: e,
+            hero_wavelength: wavelength,
+        }
+    }
+
     /// Returns the nth wavelength
     fn wl_n(&self, n: usize) -> f32 {
         let wl = self.hero_wavelength + (WL_RANGE_Q * n as f32);

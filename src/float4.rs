@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use std::cmp::PartialEq;
-use std::ops::{Add, Sub, Mul, Div, BitAnd};
+use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div, DivAssign, BitAnd};
 
 #[cfg(feature = "simd_perf")]
 use simd::{f32x4, bool32fx4};
@@ -347,6 +347,13 @@ impl Add for Float4 {
 }
 
 
+impl AddAssign for Float4 {
+    fn add_assign(&mut self, rhs: Float4) {
+        *self = *self + rhs;
+    }
+}
+
+
 impl Sub for Float4 {
     type Output = Float4;
 
@@ -362,6 +369,13 @@ impl Sub for Float4 {
                    self.get_2() - other.get_2(),
                    self.get_3() - other.get_3()],
         }
+    }
+}
+
+
+impl SubAssign for Float4 {
+    fn sub_assign(&mut self, rhs: Float4) {
+        *self = *self - rhs;
     }
 }
 
@@ -403,6 +417,19 @@ impl Mul<f32> for Float4 {
 }
 
 
+impl MulAssign for Float4 {
+    fn mul_assign(&mut self, rhs: Float4) {
+        *self = *self * rhs;
+    }
+}
+
+impl MulAssign<f32> for Float4 {
+    fn mul_assign(&mut self, rhs: f32) {
+        *self = *self * rhs;
+    }
+}
+
+
 impl Div for Float4 {
     type Output = Float4;
 
@@ -438,6 +465,20 @@ impl Div<f32> for Float4 {
         }
     }
 }
+
+
+impl DivAssign for Float4 {
+    fn div_assign(&mut self, rhs: Float4) {
+        *self = *self / rhs;
+    }
+}
+
+impl DivAssign<f32> for Float4 {
+    fn div_assign(&mut self, rhs: f32) {
+        *self = *self / rhs;
+    }
+}
+
 
 impl Lerp for Float4 {
     fn lerp(self, other: Float4, alpha: f32) -> Float4 {

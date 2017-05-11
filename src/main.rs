@@ -57,6 +57,7 @@ use mem_arena::MemArena;
 
 use parse::{parse_scene, DataTree};
 use ray::{Ray, AccelRay};
+use surface::SurfaceIntersection;
 use renderer::LightPath;
 use bbox::BBox;
 use bbox4::BBox4;
@@ -124,6 +125,8 @@ fn main() {
     if args.is_present("dev") {
         println!("Ray size:       {} bytes", mem::size_of::<Ray>());
         println!("AccelRay size:  {} bytes", mem::size_of::<AccelRay>());
+        println!("SurfaceIntersection size:  {} bytes",
+                 mem::size_of::<SurfaceIntersection>());
         println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
         println!("BBox size: {} bytes", mem::size_of::<BBox>());
         println!("BBox4 size: {} bytes", mem::size_of::<BBox4>());
@@ -185,12 +188,15 @@ fn main() {
                     let rtime = t.tick();
                     let ntime = rtime as f64 / rstats.total_time;
                     println!("\tRendered scene in {:.3}s", rtime);
-                    println!("\t\tTrace:          {:.3}s", ntime * rstats.trace_time);
-                    println!("\t\t\tTraversal:    {:.3}s",
+                    println!("\t\tTrace:                  {:.3}s",
+                             ntime * rstats.trace_time);
+                    println!("\t\t\tTraversal:            {:.3}s",
                              ntime * rstats.accel_traversal_time);
-                    println!("\t\tRay generation: {:.3}s",
+                    println!("\t\tInitial ray generation: {:.3}s",
+                             ntime * rstats.initial_ray_generation_time);
+                    println!("\t\tRay generation:         {:.3}s",
                              ntime * rstats.ray_generation_time);
-                    println!("\t\tSample writing: {:.3}s",
+                    println!("\t\tSample writing:         {:.3}s",
                              ntime * rstats.sample_writing_time);
                 }
 

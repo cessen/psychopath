@@ -11,6 +11,7 @@ use scoped_threadpool::Pool;
 use algorithm::partition_pair;
 use accel::ACCEL_TRAV_TIME;
 use color::{Color, XYZ, SpectralSample, map_0_1_to_wavelength};
+use float4::Float4;
 use hash::hash_u32;
 use hilbert;
 use image::Image;
@@ -37,6 +38,7 @@ pub struct Renderer<'a> {
 pub struct RenderStats {
     pub trace_time: f64,
     pub accel_traversal_time: f64,
+    pub initial_ray_generation_time: f64,
     pub ray_generation_time: f64,
     pub sample_writing_time: f64,
     pub total_time: f64,
@@ -47,6 +49,7 @@ impl RenderStats {
         RenderStats {
             trace_time: 0.0,
             accel_traversal_time: 0.0,
+            initial_ray_generation_time: 0.0,
             ray_generation_time: 0.0,
             sample_writing_time: 0.0,
             total_time: 0.0,
@@ -56,6 +59,7 @@ impl RenderStats {
     fn collect(&mut self, other: RenderStats) {
         self.trace_time += other.trace_time;
         self.accel_traversal_time += other.accel_traversal_time;
+        self.initial_ray_generation_time += other.initial_ray_generation_time;
         self.ray_generation_time += other.ray_generation_time;
         self.sample_writing_time += other.sample_writing_time;
         self.total_time += other.total_time;
@@ -163,7 +167,7 @@ impl<'a> Renderer<'a> {
                                 }
                             }
                         }
-                        stats.ray_generation_time += timer.tick() as f64;
+                        stats.initial_ray_generation_time += timer.tick() as f64;
 
                         // Trace the paths!
                         let mut pi = paths.len();
@@ -186,8 +190,10 @@ impl<'a> Renderer<'a> {
                             let max = (bucket.x + bucket.w, bucket.y + bucket.h);
                             let mut img_bucket = img.get_bucket(min, max);
                             for path in paths.iter() {
+                                let path_col = SpectralSample::from_parts(path.color,
+                                                                          path.wavelength);
                                 let mut col = img_bucket.get(path.pixel_co.0, path.pixel_co.1);
-                                col += XYZ::from_spectral_sample(&path.color) / self.spp as f32;
+                                col += XYZ::from_spectral_sample(&path_col) / self.spp as f32;
                                 img_bucket.set(path.pixel_co.0, path.pixel_co.1, col);
                             }
                             stats.sample_writing_time += timer.tick() as f64;
@@ -291,14 +297,14 @@ impl<'a> Renderer<'a> {
 pub struct LightPath {
     pixel_co: (u32, u32),
     lds_offset: u32,
-    dim_offset: u32,
+    dim_offset: Cell<u32>,
     round: u32,
     time: f32,
     wavelength: f32,
     interaction: surface::SurfaceIntersection,
-    light_attenuation: SpectralSample,
-    pending_color_addition: SpectralSample,
-    color: SpectralSample,
+    light_attenuation: Float4,
+    pending_color_addition: Float4,
+    color: Float4,
 }
 
 impl LightPath {
@@ -313,14 +319,14 @@ impl LightPath {
         (LightPath {
              pixel_co: pixel_co,
              lds_offset: lds_offset,
-             dim_offset: 6,
+             dim_offset: Cell::new(6),
              round: 0,
              time: time,
              wavelength: wavelength,
              interaction: surface::SurfaceIntersection::Miss,
-             light_attenuation: SpectralSample::from_value(1.0, wavelength),
-             pending_color_addition: SpectralSample::new(wavelength),
-             color: SpectralSample::new(wavelength),
+             light_attenuation: Float4::splat(1.0),
+             pending_color_addition: Float4::splat(0.0),
+             color: Float4::splat(0.0),
          },
 
          scene.camera.generate_ray(image_plane_co.0,
@@ -330,9 +336,10 @@ impl LightPath {
                                    lens_uv.1))
     }
 
-    fn next_lds_samp(&mut self) -> f32 {
-        let s = halton::sample(self.dim_offset, self.lds_offset);
-        self.dim_offset += 1;
+    fn next_lds_samp(&self) -> f32 {
+        let s = halton::sample(self.dim_offset.get(), self.lds_offset);
+        let inc = self.dim_offset.get() + 1;
+        self.dim_offset.set(inc);
         s
     }
 
@@ -346,8 +353,8 @@ impl LightPath {
 
         // Result of shading ray, prepare light ray
         if self.round % 2 == 1 {
-            if let &surface::SurfaceIntersection::Hit { intersection_data: idata, closure } =
-                isect {
+            if let &surface::SurfaceIntersection::Hit { intersection_data: ref idata,
+                                                        ref closure } = isect {
                 // Hit something!  Do the stuff
                 self.interaction = *isect; // Store interaction for use in next phase
 
@@ -367,7 +374,7 @@ impl LightPath {
                     self.pending_color_addition = {
                         let material = closure.as_surface_closure();
                         let la = material.evaluate(ray.dir, shadow_vec, idata.nor, self.wavelength);
-                        light_color * la * self.light_attenuation / (light_pdf * light_sel_pdf)
+                        light_color.e * la.e * self.light_attenuation / (light_pdf * light_sel_pdf)
                     };
 
                     // Calculate the shadow ray for testing if the light is
@@ -390,7 +397,7 @@ impl LightPath {
                 }
             } else {
                 // Didn't hit anything, so background color
-                self.color += scene.world.background_color.to_spectral_sample(self.wavelength) *
+                self.color += scene.world.background_color.to_spectral_sample(self.wavelength).e *
                               self.light_attenuation;
                 return false;
             }
@@ -405,8 +412,8 @@ impl LightPath {
 
             // Calculate bounced lighting!
             if self.round < 6 {
-                if let surface::SurfaceIntersection::Hit { intersection_data: idata, closure } =
-                    self.interaction {
+                if let surface::SurfaceIntersection::Hit { intersection_data: ref idata,
+                                                           ref closure } = self.interaction {
                     // Sample material
                     let (dir, filter, pdf) = {
                         let material = closure.as_surface_closure();
@@ -417,7 +424,7 @@ impl LightPath {
 
                     // Account for the additional light attenuation from
                     // this bounce
-                    self.light_attenuation *= filter / pdf;
+                    self.light_attenuation *= filter.e / pdf;
 
                     // Calculate the ray for this bounce
                     *ray = Ray::new(idata.pos + dir.normalized() * 0.0001, dir, self.time, false);
