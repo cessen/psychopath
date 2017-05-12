@@ -38,7 +38,7 @@ pub fn sample_with_scramble(dimension: u32, mut index: u32, scramble: u32) -> f3
     let mut i = (dimension as usize) * SIZE;
     while index != 0 {
         if (index & 1) != 0 {
-            result ^= MATRICES[i];
+            result ^= unsafe { *MATRICES.get_unchecked(i) };
         }
 
         index >>= 1;
