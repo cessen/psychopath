@@ -1,5 +1,5 @@
 [workspace]
-members = ["mem_arena"]
+members = ["sub_crates/mem_arena", "sub_crates/halton", "sub_crates/spectra_xyz"]
 
 [package]
 name = "psychopath"
@@ -29,5 +29,11 @@ simd = { version = "0.2.0", optional = true }
 openexr = { git = "https://github.com/cessen/openexr-rs", rev = "612fc6c81c031970ffddcab15509236711613de8" }
 
 # Local crate dependencies
+[dependencies.halton]
+path = "sub_crates/halton"
+
 [dependencies.mem_arena]
-path = "mem_arena"
+path = "sub_crates/mem_arena"
+
+[dependencies.spectra_xyz]
+path = "sub_crates/spectra_xyz"

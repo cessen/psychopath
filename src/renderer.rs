@@ -8,6 +8,8 @@ use std::sync::{RwLock, Mutex};
 use crossbeam::sync::MsQueue;
 use scoped_threadpool::Pool;
 
+use halton;
+
 use algorithm::partition_pair;
 use accel::ACCEL_TRAV_TIME;
 use color::{Color, XYZ, SpectralSample, map_0_1_to_wavelength};
@@ -17,7 +19,6 @@ use hilbert;
 use image::Image;
 use math::{fast_logit, upper_power_of_two};
 use ray::Ray;
-use sampling::halton;
 use scene::Scene;
 use surface;
 use timer::Timer;
@@ -158,6 +159,7 @@ impl<'a> Renderer<'a> {
                                                         halton::sample(1, offset + si as u32)),
                                                        halton::sample(2, offset + si as u32),
                                                        map_0_1_to_wavelength(halton::sample(3,
+                                                   
                                                                                             offset +
                                                                                             si as
                                                                                             u32)),

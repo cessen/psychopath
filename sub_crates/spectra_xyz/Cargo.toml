@@ -1,0 +1,9 @@
+[package]
+name = "spectra_xyz"
+version = "0.1.0"
+authors = ["Nathan Vegdahl <cessen@cessen.com>"]
+license = "MIT"
+
+[lib]
+name = "spectra_xyz"
+path = "src/lib.rs"

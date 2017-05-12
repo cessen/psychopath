@@ -1,4 +1,6 @@
+extern crate halton;
 extern crate mem_arena;
+extern crate spectra_xyz;
 
 extern crate crossbeam;
 extern crate clap;

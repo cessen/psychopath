@@ -1,4 +1,3 @@
-pub mod halton;
 mod monte_carlo;
 
 pub use self::monte_carlo::{square_to_circle, cosine_sample_hemisphere, uniform_sample_hemisphere,

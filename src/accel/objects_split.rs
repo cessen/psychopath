@@ -3,11 +3,12 @@
 use std;
 use std::cmp::Ordering;
 
+use halton;
+
 use algorithm::{partition, quick_select};
 use bbox::BBox;
 use lerp::lerp_slice;
 use math::{Vector, dot};
-use sampling::halton;
 use sampling::uniform_sample_hemisphere;
 
 
