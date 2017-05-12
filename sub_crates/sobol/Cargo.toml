@@ -1,0 +1,9 @@
+[package]
+name = "sobol"
+version = "0.1.0"
+authors = ["Nathan Vegdahl <cessen@cessen.com>"]
+license = "MIT"
+
+[lib]
+name = "sobol"
+path = "src/lib.rs"

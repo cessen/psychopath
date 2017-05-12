@@ -29,7 +29,7 @@ use std::path::Path;
 
 
 /// How many components to generate.
-const NUM_DIMENSIONS: usize = 128;
+const NUM_DIMENSIONS: usize = 256;
 
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();

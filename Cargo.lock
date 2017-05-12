@@ -151,6 +151,7 @@ dependencies = [
  "rustc-serialize 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "scoped_threadpool 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "simd 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sobol 0.1.0",
  "spectra_xyz 0.1.0",
  "time 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -179,6 +180,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "simd"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "sobol"
+version = "0.1.0"
 
 [[package]]
 name = "strsim"

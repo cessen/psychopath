@@ -1,5 +1,10 @@
 [workspace]
-members = ["sub_crates/mem_arena", "sub_crates/halton", "sub_crates/spectra_xyz"]
+members = [
+    "sub_crates/mem_arena",
+    "sub_crates/halton",
+    "sub_crates/sobol",
+    "sub_crates/spectra_xyz"
+]
 
 [package]
 name = "psychopath"
@@ -34,6 +39,9 @@ path = "sub_crates/halton"
 
 [dependencies.mem_arena]
 path = "sub_crates/mem_arena"
+
+[dependencies.sobol]
+path = "sub_crates/sobol"
 
 [dependencies.spectra_xyz]
 path = "sub_crates/spectra_xyz"

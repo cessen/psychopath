@@ -159,7 +159,7 @@ impl<'a> Renderer<'a> {
                                                         halton::sample(1, offset + si as u32)),
                                                        halton::sample(2, offset + si as u32),
                                                        map_0_1_to_wavelength(halton::sample(3,
-                                                   
+
                                                                                             offset +
                                                                                             si as
                                                                                             u32)),
