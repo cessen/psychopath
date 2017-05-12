@@ -294,14 +294,26 @@ impl<'a> Renderer<'a> {
 
 
 #[derive(Debug)]
+enum LightPathEvent {
+    CameraRay,
+    BounceRay,
+    ShadowRay,
+}
+
+#[derive(Debug)]
 pub struct LightPath {
+    event: LightPathEvent,
+    bounce_count: u32,
+
     pixel_co: (u32, u32),
     lds_offset: u32,
     dim_offset: Cell<u32>,
-    round: u32,
     time: f32,
     wavelength: f32,
-    interaction: surface::SurfaceIntersection,
+
+    next_bounce_ray: Option<Ray>,
+    next_attentuation_fac: Float4,
+
     light_attenuation: Float4,
     pending_color_addition: Float4,
     color: Float4,
@@ -317,13 +329,18 @@ impl LightPath {
            lds_offset: u32)
            -> (LightPath, Ray) {
         (LightPath {
+             event: LightPathEvent::CameraRay,
+             bounce_count: 0,
+
              pixel_co: pixel_co,
              lds_offset: lds_offset,
              dim_offset: Cell::new(6),
-             round: 0,
              time: time,
              wavelength: wavelength,
-             interaction: surface::SurfaceIntersection::Miss,
+
+             next_bounce_ray: None,
+             next_attentuation_fac: Float4::splat(1.0),
+
              light_attenuation: Float4::splat(1.0),
              pending_color_addition: Float4::splat(0.0),
              color: Float4::splat(0.0),
@@ -349,96 +366,132 @@ impl LightPath {
             isect: &surface::SurfaceIntersection,
             ray: &mut Ray)
             -> bool {
-        self.round += 1;
+        match self.event {
+            //--------------------------------------------------------------------
+            // Result of Camera or bounce ray, prepare next bounce and light rays
+            LightPathEvent::CameraRay |
+            LightPathEvent::BounceRay => {
+                if let &surface::SurfaceIntersection::Hit { intersection_data: ref idata,
+                                                            ref closure } = isect {
+                    // Hit something!  Do the stuff
 
-        // Result of shading ray, prepare light ray
-        if self.round % 2 == 1 {
-            if let &surface::SurfaceIntersection::Hit { intersection_data: ref idata,
-                                                        ref closure } = isect {
-                // Hit something!  Do the stuff
-                self.interaction = *isect; // Store interaction for use in next phase
+                    // Prepare light ray
+                    let light_n = self.next_lds_samp();
+                    let light_uvw =
+                        (self.next_lds_samp(), self.next_lds_samp(), self.next_lds_samp());
+                    xform_stack.clear();
+                    let found_light = if let Some((light_color,
+                                                   shadow_vec,
+                                                   light_pdf,
+                                                   light_sel_pdf,
+                                                   is_infinite)) =
+                        scene.sample_lights(xform_stack,
+                                            light_n,
+                                            light_uvw,
+                                            self.wavelength,
+                                            self.time,
+                                            isect) {
+                        // Calculate and store the light that will be contributed
+                        // to the film plane if the light is not in shadow.
+                        self.pending_color_addition = {
+                            let material = closure.as_surface_closure();
+                            let la =
+                                material.evaluate(ray.dir, shadow_vec, idata.nor, self.wavelength);
+                            light_color.e * la.e * self.light_attenuation /
+                            (light_pdf * light_sel_pdf)
+                        };
 
-                // Prepare light ray
-                let light_n = self.next_lds_samp();
-                let light_uvw = (self.next_lds_samp(), self.next_lds_samp(), self.next_lds_samp());
-                xform_stack.clear();
-                if let Some((light_color, shadow_vec, light_pdf, light_sel_pdf, is_infinite)) =
-                    scene.sample_lights(xform_stack,
-                                        light_n,
-                                        light_uvw,
-                                        self.wavelength,
+                        // Calculate the shadow ray for testing if the light is
+                        // in shadow or not.
+                        // TODO: use proper ray offsets for avoiding self-shadowing
+                        // rather than this hacky stupid stuff.
+                        *ray = Ray::new(idata.pos + shadow_vec.normalized() * 0.001,
+                                        shadow_vec,
                                         self.time,
-                                        isect) {
-                    // Calculate and store the light that will be contributed
-                    // to the film plane if the light is not in shadow.
-                    self.pending_color_addition = {
-                        let material = closure.as_surface_closure();
-                        let la = material.evaluate(ray.dir, shadow_vec, idata.nor, self.wavelength);
-                        light_color.e * la.e * self.light_attenuation / (light_pdf * light_sel_pdf)
+                                        true);
+
+                        // For distant lights
+                        if is_infinite {
+                            ray.max_t = std::f32::INFINITY;
+                        }
+
+                        true
+                    } else {
+                        false
                     };
 
-                    // Calculate the shadow ray for testing if the light is
-                    // in shadow or not.
-                    // TODO: use proper ray offsets for avoiding self-shadowing
-                    // rather than this hacky stupid stuff.
-                    *ray = Ray::new(idata.pos + shadow_vec.normalized() * 0.001,
-                                    shadow_vec,
-                                    self.time,
-                                    true);
+                    // Prepare bounce ray
+                    let do_bounce = if self.bounce_count < 2 {
+                        self.bounce_count += 1;
 
-                    // For distant lights
-                    if is_infinite {
-                        ray.max_t = std::f32::INFINITY;
+                        // Sample material
+                        let (dir, filter, pdf) = {
+                            let material = closure.as_surface_closure();
+                            let u = self.next_lds_samp();
+                            let v = self.next_lds_samp();
+                            material.sample(idata.incoming, idata.nor, (u, v), self.wavelength)
+                        };
+
+                        // Account for the additional light attenuation from
+                        // this bounce
+                        self.next_attentuation_fac = filter.e / pdf;
+
+                        // Calculate the ray for this bounce
+                        self.next_bounce_ray = Some(Ray::new(idata.pos +
+                                                             dir.normalized() * 0.0001,
+                                                             dir,
+                                                             self.time,
+                                                             false));
+
+                        true
+                    } else {
+                        self.next_bounce_ray = None;
+                        false
+                    };
+
+                    // Book keeping for next event
+                    if found_light && do_bounce {
+                        self.event = LightPathEvent::ShadowRay;
+                        return true;
+                    } else if found_light {
+                        self.event = LightPathEvent::ShadowRay;
+                        return true;
+                    } else if do_bounce {
+                        *ray = self.next_bounce_ray.unwrap();
+                        self.event = LightPathEvent::BounceRay;
+                        self.light_attenuation *= self.next_attentuation_fac;
+                        return true;
+                    } else {
+                        return false;
                     }
+                } else {
+                    // Didn't hit anything, so background color
+                    self.color +=
+                        scene.world.background_color.to_spectral_sample(self.wavelength).e *
+                        self.light_attenuation;
+                    return false;
+                }
+            }
 
+            //--------------------------------------------------------------------
+            // Result of shadow ray from sampling a light
+            LightPathEvent::ShadowRay => {
+                // If the light was not in shadow, add it's light to the film
+                // plane.
+                if let &surface::SurfaceIntersection::Miss = isect {
+                    self.color += self.pending_color_addition;
+                }
+
+                // Set up for the next bounce, if any
+                if let Some(ref nbr) = self.next_bounce_ray {
+                    *ray = *nbr;
+                    self.light_attenuation *= self.next_attentuation_fac;
+                    self.event = LightPathEvent::BounceRay;
                     return true;
                 } else {
                     return false;
                 }
-            } else {
-                // Didn't hit anything, so background color
-                self.color += scene.world.background_color.to_spectral_sample(self.wavelength).e *
-                              self.light_attenuation;
-                return false;
             }
-        }
-        // Result of light ray, prepare shading ray
-        else if self.round % 2 == 0 {
-            // If the light was not in shadow, add it's light to the film
-            // plane.
-            if let &surface::SurfaceIntersection::Miss = isect {
-                self.color += self.pending_color_addition;
-            }
-
-            // Calculate bounced lighting!
-            if self.round < 6 {
-                if let surface::SurfaceIntersection::Hit { intersection_data: ref idata,
-                                                           ref closure } = self.interaction {
-                    // Sample material
-                    let (dir, filter, pdf) = {
-                        let material = closure.as_surface_closure();
-                        let u = self.next_lds_samp();
-                        let v = self.next_lds_samp();
-                        material.sample(idata.incoming, idata.nor, (u, v), self.wavelength)
-                    };
-
-                    // Account for the additional light attenuation from
-                    // this bounce
-                    self.light_attenuation *= filter.e / pdf;
-
-                    // Calculate the ray for this bounce
-                    *ray = Ray::new(idata.pos + dir.normalized() * 0.0001, dir, self.time, false);
-
-                    return true;
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        } else {
-            // TODO
-            unimplemented!()
         }
     }
 }
