@@ -1,0 +1,10 @@
+[package]
+name = "blue_noise_mask"
+version = "0.1.0"
+authors = ["Nathan Vegdahl <cessen@cessen.com>"]
+license = "MIT"
+build = "build.rs"
+
+[lib]
+name = "blue_noise_mask"
+path = "src/lib.rs"

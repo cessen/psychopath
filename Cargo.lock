@@ -23,6 +23,10 @@ version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "blue_noise_mask"
+version = "0.1.0"
+
+[[package]]
 name = "c_vec"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -153,6 +157,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "psychopath"
 version = "0.1.0"
 dependencies = [
+ "blue_noise_mask 0.1.0",
  "clap 2.23.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "crossbeam 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "float4 0.1.0",

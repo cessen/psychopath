@@ -1,4 +1,4 @@
-
+extern crate blue_noise_mask;
 extern crate float4;
 extern crate halton;
 extern crate math3d;
