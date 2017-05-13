@@ -2,7 +2,6 @@
 
 use std;
 
-use bitstack::BitStack128;
 use float4::Float4;
 use math::{Vector, Point, Matrix4x4};
 
@@ -59,7 +58,6 @@ pub struct AccelRay {
     pub time: f32,
     pub flags: u32,
     pub id: u32,
-    pub trav_stack: BitStack128,
 }
 
 impl AccelRay {
@@ -71,7 +69,6 @@ impl AccelRay {
             time: ray.time,
             flags: ray.flags,
             id: id,
-            trav_stack: BitStack128::new_with_1(),
         }
     }
 

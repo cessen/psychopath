@@ -23,8 +23,6 @@ extern crate lazy_static;
 mod accel;
 mod algorithm;
 mod bbox;
-mod bbox4;
-mod bitstack;
 mod boundable;
 mod camera;
 mod color;
@@ -61,9 +59,7 @@ use ray::{Ray, AccelRay};
 use surface::SurfaceIntersection;
 use renderer::LightPath;
 use bbox::BBox;
-use bbox4::BBox4;
 use accel::BVHNode;
-use accel::BVH4Node;
 use timer::Timer;
 
 
@@ -130,9 +126,7 @@ fn main() {
                  mem::size_of::<SurfaceIntersection>());
         println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
         println!("BBox size: {} bytes", mem::size_of::<BBox>());
-        println!("BBox4 size: {} bytes", mem::size_of::<BBox4>());
         println!("BVHNode size: {} bytes", mem::size_of::<BVHNode>());
-        println!("BVH4Node size: {} bytes", mem::size_of::<BVH4Node>());
         return;
     }
 
