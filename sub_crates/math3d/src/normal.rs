@@ -4,7 +4,6 @@ use std::cmp::PartialEq;
 use std::ops::{Add, Sub, Mul, Div, Neg};
 
 use float4::Float4;
-use lerp::Lerp;
 
 use super::{DotProduct, CrossProduct};
 use super::{Matrix4x4, Vector};
@@ -17,26 +16,32 @@ pub struct Normal {
 }
 
 impl Normal {
+    #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Normal {
         Normal { co: Float4::new(x, y, z, 0.0) }
     }
 
+    #[inline(always)]
     pub fn length(&self) -> f32 {
         (self.co * self.co).h_sum().sqrt()
     }
 
+    #[inline(always)]
     pub fn length2(&self) -> f32 {
         (self.co * self.co).h_sum()
     }
 
+    #[inline(always)]
     pub fn normalized(&self) -> Normal {
         *self / self.length()
     }
 
+    #[inline(always)]
     pub fn into_vector(self) -> Vector {
         Vector::new(self.co.get_0(), self.co.get_1(), self.co.get_2())
     }
 
+    #[inline(always)]
     pub fn get_n(&self, n: usize) -> f32 {
         match n {
             0 => self.x(),
@@ -46,26 +51,32 @@ impl Normal {
         }
     }
 
+    #[inline(always)]
     pub fn x(&self) -> f32 {
         self.co.get_0()
     }
 
+    #[inline(always)]
     pub fn y(&self) -> f32 {
         self.co.get_1()
     }
 
+    #[inline(always)]
     pub fn z(&self) -> f32 {
         self.co.get_2()
     }
 
+    #[inline(always)]
     pub fn set_x(&mut self, x: f32) {
         self.co.set_0(x);
     }
 
+    #[inline(always)]
     pub fn set_y(&mut self, y: f32) {
         self.co.set_1(y);
     }
 
+    #[inline(always)]
     pub fn set_z(&mut self, z: f32) {
         self.co.set_2(z);
     }
@@ -73,6 +84,7 @@ impl Normal {
 
 
 impl PartialEq for Normal {
+    #[inline(always)]
     fn eq(&self, other: &Normal) -> bool {
         self.co == other.co
     }
@@ -82,6 +94,7 @@ impl PartialEq for Normal {
 impl Add for Normal {
     type Output = Normal;
 
+    #[inline(always)]
     fn add(self, other: Normal) -> Normal {
         Normal { co: self.co + other.co }
     }
@@ -91,6 +104,7 @@ impl Add for Normal {
 impl Sub for Normal {
     type Output = Normal;
 
+    #[inline(always)]
     fn sub(self, other: Normal) -> Normal {
         Normal { co: self.co - other.co }
     }
@@ -100,6 +114,7 @@ impl Sub for Normal {
 impl Mul<f32> for Normal {
     type Output = Normal;
 
+    #[inline(always)]
     fn mul(self, other: f32) -> Normal {
         Normal { co: self.co * other }
     }
@@ -108,12 +123,13 @@ impl Mul<f32> for Normal {
 impl Mul<Matrix4x4> for Normal {
     type Output = Normal;
 
+    #[inline]
     fn mul(self, other: Matrix4x4) -> Normal {
         let mat = other.inverse().transposed();
         Normal {
-            co: Float4::new((self.co * mat[0]).h_sum(),
-                            (self.co * mat[1]).h_sum(),
-                            (self.co * mat[2]).h_sum(),
+            co: Float4::new((self.co * mat.values[0]).h_sum(),
+                            (self.co * mat.values[1]).h_sum(),
+                            (self.co * mat.values[2]).h_sum(),
                             0.0),
         }
     }
@@ -123,6 +139,7 @@ impl Mul<Matrix4x4> for Normal {
 impl Div<f32> for Normal {
     type Output = Normal;
 
+    #[inline(always)]
     fn div(self, other: f32) -> Normal {
         Normal { co: self.co / other }
     }
@@ -132,20 +149,15 @@ impl Div<f32> for Normal {
 impl Neg for Normal {
     type Output = Normal;
 
+    #[inline(always)]
     fn neg(self) -> Normal {
         Normal { co: self.co * -1.0 }
     }
 }
 
 
-impl Lerp for Normal {
-    fn lerp(self, other: Normal, alpha: f32) -> Normal {
-        (self * (1.0 - alpha)) + (other * alpha)
-    }
-}
-
-
 impl DotProduct for Normal {
+    #[inline(always)]
     fn dot(self, other: Normal) -> f32 {
         (self.co * other.co).h_sum()
     }
@@ -153,6 +165,7 @@ impl DotProduct for Normal {
 
 
 impl CrossProduct for Normal {
+    #[inline]
     fn cross(self, other: Normal) -> Normal {
         Normal {
             co: Float4::new((self.co.get_1() * other.co.get_2()) -
@@ -171,7 +184,6 @@ impl CrossProduct for Normal {
 mod tests {
     use super::*;
     use super::super::{Matrix4x4, CrossProduct, DotProduct};
-    use lerp::Lerp;
 
     #[test]
     fn add() {
@@ -270,32 +282,5 @@ mod tests {
         let v3 = Normal::new(0.0, 0.0, 1.0);
 
         assert_eq!(v3, v1.cross(v2));
-    }
-
-    #[test]
-    fn lerp1() {
-        let n1 = Normal::new(1.0, 2.0, 1.0);
-        let n2 = Normal::new(-2.0, 1.0, -1.0);
-        let n3 = Normal::new(1.0, 2.0, 1.0);
-
-        assert_eq!(n3, n1.lerp(n2, 0.0));
-    }
-
-    #[test]
-    fn lerp2() {
-        let n1 = Normal::new(1.0, 2.0, 1.0);
-        let n2 = Normal::new(-2.0, 1.0, -1.0);
-        let n3 = Normal::new(-2.0, 1.0, -1.0);
-
-        assert_eq!(n3, n1.lerp(n2, 1.0));
-    }
-
-    #[test]
-    fn lerp3() {
-        let n1 = Normal::new(1.0, 2.0, 1.0);
-        let n2 = Normal::new(-2.0, 1.0, -1.0);
-        let n3 = Normal::new(-0.5, 1.5, 0.0);
-
-        assert_eq!(n3, n1.lerp(n2, 0.5));
     }
 }

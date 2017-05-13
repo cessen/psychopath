@@ -1,35 +1,5 @@
 #![allow(dead_code)]
-
-mod matrix;
-mod normal;
-mod point;
-mod vector;
-
-pub use self::matrix::Matrix4x4;
-pub use self::normal::Normal;
-pub use self::point::Point;
-pub use self::vector::Vector;
-
-
-/// Trait for calculating dot products.
-pub trait DotProduct {
-    fn dot(self, other: Self) -> f32;
-}
-
-pub fn dot<T: DotProduct>(a: T, b: T) -> f32 {
-    a.dot(b)
-}
-
-
-/// Trait for calculating cross products.
-pub trait CrossProduct {
-    fn cross(self, other: Self) -> Self;
-}
-
-pub fn cross<T: CrossProduct>(a: T, b: T) -> T {
-    a.cross(b)
-}
-
+pub use math3d::{Matrix4x4, Normal, Point, Vector, DotProduct, dot, CrossProduct, cross};
 
 /// Clamps a value between a min and max.
 pub fn clamp<T: PartialOrd>(v: T, lower: T, upper: T) -> T {

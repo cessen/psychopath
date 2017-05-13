@@ -4,7 +4,6 @@ use std::cmp::PartialEq;
 use std::ops::{Add, Sub, Mul};
 
 use float4::Float4;
-use lerp::Lerp;
 
 use super::Matrix4x4;
 use super::Vector;
@@ -17,16 +16,19 @@ pub struct Point {
 }
 
 impl Point {
+    #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Point {
         Point { co: Float4::new(x, y, z, 1.0) }
     }
 
     /// Returns the point in standardized coordinates, where the
     /// fourth homogeneous component has been normalized to 1.0.
+    #[inline(always)]
     pub fn norm(&self) -> Point {
         Point { co: self.co / self.co.get_3() }
     }
 
+    #[inline(always)]
     pub fn min(&self, other: Point) -> Point {
         let n1 = self.norm();
         let n2 = other.norm();
@@ -34,6 +36,7 @@ impl Point {
         Point { co: n1.co.v_min(n2.co) }
     }
 
+    #[inline(always)]
     pub fn max(&self, other: Point) -> Point {
         let n1 = self.norm();
         let n2 = other.norm();
@@ -41,10 +44,12 @@ impl Point {
         Point { co: n1.co.v_max(n2.co) }
     }
 
+    #[inline(always)]
     pub fn into_vector(self) -> Vector {
         Vector::new(self.co.get_0(), self.co.get_1(), self.co.get_2())
     }
 
+    #[inline(always)]
     pub fn get_n(&self, n: usize) -> f32 {
         match n {
             0 => self.x(),
@@ -54,26 +59,32 @@ impl Point {
         }
     }
 
+    #[inline(always)]
     pub fn x(&self) -> f32 {
         self.co.get_0()
     }
 
+    #[inline(always)]
     pub fn y(&self) -> f32 {
         self.co.get_1()
     }
 
+    #[inline(always)]
     pub fn z(&self) -> f32 {
         self.co.get_2()
     }
 
+    #[inline(always)]
     pub fn set_x(&mut self, x: f32) {
         self.co.set_0(x);
     }
 
+    #[inline(always)]
     pub fn set_y(&mut self, y: f32) {
         self.co.set_1(y);
     }
 
+    #[inline(always)]
     pub fn set_z(&mut self, z: f32) {
         self.co.set_2(z);
     }
@@ -81,6 +92,7 @@ impl Point {
 
 
 impl PartialEq for Point {
+    #[inline(always)]
     fn eq(&self, other: &Point) -> bool {
         self.co == other.co
     }
@@ -90,6 +102,7 @@ impl PartialEq for Point {
 impl Add<Vector> for Point {
     type Output = Point;
 
+    #[inline(always)]
     fn add(self, other: Vector) -> Point {
         Point { co: self.co + other.co }
     }
@@ -99,6 +112,7 @@ impl Add<Vector> for Point {
 impl Sub for Point {
     type Output = Vector;
 
+    #[inline(always)]
     fn sub(self, other: Point) -> Vector {
         Vector { co: self.norm().co - other.norm().co }
     }
@@ -107,6 +121,7 @@ impl Sub for Point {
 impl Sub<Vector> for Point {
     type Output = Point;
 
+    #[inline(always)]
     fn sub(self, other: Vector) -> Point {
         Point { co: self.co - other.co }
     }
@@ -115,22 +130,14 @@ impl Sub<Vector> for Point {
 impl Mul<Matrix4x4> for Point {
     type Output = Point;
 
+    #[inline]
     fn mul(self, other: Matrix4x4) -> Point {
         Point {
-            co: Float4::new((self.co * other[0]).h_sum(),
-                            (self.co * other[1]).h_sum(),
-                            (self.co * other[2]).h_sum(),
-                            (self.co * other[3]).h_sum()),
+            co: Float4::new((self.co * other.values[0]).h_sum(),
+                            (self.co * other.values[1]).h_sum(),
+                            (self.co * other.values[2]).h_sum(),
+                            (self.co * other.values[3]).h_sum()),
         }
-    }
-}
-
-
-impl Lerp for Point {
-    fn lerp(self, other: Point, alpha: f32) -> Point {
-        let s = self.norm();
-        let o = other.norm();
-        Point { co: (s.co * (1.0 - alpha)) + (o.co * alpha) }
     }
 }
 
@@ -139,7 +146,6 @@ impl Lerp for Point {
 mod tests {
     use super::*;
     use super::super::{Vector, Matrix4x4};
-    use lerp::Lerp;
 
     #[test]
     fn norm() {
@@ -257,32 +263,5 @@ mod tests {
         let pmm2 = (p * m1) * m2;
 
         assert!((pmm1 - pmm2).length2() <= 0.00001); // Assert pmm1 and pmm2 are roughly equal
-    }
-
-    #[test]
-    fn lerp1() {
-        let p1 = Point::new(1.0, 2.0, 1.0);
-        let p2 = Point::new(-2.0, 1.0, -1.0);
-        let p3 = Point::new(1.0, 2.0, 1.0);
-
-        assert_eq!(p3, p1.lerp(p2, 0.0));
-    }
-
-    #[test]
-    fn lerp2() {
-        let p1 = Point::new(1.0, 2.0, 1.0);
-        let p2 = Point::new(-2.0, 1.0, -1.0);
-        let p3 = Point::new(-2.0, 1.0, -1.0);
-
-        assert_eq!(p3, p1.lerp(p2, 1.0));
-    }
-
-    #[test]
-    fn lerp3() {
-        let p1 = Point::new(1.0, 2.0, 1.0);
-        let p2 = Point::new(-2.0, 1.0, -1.0);
-        let p3 = Point::new(-0.5, 1.5, 0.0);
-
-        assert_eq!(p3, p1.lerp(p2, 0.5));
     }
 }

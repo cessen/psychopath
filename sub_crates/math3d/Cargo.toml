@@ -1,0 +1,16 @@
+[package]
+name = "math3d"
+version = "0.1.0"
+authors = ["Nathan Vegdahl <cessen@cessen.com>"]
+license = "MIT"
+
+[lib]
+name = "math3d"
+path = "src/lib.rs"
+
+[features]
+simd_perf = ["float4/simd_perf"]
+
+# Local crate dependencies
+[dependencies.float4]
+path = "../float4"

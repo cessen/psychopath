@@ -1,4 +1,7 @@
+
+extern crate float4;
 extern crate halton;
+extern crate math3d;
 extern crate mem_arena;
 extern crate spectra_xyz;
 
@@ -17,9 +20,6 @@ extern crate nom;
 #[macro_use]
 extern crate lazy_static;
 
-#[cfg(feature = "simd_perf")]
-extern crate simd;
-
 mod accel;
 mod algorithm;
 mod bbox;
@@ -28,7 +28,6 @@ mod bitstack;
 mod boundable;
 mod camera;
 mod color;
-mod float4;
 mod hash;
 mod hilbert;
 mod image;

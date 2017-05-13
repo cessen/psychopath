@@ -1,0 +1,16 @@
+[package]
+name = "float4"
+version = "0.1.0"
+authors = ["Nathan Vegdahl <cessen@cessen.com>"]
+license = "MIT"
+
+[lib]
+name = "float4"
+path = "src/lib.rs"
+
+[features]
+simd_perf = ["simd"]
+
+[dependencies]
+# Crates.io dependencies
+simd = { version = "0.2.0", optional = true }

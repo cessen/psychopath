@@ -4,7 +4,6 @@ use std;
 use std::ops::{Index, IndexMut, Mul};
 
 use float4::Float4;
-use lerp::Lerp;
 
 use super::Point;
 
@@ -12,12 +11,13 @@ use super::Point;
 /// A 4x4 matrix, used for transforms
 #[derive(Debug, Copy, Clone)]
 pub struct Matrix4x4 {
-    values: [Float4; 4],
+    pub values: [Float4; 4],
 }
 
 
 impl Matrix4x4 {
     /// Creates a new identity matrix
+    #[inline]
     pub fn new() -> Matrix4x4 {
         Matrix4x4 {
             values: [Float4::new(1.0, 0.0, 0.0, 0.0),
@@ -32,6 +32,7 @@ impl Matrix4x4 {
     /// e f g h
     /// i j k l
     /// m n o p
+    #[inline]
     pub fn new_from_values(a: f32,
                            b: f32,
                            c: f32,
@@ -57,6 +58,7 @@ impl Matrix4x4 {
         }
     }
 
+    #[inline]
     pub fn from_location(loc: Point) -> Matrix4x4 {
         Matrix4x4 {
             values: [Float4::new(1.0, 0.0, 0.0, loc.x()),
@@ -69,6 +71,7 @@ impl Matrix4x4 {
     /// Returns whether the matrices are approximately equal to each other.
     /// Each corresponding element in the matrices cannot have a relative error
     /// exceeding `epsilon`.
+    #[inline]
     pub fn aprx_eq(&self, other: Matrix4x4, epsilon: f32) -> bool {
         let mut result = true;
 
@@ -99,6 +102,7 @@ impl Matrix4x4 {
     }
 
     /// Returns the transpose of the matrix
+    #[inline]
     pub fn transposed(&self) -> Matrix4x4 {
         Matrix4x4 {
             values: {
@@ -124,6 +128,7 @@ impl Matrix4x4 {
 
 
     /// Returns the inverse of the Matrix
+    #[inline]
     pub fn inverse(&self) -> Matrix4x4 {
         let s0 = (self[0].get_0() * self[1].get_1()) - (self[1].get_0() * self[0].get_1());
         let s1 = (self[0].get_0() * self[1].get_2()) - (self[1].get_0() * self[0].get_2());
@@ -189,6 +194,7 @@ impl Matrix4x4 {
 impl Index<usize> for Matrix4x4 {
     type Output = Float4;
 
+    #[inline(always)]
     fn index<'a>(&'a self, _index: usize) -> &'a Float4 {
         &self.values[_index]
     }
@@ -196,6 +202,7 @@ impl Index<usize> for Matrix4x4 {
 
 
 impl IndexMut<usize> for Matrix4x4 {
+    #[inline(always)]
     fn index_mut<'a>(&'a mut self, _index: usize) -> &'a mut Float4 {
         &mut self.values[_index]
     }
@@ -203,6 +210,7 @@ impl IndexMut<usize> for Matrix4x4 {
 
 
 impl PartialEq for Matrix4x4 {
+    #[inline]
     fn eq(&self, other: &Matrix4x4) -> bool {
         let mut result = true;
 
@@ -221,6 +229,7 @@ impl PartialEq for Matrix4x4 {
 impl Mul<Matrix4x4> for Matrix4x4 {
     type Output = Matrix4x4;
 
+    #[inline]
     fn mul(self, other: Matrix4x4) -> Matrix4x4 {
         let m = self.transposed();
         Matrix4x4 {
@@ -248,23 +257,12 @@ impl Mul<Matrix4x4> for Matrix4x4 {
 }
 
 
-impl Lerp for Matrix4x4 {
-    fn lerp(self, other: Matrix4x4, alpha: f32) -> Matrix4x4 {
-        let alpha_minus = 1.0 - alpha;
-        Matrix4x4 {
-            values: [(self[0] * alpha_minus) + (other[0] * alpha),
-                     (self[1] * alpha_minus) + (other[1] * alpha),
-                     (self[2] * alpha_minus) + (other[2] * alpha),
-                     (self[3] * alpha_minus) + (other[3] * alpha)],
-        }
-    }
-}
+
 
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lerp::Lerp;
 
     #[test]
     fn equality_test() {
@@ -463,96 +461,5 @@ mod tests {
         let c = a.transposed();
 
         assert_eq!(b, c);
-    }
-
-    #[test]
-    fn lerp_test() {
-        let a = Matrix4x4::new_from_values(0.0,
-                                           2.0,
-                                           2.0,
-                                           3.0,
-                                           4.0,
-                                           5.0,
-                                           6.0,
-                                           7.0,
-                                           8.0,
-                                           9.0,
-                                           10.0,
-                                           11.0,
-                                           12.0,
-                                           13.0,
-                                           14.0,
-                                           15.0);
-        let b = Matrix4x4::new_from_values(-1.0,
-                                           1.0,
-                                           3.0,
-                                           4.0,
-                                           5.0,
-                                           6.0,
-                                           7.0,
-                                           8.0,
-                                           9.0,
-                                           10.0,
-                                           11.0,
-                                           12.0,
-                                           13.0,
-                                           14.0,
-                                           15.0,
-                                           16.0);
-
-        let c1 = Matrix4x4::new_from_values(-0.25,
-                                            1.75,
-                                            2.25,
-                                            3.25,
-                                            4.25,
-                                            5.25,
-                                            6.25,
-                                            7.25,
-                                            8.25,
-                                            9.25,
-                                            10.25,
-                                            11.25,
-                                            12.25,
-                                            13.25,
-                                            14.25,
-                                            15.25);
-        let c2 = Matrix4x4::new_from_values(-0.5,
-                                            1.5,
-                                            2.5,
-                                            3.5,
-                                            4.5,
-                                            5.5,
-                                            6.5,
-                                            7.5,
-                                            8.5,
-                                            9.5,
-                                            10.5,
-                                            11.5,
-                                            12.5,
-                                            13.5,
-                                            14.5,
-                                            15.5);
-        let c3 = Matrix4x4::new_from_values(-0.75,
-                                            1.25,
-                                            2.75,
-                                            3.75,
-                                            4.75,
-                                            5.75,
-                                            6.75,
-                                            7.75,
-                                            8.75,
-                                            9.75,
-                                            10.75,
-                                            11.75,
-                                            12.75,
-                                            13.75,
-                                            14.75,
-                                            15.75);
-
-        assert_eq!(a.lerp(b, 0.0), a);
-        assert_eq!(a.lerp(b, 0.25), c1);
-        assert_eq!(a.lerp(b, 0.5), c2);
-        assert_eq!(a.lerp(b, 0.75), c3);
-        assert_eq!(a.lerp(b, 1.0), b);
     }
 }

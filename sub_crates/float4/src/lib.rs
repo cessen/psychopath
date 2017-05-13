@@ -1,12 +1,13 @@
 #![allow(dead_code)]
 
+#[cfg(feature = "simd_perf")]
+extern crate simd;
+
 use std::cmp::PartialEq;
 use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div, DivAssign, BitAnd};
 
 #[cfg(feature = "simd_perf")]
 use simd::{f32x4, bool32fx4};
-
-use lerp::Lerp;
 
 /// Essentially a tuple of four floats, which will use SIMD operations
 /// where possible on a platform.
@@ -24,31 +25,38 @@ pub struct Float4 {
 
 impl Float4 {
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn new(a: f32, b: f32, c: f32, d: f32) -> Float4 {
         Float4 { data: f32x4::new(a, b, c, d) }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     pub fn new(a: f32, b: f32, c: f32, d: f32) -> Float4 {
         Float4 { data: [a, b, c, d] }
     }
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn splat(n: f32) -> Float4 {
         Float4 { data: f32x4::splat(n) }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     pub fn splat(n: f32) -> Float4 {
         Float4 { data: [n, n, n, n] }
     }
 
+    #[inline]
     pub fn h_sum(&self) -> f32 {
         (self.get_0() + self.get_1()) + (self.get_2() + self.get_3())
     }
 
+    #[inline]
     pub fn h_product(&self) -> f32 {
         (self.get_0() * self.get_1()) * (self.get_2() * self.get_3())
     }
 
+    #[inline]
     pub fn h_min(&self) -> f32 {
         let n1 = if self.get_0() < self.get_1() {
             self.get_0()
@@ -63,6 +71,7 @@ impl Float4 {
         if n1 < n2 { n1 } else { n2 }
     }
 
+    #[inline]
     pub fn h_max(&self) -> f32 {
         let n1 = if self.get_0() > self.get_1() {
             self.get_0()
@@ -78,10 +87,12 @@ impl Float4 {
     }
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn v_min(&self, other: Float4) -> Float4 {
         Float4 { data: self.data.min(other.data) }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline]
     pub fn v_min(&self, other: Float4) -> Float4 {
         Float4::new(if self.get_0() < other.get_0() {
                         self.get_0()
@@ -107,10 +118,12 @@ impl Float4 {
     }
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn v_max(&self, other: Float4) -> Float4 {
         Float4 { data: self.data.max(other.data) }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline]
     pub fn v_max(&self, other: Float4) -> Float4 {
         Float4::new(if self.get_0() > other.get_0() {
                         self.get_0()
@@ -135,10 +148,12 @@ impl Float4 {
     }
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn lt(&self, other: Float4) -> Bool4 {
         Bool4 { data: self.data.lt(other.data) }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline]
     pub fn lt(&self, other: Float4) -> Bool4 {
         Bool4 {
             data: [self.data[0] < other.data[0],
@@ -149,10 +164,12 @@ impl Float4 {
     }
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn lte(&self, other: Float4) -> Bool4 {
         Bool4 { data: self.data.le(other.data) }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline]
     pub fn lte(&self, other: Float4) -> Bool4 {
         Bool4 {
             data: [self.data[0] <= other.data[0],
@@ -163,10 +180,12 @@ impl Float4 {
     }
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn gt(&self, other: Float4) -> Bool4 {
         Bool4 { data: self.data.gt(other.data) }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline]
     pub fn gt(&self, other: Float4) -> Bool4 {
         Bool4 {
             data: [self.data[0] > other.data[0],
@@ -177,10 +196,12 @@ impl Float4 {
     }
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     pub fn gte(&self, other: Float4) -> Bool4 {
         Bool4 { data: self.data.ge(other.data) }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline]
     pub fn gte(&self, other: Float4) -> Bool4 {
         Bool4 {
             data: [self.data[0] >= other.data[0],
@@ -208,8 +229,8 @@ impl Float4 {
     pub fn set_0(&mut self, n: f32) {
         self.data = self.data.replace(0, n);
     }
-    #[inline(always)]
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     pub fn set_0(&mut self, n: f32) {
         unsafe {
             *self.data.get_unchecked_mut(0) = n;
@@ -321,6 +342,7 @@ impl Float4 {
 
 
 impl PartialEq for Float4 {
+    #[inline]
     fn eq(&self, other: &Float4) -> bool {
         self.get_0() == other.get_0() && self.get_1() == other.get_1() &&
         self.get_2() == other.get_2() && self.get_3() == other.get_3()
@@ -332,10 +354,12 @@ impl Add for Float4 {
     type Output = Float4;
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     fn add(self, other: Float4) -> Float4 {
         Float4 { data: self.data + other.data }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     fn add(self, other: Float4) -> Float4 {
         Float4 {
             data: [self.get_0() + other.get_0(),
@@ -348,6 +372,7 @@ impl Add for Float4 {
 
 
 impl AddAssign for Float4 {
+    #[inline(always)]
     fn add_assign(&mut self, rhs: Float4) {
         *self = *self + rhs;
     }
@@ -358,10 +383,12 @@ impl Sub for Float4 {
     type Output = Float4;
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     fn sub(self, other: Float4) -> Float4 {
         Float4 { data: self.data - other.data }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     fn sub(self, other: Float4) -> Float4 {
         Float4 {
             data: [self.get_0() - other.get_0(),
@@ -374,6 +401,7 @@ impl Sub for Float4 {
 
 
 impl SubAssign for Float4 {
+    #[inline(always)]
     fn sub_assign(&mut self, rhs: Float4) {
         *self = *self - rhs;
     }
@@ -384,10 +412,12 @@ impl Mul for Float4 {
     type Output = Float4;
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     fn mul(self, other: Float4) -> Float4 {
         Float4 { data: self.data * other.data }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     fn mul(self, other: Float4) -> Float4 {
         Float4 {
             data: [self.get_0() * other.get_0(),
@@ -402,10 +432,12 @@ impl Mul<f32> for Float4 {
     type Output = Float4;
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     fn mul(self, other: f32) -> Float4 {
         Float4 { data: self.data * f32x4::splat(other) }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     fn mul(self, other: f32) -> Float4 {
         Float4 {
             data: [self.get_0() * other,
@@ -418,12 +450,14 @@ impl Mul<f32> for Float4 {
 
 
 impl MulAssign for Float4 {
+    #[inline(always)]
     fn mul_assign(&mut self, rhs: Float4) {
         *self = *self * rhs;
     }
 }
 
 impl MulAssign<f32> for Float4 {
+    #[inline(always)]
     fn mul_assign(&mut self, rhs: f32) {
         *self = *self * rhs;
     }
@@ -434,10 +468,12 @@ impl Div for Float4 {
     type Output = Float4;
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     fn div(self, other: Float4) -> Float4 {
         Float4 { data: self.data / other.data }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     fn div(self, other: Float4) -> Float4 {
         Float4 {
             data: [self.get_0() / other.get_0(),
@@ -452,10 +488,12 @@ impl Div<f32> for Float4 {
     type Output = Float4;
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     fn div(self, other: f32) -> Float4 {
         Float4 { data: self.data / f32x4::splat(other) }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline(always)]
     fn div(self, other: f32) -> Float4 {
         Float4 {
             data: [self.get_0() / other,
@@ -468,21 +506,16 @@ impl Div<f32> for Float4 {
 
 
 impl DivAssign for Float4 {
+    #[inline(always)]
     fn div_assign(&mut self, rhs: Float4) {
         *self = *self / rhs;
     }
 }
 
 impl DivAssign<f32> for Float4 {
+    #[inline(always)]
     fn div_assign(&mut self, rhs: f32) {
         *self = *self / rhs;
-    }
-}
-
-
-impl Lerp for Float4 {
-    fn lerp(self, other: Float4, alpha: f32) -> Float4 {
-        (self * (1.0 - alpha)) + (other * alpha)
     }
 }
 
@@ -560,6 +593,7 @@ impl Bool4 {
         unsafe { *self.data.get_unchecked(3) }
     }
 
+    #[inline]
     pub fn to_bitmask(&self) -> u8 {
         (self.get_0() as u8) | ((self.get_1() as u8) << 1) | ((self.get_2() as u8) << 2) |
         ((self.get_3() as u8) << 3)
@@ -570,10 +604,12 @@ impl BitAnd for Bool4 {
     type Output = Bool4;
 
     #[cfg(feature = "simd_perf")]
+    #[inline(always)]
     fn bitand(self, rhs: Bool4) -> Bool4 {
         Bool4 { data: self.data & rhs.data }
     }
     #[cfg(not(feature = "simd_perf"))]
+    #[inline]
     fn bitand(self, rhs: Bool4) -> Bool4 {
         Bool4 {
             data: [self.data[0] && rhs.data[0],
