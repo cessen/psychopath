@@ -211,8 +211,8 @@ impl<'a> Renderer<'a> {
                     for si in 0..self.spp {
                         // Calculate image plane x and y coordinates
                         let (img_x, img_y) = {
-                            let filter_x = fast_logit(halton::sample(4, offset + si as u32), 1.5) + 0.5;
-                            let filter_y = fast_logit(halton::sample(5, offset + si as u32), 1.5) + 0.5;
+                            let filter_x = fast_logit(get_sample(4, offset + si as u32), 1.5) + 0.5;
+                            let filter_y = fast_logit(get_sample(5, offset + si as u32), 1.5) + 0.5;
                             let samp_x = (filter_x + x as f32) * cmpx;
                             let samp_y = (filter_y + y as f32) * cmpy;
                             ((samp_x - 0.5) * x_extent, (0.5 - samp_y) * y_extent)
@@ -223,9 +223,9 @@ impl<'a> Renderer<'a> {
                             &self.scene,
                             (x, y),
                             (img_x, img_y),
-                            (halton::sample(0, offset + si as u32), halton::sample(1, offset + si as u32)),
-                            halton::sample(2, offset + si as u32),
-                            map_0_1_to_wavelength(halton::sample(3, offset + si as u32)),
+                            (get_sample(0, offset + si as u32), get_sample(1, offset + si as u32)),
+                            get_sample(2, offset + si as u32),
+                            map_0_1_to_wavelength(get_sample(3, offset + si as u32)),
                             offset + si as u32,
                         );
                         paths.push(path);
@@ -357,10 +357,9 @@ impl LightPath {
     }
 
     fn next_lds_samp(&self) -> f32 {
-        let s = halton::sample(self.dim_offset.get(), self.lds_offset);
-        let inc = self.dim_offset.get() + 1;
-        self.dim_offset.set(inc);
-        s
+        let dimension = self.dim_offset.get();
+        self.dim_offset.set(dimension + 1);
+        get_sample(dimension, self.lds_offset)
     }
 
     fn next(&mut self, xform_stack: &mut TransformStack, scene: &Scene, isect: &surface::SurfaceIntersection, ray: &mut Ray) -> bool {
@@ -498,6 +497,19 @@ impl LightPath {
                 }
             }
         }
+    }
+}
+
+/// Gets a sample, using LDS samples for lower dimensions,
+/// and switching to random samples at higher dimensions where
+/// LDS samples aren't available.
+#[inline(always)]
+fn get_sample(dimension: u32, i: u32) -> f32 {
+    use hash::hash_u32_to_f32;
+    if dimension < halton::MAX_DIMENSION {
+        halton::sample(dimension, i)
+    } else {
+        hash_u32_to_f32(dimension, i)
     }
 }
 

@@ -29,7 +29,7 @@ use std::path::Path;
 
 
 /// How many components to generate.
-const NUM_DIMENSIONS: usize = 256;
+const NUM_DIMENSIONS: usize = 128;
 
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
@@ -194,7 +194,7 @@ fn halton2(mut index: u32) -> f32 {{
                 format!(
                     r#"
 fn halton{}(index: u32) -> f32 {{
-    const PERM{}: [u16; {}] = [{}];"#,
+    static PERM{}: [u16; {}] = [{}];"#,
                     base,
                     base,
                     perm.len(),
