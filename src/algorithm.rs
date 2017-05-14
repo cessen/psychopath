@@ -159,9 +159,11 @@ pub fn partition_pair<A, B, F>(slc1: &mut [A], slc2: &mut [B], mut pred: F) -> u
                 if a1 == b1 {
                     return ((a1 as usize) - start) / std::mem::size_of::<A>();
                 }
-                if !pred(((a1 as usize) - start) / std::mem::size_of::<A>(),
-                         &mut *a1,
-                         &mut *a2) {
+                if !pred(
+                    ((a1 as usize) - start) / std::mem::size_of::<A>(),
+                    &mut *a1,
+                    &mut *a2,
+                ) {
                     break;
                 }
                 a1 = a1.offset(1);
@@ -174,9 +176,11 @@ pub fn partition_pair<A, B, F>(slc1: &mut [A], slc2: &mut [B], mut pred: F) -> u
                 if a1 == b1 {
                     return ((a1 as usize) - start) / std::mem::size_of::<A>();
                 }
-                if pred(((b1 as usize) - start) / std::mem::size_of::<A>(),
-                        &mut *b1,
-                        &mut *b2) {
+                if pred(
+                    ((b1 as usize) - start) / std::mem::size_of::<A>(),
+                    &mut *b1,
+                    &mut *b2,
+                ) {
                     break;
                 }
             }
@@ -205,9 +209,9 @@ pub fn quick_select<T, F>(slc: &mut [T], n: usize, mut order: F)
         slc.swap(i, right - 1);
         let ii = left +
                  {
-            let (val, list) = (&mut slc[left..right]).split_last_mut().unwrap();
-            partition(list, |n| order(n, val) == Ordering::Less)
-        };
+                     let (val, list) = (&mut slc[left..right]).split_last_mut().unwrap();
+                     partition(list, |n| order(n, val) == Ordering::Less)
+                 };
         slc.swap(ii, right - 1);
 
         if ii == n {
@@ -223,10 +227,7 @@ pub fn quick_select<T, F>(slc: &mut [T], n: usize, mut order: F)
 }
 
 /// Merges two slices of things, appending the result to vec_out
-pub fn merge_slices_append<T: Lerp + Copy, F>(slice1: &[T],
-                                              slice2: &[T],
-                                              vec_out: &mut Vec<T>,
-                                              merge: F)
+pub fn merge_slices_append<T: Lerp + Copy, F>(slice1: &[T], slice2: &[T], vec_out: &mut Vec<T>, merge: F)
     where F: Fn(&T, &T) -> T
 {
     // Transform the bounding boxes
@@ -253,10 +254,7 @@ pub fn merge_slices_append<T: Lerp + Copy, F>(slice1: &[T],
 
 /// Merges two slices of things, storing the result in slice_out.
 /// Panics if slice_out is not the right size.
-pub fn merge_slices_to<T: Lerp + Copy, F>(slice1: &[T],
-                                          slice2: &[T],
-                                          slice_out: &mut [T],
-                                          merge: F)
+pub fn merge_slices_to<T: Lerp + Copy, F>(slice1: &[T], slice2: &[T], slice_out: &mut [T], merge: F)
     where F: Fn(&T, &T) -> T
 {
     assert!(slice_out.len() == cmp::max(slice1.len(), slice2.len()));
@@ -266,8 +264,10 @@ pub fn merge_slices_to<T: Lerp + Copy, F>(slice1: &[T],
         return;
     } else if slice1.len() == slice2.len() {
         for (xfo, (xf1, xf2)) in
-            Iterator::zip(slice_out.iter_mut(),
-                          Iterator::zip(slice1.iter(), slice2.iter())) {
+            Iterator::zip(
+                slice_out.iter_mut(),
+                Iterator::zip(slice1.iter(), slice2.iter()),
+            ) {
             *xfo = merge(xf1, xf2);
         }
     } else if slice1.len() > slice2.len() {
@@ -291,13 +291,15 @@ mod tests {
     use super::*;
 
     fn quick_select_ints(list: &mut [i32], i: usize) {
-        quick_select(list, i, |a, b| if a < b {
-            Ordering::Less
-        } else if a == b {
-            Ordering::Equal
-        } else {
-            Ordering::Greater
-        });
+        quick_select(
+            list, i, |a, b| if a < b {
+                Ordering::Less
+            } else if a == b {
+                Ordering::Equal
+            } else {
+                Ordering::Greater
+            }
+        );
     }
 
     #[test]

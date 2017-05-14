@@ -38,11 +38,7 @@ pub enum BVHNode<'a> {
 }
 
 impl<'a> BVH<'a> {
-    pub fn from_objects<'b, T, F>(arena: &'a MemArena,
-                                  objects: &mut [T],
-                                  objects_per_leaf: usize,
-                                  bounder: F)
-                                  -> BVH<'a>
+    pub fn from_objects<'b, T, F>(arena: &'a MemArena, objects: &mut [T], objects_per_leaf: usize, bounder: F) -> BVH<'a>
         where F: 'b + Fn(&T) -> &'b [BBox]
     {
         if objects.len() == 0 {
@@ -74,8 +70,11 @@ impl<'a> BVH<'a> {
         let mut timer = Timer::new();
         let mut trav_time: f64 = 0.0;
 
-        let ray_sign =
-            [rays[0].dir_inv.x() >= 0.0, rays[0].dir_inv.y() >= 0.0, rays[0].dir_inv.z() >= 0.0];
+        let ray_sign = [
+            rays[0].dir_inv.x() >= 0.0,
+            rays[0].dir_inv.y() >= 0.0,
+            rays[0].dir_inv.z() >= 0.0,
+        ];
 
         // +2 of max depth for root and last child
         let mut node_stack = [self.root.unwrap(); BVH_MAX_DEPTH + 2];
@@ -84,12 +83,17 @@ impl<'a> BVH<'a> {
 
         while stack_ptr > 0 {
             match node_stack[stack_ptr] {
-                &BVHNode::Internal { children, bounds_start, bounds_len, split_axis } => {
-                    let bounds =
-                        unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) };
-                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
-                        (!r.is_done()) && lerp_slice(bounds, r.time).intersect_accel_ray(r)
-                    });
+                &BVHNode::Internal {
+                    children,
+                    bounds_start,
+                    bounds_len,
+                    split_axis,
+                } => {
+                    let bounds = unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) };
+                    let part = partition(
+                        &mut rays[..ray_i_stack[stack_ptr]],
+                        |r| (!r.is_done()) && lerp_slice(bounds, r.time).intersect_accel_ray(r),
+                    );
                     if part > 0 {
                         ray_i_stack[stack_ptr] = part;
                         ray_i_stack[stack_ptr + 1] = part;
@@ -106,12 +110,16 @@ impl<'a> BVH<'a> {
                     }
                 }
 
-                &BVHNode::Leaf { object_range, bounds_start, bounds_len } => {
-                    let bounds =
-                        unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) };
-                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
-                        (!r.is_done()) && lerp_slice(bounds, r.time).intersect_accel_ray(r)
-                    });
+                &BVHNode::Leaf {
+                    object_range,
+                    bounds_start,
+                    bounds_len,
+                } => {
+                    let bounds = unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) };
+                    let part = partition(
+                        &mut rays[..ray_i_stack[stack_ptr]],
+                        |r| (!r.is_done()) && lerp_slice(bounds, r.time).intersect_accel_ray(r),
+                    );
 
                     trav_time += timer.tick() as f64;
 
@@ -129,23 +137,24 @@ impl<'a> BVH<'a> {
         }
 
         trav_time += timer.tick() as f64;
-        ACCEL_TRAV_TIME.with(|att| {
-            let v = att.get();
-            att.set(v + trav_time);
-        });
+        ACCEL_TRAV_TIME.with(
+            |att| {
+                let v = att.get();
+                att.set(v + trav_time);
+            }
+        );
     }
 
-    fn construct_from_base(arena: &'a MemArena,
-                           base: &BVHBase,
-                           node_index: usize)
-                           -> &'a mut BVHNode<'a> {
+    fn construct_from_base(arena: &'a MemArena, base: &BVHBase, node_index: usize) -> &'a mut BVHNode<'a> {
         match &base.nodes[node_index] {
-            &BVHBaseNode::Internal { bounds_range, children_indices, split_axis } => {
+            &BVHBaseNode::Internal {
+                bounds_range,
+                children_indices,
+                split_axis,
+            } => {
                 let mut node = unsafe { arena.alloc_uninitialized_with_alignment::<BVHNode>(32) };
 
-                let bounds =
-                    arena.copy_slice_with_alignment(&base.bounds[bounds_range.0..bounds_range.1],
-                                                    32);
+                let bounds = arena.copy_slice_with_alignment(&base.bounds[bounds_range.0..bounds_range.1], 32);
                 let child1 = BVH::construct_from_base(arena, base, children_indices.0);
                 let child2 = BVH::construct_from_base(arena, base, children_indices.1);
 
@@ -159,7 +168,10 @@ impl<'a> BVH<'a> {
                 return node;
             }
 
-            &BVHBaseNode::Leaf { bounds_range, object_range } => {
+            &BVHBaseNode::Leaf {
+                bounds_range,
+                object_range,
+            } => {
                 let mut node = unsafe { arena.alloc_uninitialized::<BVHNode>() };
                 let bounds = arena.copy_slice(&base.bounds[bounds_range.0..bounds_range.1]);
 
@@ -185,13 +197,17 @@ impl<'a> Boundable for BVH<'a> {
             None => &DEGENERATE_BOUNDS[..],
             Some(root) => {
                 match root {
-                    &BVHNode::Internal { bounds_start, bounds_len, .. } => {
-                        unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) }
-                    }
+                    &BVHNode::Internal {
+                        bounds_start,
+                        bounds_len,
+                        ..
+                    } => unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) },
 
-                    &BVHNode::Leaf { bounds_start, bounds_len, .. } => {
-                        unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) }
-                    }
+                    &BVHNode::Leaf {
+                        bounds_start,
+                        bounds_len,
+                        ..
+                    } => unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) },
                 }
             }
         }

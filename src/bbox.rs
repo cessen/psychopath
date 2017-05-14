@@ -23,19 +23,18 @@ impl BBox {
     pub fn new() -> BBox {
         BBox {
             min: Point::new(std::f32::INFINITY, std::f32::INFINITY, std::f32::INFINITY),
-            max: Point::new(std::f32::NEG_INFINITY,
-                            std::f32::NEG_INFINITY,
-                            std::f32::NEG_INFINITY),
+            max: Point::new(
+                std::f32::NEG_INFINITY,
+                std::f32::NEG_INFINITY,
+                std::f32::NEG_INFINITY,
+            ),
         }
     }
 
     /// Creates a BBox with min as the minimum extent and max as the maximum
     /// extent.
     pub fn from_points(min: Point, max: Point) -> BBox {
-        BBox {
-            min: min,
-            max: max,
-        }
+        BBox { min: min, max: max }
     }
 
     // Returns whether the given ray intersects with the bbox.
@@ -59,14 +58,16 @@ impl BBox {
     // Creates a new BBox transformed into a different space.
     pub fn transformed(&self, xform: Matrix4x4) -> BBox {
         // BBox corners
-        let vs = [Point::new(self.min.x(), self.min.y(), self.min.z()),
-                  Point::new(self.min.x(), self.min.y(), self.max.z()),
-                  Point::new(self.min.x(), self.max.y(), self.min.z()),
-                  Point::new(self.min.x(), self.max.y(), self.max.z()),
-                  Point::new(self.max.x(), self.min.y(), self.min.z()),
-                  Point::new(self.max.x(), self.min.y(), self.max.z()),
-                  Point::new(self.max.x(), self.max.y(), self.min.z()),
-                  Point::new(self.max.x(), self.max.y(), self.max.z())];
+        let vs = [
+            Point::new(self.min.x(), self.min.y(), self.min.z()),
+            Point::new(self.min.x(), self.min.y(), self.max.z()),
+            Point::new(self.min.x(), self.max.y(), self.min.z()),
+            Point::new(self.min.x(), self.max.y(), self.max.z()),
+            Point::new(self.max.x(), self.min.y(), self.min.z()),
+            Point::new(self.max.x(), self.min.y(), self.max.z()),
+            Point::new(self.max.x(), self.max.y(), self.min.z()),
+            Point::new(self.max.x(), self.max.y(), self.max.z()),
+        ];
 
         // Transform BBox corners and make new bbox
         let mut b = BBox::new();
@@ -99,8 +100,10 @@ impl BitOr for BBox {
     type Output = BBox;
 
     fn bitor(self, rhs: BBox) -> BBox {
-        BBox::from_points(Point { co: self.min.co.v_min(rhs.min.co) },
-                          Point { co: self.max.co.v_max(rhs.max.co) })
+        BBox::from_points(
+            Point { co: self.min.co.v_min(rhs.min.co) },
+            Point { co: self.max.co.v_max(rhs.max.co) },
+        )
     }
 }
 
@@ -115,8 +118,10 @@ impl BitOr<Point> for BBox {
     type Output = BBox;
 
     fn bitor(self, rhs: Point) -> BBox {
-        BBox::from_points(Point { co: self.min.co.v_min(rhs.co) },
-                          Point { co: self.max.co.v_max(rhs.co) })
+        BBox::from_points(
+            Point { co: self.min.co.v_min(rhs.co) },
+            Point { co: self.max.co.v_max(rhs.co) },
+        )
     }
 }
 

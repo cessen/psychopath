@@ -70,59 +70,86 @@ fn main() {
     let mut t = Timer::new();
 
     // Parse command line arguments.
-    let args =
-        App::new("Psychopath")
-            .version(VERSION)
-            .about("A slightly psychotic path tracer")
-            .arg(Arg::with_name("input")
+    let args = App::new("Psychopath")
+        .version(VERSION)
+        .about("A slightly psychotic path tracer")
+        .arg(
+            Arg::with_name("input")
                 .short("i")
                 .long("input")
                 .value_name("FILE")
                 .help("Input .psy file")
                 .takes_value(true)
-                .required_unless("dev"))
-            .arg(Arg::with_name("spp")
+                .required_unless("dev")
+        )
+        .arg(
+            Arg::with_name("spp")
                 .short("s")
                 .long("spp")
                 .value_name("N")
                 .help("Number of samples per pixel")
                 .takes_value(true)
-                .validator(|s| {
-                    usize::from_str(&s).and(Ok(())).or(Err("must be an integer".to_string()))
-                }))
-            .arg(Arg::with_name("max_bucket_samples")
+                .validator(
+                    |s| {
+                        usize::from_str(&s)
+                            .and(Ok(()))
+                            .or(Err("must be an integer".to_string()))
+                    }
+                )
+        )
+        .arg(
+            Arg::with_name("max_bucket_samples")
                 .short("b")
                 .long("spb")
                 .value_name("N")
                 .help("Target number of samples per bucket (determines bucket size)")
                 .takes_value(true)
-                .validator(|s| {
-                    usize::from_str(&s).and(Ok(())).or(Err("must be an integer".to_string()))
-                }))
-            .arg(Arg::with_name("threads")
+                .validator(
+                    |s| {
+                        usize::from_str(&s)
+                            .and(Ok(()))
+                            .or(Err("must be an integer".to_string()))
+                    }
+                )
+        )
+        .arg(
+            Arg::with_name("threads")
                 .short("t")
                 .long("threads")
                 .value_name("N")
-                .help("Number of threads to render with.  Defaults to the number of logical \
-                       cores on the system.")
+                .help(
+                    "Number of threads to render with.  Defaults to the number of logical \
+                       cores on the system."
+                )
                 .takes_value(true)
-                .validator(|s| {
-                    usize::from_str(&s).and(Ok(())).or(Err("must be an integer".to_string()))
-                }))
-            .arg(Arg::with_name("stats")
+                .validator(
+                    |s| {
+                        usize::from_str(&s)
+                            .and(Ok(()))
+                            .or(Err("must be an integer".to_string()))
+                    }
+                )
+        )
+        .arg(
+            Arg::with_name("stats")
                 .long("stats")
-                .help("Print additional statistics about rendering"))
-            .arg(Arg::with_name("dev")
+                .help("Print additional statistics about rendering")
+        )
+        .arg(
+            Arg::with_name("dev")
                 .long("dev")
-                .help("Show useful dev/debug info."))
-            .get_matches();
+                .help("Show useful dev/debug info.")
+        )
+        .get_matches();
 
     // Print some misc useful dev info.
     if args.is_present("dev") {
         println!("Ray size:       {} bytes", mem::size_of::<Ray>());
         println!("AccelRay size:  {} bytes", mem::size_of::<AccelRay>());
-        println!("SurfaceIntersection size:  {} bytes",
-                 mem::size_of::<SurfaceIntersection>());
+        println!(
+            "SurfaceIntersection size:  {} bytes",
+            mem::size_of::<SurfaceIntersection>()
+        );
         println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
         println!("BBox size: {} bytes", mem::size_of::<BBox>());
         println!("BVHNode size: {} bytes", mem::size_of::<BVHNode>());
@@ -130,7 +157,9 @@ fn main() {
     }
 
     // Parse data tree of scene file
-    println!("Parsing scene file...");
+    println!(
+        "Parsing scene file...",
+    );
     t.tick();
     let mut psy_contents = String::new();
     let dt = {
@@ -150,18 +179,19 @@ fn main() {
                 println!("Building scene...");
 
                 let arena = MemArena::with_min_block_size((1 << 20) * 4);
-                let mut r = parse_scene(&arena, child).unwrap_or_else(|e| {
-                    e.print(&psy_contents);
-                    panic!("Parse error.");
-                });
+                let mut r = parse_scene(&arena, child).unwrap_or_else(
+                    |e| {
+                        e.print(&psy_contents);
+                        panic!("Parse error.");
+                    }
+                );
 
                 if let Some(spp) = args.value_of("spp") {
                     println!("\tOverriding scene spp: {}", spp);
                     r.spp = usize::from_str(&spp).unwrap();
                 }
 
-                let max_samples_per_bucket = if let Some(max_samples_per_bucket) =
-                    args.value_of("max_bucket_samples") {
+                let max_samples_per_bucket = if let Some(max_samples_per_bucket) = args.value_of("max_bucket_samples") {
                     u32::from_str(&max_samples_per_bucket).unwrap()
                 } else {
                     4096
@@ -182,16 +212,26 @@ fn main() {
                     let rtime = t.tick();
                     let ntime = rtime as f64 / rstats.total_time;
                     println!("\tRendered scene in {:.3}s", rtime);
-                    println!("\t\tTrace:                  {:.3}s",
-                             ntime * rstats.trace_time);
-                    println!("\t\t\tTraversal:            {:.3}s",
-                             ntime * rstats.accel_traversal_time);
-                    println!("\t\tInitial ray generation: {:.3}s",
-                             ntime * rstats.initial_ray_generation_time);
-                    println!("\t\tRay generation:         {:.3}s",
-                             ntime * rstats.ray_generation_time);
-                    println!("\t\tSample writing:         {:.3}s",
-                             ntime * rstats.sample_writing_time);
+                    println!(
+                        "\t\tTrace:                  {:.3}s",
+                        ntime * rstats.trace_time
+                    );
+                    println!(
+                        "\t\t\tTraversal:            {:.3}s",
+                        ntime * rstats.accel_traversal_time
+                    );
+                    println!(
+                        "\t\tInitial ray generation: {:.3}s",
+                        ntime * rstats.initial_ray_generation_time
+                    );
+                    println!(
+                        "\t\tRay generation:         {:.3}s",
+                        ntime * rstats.ray_generation_time
+                    );
+                    println!(
+                        "\t\tSample writing:         {:.3}s",
+                        ntime * rstats.sample_writing_time
+                    );
                 }
 
                 println!("Writing image to disk...");

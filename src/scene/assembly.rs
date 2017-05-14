@@ -36,15 +36,11 @@ pub struct Assembly<'a> {
 
 impl<'a> Assembly<'a> {
     // Returns (light_color, shadow_vector, pdf, selection_pdf)
-    pub fn sample_lights(&self,
-                         xform_stack: &mut TransformStack,
-                         n: f32,
-                         uvw: (f32, f32, f32),
-                         wavelength: f32,
-                         time: f32,
-                         intr: &SurfaceIntersection)
-                         -> Option<(SpectralSample, Vector, f32, f32)> {
-        if let &SurfaceIntersection::Hit { intersection_data: idata, closure } = intr {
+    pub fn sample_lights(&self, xform_stack: &mut TransformStack, n: f32, uvw: (f32, f32, f32), wavelength: f32, time: f32, intr: &SurfaceIntersection) -> Option<(SpectralSample, Vector, f32, f32)> {
+        if let &SurfaceIntersection::Hit {
+                   intersection_data: idata,
+                   closure,
+               } = intr {
             let sel_xform = if xform_stack.top().len() > 0 {
                 lerp_slice(xform_stack.top(), time)
             } else {
@@ -52,12 +48,14 @@ impl<'a> Assembly<'a> {
             };
             if let Some((light_i, sel_pdf, whittled_n)) =
                 self.light_accel
-                    .select(idata.incoming * sel_xform,
-                            idata.pos * sel_xform,
-                            idata.nor * sel_xform,
-                            closure.as_surface_closure(),
-                            time,
-                            n) {
+                    .select(
+                        idata.incoming * sel_xform,
+                        idata.pos * sel_xform,
+                        idata.nor * sel_xform,
+                        closure.as_surface_closure(),
+                        time,
+                        n,
+                    ) {
                 let inst = self.light_instances[light_i];
                 match inst.instance_type {
 
@@ -83,8 +81,7 @@ impl<'a> Assembly<'a> {
                                 };
 
                                 // Sample the light
-                                let (color, shadow_vec, pdf) =
-                                    light.sample(&xform, idata.pos, uvw.0, uvw.1, wavelength, time);
+                                let (color, shadow_vec, pdf) = light.sample(&xform, idata.pos, uvw.0, uvw.1, wavelength, time);
                                 return Some((color, shadow_vec, pdf, sel_pdf));
                             }
 
@@ -100,8 +97,7 @@ impl<'a> Assembly<'a> {
                         }
 
                         // Sample sub-assembly lights
-                        let sample = self.assemblies[inst.data_index]
-                            .sample_lights(xform_stack, whittled_n, uvw, wavelength, time, intr);
+                        let sample = self.assemblies[inst.data_index].sample_lights(xform_stack, whittled_n, uvw, wavelength, time, intr);
 
                         // Pop the assembly's transforms off the transform stack.
                         if let Some(_) = inst.transform_indices {
@@ -173,12 +169,15 @@ impl<'a> AssemblyBuilder<'a> {
     pub fn add_assembly(&mut self, name: &str, asmb: Assembly<'a>) {
         // Make sure the name hasn't already been used.
         if self.name_exists(name) {
-            panic!("Attempted to add assembly to another assembly with a name that already \
-                    exists.");
+            panic!(
+                "Attempted to add assembly to another assembly with a name that already \
+                    exists."
+            );
         }
 
         // Add assembly
-        self.assembly_map.insert(name.to_string(), self.assemblies.len());
+        self.assembly_map
+            .insert(name.to_string(), self.assemblies.len());
         self.assemblies.push(asmb);
     }
 
@@ -201,16 +200,14 @@ impl<'a> AssemblyBuilder<'a> {
                 instance_type: InstanceType::Object,
                 data_index: self.object_map[name],
                 id: self.instances.len(),
-                transform_indices:
-                    xforms.map(|xf| (self.xforms.len(), self.xforms.len() + xf.len())),
+                transform_indices: xforms.map(|xf| (self.xforms.len(), self.xforms.len() + xf.len())),
             }
         } else {
             Instance {
                 instance_type: InstanceType::Assembly,
                 data_index: self.assembly_map[name],
                 id: self.instances.len(),
-                transform_indices:
-                    xforms.map(|xf| (self.xforms.len(), self.xforms.len() + xf.len())),
+                transform_indices: xforms.map(|xf| (self.xforms.len(), self.xforms.len() + xf.len())),
             }
         };
 
@@ -231,49 +228,59 @@ impl<'a> AssemblyBuilder<'a> {
         let (bis, bbs) = self.instance_bounds();
 
         // Build object accel
-        let object_accel = BVH::from_objects(self.arena,
-                                             &mut self.instances[..],
-                                             1,
-                                             |inst| &bbs[bis[inst.id]..bis[inst.id + 1]]);
+        let object_accel = BVH::from_objects(
+            self.arena,
+            &mut self.instances[..],
+            1,
+            |inst| &bbs[bis[inst.id]..bis[inst.id + 1]],
+        );
 
         // Get list of instances that are for light sources or assemblies that contain light
         // sources.
         let mut light_instances: Vec<_> = self.instances
             .iter()
-            .filter(|inst| match inst.instance_type {
-                InstanceType::Object => {
-                    if let Object::Light(_) = self.objects[inst.data_index] {
-                        true
-                    } else {
-                        false
+            .filter(
+                |inst| match inst.instance_type {
+                    InstanceType::Object => {
+                        if let Object::Light(_) = self.objects[inst.data_index] {
+                            true
+                        } else {
+                            false
+                        }
+                    }
+
+                    InstanceType::Assembly => {
+                        self.assemblies[inst.data_index]
+                            .light_accel
+                            .approximate_energy() > 0.0
                     }
                 }
-
-                InstanceType::Assembly => {
-                    self.assemblies[inst.data_index].light_accel.approximate_energy() > 0.0
-                }
-            })
+            )
             .map(|&a| a)
             .collect();
 
         // Build light accel
-        let light_accel = LightTree::from_objects(self.arena, &mut light_instances[..], |inst| {
-            let bounds = &bbs[bis[inst.id]..bis[inst.id + 1]];
-            let energy = match inst.instance_type {
-                InstanceType::Object => {
-                    if let Object::Light(ref light) = self.objects[inst.data_index] {
-                        light.approximate_energy()
-                    } else {
-                        0.0
+        let light_accel = LightTree::from_objects(
+            self.arena, &mut light_instances[..], |inst| {
+                let bounds = &bbs[bis[inst.id]..bis[inst.id + 1]];
+                let energy = match inst.instance_type {
+                    InstanceType::Object => {
+                        if let Object::Light(ref light) = self.objects[inst.data_index] {
+                            light.approximate_energy()
+                        } else {
+                            0.0
+                        }
                     }
-                }
 
-                InstanceType::Assembly => {
-                    self.assemblies[inst.data_index].light_accel.approximate_energy()
-                }
-            };
-            (bounds, energy)
-        });
+                    InstanceType::Assembly => {
+                        self.assemblies[inst.data_index]
+                            .light_accel
+                            .approximate_energy()
+                    }
+                };
+                (bounds, energy)
+            }
+        );
 
         Assembly {
             instances: self.arena.copy_slice(&self.instances),

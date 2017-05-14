@@ -15,9 +15,7 @@ use super::DataTree;
 use super::psy::PsyParseError;
 
 
-pub fn parse_distant_disk_light<'a>(arena: &'a MemArena,
-                                    tree: &'a DataTree)
-                                    -> Result<DistantDiskLight<'a>, PsyParseError> {
+pub fn parse_distant_disk_light<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<DistantDiskLight<'a>, PsyParseError> {
     if let &DataTree::Internal { ref children, .. } = tree {
         let mut radii = Vec::new();
         let mut directions = Vec::new();
@@ -27,7 +25,11 @@ pub fn parse_distant_disk_light<'a>(arena: &'a MemArena,
         for child in children.iter() {
             match child {
                 // Radius
-                &DataTree::Leaf { type_name, contents, byte_offset } if type_name == "Radius" => {
+                &DataTree::Leaf {
+                    type_name,
+                    contents,
+                    byte_offset,
+                } if type_name == "Radius" => {
                     if let IResult::Done(_, radius) = ws_f32(contents.as_bytes()) {
                         radii.push(radius);
                     } else {
@@ -37,10 +39,12 @@ pub fn parse_distant_disk_light<'a>(arena: &'a MemArena,
                 }
 
                 // Direction
-                &DataTree::Leaf { type_name, contents, byte_offset } if type_name ==
-                                                                        "Direction" => {
-                    if let IResult::Done(_, direction) =
-                        closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes()) {
+                &DataTree::Leaf {
+                    type_name,
+                    contents,
+                    byte_offset,
+                } if type_name == "Direction" => {
+                    if let IResult::Done(_, direction) = closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes()) {
                         directions.push(Vector::new(direction.0, direction.1, direction.2));
                     } else {
                         // Found direction, but its contents is not in the right format
@@ -49,9 +53,12 @@ pub fn parse_distant_disk_light<'a>(arena: &'a MemArena,
                 }
 
                 // Color
-                &DataTree::Leaf { type_name, contents, byte_offset } if type_name == "Color" => {
-                    if let IResult::Done(_, color) =
-                        closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes()) {
+                &DataTree::Leaf {
+                    type_name,
+                    contents,
+                    byte_offset,
+                } if type_name == "Color" => {
+                    if let IResult::Done(_, color) = closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes()) {
                         // TODO: handle color space conversions properly.
                         // Probably will need a special color type with its
                         // own parser...?
@@ -73,9 +80,7 @@ pub fn parse_distant_disk_light<'a>(arena: &'a MemArena,
 }
 
 
-pub fn parse_sphere_light<'a>(arena: &'a MemArena,
-                              tree: &'a DataTree)
-                              -> Result<SphereLight<'a>, PsyParseError> {
+pub fn parse_sphere_light<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<SphereLight<'a>, PsyParseError> {
     if let &DataTree::Internal { ref children, .. } = tree {
         let mut radii = Vec::new();
         let mut colors = Vec::new();
@@ -84,7 +89,11 @@ pub fn parse_sphere_light<'a>(arena: &'a MemArena,
         for child in children.iter() {
             match child {
                 // Radius
-                &DataTree::Leaf { type_name, contents, byte_offset } if type_name == "Radius" => {
+                &DataTree::Leaf {
+                    type_name,
+                    contents,
+                    byte_offset,
+                } if type_name == "Radius" => {
                     if let IResult::Done(_, radius) = ws_f32(contents.as_bytes()) {
                         radii.push(radius);
                     } else {
@@ -94,9 +103,12 @@ pub fn parse_sphere_light<'a>(arena: &'a MemArena,
                 }
 
                 // Color
-                &DataTree::Leaf { type_name, contents, byte_offset } if type_name == "Color" => {
-                    if let IResult::Done(_, color) =
-                        closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes()) {
+                &DataTree::Leaf {
+                    type_name,
+                    contents,
+                    byte_offset,
+                } if type_name == "Color" => {
+                    if let IResult::Done(_, color) = closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes()) {
                         // TODO: handle color space conversions properly.
                         // Probably will need a special color type with its
                         // own parser...?
@@ -117,9 +129,7 @@ pub fn parse_sphere_light<'a>(arena: &'a MemArena,
     }
 }
 
-pub fn parse_rectangle_light<'a>(arena: &'a MemArena,
-                                 tree: &'a DataTree)
-                                 -> Result<RectangleLight<'a>, PsyParseError> {
+pub fn parse_rectangle_light<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<RectangleLight<'a>, PsyParseError> {
     if let &DataTree::Internal { ref children, .. } = tree {
         let mut dimensions = Vec::new();
         let mut colors = Vec::new();
@@ -128,10 +138,12 @@ pub fn parse_rectangle_light<'a>(arena: &'a MemArena,
         for child in children.iter() {
             match child {
                 // Dimensions
-                &DataTree::Leaf { type_name, contents, byte_offset } if type_name ==
-                                                                        "Dimensions" => {
-                    if let IResult::Done(_, radius) =
-                        closure!(tuple!(ws_f32, ws_f32))(contents.as_bytes()) {
+                &DataTree::Leaf {
+                    type_name,
+                    contents,
+                    byte_offset,
+                } if type_name == "Dimensions" => {
+                    if let IResult::Done(_, radius) = closure!(tuple!(ws_f32, ws_f32))(contents.as_bytes()) {
                         dimensions.push(radius);
                     } else {
                         // Found dimensions, but its contents is not in the right format
@@ -140,9 +152,12 @@ pub fn parse_rectangle_light<'a>(arena: &'a MemArena,
                 }
 
                 // Color
-                &DataTree::Leaf { type_name, contents, byte_offset } if type_name == "Color" => {
-                    if let IResult::Done(_, color) =
-                        closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes()) {
+                &DataTree::Leaf {
+                    type_name,
+                    contents,
+                    byte_offset,
+                } if type_name == "Color" => {
+                    if let IResult::Done(_, color) = closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes()) {
                         // TODO: handle color space conversions properly.
                         // Probably will need a special color type with its
                         // own parser...?

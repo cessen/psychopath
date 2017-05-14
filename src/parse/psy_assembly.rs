@@ -12,9 +12,7 @@ use super::psy_mesh_surface::parse_mesh_surface;
 use super::psy::{parse_matrix, PsyParseError};
 
 
-pub fn parse_assembly<'a>(arena: &'a MemArena,
-                          tree: &'a DataTree)
-                          -> Result<Assembly<'a>, PsyParseError> {
+pub fn parse_assembly<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Assembly<'a>, PsyParseError> {
     let mut builder = AssemblyBuilder::new(arena);
 
     if tree.is_internal() {
@@ -54,38 +52,43 @@ pub fn parse_assembly<'a>(arena: &'a MemArena,
                     if builder.name_exists(name) {
                         builder.add_instance(name, Some(&xforms));
                     } else {
-                        return Err(PsyParseError::InstancedMissingData(
-                            child.iter_leaf_children_with_type("Data").nth(0).unwrap().2,
-                                                                       "Attempted to add \
+                        return Err(
+                            PsyParseError::InstancedMissingData(
+                                child.iter_leaf_children_with_type("Data").nth(0).unwrap().2,
+                                "Attempted to add \
                                                                         instance for data with \
                                                                         a name that doesn't \
                                                                         exist.",
-                                                                       name.to_string()));
+                                name.to_string(),
+                            )
+                        );
                     }
                 }
 
                 // MeshSurface
                 "MeshSurface" => {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
-                        builder.add_object(ident,
-                                           Object::Surface(arena.alloc(
-                                               parse_mesh_surface(arena, &child)?
-                                           )));
+                        builder.add_object(
+                            ident,
+                            Object::Surface(arena.alloc(parse_mesh_surface(arena, &child)?)),
+                        );
                     } else {
                         // TODO: error condition of some kind, because no ident
-                        panic!("MeshSurface encountered that was a leaf, but MeshSurfaces cannot \
+                        panic!(
+                            "MeshSurface encountered that was a leaf, but MeshSurfaces cannot \
                                 be a leaf: {}",
-                               child.byte_offset());
+                            child.byte_offset()
+                        );
                     }
                 }
 
                 // Sphere Light
                 "SphereLight" => {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
-                        builder.add_object(ident,
-                                           Object::Light(arena.alloc(
-                                               parse_sphere_light(arena, &child)?
-                                           )));
+                        builder.add_object(
+                            ident,
+                            Object::Light(arena.alloc(parse_sphere_light(arena, &child)?)),
+                        );
                     } else {
                         // No ident
                         return Err(PsyParseError::UnknownError(child.byte_offset()));
@@ -95,10 +98,10 @@ pub fn parse_assembly<'a>(arena: &'a MemArena,
                 // Rectangle Light
                 "RectangleLight" => {
                     if let &DataTree::Internal { ident: Some(ident), .. } = child {
-                        builder.add_object(ident,
-                                           Object::Light(arena.alloc(
-                                               parse_rectangle_light(arena, &child)?
-                                           )));
+                        builder.add_object(
+                            ident,
+                            Object::Light(arena.alloc(parse_rectangle_light(arena, &child)?)),
+                        );
                     } else {
                         // No ident
                         return Err(PsyParseError::UnknownError(child.byte_offset()));

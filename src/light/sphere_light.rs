@@ -22,13 +22,16 @@ pub struct SphereLight<'a> {
 
 impl<'a> SphereLight<'a> {
     pub fn new<'b>(arena: &'b MemArena, radii: Vec<f32>, colors: Vec<XYZ>) -> SphereLight<'b> {
-        let bbs: Vec<_> = radii.iter()
-            .map(|r| {
-                BBox {
-                    min: Point::new(-*r, -*r, -*r),
-                    max: Point::new(*r, *r, *r),
+        let bbs: Vec<_> = radii
+            .iter()
+            .map(
+                |r| {
+                    BBox {
+                        min: Point::new(-*r, -*r, -*r),
+                        max: Point::new(*r, *r, *r),
+                    }
                 }
-            })
+            )
             .collect();
         SphereLight {
             radii: arena.copy_slice(&radii),
@@ -39,14 +42,7 @@ impl<'a> SphereLight<'a> {
 }
 
 impl<'a> LightSource for SphereLight<'a> {
-    fn sample(&self,
-              space: &Matrix4x4,
-              arr: Point,
-              u: f32,
-              v: f32,
-              wavelength: f32,
-              time: f32)
-              -> (SpectralSample, Vector, f32) {
+    fn sample(&self, space: &Matrix4x4, arr: Point, u: f32, v: f32, wavelength: f32, time: f32) -> (SpectralSample, Vector, f32) {
         // TODO: track fp error due to transforms
         let arr = arr * *space;
         let pos = Point::new(0.0, 0.0, 0.0);
@@ -93,13 +89,14 @@ impl<'a> LightSource for SphereLight<'a> {
             };
             let sin_a = ((1.0 - (cos_a * cos_a)).max(0.0)).sqrt();
             let phi = v as f64 * 2.0 * PI_64;
-            let sample = Vector::new((phi.cos() * sin_a * radius) as f32,
-                                     (phi.sin() * sin_a * radius) as f32,
-                                     (d - (cos_a * radius)) as f32);
+            let sample = Vector::new(
+                (phi.cos() * sin_a * radius) as f32,
+                (phi.sin() * sin_a * radius) as f32,
+                (d - (cos_a * radius)) as f32,
+            );
 
             // Calculate the final values and return everything.
-            let shadow_vec = ((x * sample.x()) + (y * sample.y()) + (z * sample.z())) *
-                             space.inverse();
+            let shadow_vec = ((x * sample.x()) + (y * sample.y()) + (z * sample.z())) * space.inverse();
             let pdf = uniform_sample_cone_pdf(cos_theta_max);
             let spectral_sample = (col * surface_area_inv as f32).to_spectral_sample(wavelength);
             return (spectral_sample, shadow_vec, pdf as f32);
@@ -112,15 +109,7 @@ impl<'a> LightSource for SphereLight<'a> {
         }
     }
 
-    fn sample_pdf(&self,
-                  space: &Matrix4x4,
-                  arr: Point,
-                  sample_dir: Vector,
-                  sample_u: f32,
-                  sample_v: f32,
-                  wavelength: f32,
-                  time: f32)
-                  -> f32 {
+    fn sample_pdf(&self, space: &Matrix4x4, arr: Point, sample_dir: Vector, sample_u: f32, sample_v: f32, wavelength: f32, time: f32) -> f32 {
         // We're not using these, silence warnings
         let _ = (sample_dir, sample_u, sample_v, wavelength);
 
@@ -143,14 +132,7 @@ impl<'a> LightSource for SphereLight<'a> {
         }
     }
 
-    fn outgoing(&self,
-                space: &Matrix4x4,
-                dir: Vector,
-                u: f32,
-                v: f32,
-                wavelength: f32,
-                time: f32)
-                -> SpectralSample {
+    fn outgoing(&self, space: &Matrix4x4, dir: Vector, u: f32, v: f32, wavelength: f32, time: f32) -> SpectralSample {
         // We're not using these, silence warnings
         let _ = (space, dir, u, v);
 
@@ -166,8 +148,9 @@ impl<'a> LightSource for SphereLight<'a> {
     }
 
     fn approximate_energy(&self) -> f32 {
-        let color: XYZ = self.colors.iter().fold(XYZ::new(0.0, 0.0, 0.0), |a, &b| a + b) /
-                         self.colors.len() as f32;
+        let color: XYZ = self.colors
+            .iter()
+            .fold(XYZ::new(0.0, 0.0, 0.0), |a, &b| a + b) / self.colors.len() as f32;
         color.y
     }
 }

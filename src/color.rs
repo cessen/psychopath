@@ -22,10 +22,12 @@ pub trait Color {
 
     fn to_spectral_sample(&self, hero_wavelength: f32) -> SpectralSample {
         SpectralSample {
-            e: Float4::new(self.sample_spectrum(nth_wavelength(hero_wavelength, 0)),
-                           self.sample_spectrum(nth_wavelength(hero_wavelength, 1)),
-                           self.sample_spectrum(nth_wavelength(hero_wavelength, 2)),
-                           self.sample_spectrum(nth_wavelength(hero_wavelength, 3))),
+            e: Float4::new(
+                self.sample_spectrum(nth_wavelength(hero_wavelength, 0)),
+                self.sample_spectrum(nth_wavelength(hero_wavelength, 1)),
+                self.sample_spectrum(nth_wavelength(hero_wavelength, 2)),
+                self.sample_spectrum(nth_wavelength(hero_wavelength, 3)),
+            ),
 
             hero_wavelength: hero_wavelength,
         }
@@ -260,17 +262,13 @@ impl DivAssign<f32> for XYZ {
 /// colorspace cannot represent all colors in the XYZ colorspace.
 #[allow(dead_code)]
 pub fn xyz_to_rec709(xyz: (f32, f32, f32)) -> (f32, f32, f32) {
-    ((xyz.0 * 3.2404542) + (xyz.1 * -1.5371385) + (xyz.2 * -0.4985314),
-     (xyz.0 * -0.9692660) + (xyz.1 * 1.8760108) + (xyz.2 * 0.0415560),
-     (xyz.0 * 0.0556434) + (xyz.1 * -0.2040259) + (xyz.2 * 1.0572252))
+    ((xyz.0 * 3.2404542) + (xyz.1 * -1.5371385) + (xyz.2 * -0.4985314), (xyz.0 * -0.9692660) + (xyz.1 * 1.8760108) + (xyz.2 * 0.0415560), (xyz.0 * 0.0556434) + (xyz.1 * -0.2040259) + (xyz.2 * 1.0572252))
 }
 
 /// Converts a color in Rec.709 colorspace to XYZ colorspace.
 #[allow(dead_code)]
 pub fn rec709_to_xyz(rec: (f32, f32, f32)) -> (f32, f32, f32) {
-    ((rec.0 * 0.4124564) + (rec.1 * 0.3575761) + (rec.2 * 0.1804375),
-     (rec.0 * 0.2126729) + (rec.1 * 0.7151522) + (rec.2 * 0.0721750),
-     (rec.0 * 0.0193339) + (rec.1 * 0.1191920) + (rec.2 * 0.9503041))
+    ((rec.0 * 0.4124564) + (rec.1 * 0.3575761) + (rec.2 * 0.1804375), (rec.0 * 0.2126729) + (rec.1 * 0.7151522) + (rec.2 * 0.0721750), (rec.0 * 0.0193339) + (rec.1 * 0.1191920) + (rec.2 * 0.9503041))
 }
 
 /// Converts a color in XYZ colorspace to an adjusted Rec.709 colorspace
@@ -278,18 +276,14 @@ pub fn rec709_to_xyz(rec: (f32, f32, f32)) -> (f32, f32, f32) {
 /// Note: this is lossy, as negative resulting values are clamped to zero.
 #[allow(dead_code)]
 pub fn xyz_to_rec709e(xyz: (f32, f32, f32)) -> (f32, f32, f32) {
-    ((xyz.0 * 3.0799600) + (xyz.1 * -1.5371400) + (xyz.2 * -0.5428160),
-     (xyz.0 * -0.9212590) + (xyz.1 * 1.8760100) + (xyz.2 * 0.0452475),
-     (xyz.0 * 0.0528874) + (xyz.1 * -0.2040260) + (xyz.2 * 1.1511400))
+    ((xyz.0 * 3.0799600) + (xyz.1 * -1.5371400) + (xyz.2 * -0.5428160), (xyz.0 * -0.9212590) + (xyz.1 * 1.8760100) + (xyz.2 * 0.0452475), (xyz.0 * 0.0528874) + (xyz.1 * -0.2040260) + (xyz.2 * 1.1511400))
 }
 
 /// Converts a color in an adjusted Rec.709 colorspace with whitepoint E to
 /// XYZ colorspace.
 #[allow(dead_code)]
 pub fn rec709e_to_xyz(rec: (f32, f32, f32)) -> (f32, f32, f32) {
-    ((rec.0 * 0.4339499) + (rec.1 * 0.3762098) + (rec.2 * 0.1898403),
-     (rec.0 * 0.2126729) + (rec.1 * 0.7151522) + (rec.2 * 0.0721750),
-     (rec.0 * 0.0177566) + (rec.1 * 0.1094680) + (rec.2 * 0.8727755))
+    ((rec.0 * 0.4339499) + (rec.1 * 0.3762098) + (rec.2 * 0.1898403), (rec.0 * 0.2126729) + (rec.1 * 0.7151522) + (rec.2 * 0.0721750), (rec.0 * 0.0177566) + (rec.1 * 0.1094680) + (rec.2 * 0.8727755))
 }
 
 
@@ -309,8 +303,7 @@ fn x_1931(wavelength: f32) -> f32 {
     let t1 = (wavelength - 442.0) * (if wavelength < 442.0 { 0.0624 } else { 0.0374 });
     let t2 = (wavelength - 599.8) * (if wavelength < 599.8 { 0.0264 } else { 0.0323 });
     let t3 = (wavelength - 501.1) * (if wavelength < 501.1 { 0.0490 } else { 0.0382 });
-    (0.362 * faster_exp(-0.5 * t1 * t1)) + (1.056 * faster_exp(-0.5 * t2 * t2)) -
-    (0.065 * faster_exp(-0.5 * t3 * t3))
+    (0.362 * faster_exp(-0.5 * t1 * t1)) + (1.056 * faster_exp(-0.5 * t2 * t2)) - (0.065 * faster_exp(-0.5 * t3 * t3))
 }
 
 #[allow(dead_code)]

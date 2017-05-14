@@ -33,23 +33,7 @@ impl Matrix4x4 {
     /// i j k l
     /// m n o p
     #[inline]
-    pub fn new_from_values(a: f32,
-                           b: f32,
-                           c: f32,
-                           d: f32,
-                           e: f32,
-                           f: f32,
-                           g: f32,
-                           h: f32,
-                           i: f32,
-                           j: f32,
-                           k: f32,
-                           l: f32,
-                           m: f32,
-                           n: f32,
-                           o: f32,
-                           p: f32)
-                           -> Matrix4x4 {
+    pub fn new_from_values(a: f32, b: f32, c: f32, d: f32, e: f32, f: f32, g: f32, h: f32, i: f32, j: f32, k: f32, l: f32, m: f32, n: f32, o: f32, p: f32) -> Matrix4x4 {
         Matrix4x4 {
             values: [Float4::new(a, b, c, d),
                      Float4::new(e, f, g, h),
@@ -106,22 +90,30 @@ impl Matrix4x4 {
     pub fn transposed(&self) -> Matrix4x4 {
         Matrix4x4 {
             values: {
-                [Float4::new(self[0].get_0(),
-                             self[1].get_0(),
-                             self[2].get_0(),
-                             self[3].get_0()),
-                 Float4::new(self[0].get_1(),
-                             self[1].get_1(),
-                             self[2].get_1(),
-                             self[3].get_1()),
-                 Float4::new(self[0].get_2(),
-                             self[1].get_2(),
-                             self[2].get_2(),
-                             self[3].get_2()),
-                 Float4::new(self[0].get_3(),
-                             self[1].get_3(),
-                             self[2].get_3(),
-                             self[3].get_3())]
+                [Float4::new(
+                    self[0].get_0(),
+                    self[1].get_0(),
+                    self[2].get_0(),
+                    self[3].get_0(),
+                ),
+                 Float4::new(
+                    self[0].get_1(),
+                    self[1].get_1(),
+                    self[2].get_1(),
+                    self[3].get_1(),
+                ),
+                 Float4::new(
+                    self[0].get_2(),
+                    self[1].get_2(),
+                    self[2].get_2(),
+                    self[3].get_2(),
+                ),
+                 Float4::new(
+                    self[0].get_3(),
+                    self[1].get_3(),
+                    self[2].get_3(),
+                    self[3].get_3(),
+                )]
             },
         }
     }
@@ -150,41 +142,33 @@ impl Matrix4x4 {
 
         Matrix4x4 {
             values: {
-                [Float4::new(((self[1].get_1() * c5) - (self[1].get_2() * c4) +
-                              (self[1].get_3() * c3)) * invdet,
-                             ((-self[0].get_1() * c5) + (self[0].get_2() * c4) -
-                              (self[0].get_3() * c3)) * invdet,
-                             ((self[3].get_1() * s5) - (self[3].get_2() * s4) +
-                              (self[3].get_3() * s3)) * invdet,
-                             ((-self[2].get_1() * s5) + (self[2].get_2() * s4) -
-                              (self[2].get_3() * s3)) * invdet),
+                [Float4::new(
+                    ((self[1].get_1() * c5) - (self[1].get_2() * c4) + (self[1].get_3() * c3)) * invdet,
+                    ((-self[0].get_1() * c5) + (self[0].get_2() * c4) - (self[0].get_3() * c3)) * invdet,
+                    ((self[3].get_1() * s5) - (self[3].get_2() * s4) + (self[3].get_3() * s3)) * invdet,
+                    ((-self[2].get_1() * s5) + (self[2].get_2() * s4) - (self[2].get_3() * s3)) * invdet,
+                ),
 
-                 Float4::new(((-self[1].get_0() * c5) + (self[1].get_2() * c2) -
-                              (self[1].get_3() * c1)) * invdet,
-                             ((self[0].get_0() * c5) - (self[0].get_2() * c2) +
-                              (self[0].get_3() * c1)) * invdet,
-                             ((-self[3].get_0() * s5) + (self[3].get_2() * s2) -
-                              (self[3].get_3() * s1)) * invdet,
-                             ((self[2].get_0() * s5) - (self[2].get_2() * s2) +
-                              (self[2].get_3() * s1)) * invdet),
+                 Float4::new(
+                    ((-self[1].get_0() * c5) + (self[1].get_2() * c2) - (self[1].get_3() * c1)) * invdet,
+                    ((self[0].get_0() * c5) - (self[0].get_2() * c2) + (self[0].get_3() * c1)) * invdet,
+                    ((-self[3].get_0() * s5) + (self[3].get_2() * s2) - (self[3].get_3() * s1)) * invdet,
+                    ((self[2].get_0() * s5) - (self[2].get_2() * s2) + (self[2].get_3() * s1)) * invdet,
+                ),
 
-                 Float4::new(((self[1].get_0() * c4) - (self[1].get_1() * c2) +
-                              (self[1].get_3() * c0)) * invdet,
-                             ((-self[0].get_0() * c4) + (self[0].get_1() * c2) -
-                              (self[0].get_3() * c0)) * invdet,
-                             ((self[3].get_0() * s4) - (self[3].get_1() * s2) +
-                              (self[3].get_3() * s0)) * invdet,
-                             ((-self[2].get_0() * s4) + (self[2].get_1() * s2) -
-                              (self[2].get_3() * s0)) * invdet),
+                 Float4::new(
+                    ((self[1].get_0() * c4) - (self[1].get_1() * c2) + (self[1].get_3() * c0)) * invdet,
+                    ((-self[0].get_0() * c4) + (self[0].get_1() * c2) - (self[0].get_3() * c0)) * invdet,
+                    ((self[3].get_0() * s4) - (self[3].get_1() * s2) + (self[3].get_3() * s0)) * invdet,
+                    ((-self[2].get_0() * s4) + (self[2].get_1() * s2) - (self[2].get_3() * s0)) * invdet,
+                ),
 
-                 Float4::new(((-self[1].get_0() * c3) + (self[1].get_1() * c1) -
-                              (self[1].get_2() * c0)) * invdet,
-                             ((self[0].get_0() * c3) - (self[0].get_1() * c1) +
-                              (self[0].get_2() * c0)) * invdet,
-                             ((-self[3].get_0() * s3) + (self[3].get_1() * s1) -
-                              (self[3].get_2() * s0)) * invdet,
-                             ((self[2].get_0() * s3) - (self[2].get_1() * s1) +
-                              (self[2].get_2() * s0)) * invdet)]
+                 Float4::new(
+                    ((-self[1].get_0() * c3) + (self[1].get_1() * c1) - (self[1].get_2() * c0)) * invdet,
+                    ((self[0].get_0() * c3) - (self[0].get_1() * c1) + (self[0].get_2() * c0)) * invdet,
+                    ((-self[3].get_0() * s3) + (self[3].get_1() * s1) - (self[3].get_2() * s0)) * invdet,
+                    ((self[2].get_0() * s3) - (self[2].get_1() * s1) + (self[2].get_2() * s0)) * invdet,
+                )]
             },
         }
     }
@@ -233,25 +217,33 @@ impl Mul<Matrix4x4> for Matrix4x4 {
     fn mul(self, other: Matrix4x4) -> Matrix4x4 {
         let m = self.transposed();
         Matrix4x4 {
-            values: [Float4::new((m[0] * other[0]).h_sum(),
-                                 (m[1] * other[0]).h_sum(),
-                                 (m[2] * other[0]).h_sum(),
-                                 (m[3] * other[0]).h_sum()),
+            values: [Float4::new(
+                (m[0] * other[0]).h_sum(),
+                (m[1] * other[0]).h_sum(),
+                (m[2] * other[0]).h_sum(),
+                (m[3] * other[0]).h_sum(),
+            ),
 
-                     Float4::new((m[0] * other[1]).h_sum(),
-                                 (m[1] * other[1]).h_sum(),
-                                 (m[2] * other[1]).h_sum(),
-                                 (m[3] * other[1]).h_sum()),
+                     Float4::new(
+                (m[0] * other[1]).h_sum(),
+                (m[1] * other[1]).h_sum(),
+                (m[2] * other[1]).h_sum(),
+                (m[3] * other[1]).h_sum(),
+            ),
 
-                     Float4::new((m[0] * other[2]).h_sum(),
-                                 (m[1] * other[2]).h_sum(),
-                                 (m[2] * other[2]).h_sum(),
-                                 (m[3] * other[2]).h_sum()),
+                     Float4::new(
+                (m[0] * other[2]).h_sum(),
+                (m[1] * other[2]).h_sum(),
+                (m[2] * other[2]).h_sum(),
+                (m[3] * other[2]).h_sum(),
+            ),
 
-                     Float4::new((m[0] * other[3]).h_sum(),
-                                 (m[1] * other[3]).h_sum(),
-                                 (m[2] * other[3]).h_sum(),
-                                 (m[3] * other[3]).h_sum())],
+                     Float4::new(
+                (m[0] * other[3]).h_sum(),
+                (m[1] * other[3]).h_sum(),
+                (m[2] * other[3]).h_sum(),
+                (m[3] * other[3]).h_sum(),
+            )],
         }
     }
 }
@@ -268,22 +260,24 @@ mod tests {
     fn equality_test() {
         let a = Matrix4x4::new();
         let b = Matrix4x4::new();
-        let c = Matrix4x4::new_from_values(1.1,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           1.1,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           1.1,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           1.1);
+        let c = Matrix4x4::new_from_values(
+            1.1,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.1,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.1,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.1,
+        );
 
         assert_eq!(a, b);
         assert!(a != c);
@@ -292,54 +286,60 @@ mod tests {
     #[test]
     fn aproximate_equality_test() {
         let a = Matrix4x4::new();
-        let b = Matrix4x4::new_from_values(1.001,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           1.001,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           1.001,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           1.001);
-        let c = Matrix4x4::new_from_values(1.003,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           1.003,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           1.003,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           1.003);
-        let d = Matrix4x4::new_from_values(-1.001,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           -1.001,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           -1.001,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           -1.001);
+        let b = Matrix4x4::new_from_values(
+            1.001,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.001,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.001,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.001,
+        );
+        let c = Matrix4x4::new_from_values(
+            1.003,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.003,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.003,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.003,
+        );
+        let d = Matrix4x4::new_from_values(
+            -1.001,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            -1.001,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            -1.001,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            -1.001,
+        );
 
         assert!(a.aprx_eq(b, 0.002));
         assert!(!a.aprx_eq(c, 0.002));
@@ -348,76 +348,84 @@ mod tests {
 
     #[test]
     fn multiply_test() {
-        let a = Matrix4x4::new_from_values(1.0,
-                                           2.0,
-                                           2.0,
-                                           1.5,
-                                           3.0,
-                                           6.0,
-                                           7.0,
-                                           8.0,
-                                           9.0,
-                                           2.0,
-                                           11.0,
-                                           12.0,
-                                           13.0,
-                                           7.0,
-                                           15.0,
-                                           3.0);
-        let b = Matrix4x4::new_from_values(1.0,
-                                           5.0,
-                                           9.0,
-                                           13.0,
-                                           2.0,
-                                           6.0,
-                                           10.0,
-                                           14.0,
-                                           3.0,
-                                           7.0,
-                                           11.0,
-                                           15.0,
-                                           4.0,
-                                           8.0,
-                                           12.0,
-                                           16.0);
-        let c = Matrix4x4::new_from_values(266.0,
-                                           141.0,
-                                           331.0,
-                                           188.5,
-                                           292.0,
-                                           158.0,
-                                           366.0,
-                                           213.0,
-                                           318.0,
-                                           175.0,
-                                           401.0,
-                                           237.5,
-                                           344.0,
-                                           192.0,
-                                           436.0,
-                                           262.0);
+        let a = Matrix4x4::new_from_values(
+            1.0,
+            2.0,
+            2.0,
+            1.5,
+            3.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            2.0,
+            11.0,
+            12.0,
+            13.0,
+            7.0,
+            15.0,
+            3.0,
+        );
+        let b = Matrix4x4::new_from_values(
+            1.0,
+            5.0,
+            9.0,
+            13.0,
+            2.0,
+            6.0,
+            10.0,
+            14.0,
+            3.0,
+            7.0,
+            11.0,
+            15.0,
+            4.0,
+            8.0,
+            12.0,
+            16.0,
+        );
+        let c = Matrix4x4::new_from_values(
+            266.0,
+            141.0,
+            331.0,
+            188.5,
+            292.0,
+            158.0,
+            366.0,
+            213.0,
+            318.0,
+            175.0,
+            401.0,
+            237.5,
+            344.0,
+            192.0,
+            436.0,
+            262.0,
+        );
 
         assert_eq!(a * b, c);
     }
 
     #[test]
     fn inverse_test() {
-        let a = Matrix4x4::new_from_values(1.0,
-                                           0.33,
-                                           0.0,
-                                           -2.0,
-                                           0.0,
-                                           1.0,
-                                           0.0,
-                                           0.0,
-                                           2.1,
-                                           0.7,
-                                           1.3,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           -1.0);
+        let a = Matrix4x4::new_from_values(
+            1.0,
+            0.33,
+            0.0,
+            -2.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            2.1,
+            0.7,
+            1.3,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            -1.0,
+        );
         let b = a.inverse();
         let c = Matrix4x4::new();
 
@@ -426,38 +434,42 @@ mod tests {
 
     #[test]
     fn transpose_test() {
-        let a = Matrix4x4::new_from_values(1.0,
-                                           2.0,
-                                           3.0,
-                                           4.0,
-                                           5.0,
-                                           6.0,
-                                           7.0,
-                                           8.0,
-                                           9.0,
-                                           10.0,
-                                           11.0,
-                                           12.0,
-                                           13.0,
-                                           14.0,
-                                           15.0,
-                                           16.0);
-        let b = Matrix4x4::new_from_values(1.0,
-                                           5.0,
-                                           9.0,
-                                           13.0,
-                                           2.0,
-                                           6.0,
-                                           10.0,
-                                           14.0,
-                                           3.0,
-                                           7.0,
-                                           11.0,
-                                           15.0,
-                                           4.0,
-                                           8.0,
-                                           12.0,
-                                           16.0);
+        let a = Matrix4x4::new_from_values(
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            10.0,
+            11.0,
+            12.0,
+            13.0,
+            14.0,
+            15.0,
+            16.0,
+        );
+        let b = Matrix4x4::new_from_values(
+            1.0,
+            5.0,
+            9.0,
+            13.0,
+            2.0,
+            6.0,
+            10.0,
+            14.0,
+            3.0,
+            7.0,
+            11.0,
+            15.0,
+            4.0,
+            8.0,
+            12.0,
+            16.0,
+        );
         let c = a.transposed();
 
         assert_eq!(b, c);

@@ -42,12 +42,7 @@ pub trait SurfaceClosure {
     /// wavelength: The wavelength of light to sample at.
     ///
     /// Returns a tuple with the generated outgoing light direction, color filter, and pdf.
-    fn sample(&self,
-              inc: Vector,
-              nor: Normal,
-              uv: (f32, f32),
-              wavelength: f32)
-              -> (Vector, SpectralSample, f32);
+    fn sample(&self, inc: Vector, nor: Normal, uv: (f32, f32), wavelength: f32) -> (Vector, SpectralSample, f32);
 
     /// Evaluates the closure for the given incoming and outgoing rays.
     ///
@@ -72,12 +67,7 @@ pub trait SurfaceClosure {
     /// This is used for importance sampling, so does not need to be exact,
     /// but it does need to be non-zero anywhere that an exact solution would
     /// be non-zero.
-    fn estimate_eval_over_solid_angle(&self,
-                                      inc: Vector,
-                                      out: Vector,
-                                      nor: Normal,
-                                      cos_theta: f32)
-                                      -> f32;
+    fn estimate_eval_over_solid_angle(&self, inc: Vector, out: Vector, nor: Normal, cos_theta: f32) -> f32;
 }
 
 
@@ -173,12 +163,7 @@ impl SurfaceClosure for EmitClosure {
         false
     }
 
-    fn sample(&self,
-              inc: Vector,
-              nor: Normal,
-              uv: (f32, f32),
-              wavelength: f32)
-              -> (Vector, SpectralSample, f32) {
+    fn sample(&self, inc: Vector, nor: Normal, uv: (f32, f32), wavelength: f32) -> (Vector, SpectralSample, f32) {
         let _ = (inc, nor, uv); // Not using these, silence warning
 
         (Vector::new(0.0, 0.0, 0.0), SpectralSample::new(wavelength), 1.0)
@@ -196,12 +181,7 @@ impl SurfaceClosure for EmitClosure {
         1.0
     }
 
-    fn estimate_eval_over_solid_angle(&self,
-                                      inc: Vector,
-                                      out: Vector,
-                                      nor: Normal,
-                                      cos_theta: f32)
-                                      -> f32 {
+    fn estimate_eval_over_solid_angle(&self, inc: Vector, out: Vector, nor: Normal, cos_theta: f32) -> f32 {
         let _ = (inc, out, nor, cos_theta); // Not using these, silence warning
 
         // TODO: what to do here?
@@ -227,12 +207,7 @@ impl SurfaceClosure for LambertClosure {
         false
     }
 
-    fn sample(&self,
-              inc: Vector,
-              nor: Normal,
-              uv: (f32, f32),
-              wavelength: f32)
-              -> (Vector, SpectralSample, f32) {
+    fn sample(&self, inc: Vector, nor: Normal, uv: (f32, f32), wavelength: f32) -> (Vector, SpectralSample, f32) {
         let nn = if dot(nor.into_vector(), inc) <= 0.0 {
                 nor.normalized()
             } else {
@@ -275,12 +250,7 @@ impl SurfaceClosure for LambertClosure {
         dot(nn, v).max(0.0) * INV_PI
     }
 
-    fn estimate_eval_over_solid_angle(&self,
-                                      inc: Vector,
-                                      out: Vector,
-                                      nor: Normal,
-                                      cos_theta: f32)
-                                      -> f32 {
+    fn estimate_eval_over_solid_angle(&self, inc: Vector, out: Vector, nor: Normal, cos_theta: f32) -> f32 {
         assert!(cos_theta >= -1.0 && cos_theta <= 1.0);
 
         // Analytically calculates lambert shading from a uniform light source
@@ -405,9 +375,7 @@ impl GTRClosure {
         let roughness2 = self.roughness * self.roughness;
 
         // Calculate top half of equation
-        let top = 1.0 -
-                  ((roughness2.powf(1.0 - self.tail_shape) * (1.0 - u)) + u)
-            .powf(1.0 / (1.0 - self.tail_shape));
+        let top = 1.0 - ((roughness2.powf(1.0 - self.tail_shape) * (1.0 - u)) + u).powf(1.0 / (1.0 - self.tail_shape));
 
         // Calculate bottom half of equation
         let bottom = 1.0 - roughness2;
@@ -440,12 +408,7 @@ impl SurfaceClosure for GTRClosure {
     }
 
 
-    fn sample(&self,
-              inc: Vector,
-              nor: Normal,
-              uv: (f32, f32),
-              wavelength: f32)
-              -> (Vector, SpectralSample, f32) {
+    fn sample(&self, inc: Vector, nor: Normal, uv: (f32, f32), wavelength: f32) -> (Vector, SpectralSample, f32) {
         // Get normalized surface normal
         let nn = if dot(nor.into_vector(), inc) < 0.0 {
                 nor.normalized()
@@ -499,18 +462,26 @@ impl SurfaceClosure for GTRClosure {
             let mut col_f = self.col.to_spectral_sample(wavelength);
 
             let rev_fresnel = 1.0 - self.fresnel;
-            let c0 = lerp(schlick_fresnel_from_fac(col_f.e.get_0(), hb),
-                          col_f.e.get_0(),
-                          rev_fresnel);
-            let c1 = lerp(schlick_fresnel_from_fac(col_f.e.get_1(), hb),
-                          col_f.e.get_1(),
-                          rev_fresnel);
-            let c2 = lerp(schlick_fresnel_from_fac(col_f.e.get_2(), hb),
-                          col_f.e.get_2(),
-                          rev_fresnel);
-            let c3 = lerp(schlick_fresnel_from_fac(col_f.e.get_3(), hb),
-                          col_f.e.get_3(),
-                          rev_fresnel);
+            let c0 = lerp(
+                schlick_fresnel_from_fac(col_f.e.get_0(), hb),
+                col_f.e.get_0(),
+                rev_fresnel,
+            );
+            let c1 = lerp(
+                schlick_fresnel_from_fac(col_f.e.get_1(), hb),
+                col_f.e.get_1(),
+                rev_fresnel,
+            );
+            let c2 = lerp(
+                schlick_fresnel_from_fac(col_f.e.get_2(), hb),
+                col_f.e.get_2(),
+                rev_fresnel,
+            );
+            let c3 = lerp(
+                schlick_fresnel_from_fac(col_f.e.get_3(), hb),
+                col_f.e.get_3(),
+                rev_fresnel,
+            );
 
             col_f.e.set_0(c0);
             col_f.e.set_1(c1);
@@ -580,12 +551,7 @@ impl SurfaceClosure for GTRClosure {
     }
 
 
-    fn estimate_eval_over_solid_angle(&self,
-                                      inc: Vector,
-                                      out: Vector,
-                                      nor: Normal,
-                                      cos_theta: f32)
-                                      -> f32 {
+    fn estimate_eval_over_solid_angle(&self, inc: Vector, out: Vector, nor: Normal, cos_theta: f32) -> f32 {
         // TODO: all of the stuff in this function is horribly hacky.
         // Find a proper way to approximate the light contribution from a
         // solid angle.
@@ -622,8 +588,10 @@ impl SurfaceClosure for GTRClosure {
         let theta = cos_theta.acos();
         let hh = (aa + bb).normalized();
         let nh = clamp(dot(nn, hh), -1.0, 1.0);
-        let fac = self.dist(nh,
-                            (1.0f32).min(self.roughness.sqrt() + (2.0 * theta / PI_32)));
+        let fac = self.dist(
+            nh,
+            (1.0f32).min(self.roughness.sqrt() + (2.0 * theta / PI_32)),
+        );
 
         return fac * (1.0f32).min(1.0 - cos_theta) * INV_PI;
     }

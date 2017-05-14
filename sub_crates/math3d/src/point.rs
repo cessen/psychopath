@@ -133,10 +133,12 @@ impl Mul<Matrix4x4> for Point {
     #[inline]
     fn mul(self, other: Matrix4x4) -> Point {
         Point {
-            co: Float4::new((self.co * other.values[0]).h_sum(),
-                            (self.co * other.values[1]).h_sum(),
-                            (self.co * other.values[2]).h_sum(),
-                            (self.co * other.values[3]).h_sum()),
+            co: Float4::new(
+                (self.co * other.values[0]).h_sum(),
+                (self.co * other.values[1]).h_sum(),
+                (self.co * other.values[2]).h_sum(),
+                (self.co * other.values[3]).h_sum(),
+            ),
         }
     }
 }
@@ -177,22 +179,24 @@ mod tests {
     #[test]
     fn mul_matrix_1() {
         let p = Point::new(1.0, 2.5, 4.0);
-        let m = Matrix4x4::new_from_values(1.0,
-                                           2.0,
-                                           2.0,
-                                           1.5,
-                                           3.0,
-                                           6.0,
-                                           7.0,
-                                           8.0,
-                                           9.0,
-                                           2.0,
-                                           11.0,
-                                           12.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           1.0);
+        let m = Matrix4x4::new_from_values(
+            1.0,
+            2.0,
+            2.0,
+            1.5,
+            3.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            2.0,
+            11.0,
+            12.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+        );
         let pm = Point::new(15.5, 54.0, 70.0);
         assert_eq!(p * m, pm);
     }
@@ -200,22 +204,24 @@ mod tests {
     #[test]
     fn mul_matrix_2() {
         let p = Point::new(1.0, 2.5, 4.0);
-        let m = Matrix4x4::new_from_values(1.0,
-                                           2.0,
-                                           2.0,
-                                           1.5,
-                                           3.0,
-                                           6.0,
-                                           7.0,
-                                           8.0,
-                                           9.0,
-                                           2.0,
-                                           11.0,
-                                           12.0,
-                                           2.0,
-                                           3.0,
-                                           1.0,
-                                           5.0);
+        let m = Matrix4x4::new_from_values(
+            1.0,
+            2.0,
+            2.0,
+            1.5,
+            3.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            2.0,
+            11.0,
+            12.0,
+            2.0,
+            3.0,
+            1.0,
+            5.0,
+        );
         let mut pm = Point::new(15.5, 54.0, 70.0);
         pm.co.set_3(18.5);
         assert_eq!(p * m, pm);
@@ -225,38 +231,42 @@ mod tests {
     fn mul_matrix_3() {
         // Make sure matrix multiplication composes the way one would expect
         let p = Point::new(1.0, 2.5, 4.0);
-        let m1 = Matrix4x4::new_from_values(1.0,
-                                            2.0,
-                                            2.0,
-                                            1.5,
-                                            3.0,
-                                            6.0,
-                                            7.0,
-                                            8.0,
-                                            9.0,
-                                            2.0,
-                                            11.0,
-                                            12.0,
-                                            13.0,
-                                            7.0,
-                                            15.0,
-                                            3.0);
-        let m2 = Matrix4x4::new_from_values(4.0,
-                                            1.0,
-                                            2.0,
-                                            3.5,
-                                            3.0,
-                                            6.0,
-                                            5.0,
-                                            2.0,
-                                            2.0,
-                                            2.0,
-                                            4.0,
-                                            12.0,
-                                            5.0,
-                                            7.0,
-                                            8.0,
-                                            11.0);
+        let m1 = Matrix4x4::new_from_values(
+            1.0,
+            2.0,
+            2.0,
+            1.5,
+            3.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            2.0,
+            11.0,
+            12.0,
+            13.0,
+            7.0,
+            15.0,
+            3.0,
+        );
+        let m2 = Matrix4x4::new_from_values(
+            4.0,
+            1.0,
+            2.0,
+            3.5,
+            3.0,
+            6.0,
+            5.0,
+            2.0,
+            2.0,
+            2.0,
+            4.0,
+            12.0,
+            5.0,
+            7.0,
+            8.0,
+            11.0,
+        );
         println!("{:?}", m1 * m2);
 
         let pmm1 = p * (m1 * m2);

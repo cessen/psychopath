@@ -35,12 +35,14 @@ impl<'a> DataTree<'a> {
         remaining_text = skip_ws_and_comments(remaining_text);
 
         if remaining_text.1.len() == 0 {
-            return Ok(DataTree::Internal {
-                type_name: "ROOT",
-                ident: None,
-                children: items,
-                byte_offset: 0,
-            });
+            return Ok(
+                DataTree::Internal {
+                    type_name: "ROOT",
+                    ident: None,
+                    children: items,
+                    byte_offset: 0,
+                }
+            );
         } else {
             // If the whole text wasn't parsed, something went wrong.
             return Err(ParseError::Other((0, "Failed to parse the entire string.")));
@@ -104,9 +106,7 @@ impl<'a> DataTree<'a> {
         }
     }
 
-    pub fn iter_internal_children_with_type(&'a self,
-                                            type_name: &'static str)
-                                            -> DataTreeFilterInternalIter<'a> {
+    pub fn iter_internal_children_with_type(&'a self, type_name: &'static str) -> DataTreeFilterInternalIter<'a> {
         if let &DataTree::Internal { ref children, .. } = self {
             DataTreeFilterInternalIter {
                 type_name: type_name,
@@ -120,9 +120,7 @@ impl<'a> DataTree<'a> {
         }
     }
 
-    pub fn iter_leaf_children_with_type(&'a self,
-                                        type_name: &'static str)
-                                        -> DataTreeFilterLeafIter<'a> {
+    pub fn iter_leaf_children_with_type(&'a self, type_name: &'static str) -> DataTreeFilterLeafIter<'a> {
         if let &DataTree::Internal { ref children, .. } = self {
             DataTreeFilterLeafIter {
                 type_name: type_name,
@@ -138,14 +136,23 @@ impl<'a> DataTree<'a> {
 
     // For unit tests
     fn internal_data_or_panic(&'a self) -> (&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>) {
-        if let DataTree::Internal { type_name, ident, ref children, byte_offset: _ } = *self {
+        if let DataTree::Internal {
+                   type_name,
+                   ident,
+                   ref children,
+                   byte_offset: _,
+               } = *self {
             (type_name, ident, children)
         } else {
             panic!("Expected DataTree::Internal, found DataTree::Leaf")
         }
     }
     fn leaf_data_or_panic(&'a self) -> (&'a str, &'a str) {
-        if let DataTree::Leaf { type_name, contents, byte_offset: _ } = *self {
+        if let DataTree::Leaf {
+                   type_name,
+                   contents,
+                   byte_offset: _,
+               } = *self {
             (type_name, contents)
         } else {
             panic!("Expected DataTree::Leaf, found DataTree::Internal")
@@ -194,7 +201,12 @@ impl<'a> Iterator for DataTreeFilterInternalIter<'a> {
     fn next(&mut self) -> Option<(&'a str, Option<&'a str>, &'a Vec<DataTree<'a>>, usize)> {
         loop {
             match self.iter.next() {
-                Some(&DataTree::Internal { type_name, ident, ref children, byte_offset }) => {
+                Some(&DataTree::Internal {
+                         type_name,
+                         ident,
+                         ref children,
+                         byte_offset,
+                     }) => {
                     if type_name == self.type_name {
                         return Some((type_name, ident, children, byte_offset));
                     } else {
@@ -233,7 +245,11 @@ impl<'a> Iterator for DataTreeFilterLeafIter<'a> {
                     continue;
                 }
 
-                Some(&DataTree::Leaf { type_name, contents, byte_offset }) => {
+                Some(&DataTree::Leaf {
+                         type_name,
+                         contents,
+                         byte_offset,
+                     }) => {
                     if type_name == self.type_name {
                         return Some((type_name, contents, byte_offset));
                     } else {
@@ -296,13 +312,17 @@ fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
                         children.push(node);
                     }
                     if let (Token::CloseInner, text4) = next_token(text_remaining) {
-                        return Ok(Some((DataTree::Internal {
-                                            type_name: type_name,
-                                            ident: Some(n),
-                                            children: children,
-                                            byte_offset: text1.0,
-                                        },
-                                        text4)));
+                        return Ok(
+                            Some(
+                                (DataTree::Internal {
+                                     type_name: type_name,
+                                     ident: Some(n),
+                                     children: children,
+                                     byte_offset: text1.0,
+                                 },
+                                 text4)
+                            )
+                        );
                     } else {
                         return Err(ParseError::MissingCloseInternal(text_remaining.0));
                     }
@@ -321,13 +341,17 @@ fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
                 }
 
                 if let (Token::CloseInner, text3) = next_token(text_remaining) {
-                    return Ok(Some((DataTree::Internal {
-                                        type_name: type_name,
-                                        ident: None,
-                                        children: children,
-                                        byte_offset: text1.0,
-                                    },
-                                    text3)));
+                    return Ok(
+                        Some(
+                            (DataTree::Internal {
+                                 type_name: type_name,
+                                 ident: None,
+                                 children: children,
+                                 byte_offset: text1.0,
+                             },
+                             text3)
+                        )
+                    );
                 } else {
                     return Err(ParseError::MissingCloseInternal(text_remaining.0));
                 }
@@ -337,12 +361,16 @@ fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
             (Token::OpenLeaf, text2) => {
                 let (contents, text3) = parse_leaf_content(text2);
                 if let (Token::CloseLeaf, text4) = next_token(text3) {
-                    return Ok(Some((DataTree::Leaf {
-                                        type_name: type_name,
-                                        contents: contents,
-                                        byte_offset: text1.0,
-                                    },
-                                    text4)));
+                    return Ok(
+                        Some(
+                            (DataTree::Leaf {
+                                 type_name: type_name,
+                                 contents: contents,
+                                 byte_offset: text1.0,
+                             },
+                             text4)
+                        )
+                    );
                 } else {
                     return Err(ParseError::MissingCloseLeaf(text3.0));
                 }
@@ -586,8 +614,10 @@ mod tests {
     fn tokenize_5() {
         let input = (0, " $hi\\ t\\#he\\[re ");
 
-        assert_eq!(next_token(input),
-                   (Token::Ident("$hi\\ t\\#he\\[re"), (15, " ")));
+        assert_eq!(
+            next_token(input),
+            (Token::Ident("$hi\\ t\\#he\\[re"), (15, " "))
+        );
     }
 
     #[test]
@@ -618,14 +648,22 @@ mod tests {
         let (token7, input8) = next_token(input7);
         let (token8, input9) = next_token(input8);
 
-        assert_eq!((token1, input2),
-                   (Token::TypeName("Thing"), (5, " $yar { # A comment\n\tThing2 []\n}")));
-        assert_eq!((token2, input3),
-                   (Token::Ident("$yar"), (10, " { # A comment\n\tThing2 []\n}")));
-        assert_eq!((token3, input4),
-                   (Token::OpenInner, (12, " # A comment\n\tThing2 []\n}")));
-        assert_eq!((token4, input5),
-                   (Token::TypeName("Thing2"), (32, " []\n}")));
+        assert_eq!(
+            (token1, input2),
+            (Token::TypeName("Thing"), (5, " $yar { # A comment\n\tThing2 []\n}"))
+        );
+        assert_eq!(
+            (token2, input3),
+            (Token::Ident("$yar"), (10, " { # A comment\n\tThing2 []\n}"))
+        );
+        assert_eq!(
+            (token3, input4),
+            (Token::OpenInner, (12, " # A comment\n\tThing2 []\n}"))
+        );
+        assert_eq!(
+            (token4, input5),
+            (Token::TypeName("Thing2"), (32, " []\n}"))
+        );
         assert_eq!((token5, input6), (Token::OpenLeaf, (34, "]\n}")));
         assert_eq!((token6, input7), (Token::CloseLeaf, (35, "\n}")));
         assert_eq!((token7, input8), (Token::CloseInner, (37, "")));
@@ -655,14 +693,16 @@ mod tests {
 
     #[test]
     fn iter_1() {
-        let dt = DataTree::from_str(r#"
+        let dt = DataTree::from_str(
+            r#"
             A {}
             B {}
             A []
             A {}
             B {}
-        "#)
-            .unwrap();
+        "#
+        )
+                .unwrap();
 
         let i = dt.iter_children_with_type("A");
         assert_eq!(i.count(), 3);
@@ -670,14 +710,16 @@ mod tests {
 
     #[test]
     fn iter_2() {
-        let dt = DataTree::from_str(r#"
+        let dt = DataTree::from_str(
+            r#"
             A {}
             B {}
             A []
             A {}
             B {}
-        "#)
-            .unwrap();
+        "#
+        )
+                .unwrap();
 
         let i = dt.iter_internal_children_with_type("A");
         assert_eq!(i.count(), 2);
@@ -685,14 +727,16 @@ mod tests {
 
     #[test]
     fn iter_3() {
-        let dt = DataTree::from_str(r#"
+        let dt = DataTree::from_str(
+            r#"
             A []
             B {}
             A {}
             A []
             B {}
-        "#)
-            .unwrap();
+        "#
+        )
+                .unwrap();
 
         let i = dt.iter_leaf_children_with_type("A");
         assert_eq!(i.count(), 2);

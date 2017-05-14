@@ -21,7 +21,9 @@ pub fn lerp<T: Lerp>(a: T, b: T, alpha: f32) -> T {
 /// Interpolates a slice of data as if each adjecent pair of elements
 /// represent a linear segment.
 pub fn lerp_slice<T: Lerp + Copy>(s: &[T], alpha: f32) -> T {
-    debug_assert!(s.len() > 0);
+    debug_assert!(
+        s.len() > 0,
+    );
     debug_assert!(alpha >= 0.0);
     debug_assert!(alpha <= 1.0);
 
@@ -41,7 +43,9 @@ pub fn lerp_slice_with<T, F>(s: &[T], alpha: f32, f: F) -> T
     where T: Copy,
           F: Fn(T, T, f32) -> T
 {
-    debug_assert!(s.len() > 0);
+    debug_assert!(
+        s.len() > 0,
+    );
     debug_assert!(alpha >= 0.0);
     debug_assert!(alpha <= 1.0);
 
@@ -86,10 +90,12 @@ impl Lerp for Matrix4x4 {
     fn lerp(self, other: Matrix4x4, alpha: f32) -> Matrix4x4 {
         let alpha_minus = 1.0 - alpha;
         Matrix4x4 {
-            values: [(self[0] * alpha_minus) + (other[0] * alpha),
-                     (self[1] * alpha_minus) + (other[1] * alpha),
-                     (self[2] * alpha_minus) + (other[2] * alpha),
-                     (self[3] * alpha_minus) + (other[3] * alpha)],
+            values: [
+                (self[0] * alpha_minus) + (other[0] * alpha),
+                (self[1] * alpha_minus) + (other[1] * alpha),
+                (self[2] * alpha_minus) + (other[2] * alpha),
+                (self[3] * alpha_minus) + (other[3] * alpha),
+            ],
         }
     }
 }
@@ -198,87 +204,97 @@ mod tests {
 
     #[test]
     fn lerp_matrix() {
-        let a = Matrix4x4::new_from_values(0.0,
-                                           2.0,
-                                           2.0,
-                                           3.0,
-                                           4.0,
-                                           5.0,
-                                           6.0,
-                                           7.0,
-                                           8.0,
-                                           9.0,
-                                           10.0,
-                                           11.0,
-                                           12.0,
-                                           13.0,
-                                           14.0,
-                                           15.0);
-        let b = Matrix4x4::new_from_values(-1.0,
-                                           1.0,
-                                           3.0,
-                                           4.0,
-                                           5.0,
-                                           6.0,
-                                           7.0,
-                                           8.0,
-                                           9.0,
-                                           10.0,
-                                           11.0,
-                                           12.0,
-                                           13.0,
-                                           14.0,
-                                           15.0,
-                                           16.0);
+        let a = Matrix4x4::new_from_values(
+            0.0,
+            2.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            10.0,
+            11.0,
+            12.0,
+            13.0,
+            14.0,
+            15.0,
+        );
+        let b = Matrix4x4::new_from_values(
+            -1.0,
+            1.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            10.0,
+            11.0,
+            12.0,
+            13.0,
+            14.0,
+            15.0,
+            16.0,
+        );
 
-        let c1 = Matrix4x4::new_from_values(-0.25,
-                                            1.75,
-                                            2.25,
-                                            3.25,
-                                            4.25,
-                                            5.25,
-                                            6.25,
-                                            7.25,
-                                            8.25,
-                                            9.25,
-                                            10.25,
-                                            11.25,
-                                            12.25,
-                                            13.25,
-                                            14.25,
-                                            15.25);
-        let c2 = Matrix4x4::new_from_values(-0.5,
-                                            1.5,
-                                            2.5,
-                                            3.5,
-                                            4.5,
-                                            5.5,
-                                            6.5,
-                                            7.5,
-                                            8.5,
-                                            9.5,
-                                            10.5,
-                                            11.5,
-                                            12.5,
-                                            13.5,
-                                            14.5,
-                                            15.5);
-        let c3 = Matrix4x4::new_from_values(-0.75,
-                                            1.25,
-                                            2.75,
-                                            3.75,
-                                            4.75,
-                                            5.75,
-                                            6.75,
-                                            7.75,
-                                            8.75,
-                                            9.75,
-                                            10.75,
-                                            11.75,
-                                            12.75,
-                                            13.75,
-                                            14.75,
-                                            15.75);
+        let c1 = Matrix4x4::new_from_values(
+            -0.25,
+            1.75,
+            2.25,
+            3.25,
+            4.25,
+            5.25,
+            6.25,
+            7.25,
+            8.25,
+            9.25,
+            10.25,
+            11.25,
+            12.25,
+            13.25,
+            14.25,
+            15.25,
+        );
+        let c2 = Matrix4x4::new_from_values(
+            -0.5,
+            1.5,
+            2.5,
+            3.5,
+            4.5,
+            5.5,
+            6.5,
+            7.5,
+            8.5,
+            9.5,
+            10.5,
+            11.5,
+            12.5,
+            13.5,
+            14.5,
+            15.5,
+        );
+        let c3 = Matrix4x4::new_from_values(
+            -0.75,
+            1.25,
+            2.75,
+            3.75,
+            4.75,
+            5.75,
+            6.75,
+            7.75,
+            8.75,
+            9.75,
+            10.75,
+            11.75,
+            12.75,
+            13.75,
+            14.75,
+            15.75,
+        );
 
         assert_eq!(a.lerp(b, 0.0), a);
         assert_eq!(a.lerp(b, 0.25), c1);

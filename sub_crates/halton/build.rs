@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-// Adapted to Rust and to generate Rust instead of C by Nathan Vegdahl
+// Adapted from Python to Rust and to generate Rust instead of C by Nathan Vegdahl
 
 // Generate Rust code for evaluating Halton points with Faure-permutations for different bases.
 
@@ -63,7 +63,9 @@ fn main() {
     };
 
     // Write the beginning bits of the file
-    f.write_all(format!(r#"
+    f.write_all(
+            format!(
+                r#"
 // Copyright (c) 2012 Leonhard Gruenschloss (leonhard@gruenschloss.org)
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -90,38 +92,54 @@ fn main() {
 
 pub const MAX_DIMENSION: u32 = {};
 "#,
-                           NUM_DIMENSIONS)
-            .as_bytes())
+                NUM_DIMENSIONS
+            )
+                    .as_bytes()
+        )
         .unwrap();
 
     // Write the sampling function
-    f.write_all(format!(r#"
+    f.write_all(
+            format!(
+                r#"
 #[inline]
 pub fn sample(dimension: u32, index: u32) -> f32 {{
-    match dimension {{"#)
-            .as_bytes())
+    match dimension {{"#
+            )
+                    .as_bytes()
+        )
         .unwrap();
 
     for i in 0..NUM_DIMENSIONS {
-        f.write_all(format!(r#"
+        f.write_all(
+                format!(
+                    r#"
         {} => halton{}(index),"#,
-                               i,
-                               primes[i])
-                .as_bytes())
+                    i,
+                    primes[i]
+                )
+                        .as_bytes()
+            )
             .unwrap();
     }
 
-    f.write_all(format!(r#"
+    f.write_all(
+            format!(
+                r#"
         _ => panic!("Exceeded max dimensions."),
     }}
 }}
-    "#)
-            .as_bytes())
+    "#
+            )
+                    .as_bytes()
+        )
         .unwrap();
 
 
     // Write the special-cased first dimension
-    f.write_all(format!(r#"
+    f.write_all(
+            format!(
+                r#"
 // Special case: radical inverse in base 2, with direct bit reversal.
 fn halton2(mut index: u32) -> f32 {{
     index = (index << 16) | (index >> 16);
@@ -131,8 +149,10 @@ fn halton2(mut index: u32) -> f32 {{
     index = ((index & 0x55555555) << 1) | ((index & 0xaaaaaaaa) >> 1);
     return (index as f32) * (1.0 / ((1u64 << 32) as f32));
 }}
-    "#)
-            .as_bytes())
+    "#
+            )
+                    .as_bytes()
+        )
         .unwrap();
 
     for i in 1..NUM_DIMENSIONS {
@@ -157,7 +177,9 @@ fn halton2(mut index: u32) -> f32 {{
         }
 
         // Build the permutation table.
-        let perm = (0..pow_base).map(|j| invert(&faure, base, j, digits)).collect::<Vec<_>>();
+        let perm = (0..pow_base)
+            .map(|j| invert(&faure, base, j, digits))
+            .collect::<Vec<_>>();
         let perm_string = {
             let mut perm_string = String::new();
             for i in perm.iter() {
@@ -168,22 +190,30 @@ fn halton2(mut index: u32) -> f32 {{
         };
 
         let mut power = max_power / pow_base;
-        f.write_all(format!(r#"
+        f.write_all(
+                format!(
+                    r#"
 fn halton{}(index: u32) -> f32 {{
     const PERM{}: [u16; {}] = [{}];"#,
-                               base,
-                               base,
-                               perm.len(),
-                               perm_string)
-                .as_bytes())
+                    base,
+                    base,
+                    perm.len(),
+                    perm_string
+                )
+                        .as_bytes()
+            )
             .unwrap();;
 
-        f.write_all(format!(r#"
+        f.write_all(
+                format!(
+                    r#"
     return (unsafe{{*PERM{}.get_unchecked((index % {}) as usize)}} as u32 * {} +"#,
-                               base,
-                               pow_base,
-                               power)
-                .as_bytes())
+                    base,
+                    pow_base,
+                    power
+                )
+                        .as_bytes()
+            )
             .unwrap();;
 
         // Advance to next set of digits.
@@ -191,26 +221,34 @@ fn halton{}(index: u32) -> f32 {{
         while power / pow_base > 1 {
             div *= pow_base;
             power /= pow_base;
-            f.write_all(format!(r#"
+            f.write_all(
+                    format!(
+                        r#"
             unsafe{{*PERM{}.get_unchecked(((index / {}) % {}) as usize)}} as u32 * {} +"#,
-                                   base,
-                                   div,
-                                   pow_base,
-                                   power)
-                    .as_bytes())
+                        base,
+                        div,
+                        pow_base,
+                        power
+                    )
+                            .as_bytes()
+                )
                 .unwrap();;
         }
 
-        f.write_all(format!(r#"
+        f.write_all(
+                format!(
+                    r#"
             unsafe{{*PERM{}.get_unchecked(((index / {}) % {}) as usize)}} as u32) as f32 *
                    (0.999999940395355224609375f32 / ({}u32 as f32)); // Results in [0,1).
 }}
         "#,
-                               base,
-                               div * pow_base,
-                               pow_base,
-                               max_power)
-                .as_bytes())
+                    base,
+                    div * pow_base,
+                    pow_base,
+                    max_power
+                )
+                        .as_bytes()
+            )
             .unwrap();;
     }
 }
@@ -237,26 +275,30 @@ fn get_faure_permutation(faure: &Vec<Vec<usize>>, b: usize) -> Vec<usize> {
         let c = (b - 1) / 2;
 
         return (0..b)
-            .map(|i| {
+                   .map(
+            |i| {
                 if i == c {
                     return c;
                 }
 
                 let f: usize = faure[b - 1][i - ((i > c) as usize)];
                 f + ((f >= c) as usize)
-            })
-            .collect();
+            }
+        )
+                   .collect();
     } else {
         // even
         let c = b / 2;
 
         return (0..b)
-            .map(|i| if i < c {
+                   .map(
+            |i| if i < c {
                 2 * faure[c][i]
             } else {
                 2 * faure[c][i - c] + 1
-            })
-            .collect();
+            }
+        )
+                   .collect();
     }
 }
 

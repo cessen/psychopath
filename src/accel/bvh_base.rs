@@ -94,13 +94,7 @@ impl BVHBase {
         }
     }
 
-    fn recursive_build<'a, T, F>(&mut self,
-                                 offset: usize,
-                                 depth: usize,
-                                 objects_per_leaf: usize,
-                                 objects: &mut [T],
-                                 bounder: &F)
-                                 -> (usize, (usize, usize))
+    fn recursive_build<'a, T, F>(&mut self, offset: usize, depth: usize, objects_per_leaf: usize, objects: &mut [T], bounder: &F) -> (usize, (usize, usize))
         where F: 'a + Fn(&T) -> &'a [BBox]
     {
         let me = self.nodes.len();
@@ -115,10 +109,12 @@ impl BVHBase {
                 // We make sure that it's worth having multiple time samples, and if not
                 // we reduce to the union of the time samples.
                 self.acc_bounds(objects, bounder);
-                let union_bounds = self.bounds_cache.iter().fold(BBox::new(), |b1, b2| (b1 | *b2));
-                let average_area =
-                    self.bounds_cache.iter().fold(0.0, |area, bb| area + bb.surface_area()) /
-                    self.bounds_cache.len() as f32;
+                let union_bounds = self.bounds_cache
+                    .iter()
+                    .fold(BBox::new(), |b1, b2| (b1 | *b2));
+                let average_area = self.bounds_cache
+                    .iter()
+                    .fold(0.0, |area, bb| area + bb.surface_area()) / self.bounds_cache.len() as f32;
                 if union_bounds.surface_area() <= (average_area * USE_UNION_FACTOR) {
                     self.bounds.push(union_bounds);
                 } else {
@@ -127,10 +123,13 @@ impl BVHBase {
             }
 
             // Create node
-            self.nodes.push(BVHBaseNode::Leaf {
-                bounds_range: (bi, self.bounds.len()),
-                object_range: (offset, offset + objects.len()),
-            });
+            self.nodes
+                .push(
+                    BVHBaseNode::Leaf {
+                        bounds_range: (bi, self.bounds.len()),
+                        object_range: (offset, offset + objects.len()),
+                    }
+                );
 
             if self.depth < depth {
                 self.depth = depth;
@@ -139,18 +138,20 @@ impl BVHBase {
             return (me, (bi, self.bounds.len()));
         } else {
             // Not a leaf node
-            self.nodes.push(BVHBaseNode::Internal {
-                bounds_range: (0, 0),
-                children_indices: (0, 0),
-                split_axis: 0,
-            });
+            self.nodes
+                .push(
+                    BVHBaseNode::Internal {
+                        bounds_range: (0, 0),
+                        children_indices: (0, 0),
+                        split_axis: 0,
+                    }
+                );
 
             // Partition objects.
             // If we're too near the max depth, we do balanced building to
             // avoid exceeding max depth.
             // Otherwise we do SAH splitting to build better trees.
-            let (split_index, split_axis) = if (log2_64(objects.len() as u64) as usize) <
-                                               (BVH_MAX_DEPTH - depth) {
+            let (split_index, split_axis) = if (log2_64(objects.len() as u64) as usize) < (BVH_MAX_DEPTH - depth) {
                 // SAH splitting, when we have room to play
                 sah_split(objects, &bounder)
             } else {
@@ -159,31 +160,36 @@ impl BVHBase {
             };
 
             // Create child nodes
-            let (c1_index, c1_bounds) = self.recursive_build(offset,
-                                                             depth + 1,
-                                                             objects_per_leaf,
-                                                             &mut objects[..split_index],
-                                                             bounder);
-            let (c2_index, c2_bounds) = self.recursive_build(offset + split_index,
-                                                             depth + 1,
-                                                             objects_per_leaf,
-                                                             &mut objects[split_index..],
-                                                             bounder);
+            let (c1_index, c1_bounds) = self.recursive_build(
+                offset,
+                depth + 1,
+                objects_per_leaf,
+                &mut objects[..split_index],
+                bounder,
+            );
+            let (c2_index, c2_bounds) = self.recursive_build(
+                offset + split_index,
+                depth + 1,
+                objects_per_leaf,
+                &mut objects[split_index..],
+                bounder,
+            );
 
             // Determine bounds
             // TODO: do merging without the temporary vec.
             let bi = self.bounds.len();
             {
                 let mut merged = Vec::new();
-                merge_slices_append(&self.bounds[c1_bounds.0..c1_bounds.1],
-                                    &self.bounds[c2_bounds.0..c2_bounds.1],
-                                    &mut merged,
-                                    |b1, b2| *b1 | *b2);
+                merge_slices_append(
+                    &self.bounds[c1_bounds.0..c1_bounds.1],
+                    &self.bounds[c2_bounds.0..c2_bounds.1],
+                    &mut merged,
+                    |b1, b2| *b1 | *b2,
+                );
                 // We make sure that it's worth having multiple time samples, and if not
                 // we reduce to the union of the time samples.
                 let union_bounds = merged.iter().fold(BBox::new(), |b1, b2| (b1 | *b2));
-                let average_area = merged.iter().fold(0.0, |area, bb| area + bb.surface_area()) /
-                                   merged.len() as f32;
+                let average_area = merged.iter().fold(0.0, |area, bb| area + bb.surface_area()) / merged.len() as f32;
                 if union_bounds.surface_area() <= (average_area * USE_UNION_FACTOR) {
                     self.bounds.push(union_bounds);
                 } else {

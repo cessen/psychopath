@@ -142,12 +142,14 @@ impl Image {
         }
 
         // Write file
-        if let Err(_) = lodepng::encode_file(path,
-                                             &image,
-                                             self.res.0,
-                                             self.res.1,
-                                             lodepng::ColorType::LCT_RGB,
-                                             8) {
+        if let Err(_) = lodepng::encode_file(
+            path,
+            &image,
+            self.res.0,
+            self.res.1,
+            lodepng::ColorType::LCT_RGB,
+            8,
+        ) {
             panic!("Couldn't write PNG file.");
         }
 
@@ -222,10 +224,9 @@ impl<'a> Drop for Bucket<'a> {
         let mut bucket_list = tmp.borrow_mut();
 
         // Find matching bucket and remove it
-        let i = bucket_list.iter().position(|bucket| {
-            (bucket.0).0 == self.min.0 && (bucket.0).1 == self.min.1 &&
-            (bucket.1).0 == self.max.0 && (bucket.1).1 == self.max.1
-        });
+        let i = bucket_list
+            .iter()
+            .position(|bucket| (bucket.0).0 == self.min.0 && (bucket.0).1 == self.min.1 && (bucket.1).0 == self.max.0 && (bucket.1).1 == self.max.1);
         bucket_list.swap_remove(i.unwrap());
     }
 }

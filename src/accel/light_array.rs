@@ -34,14 +34,7 @@ impl LightArray {
 }
 
 impl LightAccel for LightArray {
-    fn select(&self,
-              inc: Vector,
-              pos: Point,
-              nor: Normal,
-              sc: &SurfaceClosure,
-              time: f32,
-              n: f32)
-              -> Option<(usize, f32, f32)> {
+    fn select(&self, inc: Vector, pos: Point, nor: Normal, sc: &SurfaceClosure, time: f32, n: f32) -> Option<(usize, f32, f32)> {
         let _ = (inc, pos, nor, sc, time); // Not using these, silence warnings
 
         assert!(n >= 0.0 && n <= 1.0);

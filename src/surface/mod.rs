@@ -12,11 +12,7 @@ use shading::surface_closure::SurfaceClosureUnion;
 
 
 pub trait Surface: Boundable + Debug + Sync {
-    fn intersect_rays(&self,
-                      accel_rays: &mut [AccelRay],
-                      wrays: &[Ray],
-                      isects: &mut [SurfaceIntersection],
-                      space: &[Matrix4x4]);
+    fn intersect_rays(&self, accel_rays: &mut [AccelRay], wrays: &[Ray], isects: &mut [SurfaceIntersection], space: &[Matrix4x4]);
 }
 
 

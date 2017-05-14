@@ -19,11 +19,7 @@ pub struct DistantDiskLight<'a> {
 }
 
 impl<'a> DistantDiskLight<'a> {
-    pub fn new(arena: &'a MemArena,
-               radii: Vec<f32>,
-               directions: Vec<Vector>,
-               colors: Vec<XYZ>)
-               -> DistantDiskLight<'a> {
+    pub fn new(arena: &'a MemArena, radii: Vec<f32>, directions: Vec<Vector>, colors: Vec<XYZ>) -> DistantDiskLight<'a> {
         DistantDiskLight {
             radii: arena.copy_slice(&radii),
             directions: arena.copy_slice(&directions),
@@ -79,8 +75,9 @@ impl<'a> WorldLightSource for DistantDiskLight<'a> {
     }
 
     fn approximate_energy(&self) -> f32 {
-        let color: XYZ = self.colors.iter().fold(XYZ::new(0.0, 0.0, 0.0), |a, &b| a + b) /
-                         self.colors.len() as f32;
+        let color: XYZ = self.colors
+            .iter()
+            .fold(XYZ::new(0.0, 0.0, 0.0), |a, &b| a + b) / self.colors.len() as f32;
         color.y
     }
 }

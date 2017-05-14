@@ -94,26 +94,28 @@ impl Float4 {
     #[cfg(not(feature = "simd_perf"))]
     #[inline]
     pub fn v_min(&self, other: Float4) -> Float4 {
-        Float4::new(if self.get_0() < other.get_0() {
-                        self.get_0()
-                    } else {
-                        other.get_0()
-                    },
-                    if self.get_1() < other.get_1() {
-                        self.get_1()
-                    } else {
-                        other.get_1()
-                    },
-                    if self.get_2() < other.get_2() {
-                        self.get_2()
-                    } else {
-                        other.get_2()
-                    },
-                    if self.get_3() < other.get_3() {
-                        self.get_3()
-                    } else {
-                        other.get_3()
-                    })
+        Float4::new(
+            if self.get_0() < other.get_0() {
+                self.get_0()
+            } else {
+                other.get_0()
+            },
+            if self.get_1() < other.get_1() {
+                self.get_1()
+            } else {
+                other.get_1()
+            },
+            if self.get_2() < other.get_2() {
+                self.get_2()
+            } else {
+                other.get_2()
+            },
+            if self.get_3() < other.get_3() {
+                self.get_3()
+            } else {
+                other.get_3()
+            },
+        )
 
     }
 
@@ -125,26 +127,28 @@ impl Float4 {
     #[cfg(not(feature = "simd_perf"))]
     #[inline]
     pub fn v_max(&self, other: Float4) -> Float4 {
-        Float4::new(if self.get_0() > other.get_0() {
-                        self.get_0()
-                    } else {
-                        other.get_0()
-                    },
-                    if self.get_1() > other.get_1() {
-                        self.get_1()
-                    } else {
-                        other.get_1()
-                    },
-                    if self.get_2() > other.get_2() {
-                        self.get_2()
-                    } else {
-                        other.get_2()
-                    },
-                    if self.get_3() > other.get_3() {
-                        self.get_3()
-                    } else {
-                        other.get_3()
-                    })
+        Float4::new(
+            if self.get_0() > other.get_0() {
+                self.get_0()
+            } else {
+                other.get_0()
+            },
+            if self.get_1() > other.get_1() {
+                self.get_1()
+            } else {
+                other.get_1()
+            },
+            if self.get_2() > other.get_2() {
+                self.get_2()
+            } else {
+                other.get_2()
+            },
+            if self.get_3() > other.get_3() {
+                self.get_3()
+            } else {
+                other.get_3()
+            },
+        )
     }
 
     #[cfg(feature = "simd_perf")]
@@ -344,8 +348,7 @@ impl Float4 {
 impl PartialEq for Float4 {
     #[inline]
     fn eq(&self, other: &Float4) -> bool {
-        self.get_0() == other.get_0() && self.get_1() == other.get_1() &&
-        self.get_2() == other.get_2() && self.get_3() == other.get_3()
+        self.get_0() == other.get_0() && self.get_1() == other.get_1() && self.get_2() == other.get_2() && self.get_3() == other.get_3()
     }
 }
 
@@ -595,8 +598,7 @@ impl Bool4 {
 
     #[inline]
     pub fn to_bitmask(&self) -> u8 {
-        (self.get_0() as u8) | ((self.get_1() as u8) << 1) | ((self.get_2() as u8) << 2) |
-        ((self.get_3() as u8) << 3)
+        (self.get_0() as u8) | ((self.get_1() as u8) << 1) | ((self.get_2() as u8) << 2) | ((self.get_3() as u8) << 3)
     }
 }
 

@@ -19,14 +19,7 @@ pub struct Scene<'a> {
 }
 
 impl<'a> Scene<'a> {
-    pub fn sample_lights(&self,
-                         xform_stack: &mut TransformStack,
-                         n: f32,
-                         uvw: (f32, f32, f32),
-                         wavelength: f32,
-                         time: f32,
-                         intr: &SurfaceIntersection)
-                         -> Option<(SpectralSample, Vector, f32, f32, bool)> {
+    pub fn sample_lights(&self, xform_stack: &mut TransformStack, n: f32, uvw: (f32, f32, f32), wavelength: f32, time: f32, intr: &SurfaceIntersection) -> Option<(SpectralSample, Vector, f32, f32, bool)> {
         // TODO: this just selects between world lights and local lights
         // with a 50/50 chance.  We should do something more sophisticated
         // than this, accounting for the estimated impact of the lights
@@ -35,10 +28,9 @@ impl<'a> Scene<'a> {
         // Calculate relative probabilities of traversing into world lights
         // or local lights.
         let wl_energy = if self.world
-            .lights
-            .iter()
-            .fold(0.0, |energy, light| energy + light.approximate_energy()) <=
-                           0.0 {
+               .lights
+               .iter()
+               .fold(0.0, |energy, light| energy + light.approximate_energy()) <= 0.0 {
             0.0
         } else {
             1.0
@@ -67,7 +59,8 @@ impl<'a> Scene<'a> {
                 let n = (n - wl_prob) / (1.0 - wl_prob);
 
                 if let Some((ss, sv, pdf, spdf)) =
-                    self.root.sample_lights(xform_stack, n, uvw, wavelength, time, intr) {
+                    self.root
+                        .sample_lights(xform_stack, n, uvw, wavelength, time, intr) {
                     return Some((ss, sv, pdf, spdf * (1.0 - wl_prob), false));
                 } else {
                     return None;

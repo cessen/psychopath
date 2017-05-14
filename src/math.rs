@@ -29,9 +29,7 @@ pub fn fast_pow2(p: f32) -> f32 {
     let w: i32 = clipp as i32;
     let z: f32 = clipp - w as f32 + offset;
 
-    let i: u32 = ((1 << 23) as f32 *
-                  (clipp + 121.2740575 + 27.7280233 / (4.84252568 - z) - 1.49012907 * z)) as
-                 u32;
+    let i: u32 = ((1 << 23) as f32 * (clipp + 121.2740575 + 27.7280233 / (4.84252568 - z) - 1.49012907 * z)) as u32;
 
     unsafe { transmute_copy::<u32, f32>(&i) }
 }
@@ -77,10 +75,72 @@ pub fn upper_power_of_two(mut v: u32) -> u32 {
 
 /// Gets the log base 2 of the given integer
 pub fn log2_64(value: u64) -> u64 {
-    const TAB64: [u64; 64] = [63, 0, 58, 1, 59, 47, 53, 2, 60, 39, 48, 27, 54, 33, 42, 3, 61, 51,
-                              37, 40, 49, 18, 28, 20, 55, 30, 34, 11, 43, 14, 22, 4, 62, 57, 46,
-                              52, 38, 26, 32, 41, 50, 36, 17, 19, 29, 10, 13, 21, 56, 45, 25, 31,
-                              35, 16, 9, 12, 44, 24, 15, 8, 23, 7, 6, 5];
+    const TAB64: [u64; 64] = [
+        63,
+        0,
+        58,
+        1,
+        59,
+        47,
+        53,
+        2,
+        60,
+        39,
+        48,
+        27,
+        54,
+        33,
+        42,
+        3,
+        61,
+        51,
+        37,
+        40,
+        49,
+        18,
+        28,
+        20,
+        55,
+        30,
+        34,
+        11,
+        43,
+        14,
+        22,
+        4,
+        62,
+        57,
+        46,
+        52,
+        38,
+        26,
+        32,
+        41,
+        50,
+        36,
+        17,
+        19,
+        29,
+        10,
+        13,
+        21,
+        56,
+        45,
+        25,
+        31,
+        35,
+        16,
+        9,
+        12,
+        44,
+        24,
+        15,
+        8,
+        23,
+        7,
+        6,
+        5,
+    ];
 
     let value = value | value.wrapping_shr(1);
     let value = value | value.wrapping_shr(2);
@@ -89,8 +149,7 @@ pub fn log2_64(value: u64) -> u64 {
     let value = value | value.wrapping_shr(16);
     let value = value | value.wrapping_shr(32);
 
-    TAB64[((value.wrapping_sub(value.wrapping_shr(1)) as u64).wrapping_mul(0x07EDD5E59A4E28C2))
-        .wrapping_shr(58) as usize]
+    TAB64[((value.wrapping_sub(value.wrapping_shr(1)) as u64).wrapping_mul(0x07EDD5E59A4E28C2)).wrapping_shr(58) as usize]
 }
 
 

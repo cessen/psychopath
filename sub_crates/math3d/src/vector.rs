@@ -127,10 +127,12 @@ impl Mul<Matrix4x4> for Vector {
     #[inline]
     fn mul(self, other: Matrix4x4) -> Vector {
         Vector {
-            co: Float4::new((self.co * other.values[0]).h_sum(),
-                            (self.co * other.values[1]).h_sum(),
-                            (self.co * other.values[2]).h_sum(),
-                            (self.co * other.values[3]).h_sum()),
+            co: Float4::new(
+                (self.co * other.values[0]).h_sum(),
+                (self.co * other.values[1]).h_sum(),
+                (self.co * other.values[2]).h_sum(),
+                (self.co * other.values[3]).h_sum(),
+            ),
         }
     }
 }
@@ -168,13 +170,12 @@ impl CrossProduct for Vector {
     #[inline]
     fn cross(self, other: Vector) -> Vector {
         Vector {
-            co: Float4::new((self.co.get_1() * other.co.get_2()) -
-                            (self.co.get_2() * other.co.get_1()),
-                            (self.co.get_2() * other.co.get_0()) -
-                            (self.co.get_0() * other.co.get_2()),
-                            (self.co.get_0() * other.co.get_1()) -
-                            (self.co.get_1() * other.co.get_0()),
-                            0.0),
+            co: Float4::new(
+                (self.co.get_1() * other.co.get_2()) - (self.co.get_2() * other.co.get_1()),
+                (self.co.get_2() * other.co.get_0()) - (self.co.get_0() * other.co.get_2()),
+                (self.co.get_0() * other.co.get_1()) - (self.co.get_1() * other.co.get_0()),
+                0.0,
+            ),
         }
     }
 }
@@ -215,22 +216,24 @@ mod tests {
     #[test]
     fn mul_matrix_1() {
         let v = Vector::new(1.0, 2.5, 4.0);
-        let m = Matrix4x4::new_from_values(1.0,
-                                           2.0,
-                                           2.0,
-                                           1.5,
-                                           3.0,
-                                           6.0,
-                                           7.0,
-                                           8.0,
-                                           9.0,
-                                           2.0,
-                                           11.0,
-                                           12.0,
-                                           13.0,
-                                           7.0,
-                                           15.0,
-                                           3.0);
+        let m = Matrix4x4::new_from_values(
+            1.0,
+            2.0,
+            2.0,
+            1.5,
+            3.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            2.0,
+            11.0,
+            12.0,
+            13.0,
+            7.0,
+            15.0,
+            3.0,
+        );
         let mut vm = Vector::new(14.0, 46.0, 58.0);
         vm.co.set_3(90.5);
         assert_eq!(v * m, vm);
@@ -239,22 +242,24 @@ mod tests {
     #[test]
     fn mul_matrix_2() {
         let v = Vector::new(1.0, 2.5, 4.0);
-        let m = Matrix4x4::new_from_values(1.0,
-                                           2.0,
-                                           2.0,
-                                           1.5,
-                                           3.0,
-                                           6.0,
-                                           7.0,
-                                           8.0,
-                                           9.0,
-                                           2.0,
-                                           11.0,
-                                           12.0,
-                                           0.0,
-                                           0.0,
-                                           0.0,
-                                           1.0);
+        let m = Matrix4x4::new_from_values(
+            1.0,
+            2.0,
+            2.0,
+            1.5,
+            3.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            2.0,
+            11.0,
+            12.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+        );
         let vm = Vector::new(14.0, 46.0, 58.0);
         assert_eq!(v * m, vm);
     }

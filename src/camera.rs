@@ -18,12 +18,7 @@ pub struct Camera<'a> {
 }
 
 impl<'a> Camera<'a> {
-    pub fn new(arena: &'a MemArena,
-               transforms: Vec<Matrix4x4>,
-               fovs: Vec<f32>,
-               mut aperture_radii: Vec<f32>,
-               mut focus_distances: Vec<f32>)
-               -> Camera<'a> {
+    pub fn new(arena: &'a MemArena, transforms: Vec<Matrix4x4>, fovs: Vec<f32>, mut aperture_radii: Vec<f32>, mut focus_distances: Vec<f32>) -> Camera<'a> {
         assert!(transforms.len() != 0, "Camera has no transform(s)!");
         assert!(fovs.len() != 0, "Camera has no fov(s)!");
 
@@ -33,11 +28,15 @@ impl<'a> Camera<'a> {
             focus_distances = vec![1.0];
 
             if aperture_radii.len() == 0 && focus_distances.len() != 0 {
-                println!("WARNING: camera has aperture radius but no focus distance.  Disabling \
-                          focal blur.");
+                println!(
+                    "WARNING: camera has aperture radius but no focus distance.  Disabling \
+                          focal blur."
+                );
             } else if aperture_radii.len() != 0 && focus_distances.len() == 0 {
-                println!("WARNING: camera has focus distance but no aperture radius.  Disabling \
-                          focal blur.");
+                println!(
+                    "WARNING: camera has focus distance but no aperture radius.  Disabling \
+                          focal blur."
+                );
             }
         }
 
@@ -51,7 +50,9 @@ impl<'a> Camera<'a> {
         }
 
         // Convert angle fov into linear fov.
-        let tfovs: Vec<f32> = fovs.iter().map(|n| (n / 2.0).sin() / (n / 2.0).cos()).collect();
+        let tfovs: Vec<f32> = fovs.iter()
+            .map(|n| (n / 2.0).sin() / (n / 2.0).cos())
+            .collect();
 
         Camera {
             transforms: arena.copy_slice(&transforms),
@@ -76,10 +77,12 @@ impl<'a> Camera<'a> {
         };
 
         // Ray direction
-        let dir = Vector::new((x * tfov) - (orig.x() / focus_distance),
-                              (y * tfov) - (orig.y() / focus_distance),
-                              1.0)
-            .normalized();
+        let dir = Vector::new(
+            (x * tfov) - (orig.x() / focus_distance),
+            (y * tfov) - (orig.y() / focus_distance),
+            1.0,
+        )
+                .normalized();
 
         Ray::new(orig * transform, dir * transform, time, false)
     }

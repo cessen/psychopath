@@ -24,10 +24,7 @@ pub struct TriangleMesh<'a> {
 }
 
 impl<'a> TriangleMesh<'a> {
-    pub fn from_triangles<'b>(arena: &'b MemArena,
-                              time_samples: usize,
-                              triangles: Vec<(Point, Point, Point)>)
-                              -> TriangleMesh<'b> {
+    pub fn from_triangles<'b>(arena: &'b MemArena, time_samples: usize, triangles: Vec<(Point, Point, Point)>) -> TriangleMesh<'b> {
         assert!(triangles.len() % time_samples == 0);
 
         let mut indices: Vec<usize> = (0..(triangles.len() / time_samples))
@@ -44,10 +41,12 @@ impl<'a> TriangleMesh<'a> {
             bounds
         };
 
-        let accel = BVH::from_objects(arena,
-                                      &mut indices[..],
-                                      3,
-                                      |tri_i| &bounds[*tri_i..(*tri_i + time_samples)]);
+        let accel = BVH::from_objects(
+            arena,
+            &mut indices[..],
+            3,
+            |tri_i| &bounds[*tri_i..(*tri_i + time_samples)],
+        );
 
         TriangleMesh {
             time_samples: time_samples,
@@ -66,61 +65,57 @@ impl<'a> Boundable for TriangleMesh<'a> {
 
 
 impl<'a> Surface for TriangleMesh<'a> {
-    fn intersect_rays(&self,
-                      accel_rays: &mut [AccelRay],
-                      wrays: &[Ray],
-                      isects: &mut [SurfaceIntersection],
-                      space: &[Matrix4x4]) {
-        self.accel.traverse(&mut accel_rays[..], &self.indices, |tri_i, rs| {
-            for r in rs {
-                let wr = &wrays[r.id as usize];
-                let tri =
-                    lerp_slice_with(&self.geo[*tri_i..(*tri_i + self.time_samples)],
-                                    wr.time,
-                                    |a, b, t| {
-                                        (lerp(a.0, b.0, t), lerp(a.1, b.1, t), lerp(a.2, b.2, t))
-                                    });
-                // TODO: when there's no transforms, we don't have to
-                // transform the triangles at all.
-                let mat_space = if space.len() > 0 {
-                    lerp_slice(space, wr.time)
-                } else {
-                    Matrix4x4::new()
-                };
-                let mat_inv = mat_space.inverse();
-                let tri = (tri.0 * mat_inv, tri.1 * mat_inv, tri.2 * mat_inv);
-                if let Some((t, _, _)) = triangle::intersect_ray(wr, tri) {
-                    if t < r.max_t {
-                        if r.is_occlusion() {
-                            isects[r.id as usize] = SurfaceIntersection::Occlude;
-                            r.mark_done();
+    fn intersect_rays(&self, accel_rays: &mut [AccelRay], wrays: &[Ray], isects: &mut [SurfaceIntersection], space: &[Matrix4x4]) {
+        self.accel
+            .traverse(
+                &mut accel_rays[..], &self.indices, |tri_i, rs| {
+                    for r in rs {
+                        let wr = &wrays[r.id as usize];
+                        let tri = lerp_slice_with(
+                            &self.geo[*tri_i..(*tri_i + self.time_samples)],
+                            wr.time,
+                            |a, b, t| (lerp(a.0, b.0, t), lerp(a.1, b.1, t), lerp(a.2, b.2, t)),
+                        );
+                        // TODO: when there's no transforms, we don't have to
+                        // transform the triangles at all.
+                        let mat_space = if space.len() > 0 {
+                            lerp_slice(space, wr.time)
                         } else {
-                            isects[r.id as usize] = SurfaceIntersection::Hit {
-                                intersection_data: SurfaceIntersectionData {
-                                    incoming: wr.dir,
-                                    t: t,
-                                    pos: wr.orig + (wr.dir * t),
-                                    nor: cross(tri.0 - tri.1, tri.0 - tri.2).into_normal(), // TODO
-                                    nor_g: cross(tri.0 - tri.1, tri.0 - tri.2).into_normal(),
-                                    uv: (0.0, 0.0), // TODO
-                                    local_space: mat_space,
-                                },
-                                // TODO: get surface closure from surface shader.
-                                closure: SurfaceClosureUnion::LambertClosure(
-                                   LambertClosure::new(XYZ::new(0.8, 0.8, 0.8))
-                                ),
-                                // closure:
-                                //     SurfaceClosureUnion::GTRClosure(
-                                //         GTRClosure::new(XYZ::new(0.8, 0.8, 0.8),
-                                //                         0.1,
-                                //                         2.0,
-                                //                         1.0)),
-                            };
-                            r.max_t = t;
+                            Matrix4x4::new()
+                        };
+                        let mat_inv = mat_space.inverse();
+                        let tri = (tri.0 * mat_inv, tri.1 * mat_inv, tri.2 * mat_inv);
+                        if let Some((t, _, _)) = triangle::intersect_ray(wr, tri) {
+                            if t < r.max_t {
+                                if r.is_occlusion() {
+                                    isects[r.id as usize] = SurfaceIntersection::Occlude;
+                                    r.mark_done();
+                                } else {
+                                    isects[r.id as usize] = SurfaceIntersection::Hit {
+                                        intersection_data: SurfaceIntersectionData {
+                                            incoming: wr.dir,
+                                            t: t,
+                                            pos: wr.orig + (wr.dir * t),
+                                            nor: cross(tri.0 - tri.1, tri.0 - tri.2).into_normal(), // TODO
+                                            nor_g: cross(tri.0 - tri.1, tri.0 - tri.2).into_normal(),
+                                            uv: (0.0, 0.0), // TODO
+                                            local_space: mat_space,
+                                        },
+                                        // TODO: get surface closure from surface shader.
+                                        closure: SurfaceClosureUnion::LambertClosure(LambertClosure::new(XYZ::new(0.8, 0.8, 0.8))),
+// closure:
+//     SurfaceClosureUnion::GTRClosure(
+//         GTRClosure::new(XYZ::new(0.8, 0.8, 0.8),
+//                         0.1,
+//                         2.0,
+//                         1.0)),
+                                    };
+                                    r.max_t = t;
+                                }
+                            }
                         }
                     }
                 }
-            }
-        });
+            );
     }
 }

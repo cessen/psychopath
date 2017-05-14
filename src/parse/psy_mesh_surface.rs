@@ -21,9 +21,7 @@ use super::psy::PsyParseError;
 //    accel: BVH,
 // }
 
-pub fn parse_mesh_surface<'a>(arena: &'a MemArena,
-                              tree: &'a DataTree)
-                              -> Result<TriangleMesh<'a>, PsyParseError> {
+pub fn parse_mesh_surface<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<TriangleMesh<'a>, PsyParseError> {
     let mut verts = Vec::new();
     let mut face_vert_counts = Vec::new();
     let mut face_vert_indices = Vec::new();
@@ -39,8 +37,7 @@ pub fn parse_mesh_surface<'a>(arena: &'a MemArena,
 
         // Collect verts for this time sample
         let mut vert_count = 0;
-        while let IResult::Done(remaining, vert) =
-            closure!(tuple!(ws_f32, ws_f32, ws_f32))(raw_text) {
+        while let IResult::Done(remaining, vert) = closure!(tuple!(ws_f32, ws_f32, ws_f32))(raw_text) {
             raw_text = remaining;
 
             verts.push(Point::new(vert.0, vert.1, vert.2));
@@ -91,9 +88,7 @@ pub fn parse_mesh_surface<'a>(arena: &'a MemArena,
                 // Store all the time samples of each triangle contiguously
                 for time_sample in 0..time_samples {
                     let start_vi = vert_count * time_sample;
-                    triangles.push((verts[start_vi + face_vert_indices[v1]],
-                                    verts[start_vi + face_vert_indices[v1 + vi + 1]],
-                                    verts[start_vi + face_vert_indices[v1 + vi + 2]]));
+                    triangles.push((verts[start_vi + face_vert_indices[v1]], verts[start_vi + face_vert_indices[v1 + vi + 1]], verts[start_vi + face_vert_indices[v1 + vi + 2]]));
                 }
             }
         } else {
