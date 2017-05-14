@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "sub_crates/blue_noise_mask",
     "sub_crates/float4",
     "sub_crates/halton",
     "sub_crates/math3d",
@@ -37,9 +36,6 @@ lazy_static = "0.2"
 openexr = { git = "https://github.com/cessen/openexr-rs", rev = "612fc6c81c031970ffddcab15509236711613de8" }
 
 # Local crate dependencies
-[dependencies.blue_noise_mask]
-path = "sub_crates/blue_noise_mask"
-
 [dependencies.float4]
 path = "sub_crates/float4"
 
