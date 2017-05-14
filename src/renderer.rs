@@ -392,31 +392,36 @@ impl LightPath {
                                             self.wavelength,
                                             self.time,
                                             isect) {
-                        // Calculate and store the light that will be contributed
-                        // to the film plane if the light is not in shadow.
-                        self.pending_color_addition = {
-                            let material = closure.as_surface_closure();
-                            let la =
-                                material.evaluate(ray.dir, shadow_vec, idata.nor, self.wavelength);
-                            light_color.e * la.e * self.light_attenuation /
-                            (light_pdf * light_sel_pdf)
-                        };
+                        // Check if pdf is zero, to avoid NaN's.
+                        if light_pdf > 0.0 {
+                            // Calculate and store the light that will be contributed
+                            // to the film plane if the light is not in shadow.
+                            self.pending_color_addition = {
+                                let material = closure.as_surface_closure();
+                                let la =
+                                    material.evaluate(ray.dir, shadow_vec, idata.nor, self.wavelength);
+                                light_color.e * la.e * self.light_attenuation /
+                                (light_pdf * light_sel_pdf)
+                            };
 
-                        // Calculate the shadow ray for testing if the light is
-                        // in shadow or not.
-                        // TODO: use proper ray offsets for avoiding self-shadowing
-                        // rather than this hacky stupid stuff.
-                        *ray = Ray::new(idata.pos + shadow_vec.normalized() * 0.001,
-                                        shadow_vec,
-                                        self.time,
-                                        true);
+                            // Calculate the shadow ray for testing if the light is
+                            // in shadow or not.
+                            // TODO: use proper ray offsets for avoiding self-shadowing
+                            // rather than this hacky stupid stuff.
+                            *ray = Ray::new(idata.pos + shadow_vec.normalized() * 0.001,
+                                            shadow_vec,
+                                            self.time,
+                                            true);
 
-                        // For distant lights
-                        if is_infinite {
-                            ray.max_t = std::f32::INFINITY;
+                            // For distant lights
+                            if is_infinite {
+                                ray.max_t = std::f32::INFINITY;
+                            }
+
+                            true
+                        } else {
+                            false
                         }
-
-                        true
                     } else {
                         false
                     };
@@ -433,18 +438,23 @@ impl LightPath {
                             material.sample(idata.incoming, idata.nor, (u, v), self.wavelength)
                         };
 
-                        // Account for the additional light attenuation from
-                        // this bounce
-                        self.next_attentuation_fac = filter.e / pdf;
+                        // Check if pdf is zero, to avoid NaN's.
+                        if pdf > 0.0 {
+                            // Account for the additional light attenuation from
+                            // this bounce
+                            self.next_attentuation_fac = filter.e / pdf;
 
-                        // Calculate the ray for this bounce
-                        self.next_bounce_ray = Some(Ray::new(idata.pos +
-                                                             dir.normalized() * 0.0001,
-                                                             dir,
-                                                             self.time,
-                                                             false));
+                            // Calculate the ray for this bounce
+                            self.next_bounce_ray = Some(Ray::new(idata.pos +
+                                                                 dir.normalized() * 0.0001,
+                                                                 dir,
+                                                                 self.time,
+                                                                 false));
 
-                        true
+                            true
+                        } else {
+                            false
+                        }
                     } else {
                         self.next_bounce_ray = None;
                         false
