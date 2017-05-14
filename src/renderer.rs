@@ -78,23 +78,11 @@ impl<'a> Renderer<'a> {
 
         let collective_stats = RwLock::new(RenderStats::new());
 
-        // Pre-calculate some useful values related to the image plane
-        let cmpx = 1.0 / self.resolution.0 as f32;
-        let cmpy = 1.0 / self.resolution.1 as f32;
-        let min_x = -1.0;
-        let max_x = 1.0;
-        let min_y = -(self.resolution.1 as f32 / self.resolution.0 as f32);
-        let max_y = self.resolution.1 as f32 / self.resolution.0 as f32;
-        let x_extent = max_x - min_x;
-        let y_extent = max_y - min_y;
-
         // Set up job queue
         let job_queue = MsQueue::new();
 
         // For printing render progress
-        let total_pixels = self.resolution.0 * self.resolution.1;
         let pixels_rendered = Mutex::new(Cell::new(0));
-        let pixrenref = &pixels_rendered;
 
         // Render
         tpool.scoped(
@@ -105,128 +93,8 @@ impl<'a> Renderer<'a> {
                     let ajq = &all_jobs_queued;
                     let img = &image;
                     let cstats = &collective_stats;
-                    scope.execute(
-                        move || {
-                            let mut stats = RenderStats::new();
-                            let mut timer = Timer::new();
-                            let mut total_timer = Timer::new();
-
-                            let mut paths = Vec::new();
-                            let mut rays = Vec::new();
-                            let mut tracer = Tracer::from_assembly(&self.scene.root);
-                            let mut xform_stack = TransformStack::new();
-
-                            'render_loop: loop {
-                                paths.clear();
-                                rays.clear();
-
-                                // Get bucket, or exit if no more jobs left
-                                let bucket: BucketJob;
-                                loop {
-                                    if let Some(b) = jq.try_pop() {
-                                        bucket = b;
-                                        break;
-                                    } else {
-                                        if *ajq.read().unwrap() == true {
-                                            break 'render_loop;
-                                        }
-                                    }
-                                }
-
-                                timer.tick();
-                                // Generate light paths and initial rays
-                                for y in bucket.y..(bucket.y + bucket.h) {
-                                    for x in bucket.x..(bucket.x + bucket.w) {
-                                        let offset = hash_u32(((x as u32) << 16) ^ (y as u32), self.seed);
-                                        for si in 0..self.spp {
-                                            // Calculate image plane x and y coordinates
-                                            let (img_x, img_y) = {
-                                                let filter_x = fast_logit(halton::sample(4, offset + si as u32), 1.5) + 0.5;
-                                                let filter_y = fast_logit(halton::sample(5, offset + si as u32), 1.5) + 0.5;
-                                                let samp_x = (filter_x + x as f32) * cmpx;
-                                                let samp_y = (filter_y + y as f32) * cmpy;
-                                                ((samp_x - 0.5) * x_extent, (0.5 - samp_y) * y_extent)
-                                            };
-
-                                            // Create the light path and initial ray for this sample
-                                            let (path, ray) = LightPath::new(
-                                                &self.scene,
-                                                (x, y),
-                                                (img_x, img_y),
-                                                (halton::sample(0, offset + si as u32), halton::sample(1, offset + si as u32)),
-                                                halton::sample(2, offset + si as u32),
-                                                map_0_1_to_wavelength(halton::sample(3, offset + si as u32)),
-                                                offset + si as u32,
-                                            );
-                                            paths.push(path);
-                                            rays.push(ray);
-                                        }
-                                    }
-                                }
-                                stats.initial_ray_generation_time += timer.tick() as f64;
-
-                                // Trace the paths!
-                                let mut pi = paths.len();
-                                while pi > 0 {
-                                    // Test rays against scene
-                                    let isects = tracer.trace(&rays);
-                                    stats.trace_time += timer.tick() as f64;
-
-                                    // Determine next rays to shoot based on result
-                                    pi = partition_pair(
-                                        &mut paths[..pi],
-                                        &mut rays[..pi],
-                                        |i, path, ray| path.next(&mut xform_stack, &self.scene, &isects[i], &mut *ray),
-                                    );
-                                    stats.ray_generation_time += timer.tick() as f64;
-                                }
-
-                                // Calculate color based on ray hits and save to image
-                                {
-                                    let min = (bucket.x, bucket.y);
-                                    let max = (bucket.x + bucket.w, bucket.y + bucket.h);
-                                    let mut img_bucket = img.get_bucket(min, max);
-                                    for path in paths.iter() {
-                                        let path_col = SpectralSample::from_parts(path.color, path.wavelength);
-                                        let mut col = img_bucket.get(path.pixel_co.0, path.pixel_co.1);
-                                        col += XYZ::from_spectral_sample(&path_col) / self.spp as f32;
-                                        img_bucket.set(path.pixel_co.0, path.pixel_co.1, col);
-                                    }
-                                    stats.sample_writing_time += timer.tick() as f64;
-                                }
-
-                                // Print render progress
-                                {
-                                    let guard = pixrenref.lock().unwrap();
-                                    let mut pr = (*guard).get();
-                                    let percentage_old = pr as f64 / total_pixels as f64 * 100.0;
-
-                                    pr += bucket.w as usize * bucket.h as usize;
-                                    (*guard).set(pr);
-                                    let percentage_new = pr as f64 / total_pixels as f64 * 100.0;
-
-                                    let old_string = format!("{:.2}%", percentage_old);
-                                    let new_string = format!("{:.2}%", percentage_new);
-
-                                    if new_string != old_string {
-                                        print!("\r{}", new_string);
-                                        let _ = io::stdout().flush();
-                                    }
-                                }
-                            }
-
-                            stats.total_time += total_timer.tick() as f64;
-                            ACCEL_TRAV_TIME.with(
-                                |att| {
-                                    stats.accel_traversal_time = att.get();
-                                    att.set(0.0);
-                                }
-                            );
-
-                            // Collect stats
-                            cstats.write().unwrap().collect(stats);
-                        }
-                    );
+                    let pixrenref = &pixels_rendered;
+                    scope.execute(move || self.render_job(jq, ajq, img, cstats, pixrenref));
                 }
 
                 // Print initial 0.00% progress
@@ -293,6 +161,140 @@ impl<'a> Renderer<'a> {
 
         // Return the rendered image and stats
         return (image, *collective_stats.read().unwrap());
+    }
+
+    /// Waits for buckets in the job queue to render and renders them when available.
+    fn render_job(&self, job_queue: &MsQueue<BucketJob>, all_jobs_queued: &RwLock<bool>, image: &Image, collected_stats: &RwLock<RenderStats>, pixels_rendered: &Mutex<Cell<usize>>) {
+        let mut stats = RenderStats::new();
+        let mut timer = Timer::new();
+        let mut total_timer = Timer::new();
+
+        let mut paths = Vec::new();
+        let mut rays = Vec::new();
+        let mut tracer = Tracer::from_assembly(&self.scene.root);
+        let mut xform_stack = TransformStack::new();
+
+        // Pre-calculate some useful values related to the image plane
+        let cmpx = 1.0 / self.resolution.0 as f32;
+        let cmpy = 1.0 / self.resolution.1 as f32;
+        let min_x = -1.0;
+        let max_x = 1.0;
+        let min_y = -(self.resolution.1 as f32 / self.resolution.0 as f32);
+        let max_y = self.resolution.1 as f32 / self.resolution.0 as f32;
+        let x_extent = max_x - min_x;
+        let y_extent = max_y - min_y;
+        let total_pixels = self.resolution.0 * self.resolution.1;
+
+        // Render
+        'render_loop: loop {
+            paths.clear();
+            rays.clear();
+
+            // Get bucket, or exit if no more jobs left
+            let bucket: BucketJob;
+            loop {
+                if let Some(b) = job_queue.try_pop() {
+                    bucket = b;
+                    break;
+                } else {
+                    if *all_jobs_queued.read().unwrap() == true {
+                        break 'render_loop;
+                    }
+                }
+            }
+
+            timer.tick();
+            // Generate light paths and initial rays
+            for y in bucket.y..(bucket.y + bucket.h) {
+                for x in bucket.x..(bucket.x + bucket.w) {
+                    let offset = hash_u32(((x as u32) << 16) ^ (y as u32), self.seed);
+                    for si in 0..self.spp {
+                        // Calculate image plane x and y coordinates
+                        let (img_x, img_y) = {
+                            let filter_x = fast_logit(halton::sample(4, offset + si as u32), 1.5) + 0.5;
+                            let filter_y = fast_logit(halton::sample(5, offset + si as u32), 1.5) + 0.5;
+                            let samp_x = (filter_x + x as f32) * cmpx;
+                            let samp_y = (filter_y + y as f32) * cmpy;
+                            ((samp_x - 0.5) * x_extent, (0.5 - samp_y) * y_extent)
+                        };
+
+                        // Create the light path and initial ray for this sample
+                        let (path, ray) = LightPath::new(
+                            &self.scene,
+                            (x, y),
+                            (img_x, img_y),
+                            (halton::sample(0, offset + si as u32), halton::sample(1, offset + si as u32)),
+                            halton::sample(2, offset + si as u32),
+                            map_0_1_to_wavelength(halton::sample(3, offset + si as u32)),
+                            offset + si as u32,
+                        );
+                        paths.push(path);
+                        rays.push(ray);
+                    }
+                }
+            }
+            stats.initial_ray_generation_time += timer.tick() as f64;
+
+            // Trace the paths!
+            let mut pi = paths.len();
+            while pi > 0 {
+                // Test rays against scene
+                let isects = tracer.trace(&rays);
+                stats.trace_time += timer.tick() as f64;
+
+                // Determine next rays to shoot based on result
+                pi = partition_pair(
+                    &mut paths[..pi],
+                    &mut rays[..pi],
+                    |i, path, ray| path.next(&mut xform_stack, &self.scene, &isects[i], &mut *ray),
+                );
+                stats.ray_generation_time += timer.tick() as f64;
+            }
+
+            // Calculate color based on ray hits and save to image
+            {
+                let min = (bucket.x, bucket.y);
+                let max = (bucket.x + bucket.w, bucket.y + bucket.h);
+                let mut img_bucket = image.get_bucket(min, max);
+                for path in paths.iter() {
+                    let path_col = SpectralSample::from_parts(path.color, path.wavelength);
+                    let mut col = img_bucket.get(path.pixel_co.0, path.pixel_co.1);
+                    col += XYZ::from_spectral_sample(&path_col) / self.spp as f32;
+                    img_bucket.set(path.pixel_co.0, path.pixel_co.1, col);
+                }
+                stats.sample_writing_time += timer.tick() as f64;
+            }
+
+            // Print render progress
+            {
+                let guard = pixels_rendered.lock().unwrap();
+                let mut pr = (*guard).get();
+                let percentage_old = pr as f64 / total_pixels as f64 * 100.0;
+
+                pr += bucket.w as usize * bucket.h as usize;
+                (*guard).set(pr);
+                let percentage_new = pr as f64 / total_pixels as f64 * 100.0;
+
+                let old_string = format!("{:.2}%", percentage_old);
+                let new_string = format!("{:.2}%", percentage_new);
+
+                if new_string != old_string {
+                    print!("\r{}", new_string);
+                    let _ = io::stdout().flush();
+                }
+            }
+        }
+
+        stats.total_time += total_timer.tick() as f64;
+        ACCEL_TRAV_TIME.with(
+            |att| {
+                stats.accel_traversal_time = att.get();
+                att.set(0.0);
+            }
+        );
+
+        // Collect stats
+        collected_stats.write().unwrap().collect(stats);
     }
 }
 

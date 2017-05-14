@@ -21,9 +21,7 @@ pub fn lerp<T: Lerp>(a: T, b: T, alpha: f32) -> T {
 /// Interpolates a slice of data as if each adjecent pair of elements
 /// represent a linear segment.
 pub fn lerp_slice<T: Lerp + Copy>(s: &[T], alpha: f32) -> T {
-    debug_assert!(
-        s.len() > 0,
-    );
+    debug_assert!(s.len() > 0);
     debug_assert!(alpha >= 0.0);
     debug_assert!(alpha <= 1.0);
 
@@ -43,9 +41,7 @@ pub fn lerp_slice_with<T, F>(s: &[T], alpha: f32, f: F) -> T
     where T: Copy,
           F: Fn(T, T, f32) -> T
 {
-    debug_assert!(
-        s.len() > 0,
-    );
+    debug_assert!(s.len() > 0);
     debug_assert!(alpha >= 0.0);
     debug_assert!(alpha <= 1.0);
 
