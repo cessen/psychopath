@@ -8,3 +8,6 @@ build = "build.rs"
 [lib]
 name = "blue_noise_mask"
 path = "src/lib.rs"
+
+[build-dependencies]
+rayon = "0.7"

@@ -8,6 +8,8 @@ use std::sync::{RwLock, Mutex};
 use crossbeam::sync::MsQueue;
 use scoped_threadpool::Pool;
 
+use blue_noise_mask;
+use blue_noise_mask::{MASKS, NUM_MASKS_WRAP_BITMASK};
 use halton;
 
 use algorithm::partition_pair;
@@ -135,16 +137,19 @@ impl<'a> Renderer<'a> {
                         // Generate light paths and initial rays
                         for y in bucket.y..(bucket.y + bucket.h) {
                             for x in bucket.x..(bucket.x + bucket.w) {
-                                let offset = hash_u32(((x as u32) << 16) ^ (y as u32), self.seed);
+                                let x = x as u32;
+                                let y = y as u32;
+
+                                let mask_i = blue_noise_mask::get_index_to_point(x, y) + ((self.seed as usize * 53) & NUM_MASKS_WRAP_BITMASK as usize);
+
                                 for si in 0..self.spp {
+                                    let si = si as u32;
                                     // Calculate image plane x and y coordinates
                                     let (img_x, img_y) = {
-                                        let filter_x =
-                                            fast_logit(halton::sample(4, offset + si as u32), 1.5) +
-                                            0.5;
+                                        let filter_x = 
+                                            fast_logit(rot_f32(halton::sample(0, si), MASKS[(mask_i + 4) & (MASKS.len() - 1)]), 1.5) + 0.5;
                                         let filter_y =
-                                            fast_logit(halton::sample(5, offset + si as u32), 1.5) +
-                                            0.5;
+                                            fast_logit(rot_f32(halton::sample(1, si), MASKS[(mask_i + 5) & (MASKS.len() - 1)]), 1.5) + 0.5;
                                         let samp_x = (filter_x + x as f32) * cmpx;
                                         let samp_y = (filter_y + y as f32) * cmpy;
                                         ((samp_x - 0.5) * x_extent, (0.5 - samp_y) * y_extent)
@@ -155,15 +160,12 @@ impl<'a> Renderer<'a> {
                                         LightPath::new(&self.scene,
                                                        (x, y),
                                                        (img_x, img_y),
-                                                       (halton::sample(0, offset + si as u32),
-                                                        halton::sample(1, offset + si as u32)),
-                                                       halton::sample(2, offset + si as u32),
-                                                       map_0_1_to_wavelength(halton::sample(3,
-
-                                                                                            offset +
-                                                                                            si as
-                                                                                            u32)),
-                                                       offset + si as u32);
+                                                       (rot_f32(halton::sample(2, si), MASKS[(mask_i + 0) & (MASKS.len() - 1)]),
+                                                        rot_f32(halton::sample(3, si), MASKS[(mask_i + 1) & (MASKS.len() - 1)])),
+                                                       rot_f32(halton::sample(4, si), MASKS[(mask_i + 2) & (MASKS.len() - 1)]),
+                                                       map_0_1_to_wavelength(rot_f32(halton::sample(5, si), MASKS[(mask_i + 3) & (MASKS.len() - 1)])),
+                                                       si,
+                                                       mask_i as u32);
                                     paths.push(path);
                                     rays.push(ray);
                                 }
@@ -310,6 +312,7 @@ pub struct LightPath {
     pixel_co: (u32, u32),
     lds_offset: u32,
     dim_offset: Cell<u32>,
+    mask_offset: Cell<u32>,
     time: f32,
     wavelength: f32,
 
@@ -328,7 +331,8 @@ impl LightPath {
            lens_uv: (f32, f32),
            time: f32,
            wavelength: f32,
-           lds_offset: u32)
+           lds_offset: u32,
+           mask_offset: u32)
            -> (LightPath, Ray) {
         (LightPath {
              event: LightPathEvent::CameraRay,
@@ -337,6 +341,7 @@ impl LightPath {
              pixel_co: pixel_co,
              lds_offset: lds_offset,
              dim_offset: Cell::new(6),
+             mask_offset: Cell::new(mask_offset + 6),
              time: time,
              wavelength: wavelength,
 
@@ -356,10 +361,13 @@ impl LightPath {
     }
 
     fn next_lds_samp(&self) -> f32 {
-        let s = halton::sample(self.dim_offset.get(), self.lds_offset);
-        let inc = self.dim_offset.get() + 1;
-        self.dim_offset.set(inc);
-        s
+        let dim = self.dim_offset.get();
+        let mask_i = self.mask_offset.get();
+        self.dim_offset.set(dim + 1);
+        self.mask_offset.set((mask_i + 1) & (MASKS.len() - 1) as u32);
+
+        let samp = halton::sample(dim, self.lds_offset);
+        rot_f32(samp, unsafe { *MASKS.get_unchecked(mask_i as usize) })
     }
 
     fn next(&mut self,
@@ -505,4 +513,16 @@ struct BucketJob {
     y: u32,
     w: u32,
     h: u32,
+}
+
+#[inline(always)]
+fn rot_f32(a: f32, b: f32) -> f32 {
+    //assert!(a >= 0.0);
+    //assert!(b >= 0.0);
+    let mut c = a + b;
+    while c >= 1.0 {
+        c -= 1.0;
+    }
+
+    c
 }

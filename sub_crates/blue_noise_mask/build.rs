@@ -1,5 +1,7 @@
 // Generate Blue Noise Mask tables.
 
+extern crate rayon;
+
 use std::cmp::Ordering;
 use std::env;
 use std::fs::File;
@@ -7,14 +9,19 @@ use std::io::Write;
 use std::ops::{Index, IndexMut};
 use std::path::Path;
 
+use rayon::prelude::*;
 
-const WINDOW_RADIUS: isize = 6;
-const FILTER_WIDTH: f32 = 1.0;
+const WINDOW_RADIUS: isize = 63;
+const FILTER_WIDTH: f32 = 1.2;
+const FILTER_PASSES: usize = 1;
 
 // These are specified in powers of two (2^N) for fast wrapping
 // in the generated Rust code.
 const NUM_MASKS_POW: usize = 7;  // 128
 const MASK_SIZE_POW: usize = 7;  // 128
+
+const MASK_SIZE: usize = 1 << MASK_SIZE_POW;
+const MASK_SIZE_BITMASK: usize = (1 << MASK_SIZE_POW) - 1;
 
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
@@ -22,7 +29,11 @@ fn main() {
     let mut f = File::create(&dest_path).unwrap();
 
     // Generate masks
-    let masks = (0..(1 << NUM_MASKS_POW) as u32).map(|i| blue_noise_mask(1 << MASK_SIZE_POW, i)).collect::<Vec<_>>();
+    let masks = (0..(1 << NUM_MASKS_POW))
+        .collect::<Vec<_>>()
+        .par_iter()
+        .map(|i| blue_noise_mask(*i))
+        .collect::<Vec<_>>();
 
     // Write the beginning bits of the file
     f.write_all(format!(r#"
@@ -32,34 +43,44 @@ fn main() {
 
 pub const NUM_MASKS: u32 = {};
 pub const MASK_SIZE: u32 = {};
-const NUM_MASKS_WRAP_BITMASK: u32 = {};
+pub const NUM_MASKS_WRAP_BITMASK: u32 = {};
 const MASK_SIZE_WRAP_BITMASK: u32 = {};
 const MASK_POINTS: u32 = {};
 
-pub fn get_point(mask_i: u32, x: u32, y: u32) -> f32 {{
-    let mask_i = mask_i & NUM_MASKS_WRAP_BITMASK;
+#[inline]
+pub fn get_point(x: u32, y: u32) -> &'static [f32] {{
+    let i = get_index_to_point(x, y);
+
+    &MASKS[i..(i + NUM_MASKS as usize)]
+}}
+
+#[inline]
+pub fn get_index_to_point(x: u32, y: u32) -> usize {{
     let x = x & MASK_SIZE_WRAP_BITMASK;
     let y = y & MASK_SIZE_WRAP_BITMASK;
 
-    unsafe {{ *MASKS.get_unchecked(((mask_i * MASK_POINTS) + (y * MASK_SIZE) + x) as usize) }}
+    ((y * MASK_SIZE * NUM_MASKS) + (x * NUM_MASKS)) as usize
 }}
 "#,
     1 << NUM_MASKS_POW,
-    1 << MASK_SIZE_POW,
+    MASK_SIZE,
     (1 << NUM_MASKS_POW) - 1,
-    (1 << MASK_SIZE_POW) - 1,
-    (1 << MASK_SIZE_POW) * (1 << MASK_SIZE_POW),
+    MASK_SIZE_BITMASK,
+    MASK_SIZE * MASK_SIZE,
     ).as_bytes()).unwrap();
 
     // Write the mask data
     f.write_all(format!(r#"
-const MASKS: [f32; {}] = [
-    "#, (1 << MASK_SIZE_POW) * (1 << MASK_SIZE_POW) * (1 << NUM_MASKS_POW)).as_bytes()).unwrap();
+pub static MASKS: [f32; {}] = [
+    "#, MASK_SIZE * MASK_SIZE * (1 << NUM_MASKS_POW)).as_bytes()).unwrap();
 
-    for mask in masks.iter() {
-        for v in mask.data.iter() {
-            f.write_all(format!(r#"    {:.8},
+    for y in 0..MASK_SIZE {
+        for x in 0..MASK_SIZE {
+            for mask in masks.iter() {
+                let v = mask[(x as isize, y as isize)];
+                f.write_all(format!(r#"    {:.8},
 "#, v).as_bytes()).unwrap();
+            }
         }
     }
 
@@ -71,32 +92,32 @@ const MASKS: [f32; {}] = [
 
 
 /// Creates a blue noise mask
-fn blue_noise_mask(tile_size: usize, seed: u32) -> Image {
-    let mut image = Image::new(tile_size, tile_size);
-
-    for (i, v) in image.data.iter_mut().enumerate() {
+fn blue_noise_mask(seed: u32) -> Mask {
+    // Generate white noise mask
+    let mut mask = Mask::new();
+    for (i, v) in mask.data.iter_mut().enumerate() {
         *v = hash_u32_to_f32(i as u32, seed);
     }
 
     // High pass and remap
-    for _ in 0..2 {
-        high_pass_filter(&mut image, WINDOW_RADIUS, FILTER_WIDTH);
-        remap_values(&mut image);
+    for _ in 0..FILTER_PASSES {
+        high_pass_filter(&mut mask, WINDOW_RADIUS, FILTER_WIDTH);
+        remap_values(&mut mask);
     }
 
-    image
+    mask
 }
 
-/// High pass filter for an Image
-fn high_pass_filter(image: &mut Image, window_radius: isize, filter_width: f32) {
+/// Performs a high pass filter on a Mask
+fn high_pass_filter(mask: &mut Mask, window_radius: isize, filter_width: f32) {
     // Precompute filter convolution matrix
     let conv = {
-        let mut conv = Image::new(window_radius as usize * 2 + 1, window_radius as usize * 2 + 1);
-        for j in (-window_radius)..window_radius {
-            for i in (-window_radius)..window_radius {
-                let n = (((j*j) + (i*i)) as f32).sqrt();
+        let mut conv = Mask::new();
+        for j in (-window_radius)..(window_radius + 1) {
+            for i in (-window_radius)..(window_radius + 1) {
+                let n = (((j * j) + (i * i)) as f32).sqrt();
                 //let n = (j.abs() + i.abs()) as f32;
-                conv.set_wrapped(gauss(n, filter_width), i,j);
+                conv[(i + window_radius, j + window_radius)] = sinc(n, filter_width);
             }
         }
 
@@ -108,47 +129,45 @@ fn high_pass_filter(image: &mut Image, window_radius: isize, filter_width: f32) 
         conv
     };
 
-    // Compute the low-pass image
-    let mut low_pass_img = Image::new(image.width, image.height);
-    for y in 0..image.height {
-        for x in 0..image.width {
-            for j in (-window_radius as isize)..window_radius {
-                for i in (-window_radius as isize)..window_radius {
+    // Compute the low-pass mask
+    let mut low_pass_mask = Mask::new();
+    for y in 0..MASK_SIZE {
+        for x in 0..MASK_SIZE {
+            for j in (-window_radius as isize)..(window_radius + 1) {
+                for i in (-window_radius as isize)..(window_radius + 1) {
                     let b = y as isize + j;
                     let a = x as isize + i;
-                    let alpha = conv.get_wrapped(i, j);
-                    low_pass_img[(x as isize, y as isize)] += image.get_wrapped(a, b) * alpha;
+                    let alpha = conv[(i + window_radius, j + window_radius)];
+                    low_pass_mask[(x as isize, y as isize)] += mask.get_wrapped(a, b) * alpha;
                 }
             }
         }
     }
 
     // Subtract low pass from original
-    for i in 0..image.data.len() {
-        image.data[i] -= low_pass_img.data[i] - 0.5;
+    for i in 0..mask.data.len() {
+        mask.data[i] -= low_pass_mask.data[i];
     }
 }
 
-/// Remaps the values in an Image to be linearly distributed within [0, 1]
-fn remap_values(image: &mut Image) {
-    let mut vals = Vec::with_capacity(image.width * image.height);
-    for y in 0..image.height {
-        for x in 0..image.width {
-            vals.push((image[(x as isize, y as isize)], x, y));
+/// Remaps the values in a Mask to be linearly distributed within [0, 1]
+fn remap_values(mask: &mut Mask) {
+    let mut vals = Vec::with_capacity(MASK_SIZE * MASK_SIZE);
+    for y in 0..MASK_SIZE {
+        for x in 0..MASK_SIZE {
+            vals.push((mask[(x as isize, y as isize)], x, y));
         }
     }
-    vals.sort_by(|a, b| {
-        if a < b {
-            Ordering::Less
-        } else {
-            Ordering::Greater
-        }   
+    vals.sort_by(|a, b| if a < b {
+        Ordering::Less
+    } else {
+        Ordering::Greater
     });
-    let inc = 1.0 / (image.data.len() - 1) as f32;
-    let mut nor_v = 0.0;
+    let inc = 1.0 / (vals.len() - 1) as f32;
+    let mut n = 0.0;
     for v in vals.iter() {
-        image[(v.1 as isize, v.2 as isize)] = nor_v;
-        nor_v += inc;
+        mask[(v.1 as isize, v.2 as isize)] = n;
+        n += inc;
     }
 }
 
@@ -157,6 +176,16 @@ fn gauss(x: f32, sd: f32) -> f32 {
     let norm = 1.0 / (2.0 * std::f32::consts::PI * sd * sd).sqrt();
     let dist = ((-x * x) / (2.0 * sd * sd)).exp();
     norm * dist
+}
+
+// Sinc filter function
+fn sinc(x: f32, w: f32) -> f32 {
+    if x == 0.0 {
+        1.0
+    } else {
+        let x = x * std::f32::consts::PI / w;
+        x.sin() / x
+    }
 }
 
 /// Returns a random float in [0, 1] based on 'n' and a seed.
@@ -175,59 +204,34 @@ pub fn hash_u32_to_f32(n: u32, seed: u32) -> f32 {
     return hash as f32 * INV_MAX;
 }
 
-struct Image {
+
+// Holds data for a 2d mask
+struct Mask {
     data: Vec<f32>,
-    width: usize,
-    height: usize,
 }
 
-impl Image {
-    fn new(width: usize, height: usize) -> Image {
-        Image {
-            data: vec![0.0; width * height],
-            width: width,
-            height: height,
-        }
+impl Mask {
+    fn new() -> Mask {
+        Mask { data: vec![0.0; MASK_SIZE * MASK_SIZE] }
     }
 
-    fn get_wrapped(&self, mut ix: isize, mut iy: isize) -> f32 {
-        while ix < 0 {
-            ix += self.width as isize;
-        }
-        while iy < 1 {
-            iy += self.height as isize;
-        }
+    fn get_wrapped(&self, ix: isize, iy: isize) -> f32 {
+        let x = (ix + MASK_SIZE as isize) as usize & MASK_SIZE_BITMASK;
+        let y = (iy + MASK_SIZE as isize) as usize & MASK_SIZE_BITMASK;
 
-        let x = ix as usize % self.width;
-        let y = iy as usize % self.height;
-
-        self.data[y * self.width + x]
-    }
-
-    fn set_wrapped(&mut self, v: f32, mut ix: isize, mut iy: isize){
-        while ix < 0 {
-            ix += self.width as isize;
-        }
-        while iy < 1 {
-            iy += self.height as isize;
-        }
-
-        let x = ix as usize % self.width;
-        let y = iy as usize % self.height;
-
-        self.data[y * self.width + x] = v
+        self.data[(y << MASK_SIZE_POW) + x]
     }
 }
 
-impl Index<(isize, isize)> for Image {
+impl Index<(isize, isize)> for Mask {
     type Output = f32;
     fn index(&self, index: (isize, isize)) -> &f32 {
-        &self.data[index.1 as usize * self.width + index.0 as usize]
+        &self.data[index.1 as usize * MASK_SIZE + index.0 as usize]
     }
 }
 
-impl IndexMut<(isize, isize)> for Image {
+impl IndexMut<(isize, isize)> for Mask {
     fn index_mut(&mut self, index: (isize, isize)) -> &mut f32 {
-        &mut self.data[index.1 as usize * self.width + index.0 as usize]
+        &mut self.data[index.1 as usize * MASK_SIZE + index.0 as usize]
     }
 }
