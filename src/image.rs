@@ -168,18 +168,22 @@ impl Image {
             }
         }
 
-        let mut wr = openexr::ExrWriterBuilder::new(path)
-            .display_window((0, 0), ((self.res.0 - 1) as i32, (self.res.1 - 1) as i32))
-            .data_window((0, 0), ((self.res.0 - 1) as i32, (self.res.1 - 1) as i32))
-            .insert_channel("R", openexr::Channel::with_type(openexr::PixelType::F32))
-            .insert_channel("G", openexr::Channel::with_type(openexr::PixelType::F32))
-            .insert_channel("B", openexr::Channel::with_type(openexr::PixelType::F32))
-            .open();
+        let mut wr = openexr::OutputFile::from_file(
+            path,
+            (self.res.0 as u32, self.res.1 as u32),
+            &[
+                ("R", openexr::PixelType::FLOAT),
+                ("G", openexr::PixelType::FLOAT),
+                ("B", openexr::PixelType::FLOAT),
+            ],
+            openexr::Compression::PIZ_COMPRESSION,
+        )
+                .unwrap();
 
         let mut fb = {
             // Create the frame buffer
             let mut fb = openexr::FrameBuffer::new(self.res.0, self.res.1);
-            fb.add_structured_slice(&mut image, &[("R", 0.0), ("G", 0.0), ("B", 0.0)]);
+            fb.insert_pixels(&[("R", 0.0), ("G", 0.0), ("B", 0.0)], &mut image);
             fb
         };
 

@@ -30,10 +30,8 @@ crossbeam = "0.2"
 num_cpus = "1.0"
 lodepng = "0.8"
 lazy_static = "0.2"
+openexr = "0.2"
 
-
-# Github dependencies
-openexr = { git = "https://github.com/cessen/openexr-rs", rev = "612fc6c81c031970ffddcab15509236711613de8" }
 
 # Local crate dependencies
 [dependencies.float4]
