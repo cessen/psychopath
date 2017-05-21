@@ -10,6 +10,7 @@ use std::mem;
 use std::path::Path;
 use std::sync::Mutex;
 
+use half::f16;
 use lodepng;
 use openexr;
 
@@ -164,19 +165,18 @@ impl Image {
         for y in 0..self.res.1 {
             for x in 0..self.res.0 {
                 let (r, g, b) = xyz_to_rec709e(self.get(x, y).to_tuple());
-                image.push((r, g, b));
+                image.push((f16::from_f32(r), f16::from_f32(g), f16::from_f32(b)));
             }
         }
 
-        let mut wr = openexr::OutputFile::from_file(
+        let mut wr = openexr::ScanlineOutputFile::new(
             path,
-            (self.res.0 as u32, self.res.1 as u32),
-            &[
-                ("R", openexr::PixelType::FLOAT),
-                ("G", openexr::PixelType::FLOAT),
-                ("B", openexr::PixelType::FLOAT),
-            ],
-            openexr::Compression::PIZ_COMPRESSION,
+            openexr::Header::new()
+                .set_resolution(self.res.0 as u32, self.res.1 as u32)
+                .add_channel("R", openexr::PixelType::HALF)
+                .add_channel("G", openexr::PixelType::HALF)
+                .add_channel("B", openexr::PixelType::HALF)
+                .set_compression(openexr::Compression::PIZ_COMPRESSION),
         )
                 .unwrap();
 

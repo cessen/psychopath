@@ -21,17 +21,17 @@ debug = true
 
 [dependencies]
 # Crates.io dependencies
-time = "0.1"
 clap = "2.23"
-rustc-serialize = "0.3"
-nom = "1.2"
-scoped_threadpool = "0.1"
 crossbeam = "0.2"
-num_cpus = "1.0"
-lodepng = "0.8"
+half = "1.0"
 lazy_static = "0.2"
-openexr = "0.2"
-
+lodepng = "0.8"
+nom = "1.2"
+num_cpus = "1.0"
+openexr = "0.3.1"
+rustc-serialize = "0.3"
+scoped_threadpool = "0.1"
+time = "0.1"
 
 # Local crate dependencies
 [dependencies.float4]

@@ -4,8 +4,9 @@ extern crate math3d;
 extern crate mem_arena;
 extern crate spectra_xyz;
 
-extern crate crossbeam;
 extern crate clap;
+extern crate crossbeam;
+extern crate half;
 extern crate lodepng;
 extern crate num_cpus;
 extern crate openexr;
