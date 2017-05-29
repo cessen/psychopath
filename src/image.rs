@@ -11,7 +11,7 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use half::f16;
-use lodepng;
+use png_encode_mini;
 use openexr;
 
 use color::{XYZ, xyz_to_rec709e};
@@ -92,7 +92,7 @@ impl Image {
 
     pub fn write_ascii_ppm(&mut self, path: &Path) -> io::Result<()> {
         // Open file.
-        let mut f = io::BufWriter::new(try!(File::create(path)));
+        let mut f = io::BufWriter::new(File::create(path)?);
 
         // Write header
         try!(write!(f, "P3\n{} {}\n255\n", self.res.0, self.res.1));
@@ -112,7 +112,7 @@ impl Image {
 
     pub fn write_binary_ppm(&mut self, path: &Path) -> io::Result<()> {
         // Open file.
-        let mut f = io::BufWriter::new(try!(File::create(path)));
+        let mut f = io::BufWriter::new(File::create(path)?);
 
         // Write header
         try!(write!(f, "P6\n{} {}\n255\n", self.res.0, self.res.1));
@@ -134,25 +134,25 @@ impl Image {
         let mut image = Vec::new();
 
         // Convert pixels
-        for y in 0..self.res.1 {
-            for x in 0..self.res.0 {
-                let (r, g, b) = quantize_tri_255(xyz_to_srgbe(self.get(x, y).to_tuple()));
-                let d = lodepng::RGB::new(r, g, b);
-                image.push(d);
+        let res_x = self.res.0;
+        let res_y = self.res.1;
+        for y in 0..res_y {
+            for x in 0..res_x {
+                let (r, g, b) = quantize_tri_255(xyz_to_srgbe(self.get(x, res_y - 1 - y).to_tuple()));
+                image.push(r);
+                image.push(g);
+                image.push(b);
+                image.push(255);
             }
         }
 
         // Write file
-        if let Err(_) = lodepng::encode_file(
-            path,
+        png_encode_mini::write_rgba_from_u8(
+            &mut File::create(path)?,
             &image,
-            self.res.0,
-            self.res.1,
-            lodepng::ColorType::LCT_RGB,
-            8,
-        ) {
-            panic!("Couldn't write PNG file.");
-        }
+            self.res.0 as u32,
+            self.res.1 as u32,
+        )?;
 
         // Done
         Ok(())
@@ -169,8 +169,9 @@ impl Image {
             }
         }
 
+        let mut file = io::BufWriter::new(File::create(path).unwrap());
         let mut wr = openexr::ScanlineOutputFile::new(
-            path,
+            &mut file,
             openexr::Header::new()
                 .set_resolution(self.res.0 as u32, self.res.1 as u32)
                 .add_channel("R", openexr::PixelType::HALF)
@@ -183,11 +184,11 @@ impl Image {
         let mut fb = {
             // Create the frame buffer
             let mut fb = openexr::FrameBuffer::new(self.res.0, self.res.1);
-            fb.insert_pixels(&[("R", 0.0), ("G", 0.0), ("B", 0.0)], &mut image);
+            fb.insert_channels(&["R", "G", "B"], &mut image);
             fb
         };
 
-        wr.write_pixels(&mut fb);
+        wr.write_pixels(&mut fb).unwrap();
     }
 }
 

@@ -23,11 +23,6 @@ version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "c_vec"
-version = "1.0.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
 name = "clap"
 version = "2.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -56,7 +51,7 @@ dependencies = [
 
 [[package]]
 name = "gcc"
-version = "0.3.46"
+version = "0.3.49"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -88,16 +83,6 @@ version = "0.2.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "lodepng"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "c_vec 1.0.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
- "rgb 0.5.7 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "math3d"
 version = "0.1.0"
 dependencies = [
@@ -115,7 +100,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "num_cpus"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -123,20 +108,20 @@ dependencies = [
 
 [[package]]
 name = "openexr"
-version = "0.3.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "half 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
- "openexr-sys 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "openexr-sys 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "openexr-sys"
-version = "0.3.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "gcc 0.3.46 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gcc 0.3.49 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "pkg-config 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -144,6 +129,11 @@ dependencies = [
 [[package]]
 name = "pkg-config"
 version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "png_encode_mini"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -156,12 +146,12 @@ dependencies = [
  "half 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "halton 0.1.0",
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "lodepng 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "math3d 0.1.0",
  "mem_arena 0.1.0",
  "nom 1.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "num_cpus 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "openexr 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num_cpus 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "openexr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "png_encode_mini 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "scoped_threadpool 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "sobol 0.1.0",
@@ -172,11 +162,6 @@ dependencies = [
 [[package]]
 name = "redox_syscall"
 version = "0.1.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "rgb"
-version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -253,22 +238,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum ansi_term 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "23ac7c30002a5accbf7e8987d0632fa6de155b7c3d39d0067317a391e00a2ef6"
 "checksum atty 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d912da0db7fa85514874458ca3651fe2cddace8d0b0505571dbdcd41ab490159"
 "checksum bitflags 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1370e9fc2a6ae53aea8b7a5110edbd08836ed87c88736dfabccade1c2b44bff4"
-"checksum c_vec 1.0.12 (registry+https://github.com/rust-lang/crates.io-index)" = "aa9e1d9f7d49e289f36f19effbf3d5a5e30163ecf9c7a3c9be94d5374dec5b9a"
 "checksum clap 2.24.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6b8f69e518f967224e628896b54e41ff6acfb4dcfefc5076325c36525dac900f"
 "checksum crossbeam 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)" = "0c5ea215664ca264da8a9d9c3be80d2eaf30923c259d03e870388eb927508f97"
-"checksum gcc 0.3.46 (registry+https://github.com/rust-lang/crates.io-index)" = "181e3cebba1d663bd92eb90e2da787e10597e027eb00de8d742b260a7850948f"
+"checksum gcc 0.3.49 (registry+https://github.com/rust-lang/crates.io-index)" = "9be730064c122681712957ba1a9abaf082150be8aaf94526a805d900015b65b9"
 "checksum half 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "63d68db75012a85555434ee079e7e6337931f87a087ab2988becbadf64673a7f"
 "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
 "checksum lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "3b37545ab726dd833ec6420aaba8231c5b320814b9029ad585555d2a03e94fbf"
 "checksum libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)" = "e7eb6b826bfc1fdea7935d46556250d1799b7fe2d9f7951071f4291710665e3e"
-"checksum lodepng 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2949340106c6ddacb872a8bceb940e39e332739873d56c1315917778527f8779"
 "checksum nom 1.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "a5b8c256fd9471521bcb84c3cdba98921497f1a331cbc15b8030fc63b82050ce"
-"checksum num_cpus 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ca313f1862c7ec3e0dfe8ace9fa91b1d9cb5c84ace3d00f5ec4216238e93c167"
-"checksum openexr 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "208c1afa34cad9a692bc447496cb134e7d36376a7f0f9cc5e295bb5128c19256"
-"checksum openexr-sys 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "1b1f615eea5fe0336a6af762f3d9dfcb028ab65cc177b46ffdda386b93bb6676"
+"checksum num_cpus 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f6e850c7f35c3de263e6094e819f6b4b9c09190ff4438fc6dec1aef1568547bc"
+"checksum openexr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "849a5af32d6b0716cf44a8b18c1b611b8448aec44a9b1c59b6199bf9d22aba94"
+"checksum openexr-sys 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d597730c7049d9098ce64bb97c6eb4e6f96fa55d5ced7eba74a01c224fe0bcc4"
 "checksum pkg-config 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "3a8b4c6b8165cd1a1cd4b9b120978131389f64bdaf456435caa41e630edba903"
+"checksum png_encode_mini 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "116ae962ea1a679f99915c2c53dc470b45aaf6b42e607580d16fce8c6248f666"
 "checksum redox_syscall 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)" = "29dbdfd4b9df8ab31dec47c6087b7b13cbf4a776f335e4de8efba8288dda075b"
-"checksum rgb 0.5.7 (registry+https://github.com/rust-lang/crates.io-index)" = "4db5350eea2dbb4f4972c4fb4d980b70c3f0ed3983eb2f66d174a43457514a14"
 "checksum rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)" = "dcf128d1287d2ea9d80910b5f1120d0b8eede3fbf1abe91c40d39ea7d51e6fda"
 "checksum scoped_threadpool 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "3ef399c8893e8cb7aa9696e895427fab3a6bf265977bb96e126f24ddd2cda85a"
 "checksum simd 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7a94d14a2ae1f1f110937de5fb69e494372560181c7e1739a097fcc2cee37ba0"
