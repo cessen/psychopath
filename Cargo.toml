@@ -21,6 +21,7 @@ debug = true
 
 [dependencies]
 # Crates.io dependencies
+base64 = "0.5"
 clap = "2.23"
 crossbeam = "0.2"
 half = "1.0"

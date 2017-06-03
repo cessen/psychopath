@@ -3,6 +3,12 @@ import bpy
 from math import degrees, pi, log
 from mathutils import Vector, Matrix
 
+class ExportCancelled(Exception):
+    """ Indicates that the render was cancelled in the middle of exporting
+        the scene file.
+    """
+    pass
+
 
 def mat2str(m):
     """ Converts a matrix into a single-line string of values.
@@ -87,7 +93,8 @@ class IndentedWriter:
 
 
 class PsychoExporter:
-    def __init__(self, scene):
+    def __init__(self, render_engine, scene):
+        self.render_engine = render_engine
         self.scene = scene
 
         self.mesh_names = {}
@@ -112,9 +119,22 @@ class PsychoExporter:
         else:
             self.scene.frame_set(frame-1, 1.0+fraction)
 
-
     def export_psy(self, export_path, render_image_path):
-        f = open(export_path, 'w')
+        try:
+            f = open(export_path, 'w')
+            self._export_psy(f, export_path, render_image_path)
+        except ExportCancelled:
+            # Cleanup
+            f.close()
+            self.scene.frame_set(self.fr)
+            return False
+        else:
+            # Cleanup
+            f.close()
+            self.scene.frame_set(self.fr)
+            return True
+
+    def _export_psy(self, f, export_path, render_image_path):
         self.w = IndentedWriter(f)
 
         # Info
@@ -168,6 +188,10 @@ class PsychoExporter:
         matz = Matrix()
         matz[2][2] = -1
         for i in range(self.time_samples):
+            # Check if render is cancelled
+            if self.render_engine.test_break():
+                raise ExportCancelled()
+
             if res_x >= res_y:
                 self.w.write("Fov [%f]\n" % degrees(cam.data.angle))
             else:
@@ -222,9 +246,6 @@ class PsychoExporter:
         self.w.unindent()
         self.w.write("}\n")
 
-        # Cleanup
-        f.close()
-        self.scene.frame_set(self.fr)
 
 
     def export_materials(self, materials):
@@ -243,6 +264,10 @@ class PsychoExporter:
 
     def export_objects(self, objects, visible_layers, group_prefix="", translation_offset=(0,0,0)):
         for ob in objects:
+            # Check if render is cancelled
+            if self.render_engine.test_break():
+                raise ExportCancelled()
+
             # Check if the object is visible for rendering
             vis_layer = False
             for i in range(len(ob.layers)):
@@ -278,6 +303,9 @@ class PsychoExporter:
 
                 if needs_xform_mb(ob):
                     for i in range(self.time_samples):
+                        # Check if render is cancelled
+                        if self.render_engine.test_break():
+                            raise ExportCancelled()
                         self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
                         mat = ob.matrix_world.copy()
                         mat[0][3] += translation_offset[0]
@@ -316,6 +344,9 @@ class PsychoExporter:
         # Collect time samples
         time_meshes = []
         for i in range(self.time_samples):
+            # Check if render is cancelled
+            if self.render_engine.test_break():
+                raise ExportCancelled()
             self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
             if export_mesh and (deform_mb or i == 0):
                 time_meshes += [ob.to_mesh(self.scene, True, 'RENDER')]
@@ -366,6 +397,9 @@ class PsychoExporter:
         # Collect time samples
         time_surfaces = []
         for i in range(self.time_samples):
+            # Check if render is cancelled
+            if self.render_engine.test_break():
+                raise ExportCancelled()
             self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
             time_surfaces += [ob.data.copy()]
 
@@ -393,6 +427,9 @@ class PsychoExporter:
         time_col = []
         time_rad = []
         for i in range(self.time_samples):
+            # Check if render is cancelled
+            if self.render_engine.test_break():
+                raise ExportCancelled()
             self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
             time_col += [ob.data.color * ob.data.energy]
             time_rad += [ob.data.shadow_soft_size]
@@ -417,6 +454,9 @@ class PsychoExporter:
         time_col = []
         time_dim = []
         for i in range(self.time_samples):
+            # Check if render is cancelled
+            if self.render_engine.test_break():
+                raise ExportCancelled()
             self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
             time_col += [ob.data.color * ob.data.energy]
             if ob.data.shape == 'RECTANGLE':
@@ -446,6 +486,9 @@ class PsychoExporter:
         time_col = []
         time_rad = []
         for i in range(self.time_samples):
+            # Check if render is cancelled
+            if self.render_engine.test_break():
+                raise ExportCancelled()
             self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
             time_dir += [tuple(ob.matrix_world.to_3x3() * Vector((0, 0, -1)))]
             time_col += [ob.data.color * ob.data.energy]

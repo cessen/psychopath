@@ -4,6 +4,7 @@ extern crate math3d;
 extern crate mem_arena;
 extern crate spectra_xyz;
 
+extern crate base64;
 extern crate clap;
 extern crate crossbeam;
 extern crate half;
@@ -141,6 +142,12 @@ fn main() {
                 .long("dev")
                 .help("Show useful dev/debug info.")
         )
+        .arg(
+            Arg::with_name("blender_output")
+                .long("blender_output")
+                .help("Used by PsychoBlend to pass render output through standard in/out.")
+                .hidden(true)
+        )
         .get_matches();
 
     // Print some misc useful dev info.
@@ -207,7 +214,11 @@ fn main() {
                 println!("\tBuilt scene in {:.3}s", t.tick());
 
                 println!("Rendering scene with {} threads...", thread_count);
-                let (mut image, rstats) = r.render(max_samples_per_bucket, thread_count);
+                let (mut image, rstats) = r.render(
+                    max_samples_per_bucket,
+                    thread_count,
+                    args.is_present("blender_output"),
+                );
                 // Print render stats
                 {
                     let rtime = t.tick();
@@ -235,15 +246,17 @@ fn main() {
                     );
                 }
 
-                println!("Writing image to disk...");
-                if r.output_file.ends_with(".png") {
-                    let _ = image.write_png(Path::new(&r.output_file));
-                } else if r.output_file.ends_with(".exr") {
-                    image.write_exr(Path::new(&r.output_file));
-                } else {
-                    panic!("Unknown output file extension.");
+                if !args.is_present("blender_output") {
+                    println!("Writing image to disk...");
+                    if r.output_file.ends_with(".png") {
+                        let _ = image.write_png(Path::new(&r.output_file));
+                    } else if r.output_file.ends_with(".exr") {
+                        image.write_exr(Path::new(&r.output_file));
+                    } else {
+                        panic!("Unknown output file extension.");
+                    }
+                    println!("\tWrote image in {:.3}s", t.tick());
                 }
-                println!("\tWrote image in {:.3}s", t.tick());
 
                 // Print memory stats if stats are wanted.
                 if args.is_present("stats") {

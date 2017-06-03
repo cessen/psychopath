@@ -220,6 +220,33 @@ impl<'a> Bucket<'a> {
 
         data[img.res.0 * y as usize + x as usize] = value;
     }
+
+    /// Returns the bucket's contents encoded in base64.
+    ///
+    /// `color_convert` lets you do a colorspace conversion before base64
+    /// encoding if desired.
+    ///
+    /// The data is laid out as four-floats-per-pixel in scanline order before
+    /// encoding to base64.  The fourth channel is alpha, and is set to 1.0 for
+    /// all pixels.
+    pub fn rgba_base64<F>(&mut self, color_convert: F) -> String
+        where F: Fn((f32, f32, f32)) -> (f32, f32, f32)
+    {
+        use base64;
+        use std::slice;
+        let mut data = Vec::with_capacity((4 * (self.max.0 - self.min.0) * (self.max.1 - self.min.1)) as usize);
+        for y in self.min.1..self.max.1 {
+            for x in self.min.0..self.max.0 {
+                let color = color_convert(self.get(x, y).to_tuple());
+                data.push(color.0);
+                data.push(color.1);
+                data.push(color.2);
+                data.push(1.0);
+            }
+        }
+        let data_u8 = unsafe { slice::from_raw_parts(&data[0] as *const f32 as *const u8, data.len() * 4) };
+        base64::encode(data_u8)
+    }
 }
 
 impl<'a> Drop for Bucket<'a> {

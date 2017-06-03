@@ -3,6 +3,8 @@ import time
 import os
 import subprocess
 import tempfile
+import base64
+import struct
 from . import psy_export
 
 def get_temp_filename(suffix=""):
@@ -39,8 +41,8 @@ class PsychopathRender(bpy.types.RenderEngine):
         return ""
 
     def _export(self, scene, export_path, render_image_path):
-        exporter = psy_export.PsychoExporter(scene)
-        exporter.export_psy(export_path, render_image_path)
+        exporter = psy_export.PsychoExporter(self, scene)
+        return exporter.export_psy(export_path, render_image_path)
 
     def _render(self, scene, psy_filepath):
         psy_binary = PsychopathRender._locate_binary()
@@ -49,7 +51,7 @@ class PsychopathRender(bpy.types.RenderEngine):
             return False
 
         # TODO: figure out command line options
-        args = ["--spb", str(scene.psychopath.max_samples_per_bucket), "-i", psy_filepath]
+        args = ["--spb", str(scene.psychopath.max_samples_per_bucket), "--blender_output", "-i", psy_filepath]
 
         # Start Rendering!
         try:
@@ -65,27 +67,24 @@ class PsychopathRender(bpy.types.RenderEngine):
 
         return True
 
+    def _draw_bucket(self, bucket_info, pixels_encoded):
+        x = bucket_info[0]
+        y = self.size_y - bucket_info[3]
+        width = bucket_info[2] - bucket_info[0]
+        height = bucket_info[3] - bucket_info[1]
 
-    def _cleanup(self):
-        # for f in (self._temp_file_in, self._temp_file_ini, self._temp_file_out):
-        #     for i in range(5):
-        #         try:
-        #             os.unlink(f)
-        #             break
-        #         except OSError:
-        #             # Wait a bit before retrying file might be still in use by Blender,
-        #             # and Windows does not know how to delete a file in use!
-        #             time.sleep(self.DELAY)
-        # for i in unpacked_images:
-        #     for c in range(5):
-        #         try:
-        #             os.unlink(i)
-        #             break
-        #         except OSError:
-        #             # Wait a bit before retrying file might be still in use by Blender,
-        #             # and Windows does not know how to delete a file in use!
-        #             time.sleep(self.DELAY)
-        pass
+        # Decode pixel data
+        pixels = [p for p in struct.iter_unpack("ffff", base64.b64decode(pixels_encoded))]
+        pixels_flipped = []
+        for i in range(height):
+            n = height - i - 1
+            pixels_flipped += pixels[n*width:(n+1)*width]
+
+        # Write pixel data to render image
+        result = self.begin_result(x, y, width, height)
+        lay = result.layers[0].passes["Combined"]
+        lay.rect = pixels_flipped
+        self.end_result(result)
 
     def render(self, scene):
         # has to be called to update the frame on exporting animations
@@ -103,7 +102,10 @@ class PsychopathRender(bpy.types.RenderEngine):
 
         # start export
         self.update_stats("", "Psychopath: Exporting data from Blender")
-        self._export(scene, export_path, render_image_path)
+        if not self._export(scene, export_path, render_image_path):
+            # Render cancelled in the middle of exporting,
+            # so just return.
+            return
 
         # Start rendering
         self.update_stats("", "Psychopath: Rendering from exported file")
@@ -113,54 +115,78 @@ class PsychopathRender(bpy.types.RenderEngine):
 
         r = scene.render
         # compute resolution
-        x = int(r.resolution_x * r.resolution_percentage)
-        y = int(r.resolution_y * r.resolution_percentage)
+        self.size_x = int(r.resolution_x * r.resolution_percentage / 100)
+        self.size_y = int(r.resolution_y * r.resolution_percentage / 100)
 
-        result = self.begin_result(0, 0, x, y)
-        lay = result.layers[0]
+        # If we can, make the render process's stdout non-blocking.  The
+        # benefit of this is that canceling the render won't block waiting
+        # for the next piece of input.
+        try:
+            import fcntl
+            fd = self._process.stdout.fileno()
+            fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+            fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+        except:
+            print("NOTE: Can't make Psychopath's stdout non-blocking, so canceling renders may take a moment to respond.")
 
-        # TODO: Update viewport with render result while rendering
+        # Process output from rendering process
+        reached_first_bucket = False
         output = b""
         while self._process.poll() == None:
-            # Wait for self.DELAY seconds, but check for render cancels
-            # and progress updates while waiting.
-            t = 0.0
-            while t < self.DELAY:
+            # Wait for render process output while checking for render
+            # cancellation
+            while True:
                 # Check for render cancel
                 if self.test_break():
                     self._process.terminate()
                     break
 
-                # Update render progress bar
-                output += self._process.stdout.read1(2**16)
-                outputs = output.rsplit(b'\r')
-                progress = 0.0
-                if len(outputs) > 0 and outputs[-1][-1] == b"%"[0]:
+                # Get render output from stdin
+                tmp = self._process.stdout.read1(2**16)
+                if len(tmp) == 0:
+                    time.sleep(0.01)
+                    continue
+                else:
+                    break
+            output += tmp
+            outputs = output.split(b'DIV\n')
+
+            # Skip render process output until we hit the first bucket.
+            # (The stuff before it is just informational printouts.)
+            if not reached_first_bucket:
+                if len(outputs) > 1:
+                    reached_first_bucket = True
+                    outputs = outputs[1:]
+                else:
+                    continue
+
+            # Clear output buffer, since it's all in 'outputs' now.
+            output = b""
+
+            # Process buckets
+            for bucket in outputs:
+                if len(bucket) == 0:
+                    continue
+
+                if bucket[-11:] == b'BUCKET_END\n':
+                    # Parse bucket text
+                    contents = bucket.split(b'\n')
+                    percentage = contents[0]
+                    bucket_info = [int(i) for i in contents[1].split(b' ')]
+                    pixels = contents[2]
+
+                    # Draw the bucket
+                    self._draw_bucket(bucket_info, pixels)
+
+                    # Update render progress bar
                     try:
-                        progress = float(outputs[-1][:-1])
+                        progress = float(percentage[:-1])
                     except ValueError:
                         pass
                     finally:
                         self.update_progress(progress/100)
-
-                time.sleep(0.05)
-                t += 0.05
-
-            # # Update viewport image with latest render output
-            # if os.path.exists(render_image_path):
-            #     # This assumes the file has been fully written We wait a bit, just in case!
-            #     try:
-            #         lay.load_from_file(render_image_path)
-            #         self.update_result(result)
-            #     except RuntimeError:
-            #         pass
-
-        # Load final image
-        lay.load_from_file(render_image_path)
-        self.end_result(result)
-
-        # Delete temporary image file
-        os.remove(render_image_path)
+                else:
+                    output += bucket
 
 def register():
     bpy.utils.register_class(PsychopathRender)

@@ -68,7 +68,7 @@ impl RenderStats {
 }
 
 impl<'a> Renderer<'a> {
-    pub fn render(&self, max_samples_per_bucket: u32, thread_count: u32) -> (Image, RenderStats) {
+    pub fn render(&self, max_samples_per_bucket: u32, thread_count: u32, do_blender_output: bool) -> (Image, RenderStats) {
         let mut tpool = Pool::new(thread_count);
 
         let image = Image::new(self.resolution.0, self.resolution.1);
@@ -94,7 +94,7 @@ impl<'a> Renderer<'a> {
                     let img = &image;
                     let cstats = &collective_stats;
                     let pixrenref = &pixels_rendered;
-                    scope.execute(move || self.render_job(jq, ajq, img, cstats, pixrenref));
+                    scope.execute(move || self.render_job(jq, ajq, img, cstats, pixrenref, do_blender_output));
                 }
 
                 // Print initial 0.00% progress
@@ -164,7 +164,7 @@ impl<'a> Renderer<'a> {
     }
 
     /// Waits for buckets in the job queue to render and renders them when available.
-    fn render_job(&self, job_queue: &MsQueue<BucketJob>, all_jobs_queued: &RwLock<bool>, image: &Image, collected_stats: &RwLock<RenderStats>, pixels_rendered: &Mutex<Cell<usize>>) {
+    fn render_job(&self, job_queue: &MsQueue<BucketJob>, all_jobs_queued: &RwLock<bool>, image: &Image, collected_stats: &RwLock<RenderStats>, pixels_rendered: &Mutex<Cell<usize>>, do_blender_output: bool) {
         let mut stats = RenderStats::new();
         let mut timer = Timer::new();
         let mut total_timer = Timer::new();
@@ -251,8 +251,8 @@ impl<'a> Renderer<'a> {
                 stats.ray_generation_time += timer.tick() as f64;
             }
 
-            // Calculate color based on ray hits and save to image
             {
+                // Calculate color based on ray hits and save to image
                 let min = (bucket.x, bucket.y);
                 let max = (bucket.x + bucket.w, bucket.y + bucket.h);
                 let mut img_bucket = image.get_bucket(min, max);
@@ -263,10 +263,8 @@ impl<'a> Renderer<'a> {
                     img_bucket.set(path.pixel_co.0, path.pixel_co.1, col);
                 }
                 stats.sample_writing_time += timer.tick() as f64;
-            }
 
-            // Print render progress
-            {
+                // Print render progress, and image data if doing blender output
                 let guard = pixels_rendered.lock().unwrap();
                 let mut pr = (*guard).get();
                 let percentage_old = pr as f64 / total_pixels as f64 * 100.0;
@@ -278,10 +276,20 @@ impl<'a> Renderer<'a> {
                 let old_string = format!("{:.2}%", percentage_old);
                 let new_string = format!("{:.2}%", percentage_new);
 
-                if new_string != old_string {
-                    print!("\r{}", new_string);
-                    let _ = io::stdout().flush();
+                if do_blender_output {
+                    use color::xyz_to_rec709e;
+                    println!("DIV");
+                    println!("{}", new_string);
+                    println!("{} {} {} {}", min.0, min.1, max.0, max.1);
+                    println!("{}", img_bucket.rgba_base64(xyz_to_rec709e));
+                    println!("BUCKET_END");
+                    println!("DIV");
+                } else {
+                    if new_string != old_string {
+                        print!("\r{}", new_string);
+                    }
                 }
+                let _ = io::stdout().flush();
             }
         }
 
