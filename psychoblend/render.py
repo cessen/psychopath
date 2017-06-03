@@ -132,22 +132,24 @@ class PsychopathRender(bpy.types.RenderEngine):
         # Process output from rendering process
         reached_first_bucket = False
         output = b""
-        while self._process.poll() == None:
-            # Wait for render process output while checking for render
-            # cancellation
-            while True:
-                # Check for render cancel
-                if self.test_break():
-                    self._process.terminate()
-                    break
+        render_process_finished = False
+        all_output_consumed = False
+        while not (render_process_finished and all_output_consumed):
+            if self._process.poll() != None:
+                render_process_finished = True
 
-                # Get render output from stdin
-                tmp = self._process.stdout.read1(2**16)
-                if len(tmp) == 0:
-                    time.sleep(0.01)
-                    continue
-                else:
-                    break
+            # Check for render cancel
+            if self.test_break():
+                self._process.terminate()
+                break
+
+            # Get render output from stdin
+            tmp = self._process.stdout.read1(2**16)
+            if len(tmp) == 0:
+                time.sleep(0.0001) # Don't spin on the CPU
+                if render_process_finished:
+                    all_output_consumed = True
+                continue
             output += tmp
             outputs = output.split(b'DIV\n')
 

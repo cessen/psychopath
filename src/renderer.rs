@@ -264,6 +264,14 @@ impl<'a> Renderer<'a> {
                 }
                 stats.sample_writing_time += timer.tick() as f64;
 
+                // Pre-calculate base64 encoding if needed
+                let base64_enc = if do_blender_output {
+                    use color::xyz_to_rec709e;
+                    Some(img_bucket.rgba_base64(xyz_to_rec709e))
+                } else {
+                    None
+                };
+
                 // Print render progress, and image data if doing blender output
                 let guard = pixels_rendered.lock().unwrap();
                 let mut pr = (*guard).get();
@@ -276,15 +284,16 @@ impl<'a> Renderer<'a> {
                 let old_string = format!("{:.2}%", percentage_old);
                 let new_string = format!("{:.2}%", percentage_new);
 
-                if do_blender_output {
-                    use color::xyz_to_rec709e;
+                if let Some(bucket_data) = base64_enc {
+                    // If doing Blender output
                     println!("DIV");
                     println!("{}", new_string);
                     println!("{} {} {} {}", min.0, min.1, max.0, max.1);
-                    println!("{}", img_bucket.rgba_base64(xyz_to_rec709e));
+                    println!("{}", bucket_data);
                     println!("BUCKET_END");
                     println!("DIV");
                 } else {
+                    // If doing console output
                     if new_string != old_string {
                         print!("\r{}", new_string);
                     }
