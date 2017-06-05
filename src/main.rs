@@ -82,7 +82,7 @@ fn main() {
                 .value_name("FILE")
                 .help("Input .psy file")
                 .takes_value(true)
-                .required_unless("dev")
+                .required_unless_one(&["dev", "use_stdin"])
         )
         .arg(
             Arg::with_name("spp")
@@ -148,6 +148,12 @@ fn main() {
                 .help("Used by PsychoBlend to pass render output through standard in/out.")
                 .hidden(true)
         )
+        .arg(
+            Arg::with_name("use_stdin")
+                .long("use_stdin")
+                .help("Take scene file in from stdin instead of a file path.")
+                .hidden(true)
+        )
         .get_matches();
 
     // Print some misc useful dev info.
@@ -169,14 +175,46 @@ fn main() {
         "Parsing scene file...",
     );
     t.tick();
-    let mut psy_contents = String::new();
-    let dt = {
+    let psy_contents = if args.is_present("use_stdin") {
+        // Read from stdin
+        let mut input = Vec::new();
+        let tmp = std::io::stdin();
+        let mut stdin = tmp.lock();
+        let mut buf = vec![0u8; 4096];
+        loop {
+            let count = stdin
+                .read(&mut buf)
+                .expect("Unexpected end of scene input.");
+            let start = if input.len() < 11 {
+                0
+            } else {
+                input.len() - 11
+            };
+            let end = input.len() + count;
+            input.extend(&buf[..count]);
+
+            let mut done = false;
+            let mut trunc_len = 0;
+            if let nom::IResult::Done(remaining, _) = take_until!(&input[start..end], "__PSY_EOF__") {
+                done = true;
+                trunc_len = input.len() - remaining.len();
+            }
+            if done {
+                input.truncate(trunc_len);
+                break;
+            }
+        }
+        String::from_utf8(input).unwrap()
+    } else {
+        // Read from file
+        let mut input = String::new();
         let fp = args.value_of("input").unwrap();
         let mut f = io::BufReader::new(File::open(fp).unwrap());
-        let _ = f.read_to_string(&mut psy_contents);
-
-        DataTree::from_str(&psy_contents).unwrap()
+        let _ = f.read_to_string(&mut input);
+        input
     };
+
+    let dt = DataTree::from_str(&psy_contents).unwrap();
     println!("\tParsed scene file in {:.3}s", t.tick());
 
     // Iterate through scenes and render them

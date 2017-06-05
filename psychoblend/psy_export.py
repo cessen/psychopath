@@ -86,14 +86,16 @@ class IndentedWriter:
 
     def write(self, text, do_indent=True):
         if do_indent:
-            self.f.write(' '*self.indent_level + text)
+            self.f.write(bytes(' '*self.indent_level + text, "utf-8"))
         else:
-            self.f.write(text)
+            self.f.write(bytes(text, "utf-8"))
+
 
 
 
 class PsychoExporter:
-    def __init__(self, render_engine, scene):
+    def __init__(self, f, render_engine, scene):
+        self.w = IndentedWriter(f)
         self.render_engine = render_engine
         self.scene = scene
 
@@ -119,24 +121,19 @@ class PsychoExporter:
         else:
             self.scene.frame_set(frame-1, 1.0+fraction)
 
-    def export_psy(self, export_path):
+    def export_psy(self):
         try:
-            f = open(export_path, 'w')
-            self._export_psy(f, export_path)
+            self._export_psy()
         except ExportCancelled:
             # Cleanup
-            f.close()
             self.scene.frame_set(self.fr)
             return False
         else:
             # Cleanup
-            f.close()
             self.scene.frame_set(self.fr)
             return True
 
-    def _export_psy(self, f, export_path):
-        self.w = IndentedWriter(f)
-
+    def _export_psy(self):
         # Info
         self.w.write("# Exported from Blender 2.7x\n")
 

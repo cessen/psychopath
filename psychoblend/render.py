@@ -2,15 +2,9 @@ import bpy
 import time
 import os
 import subprocess
-import tempfile
 import base64
 import struct
 from . import psy_export
-
-def get_temp_filename(suffix=""):
-    tmpf = tempfile.mkstemp(suffix=suffix, prefix='tmp')
-    os.close(tmpf[0])
-    return(tmpf[1])
 
 class PsychopathRender(bpy.types.RenderEngine):
     bl_idname = 'PSYCHOPATH_RENDER'
@@ -40,23 +34,21 @@ class PsychopathRender(bpy.types.RenderEngine):
                 return psy_binary
         return ""
 
-    def _export(self, scene, export_path):
-        exporter = psy_export.PsychoExporter(self, scene)
-        return exporter.export_psy(export_path)
-
-    def _render(self, scene, psy_filepath):
+    def _render(self, scene, psy_filepath, use_stdin):
         psy_binary = PsychopathRender._locate_binary()
         if not psy_binary:
             print("Psychopath: could not execute psychopath, possibly Psychopath isn't installed")
             return False
 
         # TODO: figure out command line options
-        args = ["--spb", str(scene.psychopath.max_samples_per_bucket), "--blender_output", "-i", psy_filepath]
+        if use_stdin:
+            args = ["--spb", str(scene.psychopath.max_samples_per_bucket), "--blender_output", "--use_stdin"]
+        else:
+            args = ["--spb", str(scene.psychopath.max_samples_per_bucket), "--blender_output", "-i", psy_filepath]
 
         # Start Rendering!
         try:
-            self._process = subprocess.Popen([psy_binary] + args, bufsize=1,
-                                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            self._process = subprocess.Popen([psy_binary] + args, bufsize=1, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         except OSError:
             # TODO, report api
             print("Psychopath: could not execute '%s'" % psy_binary)
@@ -90,25 +82,44 @@ class PsychopathRender(bpy.types.RenderEngine):
         # has to be called to update the frame on exporting animations
         scene.frame_set(scene.frame_current)
 
-        export_path = scene.psychopath.export_path
+        export_path = scene.psychopath.export_path.strip()
+        use_stdin = False
         if export_path != "":
             export_path += "_%d.psy" % scene.frame_current
         else:
-            # Create a temporary file for exporting
-            export_path = get_temp_filename('.psy')
+            # We'll write directly to Psychopath's stdin
+            use_stdin = True
 
-        # start export
-        self.update_stats("", "Psychopath: Exporting data from Blender")
-        if not self._export(scene, export_path):
-            # Render cancelled in the middle of exporting,
-            # so just return.
-            return
+        if use_stdin:
+            # Start rendering
+            if not self._render(scene, export_path, use_stdin):
+                self.update_stats("", "Psychopath: Not found")
+                return
 
-        # Start rendering
-        self.update_stats("", "Psychopath: Rendering from exported file")
-        if not self._render(scene, export_path):
-            self.update_stats("", "Psychopath: Not found")
-            return
+            self.update_stats("", "Psychopath: Exporting data from Blender")
+            # Export to Psychopath's stdin
+            if not psy_export.PsychoExporter(self._process.stdin, self, scene).export_psy():
+                # Render cancelled in the middle of exporting,
+                # so just return.
+                return
+            self._process.stdin.write(bytes("__PSY_EOF__", "utf-8"))
+            self._process.stdin.flush()
+
+            self.update_stats("", "Psychopath: Rendering")
+        else:
+            # start export
+            self.update_stats("", "Psychopath: Exporting data from Blender")
+            with open(export_path, 'w+b') as f:
+                if not psy_export.PsychoExporter(f, self, scene).export_psy():
+                    # Render cancelled in the middle of exporting,
+                    # so just return.
+                    return
+
+            # Start rendering
+            self.update_stats("", "Psychopath: Rendering from %s" % export_path)
+            if not self._render(scene, export_path, use_stdin):
+                self.update_stats("", "Psychopath: Not found")
+                return
 
         r = scene.render
         # compute resolution
