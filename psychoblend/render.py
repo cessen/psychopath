@@ -40,9 +40,9 @@ class PsychopathRender(bpy.types.RenderEngine):
                 return psy_binary
         return ""
 
-    def _export(self, scene, export_path, render_image_path):
+    def _export(self, scene, export_path):
         exporter = psy_export.PsychoExporter(self, scene)
-        return exporter.export_psy(export_path, render_image_path)
+        return exporter.export_psy(export_path)
 
     def _render(self, scene, psy_filepath):
         psy_binary = PsychopathRender._locate_binary()
@@ -97,12 +97,9 @@ class PsychopathRender(bpy.types.RenderEngine):
             # Create a temporary file for exporting
             export_path = get_temp_filename('.psy')
 
-        # Create a temporary file to render into
-        render_image_path = get_temp_filename('.exr')
-
         # start export
         self.update_stats("", "Psychopath: Exporting data from Blender")
-        if not self._export(scene, export_path, render_image_path):
+        if not self._export(scene, export_path):
             # Render cancelled in the middle of exporting,
             # so just return.
             return

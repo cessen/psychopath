@@ -119,10 +119,10 @@ class PsychoExporter:
         else:
             self.scene.frame_set(frame-1, 1.0+fraction)
 
-    def export_psy(self, export_path, render_image_path):
+    def export_psy(self, export_path):
         try:
             f = open(export_path, 'w')
-            self._export_psy(f, export_path, render_image_path)
+            self._export_psy(f, export_path)
         except ExportCancelled:
             # Cleanup
             f.close()
@@ -134,7 +134,7 @@ class PsychoExporter:
             self.scene.frame_set(self.fr)
             return True
 
-    def _export_psy(self, f, export_path, render_image_path):
+    def _export_psy(self, f, export_path):
         self.w = IndentedWriter(f)
 
         # Info
@@ -149,7 +149,7 @@ class PsychoExporter:
         self.w.write("Output {\n")
         self.w.indent()
 
-        self.w.write('Path ["%s"]\n' % render_image_path)
+        self.w.write('Path [""]\n')
 
         # Output section end
         self.w.unindent()
