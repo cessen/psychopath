@@ -198,7 +198,8 @@ class PsychoExporter:
                 self.w.write("Fov [%f]\n" % (degrees(cam.data.angle) * res_x / res_y))
             self.w.write("FocalDistance [%f]\n" % dof_distance)
             self.w.write("ApertureRadius [%f]\n" % (cam.data.psychopath.aperture_radius))
-            self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
+            if self.time_samples > 1:
+                self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
             mat = cam.matrix_world.copy()
             mat = mat * matz
             self.w.write("Transform [%s]\n" % mat2str(mat))
@@ -343,13 +344,16 @@ class PsychoExporter:
 
         # Collect time samples
         time_meshes = []
-        for i in range(self.time_samples):
-            # Check if render is cancelled
-            if self.render_engine.test_break():
-                raise ExportCancelled()
-            self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
-            if export_mesh and (deform_mb or i == 0):
-                time_meshes += [ob.to_mesh(self.scene, True, 'RENDER')]
+        if deform_mb:
+            for i in range(self.time_samples):
+                # Check if render is cancelled
+                if self.render_engine.test_break():
+                    raise ExportCancelled()
+                self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
+                if export_mesh and (deform_mb or i == 0):
+                    time_meshes += [ob.to_mesh(self.scene, True, 'RENDER')]
+        elif export_mesh:
+            time_meshes += [ob.to_mesh(self.scene, True, 'RENDER')]
 
         # Export mesh data if necessary
         if export_mesh:
@@ -367,26 +371,25 @@ class PsychoExporter:
             # Write vertices
             for ti in range(len(time_meshes)):
                 self.w.write("Vertices [")
-                for v in time_meshes[ti].vertices:
-                    self.w.write("%f %f %f " % (v.co[0], v.co[1], v.co[2]), False)
+                self.w.write(" ".join([("%f" % i) for vert in time_meshes[ti].vertices for i in vert.co]), False)
                 self.w.write("]\n", False)
 
             # Write face vertex counts
             self.w.write("FaceVertCounts [")
-            for p in time_meshes[0].polygons:
-                self.w.write("%d " % len(p.vertices), False)
+            self.w.write(" ".join([("%d" % len(p.vertices)) for p in time_meshes[0].polygons]), False)
             self.w.write("]\n", False)
 
             # Write face vertex indices
             self.w.write("FaceVertIndices [")
-            for p in time_meshes[0].polygons:
-                for v in p.vertices:
-                    self.w.write("%d " % v, False)
+            self.w.write(" ".join([("%d"%v) for p in time_meshes[0].polygons for v in p.vertices]), False)
             self.w.write("]\n", False)
 
             # MeshSurface/SubdivisionSurface section end
             self.w.unindent()
             self.w.write("}\n")
+
+        for mesh in time_meshes:
+            bpy.data.meshes.remove(mesh)
 
         return mesh_name
 
