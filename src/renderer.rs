@@ -68,7 +68,7 @@ impl RenderStats {
 }
 
 impl<'a> Renderer<'a> {
-    pub fn render(&self, max_samples_per_bucket: u32, thread_count: u32, do_blender_output: bool) -> (Image, RenderStats) {
+    pub fn render(&self, max_samples_per_bucket: u32, crop: Option<(u32, u32, u32, u32)>, thread_count: u32, do_blender_output: bool) -> (Image, RenderStats) {
         let mut tpool = Pool::new(thread_count);
 
         let image = Image::new(self.resolution.0, self.resolution.1);
@@ -84,6 +84,18 @@ impl<'a> Renderer<'a> {
         // For printing render progress
         let pixels_rendered = Mutex::new(Cell::new(0));
 
+        // Calculate dimensions and coordinates of what we're rendering.  This
+        // accounts for cropping.
+        let (width, height, start_x, start_y) = if let Some((x1, y1, x2, y2)) = crop {
+            let x1 = min(x1 as usize, img_width - 1);
+            let y1 = min(y1 as usize, img_height - 1);
+            let x2 = min(x2 as usize, img_width - 1);
+            let y2 = min(y2 as usize, img_height - 1);
+            (x2 - x1 + 1, y2 - y1 + 1, x1, y1)
+        } else {
+            (img_width, img_height, 0, 0)
+        };
+
         // Render
         tpool.scoped(
             |scope| {
@@ -92,9 +104,21 @@ impl<'a> Renderer<'a> {
                     let jq = &job_queue;
                     let ajq = &all_jobs_queued;
                     let img = &image;
-                    let cstats = &collective_stats;
                     let pixrenref = &pixels_rendered;
-                    scope.execute(move || self.render_job(jq, ajq, img, cstats, pixrenref, do_blender_output));
+                    let cstats = &collective_stats;
+                    scope.execute(
+                        move || {
+                            self.render_job(
+                                jq,
+                                ajq,
+                                img,
+                                width * height,
+                                pixrenref,
+                                cstats,
+                                do_blender_output,
+                            )
+                        }
+                    );
                 }
 
                 // Print initial 0.00% progress
@@ -116,8 +140,8 @@ impl<'a> Renderer<'a> {
 
                 // Populate job queue
                 let bucket_n = {
-                    let bucket_count_x = ((img_width / bucket_w) + 1) as u32;
-                    let bucket_count_y = ((img_height / bucket_h) + 1) as u32;
+                    let bucket_count_x = ((width / bucket_w) + 1) as u32;
+                    let bucket_count_y = ((height / bucket_h) + 1) as u32;
                     let larger = cmp::max(bucket_count_x, bucket_count_y);
                     let pow2 = upper_power_of_two(larger);
                     pow2 * pow2
@@ -127,21 +151,21 @@ impl<'a> Renderer<'a> {
 
                     let x = bx as usize * bucket_w;
                     let y = by as usize * bucket_h;
-                    let w = if img_width >= x {
-                        min(bucket_w, img_width - x)
+                    let w = if width >= x {
+                        min(bucket_w, width - x)
                     } else {
                         bucket_w
                     };
-                    let h = if img_height >= y {
-                        min(bucket_h, img_height - y)
+                    let h = if height >= y {
+                        min(bucket_h, height - y)
                     } else {
                         bucket_h
                     };
-                    if x < img_width && y < img_height && w > 0 && h > 0 {
+                    if x < width && y < height && w > 0 && h > 0 {
                         job_queue.push(
                             BucketJob {
-                                x: x as u32,
-                                y: y as u32,
+                                x: (start_x + x) as u32,
+                                y: (start_y + y) as u32,
                                 w: w as u32,
                                 h: h as u32,
                             }
@@ -164,7 +188,7 @@ impl<'a> Renderer<'a> {
     }
 
     /// Waits for buckets in the job queue to render and renders them when available.
-    fn render_job(&self, job_queue: &MsQueue<BucketJob>, all_jobs_queued: &RwLock<bool>, image: &Image, collected_stats: &RwLock<RenderStats>, pixels_rendered: &Mutex<Cell<usize>>, do_blender_output: bool) {
+    fn render_job(&self, job_queue: &MsQueue<BucketJob>, all_jobs_queued: &RwLock<bool>, image: &Image, total_pixels: usize, pixels_rendered: &Mutex<Cell<usize>>, collected_stats: &RwLock<RenderStats>, do_blender_output: bool) {
         let mut stats = RenderStats::new();
         let mut timer = Timer::new();
         let mut total_timer = Timer::new();
@@ -183,7 +207,6 @@ impl<'a> Renderer<'a> {
         let max_y = self.resolution.1 as f32 / self.resolution.0 as f32;
         let x_extent = max_x - min_x;
         let y_extent = max_y - min_y;
-        let total_pixels = self.resolution.0 * self.resolution.1;
 
         // Render
         'render_loop: loop {

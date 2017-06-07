@@ -115,6 +115,21 @@ fn main() {
                 )
         )
         .arg(
+            Arg::with_name("crop")
+                .long("crop")
+                .value_name("X1 Y1 X2 Y2")
+                .help("Only render the image between pixel coordinates (X1, Y1) and (X2, Y2).  Coordinates are zero-indexed and inclusive.")
+                .takes_value(true)
+                .number_of_values(4)
+                .validator(
+                    |s| {
+                        usize::from_str(&s)
+                            .and(Ok(()))
+                            .or(Err("must be four integers".to_string()))
+                    }
+                )
+        )
+        .arg(
             Arg::with_name("threads")
                 .short("t")
                 .long("threads")
@@ -169,6 +184,20 @@ fn main() {
         println!("BVHNode size: {} bytes", mem::size_of::<BVHNode>());
         return;
     }
+
+    let crop = args.values_of("crop")
+        .map(
+            |mut vals| {
+                let coords = (u32::from_str(vals.next().unwrap()).unwrap(), u32::from_str(vals.next().unwrap()).unwrap(), u32::from_str(vals.next().unwrap()).unwrap(), u32::from_str(vals.next().unwrap()).unwrap());
+                if coords.0 > coords.2 {
+                    panic!("Argument '--crop': X1 must be less than or equal to X2");
+                }
+                if coords.1 > coords.3 {
+                    panic!("Argument '--crop': Y1 must be less than or equal to Y2");
+                }
+                coords
+            }
+        );
 
     // Parse data tree of scene file
     println!(
@@ -254,6 +283,7 @@ fn main() {
                 println!("Rendering scene with {} threads...", thread_count);
                 let (mut image, rstats) = r.render(
                     max_samples_per_bucket,
+                    crop,
                     thread_count,
                     args.is_present("blender_output"),
                 );
