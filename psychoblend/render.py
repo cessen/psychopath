@@ -34,17 +34,20 @@ class PsychopathRender(bpy.types.RenderEngine):
                 return psy_binary
         return ""
 
-    def _render(self, scene, psy_filepath, use_stdin):
+    def _render(self, scene, psy_filepath, use_stdin, crop):
         psy_binary = PsychopathRender._locate_binary()
         if not psy_binary:
             print("Psychopath: could not execute psychopath, possibly Psychopath isn't installed")
             return False
 
-        # TODO: figure out command line options
+        # Figure out command line options
+        args = []
+        if crop != None:
+            args += ["--crop", str(crop[0]), str(self.size_y - crop[3]), str(crop[2] - 1), str(self.size_y - crop[1] - 1)]
         if use_stdin:
-            args = ["--spb", str(scene.psychopath.max_samples_per_bucket), "--blender_output", "--use_stdin"]
+            args += ["--spb", str(scene.psychopath.max_samples_per_bucket), "--blender_output", "--use_stdin"]
         else:
-            args = ["--spb", str(scene.psychopath.max_samples_per_bucket), "--blender_output", "-i", psy_filepath]
+            args += ["--spb", str(scene.psychopath.max_samples_per_bucket), "--blender_output", "-i", psy_filepath]
 
         # Start Rendering!
         try:
@@ -59,9 +62,13 @@ class PsychopathRender(bpy.types.RenderEngine):
 
         return True
 
-    def _draw_bucket(self, bucket_info, pixels_encoded):
-        x = bucket_info[0]
-        y = self.size_y - bucket_info[3]
+    def _draw_bucket(self, crop, bucket_info, pixels_encoded):
+        if crop != None:
+            x = bucket_info[0] - crop[0]
+            y = self.size_y - bucket_info[3] - crop[1]
+        else:
+            x = bucket_info[0]
+            y = self.size_y - bucket_info[3]
         width = bucket_info[2] - bucket_info[0]
         height = bucket_info[3] - bucket_info[1]
 
@@ -84,6 +91,23 @@ class PsychopathRender(bpy.types.RenderEngine):
 
         export_path = scene.psychopath.export_path.strip()
         use_stdin = False
+
+        r = scene.render
+        # compute resolution
+        self.size_x = int(r.resolution_x * r.resolution_percentage / 100)
+        self.size_y = int(r.resolution_y * r.resolution_percentage / 100)
+
+        # Calculate border cropping, if any.
+        if scene.render.use_border == True:
+            minx = r.resolution_x * scene.render.border_min_x * (r.resolution_percentage / 100)
+            miny = r.resolution_y * scene.render.border_min_y * (r.resolution_percentage / 100)
+            maxx = r.resolution_x * scene.render.border_max_x * (r.resolution_percentage / 100)
+            maxy = r.resolution_y * scene.render.border_max_y * (r.resolution_percentage / 100)
+            crop = (int(minx), int(miny), int(maxx), int(maxy))
+        else:
+            crop = None
+
+        # Are we using an output file or standard in/out?
         if export_path != "":
             export_path += "_%d.psy" % scene.frame_current
         else:
@@ -92,7 +116,7 @@ class PsychopathRender(bpy.types.RenderEngine):
 
         if use_stdin:
             # Start rendering
-            if not self._render(scene, export_path, use_stdin):
+            if not self._render(scene, export_path, use_stdin, crop):
                 self.update_stats("", "Psychopath: Not found")
                 return
 
@@ -107,7 +131,7 @@ class PsychopathRender(bpy.types.RenderEngine):
 
             self.update_stats("", "Psychopath: Rendering")
         else:
-            # start export
+            # Export to file
             self.update_stats("", "Psychopath: Exporting data from Blender")
             with open(export_path, 'w+b') as f:
                 if not psy_export.PsychoExporter(f, self, scene).export_psy():
@@ -117,14 +141,9 @@ class PsychopathRender(bpy.types.RenderEngine):
 
             # Start rendering
             self.update_stats("", "Psychopath: Rendering from %s" % export_path)
-            if not self._render(scene, export_path, use_stdin):
+            if not self._render(scene, export_path, use_stdin, crop):
                 self.update_stats("", "Psychopath: Not found")
                 return
-
-        r = scene.render
-        # compute resolution
-        self.size_x = int(r.resolution_x * r.resolution_percentage / 100)
-        self.size_y = int(r.resolution_y * r.resolution_percentage / 100)
 
         # If we can, make the render process's stdout non-blocking.  The
         # benefit of this is that canceling the render won't block waiting
@@ -186,7 +205,7 @@ class PsychopathRender(bpy.types.RenderEngine):
                     pixels = contents[2]
 
                     # Draw the bucket
-                    self._draw_bucket(bucket_info, pixels)
+                    self._draw_bucket(crop, bucket_info, pixels)
 
                     # Update render progress bar
                     try:
