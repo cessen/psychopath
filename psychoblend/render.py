@@ -120,16 +120,20 @@ class PsychopathRender(bpy.types.RenderEngine):
                 self.update_stats("", "Psychopath: Not found")
                 return
 
-            self.update_stats("", "Psychopath: Exporting data from Blender")
+            self.update_stats("", "Psychopath: Collecting...")
             # Export to Psychopath's stdin
-            if not psy_export.PsychoExporter(self._process.stdin, self, scene).export_psy():
-                # Render cancelled in the middle of exporting,
-                # so just return.
-                return
-            self._process.stdin.write(bytes("__PSY_EOF__", "utf-8"))
-            self._process.stdin.flush()
+            try:
+                if not psy_export.PsychoExporter(self._process.stdin, self, scene).export_psy():
+                    # Render cancelled in the middle of exporting,
+                    # so just return.
+                    return
+                self._process.stdin.write(bytes("__PSY_EOF__", "utf-8"))
+                self._process.stdin.flush()
+            except:
+                self._process.terminate()
+                raise
 
-            self.update_stats("", "Psychopath: Rendering")
+            self.update_stats("", "Psychopath: Building")
         else:
             # Export to file
             self.update_stats("", "Psychopath: Exporting data from Blender")
@@ -188,6 +192,8 @@ class PsychopathRender(bpy.types.RenderEngine):
                     outputs = outputs[1:]
                 else:
                     continue
+
+            self.update_stats("", "Psychopath: Rendering")
 
             # Clear output buffer, since it's all in 'outputs' now.
             output = b""

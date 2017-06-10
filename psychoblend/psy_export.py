@@ -3,71 +3,14 @@ import bpy
 from math import degrees, pi, log
 from mathutils import Vector, Matrix
 
+from .assembly import Assembly
+from .util import escape_name, mat2str
+
 class ExportCancelled(Exception):
     """ Indicates that the render was cancelled in the middle of exporting
         the scene file.
     """
     pass
-
-
-def mat2str(m):
-    """ Converts a matrix into a single-line string of values.
-    """
-    s = ""
-    for j in range(4):
-        for i in range(4):
-            s += (" %f" % m[i][j])
-    return s[1:]
-
-
-def needs_def_mb(ob):
-    """ Determines if the given object needs to be exported with
-        deformation motion blur or not.
-    """
-    for mod in ob.modifiers:
-        if mod.type == 'SUBSURF':
-            pass
-        elif mod.type == 'MIRROR':
-            if mod.mirror_object == None:
-                pass
-            else:
-                return True
-        else:
-            return True
-
-    if ob.type == 'MESH':
-        if ob.data.shape_keys == None:
-            pass
-        else:
-            return True
-
-    return False
-
-def escape_name(name):
-    name = name.replace("\\", "\\\\")
-    name = name.replace(" ", "\\ ")
-    name = name.replace("$", "\\$")
-    name = name.replace("[", "\\[")
-    name = name.replace("]", "\\]")
-    name = name.replace("{", "\\{")
-    name = name.replace("}", "\\}")
-    return name
-
-
-def needs_xform_mb(ob):
-    """ Determines if the given object needs to be exported with
-        transformation motion blur or not.
-    """
-    if ob.animation_data != None:
-        return True
-
-    if len(ob.constraints) > 0:
-        return True
-
-    if ob.parent != None:
-        return needs_xform_mb(ob.parent)
-
-    return False
 
 
 class IndentedWriter:
@@ -89,8 +32,6 @@ class IndentedWriter:
             self.f.write(bytes(' '*self.indent_level + text, "utf-8"))
         else:
             self.f.write(bytes(text, "utf-8"))
-
-
 
 
 class PsychoExporter:
@@ -231,252 +172,22 @@ class PsychoExporter:
 
         #######################
         # Export objects and materials
-        # TODO: handle materials from linked files (as used in group
-        # instances) properly.
-        self.w.write("Assembly {\n")
-        self.w.indent()
-        self.export_materials(bpy.data.materials)
-        self.export_objects(self.scene.objects, self.scene.layers)
-        self.w.unindent()
-        self.w.write("}\n")
+        try:
+            root_assembly = Assembly(self.render_engine, self.scene.objects, self.scene.layers)
+            for i in range(self.time_samples):
+                time = self.fr + self.shutter_start + (self.shutter_diff*i)
+                self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
+                root_assembly.take_sample(self.render_engine, self.scene, time)
+            root_assembly.export(self.render_engine, self.w)
+        except ExportCancelled:
+            root_assembly.cleanup()
+            raise ExportCancelled()
+        else:
+            root_assembly.cleanup()
 
         # Scene end
         self.w.unindent()
         self.w.write("}\n")
-
-
-
-    def export_materials(self, materials):
-        for m in materials:
-            self.w.write("SurfaceShader $%s {\n" % escape_name(m.name))
-            self.w.indent()
-            self.w.write("Type [%s]\n" % m.psychopath.surface_shader_type)
-            self.w.write("Color [%f %f %f]\n" % (m.psychopath.color[0], m.psychopath.color[1], m.psychopath.color[2]))
-            if m.psychopath.surface_shader_type == 'GTR':
-                self.w.write("Roughness [%f]\n" % m.psychopath.roughness)
-                self.w.write("TailShape [%f]\n" % m.psychopath.tail_shape)
-                self.w.write("Fresnel [%f]\n" % m.psychopath.fresnel)
-            self.w.unindent()
-            self.w.write("}\n")
-
-
-    def export_objects(self, objects, visible_layers, group_prefix="", translation_offset=(0,0,0)):
-        for ob in objects:
-            # Check if render is cancelled
-            if self.render_engine.test_break():
-                raise ExportCancelled()
-
-            # Check if the object is visible for rendering
-            vis_layer = False
-            for i in range(len(ob.layers)):
-                vis_layer = vis_layer or (ob.layers[i] and visible_layers[i])
-            if ob.hide_render or not vis_layer:
-                continue
-
-            name = None
-
-            # Write object data
-            if ob.type == 'EMPTY':
-                if ob.dupli_type == 'GROUP':
-                    name = group_prefix + "__" + escape_name(ob.dupli_group.name)
-                    if name not in self.group_names:
-                        self.group_names[name] = True
-                        self.w.write("Assembly $%s {\n" % name)
-                        self.w.indent()
-                        self.export_objects(ob.dupli_group.objects, ob.dupli_group.layers, name, ob.dupli_group.dupli_offset*-1)
-                        self.w.unindent()
-                        self.w.write("}\n")
-            elif ob.type == 'MESH':
-                name = self.export_mesh_object(ob, group_prefix)
-            elif ob.type == 'SURFACE':
-                name = self.export_surface_object(ob, group_prefix)
-            elif ob.type == 'LAMP' and ob.data.type == 'POINT':
-                name = self.export_sphere_lamp(ob, group_prefix)
-            elif ob.type == 'LAMP' and ob.data.type == 'AREA':
-                name = self.export_area_lamp(ob, group_prefix)
-
-            # Write object instance, with transforms
-            if name != None:
-                time_mats = []
-
-                if needs_xform_mb(ob):
-                    for i in range(self.time_samples):
-                        # Check if render is cancelled
-                        if self.render_engine.test_break():
-                            raise ExportCancelled()
-                        self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
-                        mat = ob.matrix_world.copy()
-                        mat[0][3] += translation_offset[0]
-                        mat[1][3] += translation_offset[1]
-                        mat[2][3] += translation_offset[2]
-                        time_mats += [mat]
-                else:
-                    mat = ob.matrix_world.copy()
-                    mat[0][3] += translation_offset[0]
-                    mat[1][3] += translation_offset[1]
-                    mat[2][3] += translation_offset[2]
-                    time_mats += [mat]
-
-                self.w.write("Instance {\n")
-                self.w.indent()
-                self.w.write("Data [$%s]\n" % name)
-                if len(ob.material_slots) > 0 and ob.material_slots[0].material != None:
-                    self.w.write("SurfaceShaderBind [$%s]\n" % escape_name(ob.material_slots[0].material.name))
-                for i in range(len(time_mats)):
-                    mat = time_mats[i].inverted()
-                    self.w.write("Transform [%s]\n" % mat2str(mat))
-                self.w.unindent()
-                self.w.write("}\n")
-
-
-    def export_mesh_object(self, ob, group_prefix):
-        # Determine if and how to export the mesh data
-        has_modifiers = len(ob.modifiers) > 0
-        deform_mb = needs_def_mb(ob)
-        if has_modifiers or deform_mb:
-            mesh_name = group_prefix + escape_name("__" + ob.name + "__" + ob.data.name + "_")
-        else:
-            mesh_name = group_prefix + escape_name("__" + ob.data.name + "_")
-        export_mesh = (mesh_name not in self.mesh_names) or has_modifiers or deform_mb
-
-        # Collect time samples
-        time_meshes = []
-        if deform_mb:
-            for i in range(self.time_samples):
-                # Check if render is cancelled
-                if self.render_engine.test_break():
-                    raise ExportCancelled()
-                self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
-                if export_mesh and (deform_mb or i == 0):
-                    time_meshes += [ob.to_mesh(self.scene, True, 'RENDER')]
-        elif export_mesh:
-            time_meshes += [ob.to_mesh(self.scene, True, 'RENDER')]
-
-        # Export mesh data if necessary
-        if export_mesh:
-            if ob.data.psychopath.is_subdivision_surface == False:
-                # Exporting normal mesh
-                self.mesh_names[mesh_name] = True
-                self.w.write("MeshSurface $%s {\n" % mesh_name)
-                self.w.indent()
-            elif ob.data.psychopath.is_subdivision_surface == True:
-                # Exporting subdivision surface cage
-                self.mesh_names[mesh_name] = True
-                self.w.write("SubdivisionSurface $%s {\n" % mesh_name)
-                self.w.indent()
-
-            # Write vertices
-            for ti in range(len(time_meshes)):
-                self.w.write("Vertices [")
-                self.w.write(" ".join([("%f" % i) for vert in time_meshes[ti].vertices for i in vert.co]), False)
-                self.w.write("]\n", False)
-
-            # Write face vertex counts
-            self.w.write("FaceVertCounts [")
-            self.w.write(" ".join([("%d" % len(p.vertices)) for p in time_meshes[0].polygons]), False)
-            self.w.write("]\n", False)
-
-            # Write face vertex indices
-            self.w.write("FaceVertIndices [")
-            self.w.write(" ".join([("%d"%v) for p in time_meshes[0].polygons for v in p.vertices]), False)
-            self.w.write("]\n", False)
-
-            # MeshSurface/SubdivisionSurface section end
-            self.w.unindent()
-            self.w.write("}\n")
-
-        for mesh in time_meshes:
-            bpy.data.meshes.remove(mesh)
-
-        return mesh_name
-
-
-    def export_surface_object(self, ob, group_prefix):
-        name = group_prefix + "__" + escape_name(ob.name)
-
-        # Collect time samples
-        time_surfaces = []
-        for i in range(self.time_samples):
-            # Check if render is cancelled
-            if self.render_engine.test_break():
-                raise ExportCancelled()
-            self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
-            time_surfaces += [ob.data.copy()]
-
-        # Write patch
-        self.w.write("BicubicPatch $" + name + " {\n")
-        self.w.indent()
-        for i in range(self.time_samples):
-            verts = time_surfaces[i].splines[0].points
-            vstr = ""
-            for v in verts:
-                vstr += ("%f %f %f " % (v.co[0], v.co[1], v.co[2]))
-            self.w.write("Vertices [%s]\n" % vstr[:-1])
-        for s in time_surfaces:
-            bpy.data.curves.remove(s)
-        self.w.unindent()
-        self.w.write("}\n")
-
-        return name
-
-
-    def export_sphere_lamp(self, ob, group_prefix):
-        name = group_prefix + "__" + escape_name(ob.name)
-
-        # Collect data over time
-        time_col = []
-        time_rad = []
-        for i in range(self.time_samples):
-            # Check if render is cancelled
-            if self.render_engine.test_break():
-                raise ExportCancelled()
-            self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
-            time_col += [ob.data.color * ob.data.energy]
-            time_rad += [ob.data.shadow_soft_size]
-
-        # Write out sphere light
-        self.w.write("SphereLight $%s {\n" % name)
-        self.w.indent()
-        for col in time_col:
-            self.w.write("Color [%f %f %f]\n" % (col[0], col[1], col[2]))
-        for rad in time_rad:
-            self.w.write("Radius [%f]\n" % rad)
-
-        self.w.unindent()
-        self.w.write("}\n")
-
-        return name
-
-    def export_area_lamp(self, ob, group_prefix):
-        name = group_prefix + "__" + escape_name(ob.name)
-
-        # Collect data over time
-        time_col = []
-        time_dim = []
-        for i in range(self.time_samples):
-            # Check if render is cancelled
-            if self.render_engine.test_break():
-                raise ExportCancelled()
-            self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
-            time_col += [ob.data.color * ob.data.energy]
-            if ob.data.shape == 'RECTANGLE':
-                time_dim += [(ob.data.size, ob.data.size_y)]
-            else:
-                time_dim += [(ob.data.size, ob.data.size)]
-
-
-        # Write out sphere light
-        self.w.write("RectangleLight $%s {\n" % name)
-        self.w.indent()
-        for col in time_col:
-            self.w.write("Color [%f %f %f]\n" % (col[0], col[1], col[2]))
-        for dim in time_dim:
-            self.w.write("Dimensions [%f %f]\n" % dim)
-
-        self.w.unindent()
-        self.w.write("}\n")
-
-        return name
 
     def export_world_distant_disk_lamp(self, ob, group_prefix):
         name = group_prefix + "__" + escape_name(ob.name)
