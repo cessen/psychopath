@@ -1,10 +1,10 @@
 import bpy
 
-from math import degrees, pi, log
-from mathutils import Vector, Matrix
+from math import log
 
 from .assembly import Assembly
 from .util import escape_name, mat2str, ExportCancelled
+from .world import World
 
 
 class IndentedWriter:
@@ -103,113 +103,31 @@ class PsychoExporter:
         self.w.unindent()
         self.w.write("}\n")
 
-        #######################
-        # Camera section begin
-        self.w.write("Camera {\n")
-        self.w.indent()
-
-        cam = self.scene.camera
-
-        if cam.data.dof_object == None:
-            dof_distance = cam.data.dof_distance
-        else:
-            # TODO: implement DoF object tracking here
-            dof_distance = 0.0
-            print("WARNING: DoF object tracking not yet implemented.")
-
-        matz = Matrix()
-        matz[2][2] = -1
-        for i in range(self.time_samples):
-            # Check if render is cancelled
-            if self.render_engine.test_break():
-                raise ExportCancelled()
-
-            if res_x >= res_y:
-                self.w.write("Fov [%f]\n" % degrees(cam.data.angle))
-            else:
-                self.w.write("Fov [%f]\n" % (degrees(cam.data.angle) * res_x / res_y))
-            self.w.write("FocalDistance [%f]\n" % dof_distance)
-            self.w.write("ApertureRadius [%f]\n" % (cam.data.psychopath.aperture_radius))
-            if self.time_samples > 1:
-                self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
-            mat = cam.matrix_world.copy()
-            mat = mat * matz
-            self.w.write("Transform [%s]\n" % mat2str(mat))
-
-        # Camera section end
-        self.w.unindent()
-        self.w.write("}\n")
-
-        #######################
-        # World section begin
-        self.w.write("World {\n")
-        self.w.indent()
-
-        world = self.scene.world
-
-        if world != None:
-            self.w.write("BackgroundShader {\n")
-            self.w.indent();
-            self.w.write("Type [Color]\n")
-            self.w.write("Color [%f %f %f]\n" % (world.horizon_color[0], world.horizon_color[1], world.horizon_color[2]))
-            self.w.unindent()
-            self.w.write("}\n")
-
-        # Infinite light sources
-        for ob in self.scene.objects:
-            if ob.type == 'LAMP' and ob.data.type == 'SUN':
-                self.export_world_distant_disk_lamp(ob, "")
-
-        # World section end
-        self.w.unindent()
-        self.w.write("}\n")
-
-        #######################
-        # Export objects and materials
+        ###############################
+        # Export world and object data
+        world = None
+        root_assembly = None
         try:
+            # Prep for data collection
+            world = World(self.render_engine, self.scene, self.scene.layers, float(res_x) / float(res_y))
             root_assembly = Assembly(self.render_engine, self.scene.objects, self.scene.layers)
+
+            # Collect data for each time sample
             for i in range(self.time_samples):
                 time = self.fr + self.shutter_start + (self.shutter_diff*i)
                 self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
+                world.take_sample(self.render_engine, self.scene, time)
                 root_assembly.take_sample(self.render_engine, self.scene, time)
+
+            # Export collected data
+            world.export(self.render_engine, self.w)
             root_assembly.export(self.render_engine, self.w)
-        except ExportCancelled:
-            root_assembly.cleanup()
-            raise
-        else:
-            root_assembly.cleanup()
+        finally:
+            if world != None:
+                world.cleanup()
+            if root_assembly != None:
+                root_assembly.cleanup()
 
         # Scene end
         self.w.unindent()
         self.w.write("}\n")
-
-    def export_world_distant_disk_lamp(self, ob, group_prefix):
-        name = group_prefix + "__" + escape_name(ob.name)
-
-        # Collect data over time
-        time_dir = []
-        time_col = []
-        time_rad = []
-        for i in range(self.time_samples):
-            # Check if render is cancelled
-            if self.render_engine.test_break():
-                raise ExportCancelled()
-            self.set_frame(self.fr, self.shutter_start + (self.shutter_diff*i))
-            time_dir += [tuple(ob.matrix_world.to_3x3() * Vector((0, 0, -1)))]
-            time_col += [ob.data.color * ob.data.energy]
-            time_rad += [ob.data.shadow_soft_size]
-
-        # Write out sphere light
-        self.w.write("DistantDiskLight $%s {\n" % name)
-        self.w.indent()
-        for direc in time_dir:
-            self.w.write("Direction [%f %f %f]\n" % (direc[0], direc[1], direc[2]))
-        for col in time_col:
-            self.w.write("Color [%f %f %f]\n" % (col[0], col[1], col[2]))
-        for rad in time_rad:
-            self.w.write("Radius [%f]\n" % rad)
-
-        self.w.unindent()
-        self.w.write("}\n")
-
-        return name

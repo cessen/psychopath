@@ -138,8 +138,6 @@ class PsychopathRender(bpy.types.RenderEngine):
                 return
             self._process.stdin.write(bytes("__PSY_EOF__", "utf-8"))
             self._process.stdin.flush()
-
-            self.update_stats("", "Psychopath: Building")
         else:
             # Export to file
             self.update_stats("", "Psychopath: Exporting data from Blender")
@@ -154,6 +152,8 @@ class PsychopathRender(bpy.types.RenderEngine):
             if not self._start_psychopath(scene, export_path, use_stdin, crop):
                 self.update_stats("", "Psychopath: Not found")
                 return
+
+        self.update_stats("", "Psychopath: Building")
 
         # If we can, make the render process's stdout non-blocking.  The
         # benefit of this is that canceling the render won't block waiting
