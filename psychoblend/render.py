@@ -34,7 +34,7 @@ class PsychopathRender(bpy.types.RenderEngine):
                 return psy_binary
         return ""
 
-    def _render(self, scene, psy_filepath, use_stdin, crop):
+    def _start_psychopath(self, scene, psy_filepath, use_stdin, crop):
         psy_binary = PsychopathRender._locate_binary()
         if not psy_binary:
             print("Psychopath: could not execute psychopath, possibly Psychopath isn't installed")
@@ -86,6 +86,15 @@ class PsychopathRender(bpy.types.RenderEngine):
         self.end_result(result)
 
     def render(self, scene):
+        self._process = None
+        try:
+            self._render(scene)
+        except:
+            if self.process != None:
+                self._process.terminate()
+            raise
+
+    def _render(self, scene):
         # has to be called to update the frame on exporting animations
         scene.frame_set(scene.frame_current)
 
@@ -116,22 +125,19 @@ class PsychopathRender(bpy.types.RenderEngine):
 
         if use_stdin:
             # Start rendering
-            if not self._render(scene, export_path, use_stdin, crop):
+            if not self._start_psychopath(scene, export_path, use_stdin, crop):
                 self.update_stats("", "Psychopath: Not found")
                 return
 
             self.update_stats("", "Psychopath: Collecting...")
             # Export to Psychopath's stdin
-            try:
-                if not psy_export.PsychoExporter(self._process.stdin, self, scene).export_psy():
-                    # Render cancelled in the middle of exporting,
-                    # so just return.
-                    return
-                self._process.stdin.write(bytes("__PSY_EOF__", "utf-8"))
-                self._process.stdin.flush()
-            except:
+            if not psy_export.PsychoExporter(self._process.stdin, self, scene).export_psy():
+                # Render cancelled in the middle of exporting,
+                # so just return.
                 self._process.terminate()
-                raise
+                return
+            self._process.stdin.write(bytes("__PSY_EOF__", "utf-8"))
+            self._process.stdin.flush()
 
             self.update_stats("", "Psychopath: Building")
         else:
@@ -145,7 +151,7 @@ class PsychopathRender(bpy.types.RenderEngine):
 
             # Start rendering
             self.update_stats("", "Psychopath: Rendering from %s" % export_path)
-            if not self._render(scene, export_path, use_stdin, crop):
+            if not self._start_psychopath(scene, export_path, use_stdin, crop):
                 self.update_stats("", "Psychopath: Not found")
                 return
 

@@ -1,6 +1,6 @@
 import bpy
 
-from .util import escape_name, mat2str, needs_def_mb, needs_xform_mb
+from .util import escape_name, mat2str, needs_def_mb, needs_xform_mb, ExportCancelled
 
 class Assembly:
     def __init__(self, render_engine, objects, visible_layers, group_prefix="", translation_offset=(0,0,0)):
@@ -80,10 +80,21 @@ class Assembly:
 
     def take_sample(self, render_engine, scene, time):
         for mat in self.materials:
+            # Check if render is cancelled
+            if render_engine.test_break():
+                raise ExportCancelled()
             mat.take_sample(render_engine, scene, time)
+
         for ob in self.objects:
+            # Check if render is cancelled
+            if render_engine.test_break():
+                raise ExportCancelled()
             ob.take_sample(render_engine, scene, time)
+
         for inst in self.instances:
+            # Check if render is cancelled
+            if render_engine.test_break():
+                raise ExportCancelled()
             inst.take_sample(render_engine, time, self.translation_offset)
     
     def cleanup(self):
@@ -131,11 +142,13 @@ class Mesh:
     def __init__(self, render_engine, ob, name):
         self.ob = ob
         self.name = name
+        self.needs_mb = needs_def_mb(self.ob)
         self.time_meshes = []
 
     def take_sample(self, render_engine, scene, time):
-        render_engine.update_stats("", "Psychopath: Collecting '%s' at time %f" % (self.ob.name, time))
-        self.time_meshes += [self.ob.to_mesh(scene, True, 'RENDER')]
+        if len(self.time_meshes) == 0 or self.needs_mb:
+            render_engine.update_stats("", "Psychopath: Collecting '{}' at time {}".format(self.ob.name, time))
+            self.time_meshes += [self.ob.to_mesh(scene, True, 'RENDER')]
     
     def cleanup(self):
         for mesh in self.time_meshes:
@@ -184,7 +197,7 @@ class SphereLamp:
         self.time_rad = []
 
     def take_sample(self, render_engine, scene, time):
-        render_engine.update_stats("", "Psychopath: Collecting '%s' at time %f" % (self.ob.name, time))
+        render_engine.update_stats("", "Psychopath: Collecting '{}' at time {}".format(self.ob.name, time))
         self.time_col += [self.ob.data.color * self.ob.data.energy]
         self.time_rad += [self.ob.data.shadow_soft_size]
 
@@ -215,7 +228,7 @@ class RectLamp:
         self.time_dim = []
 
     def take_sample(self, render_engine, scene, time):
-        render_engine.update_stats("", "Psychopath: Collecting '%s' at time %f" % (self.ob.name, time))
+        render_engine.update_stats("", "Psychopath: Collecting '{}' at time {}".format(self.ob.name, time))
         self.time_col += [self.ob.data.color * self.ob.data.energy]
         if ob.data.shape == 'RECTANGLE':
             self.time_dim += [(self.ob.data.size, self.ob.data.size_y)]
@@ -243,15 +256,17 @@ class Instance:
     def __init__(self, render_engine, ob, data_name):
         self.ob = ob
         self.data_name = data_name
+        self.needs_mb = needs_xform_mb(self.ob)
         self.time_xforms = []
 
     def take_sample(self, render_engine, time, translation_offset):
-        render_engine.update_stats("", "Psychopath: Collecting '%s' at time %f" % (self.ob.name, time))
-        mat = self.ob.matrix_world.copy()
-        mat[0][3] += translation_offset[0]
-        mat[1][3] += translation_offset[1]
-        mat[2][3] += translation_offset[2]
-        self.time_xforms += [mat]
+        if len(self.time_xforms) == 0 or self.needs_mb:
+            render_engine.update_stats("", "Psychopath: Collecting '{}' xforms at time {}".format(self.ob.name, time))
+            mat = self.ob.matrix_world.copy()
+            mat[0][3] += translation_offset[0]
+            mat[1][3] += translation_offset[1]
+            mat[2][3] += translation_offset[2]
+            self.time_xforms += [mat]
 
     def export(self, render_engine, w):
         render_engine.update_stats("", "Psychopath: Exporting %s" % self.ob.name)

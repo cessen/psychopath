@@ -4,13 +4,7 @@ from math import degrees, pi, log
 from mathutils import Vector, Matrix
 
 from .assembly import Assembly
-from .util import escape_name, mat2str
-
-class ExportCancelled(Exception):
-    """ Indicates that the render was cancelled in the middle of exporting
-        the scene file.
-    """
-    pass
+from .util import escape_name, mat2str, ExportCancelled
 
 
 class IndentedWriter:
@@ -181,7 +175,7 @@ class PsychoExporter:
             root_assembly.export(self.render_engine, self.w)
         except ExportCancelled:
             root_assembly.cleanup()
-            raise ExportCancelled()
+            raise
         else:
             root_assembly.cleanup()
 

@@ -1,3 +1,10 @@
+class ExportCancelled(Exception):
+    """ Indicates that the render was cancelled in the middle of exporting
+        the scene file.
+    """
+    pass
+
+
 def mat2str(m):
     """ Converts a matrix into a single-line string of values.
     """
@@ -12,14 +19,33 @@ def needs_def_mb(ob):
     """ Determines if the given object needs to be exported with
         deformation motion blur or not.
     """
+    anim = ob.animation_data
+    no_anim_data = anim == None or (anim.action == None and len(anim.nla_tracks) == 0 and len(anim.drivers) == 0)
+
     for mod in ob.modifiers:
         if mod.type == 'SUBSURF':
+            pass
+        elif mod.type == 'MULTIRES':
             pass
         elif mod.type == 'MIRROR':
             if mod.mirror_object == None:
                 pass
             else:
                 return True
+        elif mod.type == 'BEVEL' and no_anim_data:
+            pass
+        elif mod.type == 'EDGE_SPLIT' and no_anim_data:
+            pass
+        elif mod.type == 'SOLIDIFY' and no_anim_data:
+            pass
+        elif mod.type == 'MASK' and no_anim_data:
+            pass
+        elif mod.type == 'REMESH' and no_anim_data:
+            pass
+        elif mod.type == 'TRIANGULATE' and no_anim_data:
+            pass
+        elif mod.type == 'WIREFRAME' and no_anim_data:
+            pass
         else:
             return True
 
