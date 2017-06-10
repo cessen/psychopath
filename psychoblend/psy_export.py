@@ -152,7 +152,7 @@ class PsychoExporter:
             self.w.indent();
             self.w.write("Type [Color]\n")
             self.w.write("Color [%f %f %f]\n" % (world.horizon_color[0], world.horizon_color[1], world.horizon_color[2]))
-            self.w.unindent();
+            self.w.unindent()
             self.w.write("}\n")
 
         # Infinite light sources

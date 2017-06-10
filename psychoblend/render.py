@@ -90,7 +90,7 @@ class PsychopathRender(bpy.types.RenderEngine):
         try:
             self._render(scene)
         except:
-            if self.process != None:
+            if self._process != None:
                 self._process.terminate()
             raise
 

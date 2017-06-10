@@ -230,7 +230,7 @@ class RectLamp:
     def take_sample(self, render_engine, scene, time):
         render_engine.update_stats("", "Psychopath: Collecting '{}' at time {}".format(self.ob.name, time))
         self.time_col += [self.ob.data.color * self.ob.data.energy]
-        if ob.data.shape == 'RECTANGLE':
+        if self.ob.data.shape == 'RECTANGLE':
             self.time_dim += [(self.ob.data.size, self.ob.data.size_y)]
         else:
             self.time_dim += [(self.ob.data.size, self.ob.data.size)]
