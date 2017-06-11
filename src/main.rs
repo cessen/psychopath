@@ -158,9 +158,9 @@ fn main() {
                 .help("Show useful dev/debug info.")
         )
         .arg(
-            Arg::with_name("blender_output")
-                .long("blender_output")
-                .help("Used by PsychoBlend to pass render output through standard in/out.")
+            Arg::with_name("serialized_output")
+                .long("serialized_output")
+                .help("Serialize and send render output to standard output.")
                 .hidden(true)
         )
         .arg(
@@ -200,9 +200,11 @@ fn main() {
         );
 
     // Parse data tree of scene file
-    println!(
-        "Parsing scene file...",
-    );
+    if !args.is_present("serialized_output") {
+        println!(
+            "Parsing scene file...",
+        );
+    }
     t.tick();
     let psy_contents = if args.is_present("use_stdin") {
         // Read from stdin
@@ -244,14 +246,18 @@ fn main() {
     };
 
     let dt = DataTree::from_str(&psy_contents).unwrap();
-    println!("\tParsed scene file in {:.3}s", t.tick());
+    if !args.is_present("serialized_output") {
+        println!("\tParsed scene file in {:.3}s", t.tick());
+    }
 
     // Iterate through scenes and render them
     if let DataTree::Internal { ref children, .. } = dt {
         for child in children {
             t.tick();
             if child.type_name() == "Scene" {
-                println!("Building scene...");
+                if !args.is_present("serialized_output") {
+                    println!("Building scene...");
+                }
 
                 let arena = MemArena::with_min_block_size((1 << 20) * 4);
                 let mut r = parse_scene(&arena, child).unwrap_or_else(
@@ -262,7 +268,9 @@ fn main() {
                 );
 
                 if let Some(spp) = args.value_of("spp") {
-                    println!("\tOverriding scene spp: {}", spp);
+                    if !args.is_present("serialized_output") {
+                        println!("\tOverriding scene spp: {}", spp);
+                    }
                     r.spp = usize::from_str(&spp).unwrap();
                 }
 
@@ -278,17 +286,21 @@ fn main() {
                     num_cpus::get() as u32
                 };
 
-                println!("\tBuilt scene in {:.3}s", t.tick());
+                if !args.is_present("serialized_output") {
+                    println!("\tBuilt scene in {:.3}s", t.tick());
+                }
 
-                println!("Rendering scene with {} threads...", thread_count);
+                if !args.is_present("serialized_output") {
+                    println!("Rendering scene with {} threads...", thread_count);
+                }
                 let (mut image, rstats) = r.render(
                     max_samples_per_bucket,
                     crop,
                     thread_count,
-                    args.is_present("blender_output"),
+                    args.is_present("serialized_output"),
                 );
                 // Print render stats
-                {
+                if !args.is_present("serialized_output") {
                     let rtime = t.tick();
                     let ntime = rtime as f64 / rstats.total_time;
                     println!("\tRendered scene in {:.3}s", rtime);
@@ -314,7 +326,8 @@ fn main() {
                     );
                 }
 
-                if !args.is_present("blender_output") {
+                // Write to disk
+                if !args.is_present("serialized_output") {
                     println!("Writing image to disk...");
                     if r.output_file.ends_with(".png") {
                         let _ = image.write_png(Path::new(&r.output_file));

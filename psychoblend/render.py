@@ -45,9 +45,9 @@ class PsychopathRender(bpy.types.RenderEngine):
         if crop != None:
             args += ["--crop", str(crop[0]), str(self.size_y - crop[3]), str(crop[2] - 1), str(self.size_y - crop[1] - 1)]
         if use_stdin:
-            args += ["--spb", str(scene.psychopath.max_samples_per_bucket), "--blender_output", "--use_stdin"]
+            args += ["--spb", str(scene.psychopath.max_samples_per_bucket), "--serialized_output", "--use_stdin"]
         else:
-            args += ["--spb", str(scene.psychopath.max_samples_per_bucket), "--blender_output", "-i", psy_filepath]
+            args += ["--spb", str(scene.psychopath.max_samples_per_bucket), "--serialized_output", "-i", psy_filepath]
 
         # Start Rendering!
         try:
