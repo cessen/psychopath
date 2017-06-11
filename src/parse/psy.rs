@@ -8,7 +8,7 @@ use nom::IResult;
 use mem_arena::MemArena;
 
 use camera::Camera;
-use color::{XYZ, rec709e_to_xyz};
+use color::{XYZ, rec709_e_to_xyz};
 use light::WorldLightSource;
 use math::Matrix4x4;
 use renderer::Renderer;
@@ -533,7 +533,7 @@ fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>,
                     if let IResult::Done(_, color) = closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.trim().as_bytes()) {
                         // TODO: proper color space management, not just assuming
                         // rec.709.
-                        background_color = XYZ::from_tuple(rec709e_to_xyz(color));
+                        background_color = XYZ::from_tuple(rec709_e_to_xyz(color));
                     } else {
                         return Err(
                             PsyParseError::IncorrectLeafData(

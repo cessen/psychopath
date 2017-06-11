@@ -36,6 +36,7 @@ impl SimpleSurfaceShader {
 
 impl SurfaceShader for SimpleSurfaceShader {
     fn shade(&self, data: &SurfaceIntersectionData) -> SurfaceClosureUnion {
+        let _ = data; // Silence "unused" compiler warning
         self.closure
     }
 }

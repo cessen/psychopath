@@ -110,7 +110,7 @@ pub fn parse_assembly<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Ass
 
                 // Surface shader
                 "SurfaceShader" => {
-                    if let &DataTree::Internal { ident: Some(ident), .. } = child {
+                    if let &DataTree::Internal { ident: Some(_), .. } = child {
                         // TODO
                         //unimplemented!()
                     } else {

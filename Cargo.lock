@@ -51,6 +51,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "color"
+version = "0.1.0"
+
+[[package]]
 name = "crossbeam"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -155,6 +159,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.24.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "color 0.1.0",
  "crossbeam 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "float4 0.1.0",
  "half 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",

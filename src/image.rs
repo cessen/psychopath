@@ -14,7 +14,7 @@ use half::f16;
 use png_encode_mini;
 use openexr;
 
-use color::{XYZ, xyz_to_rec709e};
+use color::{XYZ, xyz_to_rec709_e};
 
 
 #[derive(Debug)]
@@ -164,7 +164,7 @@ impl Image {
         // Convert pixels
         for y in 0..self.res.1 {
             for x in 0..self.res.0 {
-                let (r, g, b) = xyz_to_rec709e(self.get(x, y).to_tuple());
+                let (r, g, b) = xyz_to_rec709_e(self.get(x, y).to_tuple());
                 image.push((f16::from_f32(r), f16::from_f32(g), f16::from_f32(b)));
             }
         }
@@ -280,7 +280,7 @@ fn srgb_inv_gamma(n: f32) -> f32 {
 }
 
 fn xyz_to_srgbe(xyz: (f32, f32, f32)) -> (f32, f32, f32) {
-    let rgb = xyz_to_rec709e(xyz);
+    let rgb = xyz_to_rec709_e(xyz);
     (srgb_gamma(rgb.0), srgb_gamma(rgb.1), srgb_gamma(rgb.2))
 }
 

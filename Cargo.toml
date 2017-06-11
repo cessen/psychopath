@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "sub_crates/color",
     "sub_crates/float4",
     "sub_crates/halton",
     "sub_crates/math3d",
@@ -35,6 +36,9 @@ scoped_threadpool = "0.1"
 time = "0.1"
 
 # Local crate dependencies
+[dependencies.color]
+path = "sub_crates/color"
+
 [dependencies.float4]
 path = "sub_crates/float4"
 

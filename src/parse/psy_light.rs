@@ -7,7 +7,7 @@ use nom::IResult;
 use mem_arena::MemArena;
 
 use math::Vector;
-use color::{XYZ, rec709e_to_xyz};
+use color::{XYZ, rec709_e_to_xyz};
 use light::{DistantDiskLight, SphereLight, RectangleLight};
 
 use super::basics::ws_f32;
@@ -62,7 +62,7 @@ pub fn parse_distant_disk_light<'a>(arena: &'a MemArena, tree: &'a DataTree) -> 
                         // TODO: handle color space conversions properly.
                         // Probably will need a special color type with its
                         // own parser...?
-                        colors.push(XYZ::from_tuple(rec709e_to_xyz(color)));
+                        colors.push(XYZ::from_tuple(rec709_e_to_xyz(color)));
                     } else {
                         // Found color, but its contents is not in the right format
                         return Err(PsyParseError::UnknownError(byte_offset));
@@ -112,7 +112,7 @@ pub fn parse_sphere_light<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result
                         // TODO: handle color space conversions properly.
                         // Probably will need a special color type with its
                         // own parser...?
-                        colors.push(XYZ::from_tuple(rec709e_to_xyz(color)));
+                        colors.push(XYZ::from_tuple(rec709_e_to_xyz(color)));
                     } else {
                         // Found color, but its contents is not in the right format
                         return Err(PsyParseError::UnknownError(byte_offset));
@@ -161,7 +161,7 @@ pub fn parse_rectangle_light<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Res
                         // TODO: handle color space conversions properly.
                         // Probably will need a special color type with its
                         // own parser...?
-                        colors.push(XYZ::from_tuple(rec709e_to_xyz(color)));
+                        colors.push(XYZ::from_tuple(rec709_e_to_xyz(color)));
                     } else {
                         // Found color, but its contents is not in the right format
                         return Err(PsyParseError::UnknownError(byte_offset));

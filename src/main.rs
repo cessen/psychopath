@@ -1,3 +1,4 @@
+extern crate color as color_util;
 extern crate float4;
 extern crate halton;
 extern crate math3d;

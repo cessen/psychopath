@@ -289,8 +289,8 @@ impl<'a> Renderer<'a> {
 
                 // Pre-calculate base64 encoding if needed
                 let base64_enc = if do_blender_output {
-                    use color::xyz_to_rec709e;
-                    Some(img_bucket.rgba_base64(xyz_to_rec709e))
+                    use color::xyz_to_rec709_e;
+                    Some(img_bucket.rgba_base64(xyz_to_rec709_e))
                 } else {
                     None
                 };

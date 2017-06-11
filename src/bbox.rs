@@ -5,7 +5,7 @@ use std::iter::Iterator;
 use std::ops::{BitOr, BitOrAssign};
 
 use lerp::{lerp, lerp_slice, Lerp};
-use math::{Point, Matrix4x4, fast_minf32, fast_maxf32};
+use math::{Point, Matrix4x4, fast_minf32};
 use ray::AccelRay;
 
 
