@@ -3,11 +3,11 @@
 Psychopath is a path tracer, aimed at rendering animations and VFX for
 film.  It is currently still in an early prototyping stage of development.
 
-This project is mostly for fun, but I do hope to eventually get it to a point
-where it's actually useful.  That "for-fun" disclaimer aside, the long-term
-goals of Psychopath are to support efficient global illumination rendering of
-scenes that are significantly larger than available RAM and/or that contain
-procedural elements that need to be generated on-the-fly during rendering.
+This project is mostly for fun, but I do hope it eventually becomes useful.
+That "for-fun" disclaimer aside, the long-term goals of Psychopath are to
+support efficient global illumination rendering of scenes that are
+significantly larger than available RAM and/or that contain procedural elements
+that need to be generated on-the-fly during rendering.
 
 The approach that Psychopath takes to enable this is to try to access the scene
 data in as coherent a fashion as possible via breadth-first ray tracing,
@@ -67,9 +67,9 @@ help out as I have time!
 # PsychoBlend
 
 Included in the repository is an addon for [Blender](http://www.blender.org)
-called "PsychoBlend" that lets you used Psychopath for rendering in Blender.
-However, most Blender features are not yet supported because Psychopath doesn't
-support them yet.
+called "PsychoBlend" that lets you use Psychopath for rendering in Blender.
+However, most Blender features are not yet supported because Psychopath itself
+doesn't support them yet.
 
 If you have any trouble getting the addon working, please feel free to file an
 issue and I'll try to troubleshoot/fix it as I have time!
