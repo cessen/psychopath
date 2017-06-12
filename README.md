@@ -81,3 +81,21 @@ issue and I'll try to troubleshoot/fix it as I have time!
 - Camera, transform, and deformation motion blur
 - Exports dupligroups with full hierarchical instancing
 - Limited auto-detection of instanced meshes
+
+# License
+
+The original code in Psychopath is distributed under the [MIT license](https://opensource.org/licenses/MIT).
+
+PsychoBlend is distributed under the [GPL version 2](https://opensource.org/licenses/GPL-2.0)
+or (at your option) any later version.
+
+Some code in this repository was adapted to Rust from other sources.  With one
+exception, all of the adapted code is from sources that are licensed under the
+MIT license or a BSD license variant.  Adapted code is marked by comments citing
+their source.
+
+The one exception is the code in `sub_crates/spectra_xyz/src/generate_spectra_rust.py`,
+which is adapted from the supplemental material of the paper
+["Physically Meaningful Rendering using Tristimulus Colours" by Meng et al.](https://cg.ivd.kit.edu/spectrum.php)
+It has no explicit license, but I contacted one of the authors and confirmed
+that it is intended to be used freely.  Take that for what you will!

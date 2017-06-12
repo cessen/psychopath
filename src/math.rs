@@ -12,45 +12,6 @@ pub fn clamp<T: PartialOrd>(v: T, lower: T, upper: T) -> T {
     }
 }
 
-// Adapted from from http://fastapprox.googlecode.com
-pub fn fast_ln(x: f32) -> f32 {
-    use std::mem::transmute_copy;
-
-    let mut y = unsafe { transmute_copy::<f32, u32>(&x) as f32 };
-    y *= 8.2629582881927490e-8;
-    return y - 87.989971088;
-}
-
-pub fn fast_pow2(p: f32) -> f32 {
-    use std::mem::transmute_copy;
-
-    let offset: f32 = if p < 0.0 { 1.0 } else { 0.0 };
-    let clipp: f32 = if p < -126.0 { -126.0 } else { p };
-    let w: i32 = clipp as i32;
-    let z: f32 = clipp - w as f32 + offset;
-
-    let i: u32 = ((1 << 23) as f32 * (clipp + 121.2740575 + 27.7280233 / (4.84252568 - z) - 1.49012907 * z)) as u32;
-
-    unsafe { transmute_copy::<u32, f32>(&i) }
-}
-
-pub fn fast_exp(p: f32) -> f32 {
-    fast_pow2(1.442695040 * p)
-}
-
-pub fn faster_pow2(p: f32) -> f32 {
-    use std::mem::transmute_copy;
-
-    let clipp: f32 = if p < -126.0 { -126.0 } else { p };
-    let i: u32 = ((1 << 23) as f32 * (clipp + 126.94269504)) as u32;
-
-    unsafe { transmute_copy::<u32, f32>(&i) }
-}
-
-pub fn faster_exp(p: f32) -> f32 {
-    faster_pow2(1.442695040 * p)
-}
-
 // The stdlib min function is slower than a simple if statement for some reason.
 pub fn fast_minf32(a: f32, b: f32) -> f32 {
     if a < b { a } else { b }
@@ -60,7 +21,6 @@ pub fn fast_minf32(a: f32, b: f32) -> f32 {
 pub fn fast_maxf32(a: f32, b: f32) -> f32 {
     if a > b { a } else { b }
 }
-
 
 /// Rounds an integer up to the next power of two.
 pub fn upper_power_of_two(mut v: u32) -> u32 {
@@ -74,85 +34,33 @@ pub fn upper_power_of_two(mut v: u32) -> u32 {
 }
 
 /// Gets the log base 2 of the given integer
-pub fn log2_64(value: u64) -> u64 {
-    const TAB64: [u64; 64] = [
-        63,
-        0,
-        58,
-        1,
-        59,
-        47,
-        53,
-        2,
-        60,
-        39,
-        48,
-        27,
-        54,
-        33,
-        42,
-        3,
-        61,
-        51,
-        37,
-        40,
-        49,
-        18,
-        28,
-        20,
-        55,
-        30,
-        34,
-        11,
-        43,
-        14,
-        22,
-        4,
-        62,
-        57,
-        46,
-        52,
-        38,
-        26,
-        32,
-        41,
-        50,
-        36,
-        17,
-        19,
-        29,
-        10,
-        13,
-        21,
-        56,
-        45,
-        25,
-        31,
-        35,
-        16,
-        9,
-        12,
-        44,
-        24,
-        15,
-        8,
-        23,
-        7,
-        6,
-        5,
+pub fn log2_64(mut value: u64) -> u64 {
+    // This works by doing a binary search for the largest non-zero binary
+    // digit in the number.  Its bit position is then the log2 of the integer.
+
+    let mut log = 0;
+
+    const POWERS: [(u64, u64); 6] = [
+        (32, (1 << 32) - 1),
+        (16, (1 << 16) - 1),
+        (8, (1 << 8) - 1),
+        (4, (1 << 4) - 1),
+        (2, (1 << 2) - 1),
+        (1, (1 << 1) - 1),
     ];
 
-    let value = value | value.wrapping_shr(1);
-    let value = value | value.wrapping_shr(2);
-    let value = value | value.wrapping_shr(4);
-    let value = value | value.wrapping_shr(8);
-    let value = value | value.wrapping_shr(16);
-    let value = value | value.wrapping_shr(32);
+    for &(i, j) in POWERS.iter() {
+        let tmp = value >> i;
+        if tmp != 0 {
+            log += i;
+            value = tmp;
+        } else {
+            value &= j;
+        }
+    }
 
-    TAB64[((value.wrapping_sub(value.wrapping_shr(1)) as u64).wrapping_mul(0x07EDD5E59A4E28C2)).wrapping_shr(58) as usize]
+    log
 }
-
-
 
 /// Creates a coordinate system from a single vector.
 ///
@@ -205,4 +113,76 @@ pub fn fast_logit(p: f32, width: f32) -> f32 {
     let n = 0.001 + (p * 0.998);
 
     fast_ln((n / (1.0 - n))) * width * (0.6266 / 4.0)
+}
+
+
+//----------------------------------------------------------------
+// Adapted to Rust from https://code.google.com/archive/p/fastapprox/
+
+pub fn fast_ln(x: f32) -> f32 {
+    use std::mem::transmute_copy;
+
+    let mut y = unsafe { transmute_copy::<f32, u32>(&x) as f32 };
+    y *= 8.2629582881927490e-8;
+    return y - 87.989971088;
+}
+
+pub fn fast_pow2(p: f32) -> f32 {
+    use std::mem::transmute_copy;
+
+    let offset: f32 = if p < 0.0 { 1.0 } else { 0.0 };
+    let clipp: f32 = if p < -126.0 { -126.0 } else { p };
+    let w: i32 = clipp as i32;
+    let z: f32 = clipp - w as f32 + offset;
+
+    let i: u32 = ((1 << 23) as f32 * (clipp + 121.2740575 + 27.7280233 / (4.84252568 - z) - 1.49012907 * z)) as u32;
+
+    unsafe { transmute_copy::<u32, f32>(&i) }
+}
+
+pub fn fast_exp(p: f32) -> f32 {
+    fast_pow2(1.442695040 * p)
+}
+
+pub fn faster_pow2(p: f32) -> f32 {
+    use std::mem::transmute_copy;
+
+    let clipp: f32 = if p < -126.0 { -126.0 } else { p };
+    let i: u32 = ((1 << 23) as f32 * (clipp + 126.94269504)) as u32;
+
+    unsafe { transmute_copy::<u32, f32>(&i) }
+}
+
+pub fn faster_exp(p: f32) -> f32 {
+    faster_pow2(1.442695040 * p)
+}
+
+// End of adapted code
+//----------------------------------------------------------------
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn log2_64_test() {
+        assert_eq!(0, log2_64(0));
+
+        for i in 0..64 {
+            assert_eq!(i, log2_64(1 << i));
+        }
+
+        for i in 8..64 {
+            assert_eq!(i, log2_64((1 << i) + 227));
+        }
+
+        for i in 16..64 {
+            assert_eq!(i, log2_64((1 << i) + 56369));
+        }
+
+        for i in 32..64 {
+            assert_eq!(i, log2_64((1 << i) + 2514124923));
+        }
+    }
 }
