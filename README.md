@@ -82,6 +82,23 @@ issue and I'll try to troubleshoot/fix it as I have time!
 - Exports dupligroups with full hierarchical instancing
 - Limited auto-detection of instanced meshes
 
+# Contributing
+
+I'm not looking for contributions right now, and I'm likely to reject pull
+requests.  This is currently a solo project and I like it that way.  Eventually
+when things become less playful/experimental I will likely want to start
+collaborating, but that's quite a ways off.
+
+However, I _do_ want people to be able to play with Psychopath, so if you have
+trouble getting it to build/run please file an issue!  And if you want to fork
+it and play around with the code yourself (or start an entirely new project
+based on it!) feel free.  That's why I put it under the MIT license.
+
+Also, if you're looking for projects _related_ to Psychopath to contribute to,
+[OpenEXR-rs](https://github.com/cessen/openexr-rs) is definitely a
+collaborative project that I would love more help with!  And I fully expect more
+such projects to come out of Psychopath in the future.
+
 # License
 
 The original code in Psychopath is distributed under the [MIT license](https://opensource.org/licenses/MIT).
