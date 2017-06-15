@@ -329,9 +329,9 @@ fn main() {
 
                 // Write to disk
                 if !args.is_present("serialized_output") {
-                    println!("Writing image to disk...");
+                    println!("Writing image to disk into '{}'...", r.output_file);
                     if r.output_file.ends_with(".png") {
-                        let _ = image.write_png(Path::new(&r.output_file));
+                        image.write_png(Path::new(&r.output_file)).expect("Failed to write png...");
                     } else if r.output_file.ends_with(".exr") {
                         image.write_exr(Path::new(&r.output_file));
                     } else {
