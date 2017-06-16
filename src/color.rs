@@ -4,7 +4,7 @@ use spectra_xyz::{spectrum_xyz_to_p, EQUAL_ENERGY_REFLECTANCE};
 
 use float4::Float4;
 use lerp::Lerp;
-use math::faster_exp;
+use math::fast_exp;
 
 pub use color_util::{xyz_to_rec709, xyz_to_rec709_e, rec709_to_xyz, rec709_e_to_xyz};
 
@@ -278,18 +278,18 @@ pub fn x_1931(wavelength: f32) -> f32 {
     let t1 = (wavelength - 442.0) * (if wavelength < 442.0 { 0.0624 } else { 0.0374 });
     let t2 = (wavelength - 599.8) * (if wavelength < 599.8 { 0.0264 } else { 0.0323 });
     let t3 = (wavelength - 501.1) * (if wavelength < 501.1 { 0.0490 } else { 0.0382 });
-    (0.362 * faster_exp(-0.5 * t1 * t1)) + (1.056 * faster_exp(-0.5 * t2 * t2)) -
-        (0.065 * faster_exp(-0.5 * t3 * t3))
+    (0.362 * fast_exp(-0.5 * t1 * t1)) + (1.056 * fast_exp(-0.5 * t2 * t2)) -
+        (0.065 * fast_exp(-0.5 * t3 * t3))
 }
 
 pub fn y_1931(wavelength: f32) -> f32 {
     let t1 = (wavelength - 568.8) * (if wavelength < 568.8 { 0.0213 } else { 0.0247 });
     let t2 = (wavelength - 530.9) * (if wavelength < 530.9 { 0.0613 } else { 0.0322 });
-    (0.821 * faster_exp(-0.5 * t1 * t1)) + (0.286 * faster_exp(-0.5 * t2 * t2))
+    (0.821 * fast_exp(-0.5 * t1 * t1)) + (0.286 * fast_exp(-0.5 * t2 * t2))
 }
 
 pub fn z_1931(wavelength: f32) -> f32 {
     let t1 = (wavelength - 437.0) * (if wavelength < 437.0 { 0.0845 } else { 0.0278 });
     let t2 = (wavelength - 459.0) * (if wavelength < 459.0 { 0.0385 } else { 0.0725 });
-    (1.217 * faster_exp(-0.5 * t1 * t1)) + (0.681 * faster_exp(-0.5 * t2 * t2))
+    (1.217 * fast_exp(-0.5 * t1 * t1)) + (0.681 * fast_exp(-0.5 * t2 * t2))
 }
