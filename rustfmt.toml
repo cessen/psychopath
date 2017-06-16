@@ -1,6 +1,0 @@
-max_width = 1024
-error_on_line_overflow = false
-array_layout = "Block"
-chain_indent = "Block"
-fn_args_layout = "Block"
-fn_call_style = "Block"

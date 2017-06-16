@@ -135,7 +135,9 @@ pub fn fast_pow2(p: f32) -> f32 {
     let w: i32 = clipp as i32;
     let z: f32 = clipp - w as f32 + offset;
 
-    let i: u32 = ((1 << 23) as f32 * (clipp + 121.2740575 + 27.7280233 / (4.84252568 - z) - 1.49012907 * z)) as u32;
+    let i: u32 = ((1 << 23) as f32 *
+                      (clipp + 121.2740575 + 27.7280233 / (4.84252568 - z) - 1.49012907 * z)) as
+        u32;
 
     unsafe { transmute_copy::<u32, f32>(&i) }
 }

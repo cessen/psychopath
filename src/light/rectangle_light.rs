@@ -18,17 +18,19 @@ pub struct RectangleLight<'a> {
 }
 
 impl<'a> RectangleLight<'a> {
-    pub fn new<'b>(arena: &'b MemArena, dimensions: Vec<(f32, f32)>, colors: Vec<XYZ>) -> RectangleLight<'b> {
+    pub fn new<'b>(
+        arena: &'b MemArena,
+        dimensions: Vec<(f32, f32)>,
+        colors: Vec<XYZ>,
+    ) -> RectangleLight<'b> {
         let bbs: Vec<_> = dimensions
             .iter()
-            .map(
-                |d| {
-                    BBox {
-                        min: Point::new(d.0 * -0.5, d.1 * -0.5, 0.0),
-                        max: Point::new(d.0 * 0.5, d.1 * 0.5, 0.0),
-                    }
+            .map(|d| {
+                BBox {
+                    min: Point::new(d.0 * -0.5, d.1 * -0.5, 0.0),
+                    max: Point::new(d.0 * 0.5, d.1 * 0.5, 0.0),
                 }
-            )
+            })
             .collect();
         RectangleLight {
             dimensions: arena.copy_slice(&dimensions),
@@ -39,7 +41,15 @@ impl<'a> RectangleLight<'a> {
 }
 
 impl<'a> LightSource for RectangleLight<'a> {
-    fn sample(&self, space: &Matrix4x4, arr: Point, u: f32, v: f32, wavelength: f32, time: f32) -> (SpectralSample, Vector, f32) {
+    fn sample(
+        &self,
+        space: &Matrix4x4,
+        arr: Point,
+        u: f32,
+        v: f32,
+        wavelength: f32,
+        time: f32,
+    ) -> (SpectralSample, Vector, f32) {
         // Calculate time interpolated values
         let dim = lerp_slice(&self.dimensions, time);
         let col = lerp_slice(&self.colors, time);
@@ -98,7 +108,16 @@ impl<'a> LightSource for RectangleLight<'a> {
         return (spectral_sample, shadow_vec, pdf as f32);
     }
 
-    fn sample_pdf(&self, space: &Matrix4x4, arr: Point, sample_dir: Vector, sample_u: f32, sample_v: f32, wavelength: f32, time: f32) -> f32 {
+    fn sample_pdf(
+        &self,
+        space: &Matrix4x4,
+        arr: Point,
+        sample_dir: Vector,
+        sample_u: f32,
+        sample_v: f32,
+        wavelength: f32,
+        time: f32,
+    ) -> f32 {
         // We're not using these, silence warnings
         let _ = (sample_dir, sample_u, sample_v, wavelength);
 
@@ -125,7 +144,15 @@ impl<'a> LightSource for RectangleLight<'a> {
         1.0 / (area_1 + area_2)
     }
 
-    fn outgoing(&self, space: &Matrix4x4, dir: Vector, u: f32, v: f32, wavelength: f32, time: f32) -> SpectralSample {
+    fn outgoing(
+        &self,
+        space: &Matrix4x4,
+        dir: Vector,
+        u: f32,
+        v: f32,
+        wavelength: f32,
+        time: f32,
+    ) -> SpectralSample {
         // We're not using these, silence warnings
         let _ = (space, dir, u, v);
 
@@ -143,9 +170,10 @@ impl<'a> LightSource for RectangleLight<'a> {
     }
 
     fn approximate_energy(&self) -> f32 {
-        let color: XYZ = self.colors
-            .iter()
-            .fold(XYZ::new(0.0, 0.0, 0.0), |a, &b| a + b) / self.colors.len() as f32;
+        let color: XYZ = self.colors.iter().fold(
+            XYZ::new(0.0, 0.0, 0.0),
+            |a, &b| a + b,
+        ) / self.colors.len() as f32;
         color.y
     }
 }

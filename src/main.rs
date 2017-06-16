@@ -83,7 +83,7 @@ fn main() {
                 .value_name("FILE")
                 .help("Input .psy file")
                 .takes_value(true)
-                .required_unless_one(&["dev", "use_stdin"])
+                .required_unless_one(&["dev", "use_stdin"]),
         )
         .arg(
             Arg::with_name("spp")
@@ -92,43 +92,45 @@ fn main() {
                 .value_name("N")
                 .help("Number of samples per pixel")
                 .takes_value(true)
-                .validator(
-                    |s| {
-                        usize::from_str(&s)
-                            .and(Ok(()))
-                            .or(Err("must be an integer".to_string()))
-                    }
-                )
+                .validator(|s| {
+                    usize::from_str(&s).and(Ok(())).or(Err(
+                        "must be an integer"
+                            .to_string(),
+                    ))
+                }),
         )
         .arg(
             Arg::with_name("max_bucket_samples")
                 .short("b")
                 .long("spb")
                 .value_name("N")
-                .help("Target number of samples per bucket (determines bucket size)")
-                .takes_value(true)
-                .validator(
-                    |s| {
-                        usize::from_str(&s)
-                            .and(Ok(()))
-                            .or(Err("must be an integer".to_string()))
-                    }
+                .help(
+                    "Target number of samples per bucket (determines bucket size)",
                 )
+                .takes_value(true)
+                .validator(|s| {
+                    usize::from_str(&s).and(Ok(())).or(Err(
+                        "must be an integer"
+                            .to_string(),
+                    ))
+                }),
         )
         .arg(
             Arg::with_name("crop")
                 .long("crop")
                 .value_name("X1 Y1 X2 Y2")
-                .help("Only render the image between pixel coordinates (X1, Y1) and (X2, Y2).  Coordinates are zero-indexed and inclusive.")
+                .help(
+                    "Only render the image between pixel coordinates (X1, Y1) \
+                    and (X2, Y2).  Coordinates are zero-indexed and inclusive.",
+                )
                 .takes_value(true)
                 .number_of_values(4)
-                .validator(
-                    |s| {
-                        usize::from_str(&s)
-                            .and(Ok(()))
-                            .or(Err("must be four integers".to_string()))
-                    }
-                )
+                .validator(|s| {
+                    usize::from_str(&s).and(Ok(())).or(Err(
+                        "must be four integers"
+                            .to_string(),
+                    ))
+                }),
         )
         .arg(
             Arg::with_name("threads")
@@ -137,38 +139,33 @@ fn main() {
                 .value_name("N")
                 .help(
                     "Number of threads to render with.  Defaults to the number of logical \
-                       cores on the system."
+                       cores on the system.",
                 )
                 .takes_value(true)
-                .validator(
-                    |s| {
-                        usize::from_str(&s)
-                            .and(Ok(()))
-                            .or(Err("must be an integer".to_string()))
-                    }
-                )
+                .validator(|s| {
+                    usize::from_str(&s).and(Ok(())).or(Err(
+                        "must be an integer"
+                            .to_string(),
+                    ))
+                }),
         )
-        .arg(
-            Arg::with_name("stats")
-                .long("stats")
-                .help("Print additional statistics about rendering")
-        )
-        .arg(
-            Arg::with_name("dev")
-                .long("dev")
-                .help("Show useful dev/debug info.")
-        )
+        .arg(Arg::with_name("stats").long("stats").help(
+            "Print additional statistics about rendering",
+        ))
+        .arg(Arg::with_name("dev").long("dev").help(
+            "Show useful dev/debug info.",
+        ))
         .arg(
             Arg::with_name("serialized_output")
                 .long("serialized_output")
                 .help("Serialize and send render output to standard output.")
-                .hidden(true)
+                .hidden(true),
         )
         .arg(
             Arg::with_name("use_stdin")
                 .long("use_stdin")
                 .help("Take scene file in from stdin instead of a file path.")
-                .hidden(true)
+                .hidden(true),
         )
         .get_matches();
 
@@ -186,19 +183,21 @@ fn main() {
         return;
     }
 
-    let crop = args.values_of("crop")
-        .map(
-            |mut vals| {
-                let coords = (u32::from_str(vals.next().unwrap()).unwrap(), u32::from_str(vals.next().unwrap()).unwrap(), u32::from_str(vals.next().unwrap()).unwrap(), u32::from_str(vals.next().unwrap()).unwrap());
-                if coords.0 > coords.2 {
-                    panic!("Argument '--crop': X1 must be less than or equal to X2");
-                }
-                if coords.1 > coords.3 {
-                    panic!("Argument '--crop': Y1 must be less than or equal to Y2");
-                }
-                coords
-            }
+    let crop = args.values_of("crop").map(|mut vals| {
+        let coords = (
+            u32::from_str(vals.next().unwrap()).unwrap(),
+            u32::from_str(vals.next().unwrap()).unwrap(),
+            u32::from_str(vals.next().unwrap()).unwrap(),
+            u32::from_str(vals.next().unwrap()).unwrap(),
         );
+        if coords.0 > coords.2 {
+            panic!("Argument '--crop': X1 must be less than or equal to X2");
+        }
+        if coords.1 > coords.3 {
+            panic!("Argument '--crop': Y1 must be less than or equal to Y2");
+        }
+        coords
+    });
 
     // Parse data tree of scene file
     if !args.is_present("serialized_output") {
@@ -214,9 +213,9 @@ fn main() {
         let mut stdin = tmp.lock();
         let mut buf = vec![0u8; 4096];
         loop {
-            let count = stdin
-                .read(&mut buf)
-                .expect("Unexpected end of scene input.");
+            let count = stdin.read(&mut buf).expect(
+                "Unexpected end of scene input.",
+            );
             let start = if input.len() < 11 {
                 0
             } else {
@@ -227,7 +226,9 @@ fn main() {
 
             let mut done = false;
             let mut trunc_len = 0;
-            if let nom::IResult::Done(remaining, _) = take_until!(&input[start..end], "__PSY_EOF__") {
+            if let nom::IResult::Done(remaining, _) =
+                take_until!(&input[start..end], "__PSY_EOF__")
+            {
                 done = true;
                 trunc_len = input.len() - remaining.len();
             }
@@ -261,12 +262,10 @@ fn main() {
                 }
 
                 let arena = MemArena::with_min_block_size((1 << 20) * 4);
-                let mut r = parse_scene(&arena, child).unwrap_or_else(
-                    |e| {
-                        e.print(&psy_contents);
-                        panic!("Parse error.");
-                    }
-                );
+                let mut r = parse_scene(&arena, child).unwrap_or_else(|e| {
+                    e.print(&psy_contents);
+                    panic!("Parse error.");
+                });
 
                 if let Some(spp) = args.value_of("spp") {
                     if !args.is_present("serialized_output") {
@@ -275,11 +274,12 @@ fn main() {
                     r.spp = usize::from_str(&spp).unwrap();
                 }
 
-                let max_samples_per_bucket = if let Some(max_samples_per_bucket) = args.value_of("max_bucket_samples") {
-                    u32::from_str(&max_samples_per_bucket).unwrap()
-                } else {
-                    4096
-                };
+                let max_samples_per_bucket =
+                    if let Some(max_samples_per_bucket) = args.value_of("max_bucket_samples") {
+                        u32::from_str(&max_samples_per_bucket).unwrap()
+                    } else {
+                        4096
+                    };
 
                 let thread_count = if let Some(threads) = args.value_of("threads") {
                     u32::from_str(&threads).unwrap()
@@ -331,7 +331,9 @@ fn main() {
                 if !args.is_present("serialized_output") {
                     println!("Writing image to disk into '{}'...", r.output_file);
                     if r.output_file.ends_with(".png") {
-                        image.write_png(Path::new(&r.output_file)).expect("Failed to write png...");
+                        image.write_png(Path::new(&r.output_file)).expect(
+                            "Failed to write png...",
+                        );
                     } else if r.output_file.ends_with(".exr") {
                         image.write_exr(Path::new(&r.output_file));
                     } else {

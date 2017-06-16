@@ -42,7 +42,13 @@ pub trait SurfaceClosure {
     /// wavelength: The wavelength of light to sample at.
     ///
     /// Returns a tuple with the generated outgoing light direction, color filter, and pdf.
-    fn sample(&self, inc: Vector, nor: Normal, uv: (f32, f32), wavelength: f32) -> (Vector, SpectralSample, f32);
+    fn sample(
+        &self,
+        inc: Vector,
+        nor: Normal,
+        uv: (f32, f32),
+        wavelength: f32,
+    ) -> (Vector, SpectralSample, f32);
 
     /// Evaluates the closure for the given incoming and outgoing rays.
     ///
@@ -67,7 +73,13 @@ pub trait SurfaceClosure {
     /// This is used for importance sampling, so does not need to be exact,
     /// but it does need to be non-zero anywhere that an exact solution would
     /// be non-zero.
-    fn estimate_eval_over_solid_angle(&self, inc: Vector, out: Vector, nor: Normal, cos_theta: f32) -> f32;
+    fn estimate_eval_over_solid_angle(
+        &self,
+        inc: Vector,
+        out: Vector,
+        nor: Normal,
+        cos_theta: f32,
+    ) -> f32;
 }
 
 
@@ -163,10 +175,20 @@ impl SurfaceClosure for EmitClosure {
         false
     }
 
-    fn sample(&self, inc: Vector, nor: Normal, uv: (f32, f32), wavelength: f32) -> (Vector, SpectralSample, f32) {
+    fn sample(
+        &self,
+        inc: Vector,
+        nor: Normal,
+        uv: (f32, f32),
+        wavelength: f32,
+    ) -> (Vector, SpectralSample, f32) {
         let _ = (inc, nor, uv); // Not using these, silence warning
 
-        (Vector::new(0.0, 0.0, 0.0), SpectralSample::new(wavelength), 1.0)
+        (
+            Vector::new(0.0, 0.0, 0.0),
+            SpectralSample::new(wavelength),
+            1.0,
+        )
     }
 
     fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, wavelength: f32) -> SpectralSample {
@@ -181,7 +203,13 @@ impl SurfaceClosure for EmitClosure {
         1.0
     }
 
-    fn estimate_eval_over_solid_angle(&self, inc: Vector, out: Vector, nor: Normal, cos_theta: f32) -> f32 {
+    fn estimate_eval_over_solid_angle(
+        &self,
+        inc: Vector,
+        out: Vector,
+        nor: Normal,
+        cos_theta: f32,
+    ) -> f32 {
         let _ = (inc, out, nor, cos_theta); // Not using these, silence warning
 
         // TODO: what to do here?
@@ -207,13 +235,18 @@ impl SurfaceClosure for LambertClosure {
         false
     }
 
-    fn sample(&self, inc: Vector, nor: Normal, uv: (f32, f32), wavelength: f32) -> (Vector, SpectralSample, f32) {
+    fn sample(
+        &self,
+        inc: Vector,
+        nor: Normal,
+        uv: (f32, f32),
+        wavelength: f32,
+    ) -> (Vector, SpectralSample, f32) {
         let nn = if dot(nor.into_vector(), inc) <= 0.0 {
-                nor.normalized()
-            } else {
-                -nor.normalized()
-            }
-            .into_vector();
+            nor.normalized()
+        } else {
+            -nor.normalized()
+        }.into_vector();
 
         // Generate a random ray direction in the hemisphere
         // of the surface.
@@ -228,11 +261,10 @@ impl SurfaceClosure for LambertClosure {
     fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, wavelength: f32) -> SpectralSample {
         let v = out.normalized();
         let nn = if dot(nor.into_vector(), inc) <= 0.0 {
-                nor.normalized()
-            } else {
-                -nor.normalized()
-            }
-            .into_vector();
+            nor.normalized()
+        } else {
+            -nor.normalized()
+        }.into_vector();
         let fac = dot(nn, v).max(0.0) * INV_PI;
 
         self.col.to_spectral_sample(wavelength) * fac
@@ -241,16 +273,21 @@ impl SurfaceClosure for LambertClosure {
     fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal) -> f32 {
         let v = out.normalized();
         let nn = if dot(nor.into_vector(), inc) <= 0.0 {
-                nor.normalized()
-            } else {
-                -nor.normalized()
-            }
-            .into_vector();
+            nor.normalized()
+        } else {
+            -nor.normalized()
+        }.into_vector();
 
         dot(nn, v).max(0.0) * INV_PI
     }
 
-    fn estimate_eval_over_solid_angle(&self, inc: Vector, out: Vector, nor: Normal, cos_theta: f32) -> f32 {
+    fn estimate_eval_over_solid_angle(
+        &self,
+        inc: Vector,
+        out: Vector,
+        nor: Normal,
+        cos_theta: f32,
+    ) -> f32 {
         assert!(cos_theta >= -1.0 && cos_theta <= 1.0);
 
         // Analytically calculates lambert shading from a uniform light source
@@ -292,11 +329,10 @@ impl SurfaceClosure for LambertClosure {
         } else {
             let v = out.normalized();
             let nn = if dot(nor.into_vector(), inc) <= 0.0 {
-                    nor.normalized()
-                } else {
-                    -nor.normalized()
-                }
-                .into_vector();
+                nor.normalized()
+            } else {
+                -nor.normalized()
+            }.into_vector();
 
             let cos_nv = dot(nn, v).max(-1.0).min(1.0);
 
@@ -375,7 +411,9 @@ impl GTRClosure {
         let roughness2 = self.roughness * self.roughness;
 
         // Calculate top half of equation
-        let top = 1.0 - ((roughness2.powf(1.0 - self.tail_shape) * (1.0 - u)) + u).powf(1.0 / (1.0 - self.tail_shape));
+        let top = 1.0 -
+            ((roughness2.powf(1.0 - self.tail_shape) * (1.0 - u)) + u)
+                .powf(1.0 / (1.0 - self.tail_shape));
 
         // Calculate bottom half of equation
         let bottom = 1.0 - roughness2;
@@ -408,14 +446,19 @@ impl SurfaceClosure for GTRClosure {
     }
 
 
-    fn sample(&self, inc: Vector, nor: Normal, uv: (f32, f32), wavelength: f32) -> (Vector, SpectralSample, f32) {
+    fn sample(
+        &self,
+        inc: Vector,
+        nor: Normal,
+        uv: (f32, f32),
+        wavelength: f32,
+    ) -> (Vector, SpectralSample, f32) {
         // Get normalized surface normal
         let nn = if dot(nor.into_vector(), inc) < 0.0 {
-                nor.normalized()
-            } else {
-                -nor.normalized() // If back-facing, flip normal
-            }
-            .into_vector();
+            nor.normalized()
+        } else {
+            -nor.normalized() // If back-facing, flip normal
+        }.into_vector();
 
         // Generate a random ray direction in the hemisphere
         // of the surface.
@@ -441,11 +484,10 @@ impl SurfaceClosure for GTRClosure {
 
         // Surface normal
         let nn = if dot(nor.into_vector(), hh) < 0.0 {
-                -nor.normalized() // If back-facing, flip normal
-            } else {
-                nor.normalized()
-            }
-            .into_vector();
+            -nor.normalized() // If back-facing, flip normal
+        } else {
+            nor.normalized()
+        }.into_vector();
 
         // Calculate needed dot products
         let na = clamp(dot(nn, aa), -1.0, 1.0);
@@ -538,11 +580,10 @@ impl SurfaceClosure for GTRClosure {
 
         // Surface normal
         let nn = if dot(nor.into_vector(), hh) < 0.0 {
-                -nor.normalized() // If back-facing, flip normal
-            } else {
-                nor.normalized()
-            }
-            .into_vector();
+            -nor.normalized() // If back-facing, flip normal
+        } else {
+            nor.normalized()
+        }.into_vector();
 
         // Calculate needed dot products
         let nh = clamp(dot(nn, hh), -1.0, 1.0);
@@ -551,7 +592,13 @@ impl SurfaceClosure for GTRClosure {
     }
 
 
-    fn estimate_eval_over_solid_angle(&self, inc: Vector, out: Vector, nor: Normal, cos_theta: f32) -> f32 {
+    fn estimate_eval_over_solid_angle(
+        &self,
+        inc: Vector,
+        out: Vector,
+        nor: Normal,
+        cos_theta: f32,
+    ) -> f32 {
         // TODO: all of the stuff in this function is horribly hacky.
         // Find a proper way to approximate the light contribution from a
         // solid angle.
@@ -560,11 +607,10 @@ impl SurfaceClosure for GTRClosure {
 
         // Surface normal
         let nn = if dot(nor.into_vector(), inc) < 0.0 {
-                nor.normalized()
-            } else {
-                -nor.normalized() // If back-facing, flip normal
-            }
-            .into_vector();
+            nor.normalized()
+        } else {
+            -nor.normalized() // If back-facing, flip normal
+        }.into_vector();
 
         let aa = -inc.normalized(); // Vector pointing to where "in" came from
         let bb = out.normalized(); // Out

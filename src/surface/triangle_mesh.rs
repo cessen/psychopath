@@ -24,7 +24,11 @@ pub struct TriangleMesh<'a> {
 }
 
 impl<'a> TriangleMesh<'a> {
-    pub fn from_triangles<'b>(arena: &'b MemArena, time_samples: usize, triangles: Vec<(Point, Point, Point)>) -> TriangleMesh<'b> {
+    pub fn from_triangles<'b>(
+        arena: &'b MemArena,
+        time_samples: usize,
+        triangles: Vec<(Point, Point, Point)>,
+    ) -> TriangleMesh<'b> {
         assert!(triangles.len() % time_samples == 0);
 
         let mut indices: Vec<usize> = (0..(triangles.len() / time_samples))
@@ -41,12 +45,9 @@ impl<'a> TriangleMesh<'a> {
             bounds
         };
 
-        let accel = BVH::from_objects(
-            arena,
-            &mut indices[..],
-            3,
-            |tri_i| &bounds[*tri_i..(*tri_i + time_samples)],
-        );
+        let accel = BVH::from_objects(arena, &mut indices[..], 3, |tri_i| {
+            &bounds[*tri_i..(*tri_i + time_samples)]
+        });
 
         TriangleMesh {
             time_samples: time_samples,
@@ -65,7 +66,13 @@ impl<'a> Boundable for TriangleMesh<'a> {
 
 
 impl<'a> Surface for TriangleMesh<'a> {
-    fn intersect_rays(&self, accel_rays: &mut [AccelRay], wrays: &[Ray], isects: &mut [SurfaceIntersection], space: &[Matrix4x4]) {
+    fn intersect_rays(
+        &self,
+        accel_rays: &mut [AccelRay],
+        wrays: &[Ray],
+        isects: &mut [SurfaceIntersection],
+        space: &[Matrix4x4],
+    ) {
         self.accel
             .traverse(
                 &mut accel_rays[..], &self.indices, |tri_i, rs| {
@@ -96,13 +103,17 @@ impl<'a> Surface for TriangleMesh<'a> {
                                             incoming: wr.dir,
                                             t: t,
                                             pos: wr.orig + (wr.dir * t),
-                                            nor: cross(tri.0 - tri.1, tri.0 - tri.2).into_normal(), // TODO
-                                            nor_g: cross(tri.0 - tri.1, tri.0 - tri.2).into_normal(),
+                                            nor: cross(tri.0 - tri.1, tri.0 - tri.2)
+                                                .into_normal(), // TODO
+                                            nor_g: cross(tri.0 - tri.1, tri.0 - tri.2)
+                                                .into_normal(),
                                             uv: (0.0, 0.0), // TODO
                                             local_space: mat_space,
                                         },
                                         // TODO: get surface closure from surface shader.
-                                        closure: SurfaceClosureUnion::LambertClosure(LambertClosure::new(XYZ::new(0.8, 0.8, 0.8))),
+                                        closure: SurfaceClosureUnion::LambertClosure(
+                                            LambertClosure::new(XYZ::new(0.8, 0.8, 0.8))
+                                        ),
 // closure:
 //     SurfaceClosureUnion::GTRClosure(
 //         GTRClosure::new(XYZ::new(0.8, 0.8, 0.8),

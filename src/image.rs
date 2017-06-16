@@ -77,7 +77,10 @@ impl Image {
         }
 
         // Clip bucket to image
-        let max = (cmp::min(max.0, self.res.0 as u32), cmp::min(max.1, self.res.1 as u32));
+        let max = (
+            cmp::min(max.0, self.res.0 as u32),
+            cmp::min(max.1, self.res.1 as u32),
+        );
 
         // Push bucket onto list
         bucket_list.push((min, max));
@@ -138,7 +141,8 @@ impl Image {
         let res_y = self.res.1;
         for y in 0..res_y {
             for x in 0..res_x {
-                let (r, g, b) = quantize_tri_255(xyz_to_srgbe(self.get(x, res_y - 1 - y).to_tuple()));
+                let (r, g, b) =
+                    quantize_tri_255(xyz_to_srgbe(self.get(x, res_y - 1 - y).to_tuple()));
                 image.push(r);
                 image.push(g);
                 image.push(b);
@@ -178,8 +182,7 @@ impl Image {
                 .add_channel("G", openexr::PixelType::HALF)
                 .add_channel("B", openexr::PixelType::HALF)
                 .set_compression(openexr::Compression::PIZ_COMPRESSION),
-        )
-                .unwrap();
+        ).unwrap();
 
         let mut fb = {
             // Create the frame buffer
@@ -230,11 +233,14 @@ impl<'a> Bucket<'a> {
     /// encoding to base64.  The fourth channel is alpha, and is set to 1.0 for
     /// all pixels.
     pub fn rgba_base64<F>(&mut self, color_convert: F) -> String
-        where F: Fn((f32, f32, f32)) -> (f32, f32, f32)
+    where
+        F: Fn((f32, f32, f32)) -> (f32, f32, f32),
     {
         use base64;
         use std::slice;
-        let mut data = Vec::with_capacity((4 * (self.max.0 - self.min.0) * (self.max.1 - self.min.1)) as usize);
+        let mut data = Vec::with_capacity(
+            (4 * (self.max.0 - self.min.0) * (self.max.1 - self.min.1)) as usize,
+        );
         for y in self.min.1..self.max.1 {
             for x in self.min.0..self.max.0 {
                 let color = color_convert(self.get(x, y).to_tuple());
@@ -244,7 +250,8 @@ impl<'a> Bucket<'a> {
                 data.push(1.0);
             }
         }
-        let data_u8 = unsafe { slice::from_raw_parts(&data[0] as *const f32 as *const u8, data.len() * 4) };
+        let data_u8 =
+            unsafe { slice::from_raw_parts(&data[0] as *const f32 as *const u8, data.len() * 4) };
         base64::encode(data_u8)
     }
 }
@@ -256,9 +263,10 @@ impl<'a> Drop for Bucket<'a> {
         let mut bucket_list = tmp.borrow_mut();
 
         // Find matching bucket and remove it
-        let i = bucket_list
-            .iter()
-            .position(|bucket| (bucket.0).0 == self.min.0 && (bucket.0).1 == self.min.1 && (bucket.1).0 == self.max.0 && (bucket.1).1 == self.max.1);
+        let i = bucket_list.iter().position(|bucket| {
+            (bucket.0).0 == self.min.0 && (bucket.0).1 == self.min.1 &&
+                (bucket.1).0 == self.max.0 && (bucket.1).1 == self.max.1
+        });
         bucket_list.swap_remove(i.unwrap());
     }
 }

@@ -13,7 +13,8 @@ pub struct LightArray {
 impl LightArray {
     #[allow(dead_code)]
     pub fn new<'a, T, F>(things: &mut [T], q: F) -> LightArray
-        where F: 'a + Fn(&T) -> Option<(&'a [BBox], f32)>
+    where
+        F: 'a + Fn(&T) -> Option<(&'a [BBox], f32)>,
     {
         let mut indices = Vec::new();
         let mut aprx_energy = 0.0;
@@ -34,7 +35,15 @@ impl LightArray {
 }
 
 impl LightAccel for LightArray {
-    fn select(&self, inc: Vector, pos: Point, nor: Normal, sc: &SurfaceClosure, time: f32, n: f32) -> Option<(usize, f32, f32)> {
+    fn select(
+        &self,
+        inc: Vector,
+        pos: Point,
+        nor: Normal,
+        sc: &SurfaceClosure,
+        time: f32,
+        n: f32,
+    ) -> Option<(usize, f32, f32)> {
         let _ = (inc, pos, nor, sc, time); // Not using these, silence warnings
 
         assert!(n >= 0.0 && n <= 1.0);

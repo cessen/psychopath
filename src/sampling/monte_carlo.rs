@@ -120,7 +120,13 @@ pub fn spherical_triangle_solid_angle(va: Vector, vb: Vector, vc: Vector) -> f32
 
 /// Generates a uniform sample on a spherical triangle given two uniform
 /// random variables i and j in [0, 1].
-pub fn uniform_sample_spherical_triangle(va: Vector, vb: Vector, vc: Vector, i: f32, j: f32) -> Vector {
+pub fn uniform_sample_spherical_triangle(
+    va: Vector,
+    vb: Vector,
+    vc: Vector,
+    i: f32,
+    j: f32,
+) -> Vector {
     // Calculate sines and cosines of the spherical triangle's edge lengths
     let cos_a: f64 = dot(vb, vc).max(-1.0).min(1.0) as f64;
     let cos_b: f64 = dot(vc, va).max(-1.0).min(1.0) as f64;
@@ -172,7 +178,8 @@ pub fn uniform_sample_spherical_triangle(va: Vector, vb: Vector, vc: Vector, i: 
     let q_bottom = ((v * s) + (u * t)) * sin_va;
     let q = q_top / q_bottom;
 
-    let vc_2 = (va * q as f32) + ((vc - (va * dot(vc, va))).normalized() * (1.0 - (q * q)).sqrt() as f32);
+    let vc_2 = (va * q as f32) +
+        ((vc - (va * dot(vc, va))).normalized() * (1.0 - (q * q)).sqrt() as f32);
 
     let z = 1.0 - (j * (1.0 - dot(vc_2, vb)));
 

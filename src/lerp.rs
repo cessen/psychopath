@@ -38,8 +38,9 @@ pub fn lerp_slice<T: Lerp + Copy>(s: &[T], alpha: f32) -> T {
 }
 
 pub fn lerp_slice_with<T, F>(s: &[T], alpha: f32, f: F) -> T
-    where T: Copy,
-          F: Fn(T, T, f32) -> T
+where
+    T: Copy,
+    F: Fn(T, T, f32) -> T,
 {
     debug_assert!(s.len() > 0);
     debug_assert!(alpha >= 0.0);

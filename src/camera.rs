@@ -18,7 +18,13 @@ pub struct Camera<'a> {
 }
 
 impl<'a> Camera<'a> {
-    pub fn new(arena: &'a MemArena, transforms: Vec<Matrix4x4>, fovs: Vec<f32>, mut aperture_radii: Vec<f32>, mut focus_distances: Vec<f32>) -> Camera<'a> {
+    pub fn new(
+        arena: &'a MemArena,
+        transforms: Vec<Matrix4x4>,
+        fovs: Vec<f32>,
+        mut aperture_radii: Vec<f32>,
+        mut focus_distances: Vec<f32>,
+    ) -> Camera<'a> {
         assert!(transforms.len() != 0, "Camera has no transform(s)!");
         assert!(fovs.len() != 0, "Camera has no fov(s)!");
 
@@ -81,8 +87,7 @@ impl<'a> Camera<'a> {
             (x * tfov) - (orig.x() / focus_distance),
             (y * tfov) - (orig.y() / focus_distance),
             1.0,
-        )
-                .normalized();
+        ).normalized();
 
         Ray::new(orig * transform, dir * transform, time, false)
     }

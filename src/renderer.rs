@@ -68,7 +68,13 @@ impl RenderStats {
 }
 
 impl<'a> Renderer<'a> {
-    pub fn render(&self, max_samples_per_bucket: u32, crop: Option<(u32, u32, u32, u32)>, thread_count: u32, do_blender_output: bool) -> (Image, RenderStats) {
+    pub fn render(
+        &self,
+        max_samples_per_bucket: u32,
+        crop: Option<(u32, u32, u32, u32)>,
+        thread_count: u32,
+        do_blender_output: bool,
+    ) -> (Image, RenderStats) {
         let mut tpool = Pool::new(thread_count);
 
         let image = Image::new(self.resolution.0, self.resolution.1);
@@ -97,86 +103,80 @@ impl<'a> Renderer<'a> {
         };
 
         // Render
-        tpool.scoped(
-            |scope| {
-                // Spawn worker tasks
-                for _ in 0..thread_count {
-                    let jq = &job_queue;
-                    let ajq = &all_jobs_queued;
-                    let img = &image;
-                    let pixrenref = &pixels_rendered;
-                    let cstats = &collective_stats;
-                    scope.execute(
-                        move || {
-                            self.render_job(
-                                jq,
-                                ajq,
-                                img,
-                                width * height,
-                                pixrenref,
-                                cstats,
-                                do_blender_output,
-                            )
-                        }
-                    );
-                }
-
-                // Print initial 0.00% progress
-                print!("0.00%");
-                let _ = io::stdout().flush();
-
-                // Determine bucket size based on the per-thread maximum number of samples to
-                // calculate at a time.
-                let (bucket_w, bucket_h) = {
-                    let target_pixels_per_bucket = max_samples_per_bucket as f64 / self.spp as f64;
-                    let target_bucket_dim = if target_pixels_per_bucket.sqrt() < 1.0 {
-                        1usize
-                    } else {
-                        target_pixels_per_bucket.sqrt() as usize
-                    };
-
-                    (target_bucket_dim, target_bucket_dim)
-                };
-
-                // Populate job queue
-                let bucket_n = {
-                    let bucket_count_x = ((width / bucket_w) + 1) as u32;
-                    let bucket_count_y = ((height / bucket_h) + 1) as u32;
-                    let larger = cmp::max(bucket_count_x, bucket_count_y);
-                    let pow2 = upper_power_of_two(larger);
-                    pow2 * pow2
-                };
-                for hilbert_d in 0..bucket_n {
-                    let (bx, by) = hilbert::d2xy(hilbert_d);
-
-                    let x = bx as usize * bucket_w;
-                    let y = by as usize * bucket_h;
-                    let w = if width >= x {
-                        min(bucket_w, width - x)
-                    } else {
-                        bucket_w
-                    };
-                    let h = if height >= y {
-                        min(bucket_h, height - y)
-                    } else {
-                        bucket_h
-                    };
-                    if x < width && y < height && w > 0 && h > 0 {
-                        job_queue.push(
-                            BucketJob {
-                                x: (start_x + x) as u32,
-                                y: (start_y + y) as u32,
-                                w: w as u32,
-                                h: h as u32,
-                            }
-                        );
-                    }
-                }
-
-                // Mark done queuing jobs
-                *all_jobs_queued.write().unwrap() = true;
+        tpool.scoped(|scope| {
+            // Spawn worker tasks
+            for _ in 0..thread_count {
+                let jq = &job_queue;
+                let ajq = &all_jobs_queued;
+                let img = &image;
+                let pixrenref = &pixels_rendered;
+                let cstats = &collective_stats;
+                scope.execute(move || {
+                    self.render_job(
+                        jq,
+                        ajq,
+                        img,
+                        width * height,
+                        pixrenref,
+                        cstats,
+                        do_blender_output,
+                    )
+                });
             }
-        );
+
+            // Print initial 0.00% progress
+            print!("0.00%");
+            let _ = io::stdout().flush();
+
+            // Determine bucket size based on the per-thread maximum number of samples to
+            // calculate at a time.
+            let (bucket_w, bucket_h) = {
+                let target_pixels_per_bucket = max_samples_per_bucket as f64 / self.spp as f64;
+                let target_bucket_dim = if target_pixels_per_bucket.sqrt() < 1.0 {
+                    1usize
+                } else {
+                    target_pixels_per_bucket.sqrt() as usize
+                };
+
+                (target_bucket_dim, target_bucket_dim)
+            };
+
+            // Populate job queue
+            let bucket_n = {
+                let bucket_count_x = ((width / bucket_w) + 1) as u32;
+                let bucket_count_y = ((height / bucket_h) + 1) as u32;
+                let larger = cmp::max(bucket_count_x, bucket_count_y);
+                let pow2 = upper_power_of_two(larger);
+                pow2 * pow2
+            };
+            for hilbert_d in 0..bucket_n {
+                let (bx, by) = hilbert::d2xy(hilbert_d);
+
+                let x = bx as usize * bucket_w;
+                let y = by as usize * bucket_h;
+                let w = if width >= x {
+                    min(bucket_w, width - x)
+                } else {
+                    bucket_w
+                };
+                let h = if height >= y {
+                    min(bucket_h, height - y)
+                } else {
+                    bucket_h
+                };
+                if x < width && y < height && w > 0 && h > 0 {
+                    job_queue.push(BucketJob {
+                        x: (start_x + x) as u32,
+                        y: (start_y + y) as u32,
+                        w: w as u32,
+                        h: h as u32,
+                    });
+                }
+            }
+
+            // Mark done queuing jobs
+            *all_jobs_queued.write().unwrap() = true;
+        });
 
         // Clear percentage progress print
         print!(
@@ -188,7 +188,16 @@ impl<'a> Renderer<'a> {
     }
 
     /// Waits for buckets in the job queue to render and renders them when available.
-    fn render_job(&self, job_queue: &MsQueue<BucketJob>, all_jobs_queued: &RwLock<bool>, image: &Image, total_pixels: usize, pixels_rendered: &Mutex<Cell<usize>>, collected_stats: &RwLock<RenderStats>, do_blender_output: bool) {
+    fn render_job(
+        &self,
+        job_queue: &MsQueue<BucketJob>,
+        all_jobs_queued: &RwLock<bool>,
+        image: &Image,
+        total_pixels: usize,
+        pixels_rendered: &Mutex<Cell<usize>>,
+        collected_stats: &RwLock<RenderStats>,
+        do_blender_output: bool,
+    ) {
         let mut stats = RenderStats::new();
         let mut timer = Timer::new();
         let mut total_timer = Timer::new();
@@ -246,7 +255,10 @@ impl<'a> Renderer<'a> {
                             &self.scene,
                             (x, y),
                             (img_x, img_y),
-                            (get_sample(0, offset + si as u32), get_sample(1, offset + si as u32)),
+                            (
+                                get_sample(0, offset + si as u32),
+                                get_sample(1, offset + si as u32),
+                            ),
                             get_sample(2, offset + si as u32),
                             map_0_1_to_wavelength(get_sample(3, offset + si as u32)),
                             offset + si as u32,
@@ -266,11 +278,9 @@ impl<'a> Renderer<'a> {
                 stats.trace_time += timer.tick() as f64;
 
                 // Determine next rays to shoot based on result
-                pi = partition_pair(
-                    &mut paths[..pi],
-                    &mut rays[..pi],
-                    |i, path, ray| path.next(&mut xform_stack, &self.scene, &isects[i], &mut *ray),
-                );
+                pi = partition_pair(&mut paths[..pi], &mut rays[..pi], |i, path, ray| {
+                    path.next(&mut xform_stack, &self.scene, &isects[i], &mut *ray)
+                });
                 stats.ray_generation_time += timer.tick() as f64;
             }
 
@@ -326,12 +336,10 @@ impl<'a> Renderer<'a> {
         }
 
         stats.total_time += total_timer.tick() as f64;
-        ACCEL_TRAV_TIME.with(
-            |att| {
-                stats.accel_traversal_time = att.get();
-                att.set(0.0);
-            }
-        );
+        ACCEL_TRAV_TIME.with(|att| {
+            stats.accel_traversal_time = att.get();
+            att.set(0.0);
+        });
 
         // Collect stats
         collected_stats.write().unwrap().collect(stats);
@@ -366,34 +374,42 @@ pub struct LightPath {
 }
 
 impl LightPath {
-    fn new(scene: &Scene, pixel_co: (u32, u32), image_plane_co: (f32, f32), lens_uv: (f32, f32), time: f32, wavelength: f32, lds_offset: u32) -> (LightPath, Ray) {
-        (LightPath {
-             event: LightPathEvent::CameraRay,
-             bounce_count: 0,
+    fn new(
+        scene: &Scene,
+        pixel_co: (u32, u32),
+        image_plane_co: (f32, f32),
+        lens_uv: (f32, f32),
+        time: f32,
+        wavelength: f32,
+        lds_offset: u32,
+    ) -> (LightPath, Ray) {
+        (
+            LightPath {
+                event: LightPathEvent::CameraRay,
+                bounce_count: 0,
 
-             pixel_co: pixel_co,
-             lds_offset: lds_offset,
-             dim_offset: Cell::new(6),
-             time: time,
-             wavelength: wavelength,
+                pixel_co: pixel_co,
+                lds_offset: lds_offset,
+                dim_offset: Cell::new(6),
+                time: time,
+                wavelength: wavelength,
 
-             next_bounce_ray: None,
-             next_attentuation_fac: Float4::splat(1.0),
+                next_bounce_ray: None,
+                next_attentuation_fac: Float4::splat(1.0),
 
-             light_attenuation: Float4::splat(1.0),
-             pending_color_addition: Float4::splat(0.0),
-             color: Float4::splat(0.0),
-         },
+                light_attenuation: Float4::splat(1.0),
+                pending_color_addition: Float4::splat(0.0),
+                color: Float4::splat(0.0),
+            },
 
-         scene
-             .camera
-             .generate_ray(
-            image_plane_co.0,
-            image_plane_co.1,
-            time,
-            lens_uv.0,
-            lens_uv.1,
-        ))
+            scene.camera.generate_ray(
+                image_plane_co.0,
+                image_plane_co.1,
+                time,
+                lens_uv.0,
+                lens_uv.1,
+            ),
+        )
     }
 
     fn next_lds_samp(&self) -> f32 {
@@ -402,23 +418,38 @@ impl LightPath {
         get_sample(dimension, self.lds_offset)
     }
 
-    fn next(&mut self, xform_stack: &mut TransformStack, scene: &Scene, isect: &surface::SurfaceIntersection, ray: &mut Ray) -> bool {
+    fn next(
+        &mut self,
+        xform_stack: &mut TransformStack,
+        scene: &Scene,
+        isect: &surface::SurfaceIntersection,
+        ray: &mut Ray,
+    ) -> bool {
         match self.event {
             //--------------------------------------------------------------------
             // Result of Camera or bounce ray, prepare next bounce and light rays
             LightPathEvent::CameraRay |
             LightPathEvent::BounceRay => {
                 if let &surface::SurfaceIntersection::Hit {
-                           intersection_data: ref idata,
-                           ref closure,
-                       } = isect {
+                    intersection_data: ref idata,
+                    ref closure,
+                } = isect
+                {
                     // Hit something!  Do the stuff
 
                     // Prepare light ray
                     let light_n = self.next_lds_samp();
-                    let light_uvw = (self.next_lds_samp(), self.next_lds_samp(), self.next_lds_samp());
+                    let light_uvw = (
+                        self.next_lds_samp(),
+                        self.next_lds_samp(),
+                        self.next_lds_samp(),
+                    );
                     xform_stack.clear();
-                    let found_light = if let Some((light_color, shadow_vec, light_pdf, light_sel_pdf, is_infinite)) =
+                    let found_light = if let Some((light_color,
+                                                   shadow_vec,
+                                                   light_pdf,
+                                                   light_sel_pdf,
+                                                   is_infinite)) =
                         scene.sample_lights(
                             xform_stack,
                             light_n,
@@ -426,15 +457,22 @@ impl LightPath {
                             self.wavelength,
                             self.time,
                             isect,
-                        ) {
+                        )
+                    {
                         // Check if pdf is zero, to avoid NaN's.
                         if light_pdf > 0.0 {
                             // Calculate and store the light that will be contributed
                             // to the film plane if the light is not in shadow.
                             self.pending_color_addition = {
                                 let material = closure.as_surface_closure();
-                                let la = material.evaluate(ray.dir, shadow_vec, idata.nor, self.wavelength);
-                                light_color.e * la.e * self.light_attenuation / (light_pdf * light_sel_pdf)
+                                let la = material.evaluate(
+                                    ray.dir,
+                                    shadow_vec,
+                                    idata.nor,
+                                    self.wavelength,
+                                );
+                                light_color.e * la.e * self.light_attenuation /
+                                    (light_pdf * light_sel_pdf)
                             };
 
                             // Calculate the shadow ray for testing if the light is
@@ -480,7 +518,12 @@ impl LightPath {
                             self.next_attentuation_fac = filter.e / pdf;
 
                             // Calculate the ray for this bounce
-                            self.next_bounce_ray = Some(Ray::new(idata.pos + dir.normalized() * 0.0001, dir, self.time, false));
+                            self.next_bounce_ray = Some(Ray::new(
+                                idata.pos + dir.normalized() * 0.0001,
+                                dir,
+                                self.time,
+                                false,
+                            ));
 
                             true
                         } else {

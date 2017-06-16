@@ -29,12 +29,9 @@ impl<'a> Tracer<'a> {
         self.rays.clear();
         self.rays.reserve(wrays.len());
         let mut ids = 0..(wrays.len() as u32);
-        self.rays
-            .extend(
-                wrays
-                    .iter()
-                    .map(|wr| AccelRay::new(wr, ids.next().unwrap()))
-            );
+        self.rays.extend(wrays.iter().map(
+            |wr| AccelRay::new(wr, ids.next().unwrap()),
+        ));
 
         return self.inner.trace(wrays, &mut self.rays[..]);
     }
@@ -51,8 +48,12 @@ impl<'a> TracerInner<'a> {
         // Ready the isects
         self.isects.clear();
         self.isects.reserve(wrays.len());
-        self.isects
-            .extend(iter::repeat(SurfaceIntersection::Miss).take(wrays.len()));
+        self.isects.extend(
+            iter::repeat(SurfaceIntersection::Miss).take(
+                wrays
+                    .len(),
+            ),
+        );
 
         let mut ray_sets = split_rays_by_direction(&mut rays[..]);
         for ray_set in ray_sets.iter_mut().filter(|ray_set| ray_set.len() > 0) {
@@ -62,93 +63,112 @@ impl<'a> TracerInner<'a> {
         return &self.isects;
     }
 
-    fn trace_assembly<'b>(&'b mut self, assembly: &Assembly, wrays: &[Ray], accel_rays: &mut [AccelRay]) {
-        assembly
-            .object_accel
-            .traverse(
-                &mut accel_rays[..], &assembly.instances[..], |inst, rs| {
-                    // Transform rays if needed
-                    if let Some((xstart, xend)) = inst.transform_indices {
-                        // Push transforms to stack
-                        self.xform_stack.push(&assembly.xforms[xstart..xend]);
+    fn trace_assembly<'b>(
+        &'b mut self,
+        assembly: &Assembly,
+        wrays: &[Ray],
+        accel_rays: &mut [AccelRay],
+    ) {
+        assembly.object_accel.traverse(
+            &mut accel_rays[..],
+            &assembly.instances[..],
+            |inst, rs| {
+                // Transform rays if needed
+                if let Some((xstart, xend)) = inst.transform_indices {
+                    // Push transforms to stack
+                    self.xform_stack.push(&assembly.xforms[xstart..xend]);
 
-                        // Do transforms
-                        let xforms = self.xform_stack.top();
-                        for ray in &mut rs[..] {
-                            let id = ray.id;
-                            let t = ray.time;
-                            ray.update_from_xformed_world_ray(&wrays[id as usize], &lerp_slice(xforms, t));
-                        }
+                    // Do transforms
+                    let xforms = self.xform_stack.top();
+                    for ray in &mut rs[..] {
+                        let id = ray.id;
+                        let t = ray.time;
+                        ray.update_from_xformed_world_ray(
+                            &wrays[id as usize],
+                            &lerp_slice(xforms, t),
+                        );
                     }
+                }
 
-                    // Trace rays
-                    {
-                        // This is kind of weird looking, but what we're doing here is
-                        // splitting the rays up based on direction if they were
-                        // transformed, and not splitting them up if they weren't
-                        // transformed.
-                        // But to keep the actual tracing code in one place (DRY),
-                        // we map both cases to an array slice that contains slices of
-                        // ray arrays.  Gah... that's confusing even when explained.
-                        // TODO: do this in a way that's less confusing.  Probably split
-                        // the tracing code out into a trace_instance() method or
-                        // something.
-                        let mut tmp = if let Some(_) = inst.transform_indices {
-                            split_rays_by_direction(rs)
-                        } else {
-                            [
-                                &mut rs[..],
-                                &mut [],
-                                &mut [],
-                                &mut [],
-                                &mut [],
-                                &mut [],
-                                &mut [],
-                                &mut [],
-                            ]
-                        };
-                        let mut ray_sets = if let Some(_) = inst.transform_indices {
-                            &mut tmp[..]
-                        } else {
-                            &mut tmp[..1]
-                        };
+                // Trace rays
+                {
+                    // This is kind of weird looking, but what we're doing here is
+                    // splitting the rays up based on direction if they were
+                    // transformed, and not splitting them up if they weren't
+                    // transformed.
+                    // But to keep the actual tracing code in one place (DRY),
+                    // we map both cases to an array slice that contains slices of
+                    // ray arrays.  Gah... that's confusing even when explained.
+                    // TODO: do this in a way that's less confusing.  Probably split
+                    // the tracing code out into a trace_instance() method or
+                    // something.
+                    let mut tmp = if let Some(_) = inst.transform_indices {
+                        split_rays_by_direction(rs)
+                    } else {
+                        [
+                            &mut rs[..],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                        ]
+                    };
+                    let mut ray_sets = if let Some(_) = inst.transform_indices {
+                        &mut tmp[..]
+                    } else {
+                        &mut tmp[..1]
+                    };
 
-                        // Loop through the split ray slices and trace them
-                        for ray_set in ray_sets.iter_mut().filter(|ray_set| ray_set.len() > 0) {
-                            match inst.instance_type {
-                                InstanceType::Object => {
-                                    self.trace_object(&assembly.objects[inst.data_index], wrays, ray_set);
-                                }
-
-                                InstanceType::Assembly => {
-                                    self.trace_assembly(&assembly.assemblies[inst.data_index], wrays, ray_set);
-                                }
+                    // Loop through the split ray slices and trace them
+                    for ray_set in ray_sets.iter_mut().filter(|ray_set| ray_set.len() > 0) {
+                        match inst.instance_type {
+                            InstanceType::Object => {
+                                self.trace_object(
+                                    &assembly.objects[inst.data_index],
+                                    wrays,
+                                    ray_set,
+                                );
                             }
-                        }
-                    }
 
-                    // Un-transform rays if needed
-                    if let Some(_) = inst.transform_indices {
-                        // Pop transforms off stack
-                        self.xform_stack.pop();
-
-                        // Undo transforms
-                        let xforms = self.xform_stack.top();
-                        if xforms.len() > 0 {
-                            for ray in &mut rs[..] {
-                                let id = ray.id;
-                                let t = ray.time;
-                                ray.update_from_xformed_world_ray(&wrays[id as usize], &lerp_slice(xforms, t));
-                            }
-                        } else {
-                            for ray in &mut rs[..] {
-                                let id = ray.id;
-                                ray.update_from_world_ray(&wrays[id as usize]);
+                            InstanceType::Assembly => {
+                                self.trace_assembly(
+                                    &assembly.assemblies[inst.data_index],
+                                    wrays,
+                                    ray_set,
+                                );
                             }
                         }
                     }
                 }
-            );
+
+                // Un-transform rays if needed
+                if let Some(_) = inst.transform_indices {
+                    // Pop transforms off stack
+                    self.xform_stack.pop();
+
+                    // Undo transforms
+                    let xforms = self.xform_stack.top();
+                    if xforms.len() > 0 {
+                        for ray in &mut rs[..] {
+                            let id = ray.id;
+                            let t = ray.time;
+                            ray.update_from_xformed_world_ray(
+                                &wrays[id as usize],
+                                &lerp_slice(xforms, t),
+                            );
+                        }
+                    } else {
+                        for ray in &mut rs[..] {
+                            let id = ray.id;
+                            ray.update_from_world_ray(&wrays[id as usize]);
+                        }
+                    }
+                }
+            },
+        );
     }
 
     fn trace_object<'b>(&'b mut self, obj: &Object, wrays: &[Ray], rays: &mut [AccelRay]) {

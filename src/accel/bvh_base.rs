@@ -58,7 +58,8 @@ impl BVHBase {
     }
 
     pub fn from_objects<'b, T, F>(objects: &mut [T], objects_per_leaf: usize, bounder: F) -> BVHBase
-        where F: 'b + Fn(&T) -> &'b [BBox]
+    where
+        F: 'b + Fn(&T) -> &'b [BBox],
     {
         let mut bvh = BVHBase::new();
         bvh.recursive_build(0, 0, objects_per_leaf, objects, &bounder);
@@ -70,7 +71,8 @@ impl BVHBase {
     }
 
     fn acc_bounds<'a, T, F>(&mut self, objects: &mut [T], bounder: &F)
-        where F: 'a + Fn(&T) -> &'a [BBox]
+    where
+        F: 'a + Fn(&T) -> &'a [BBox],
     {
         // TODO: do all of this without the temporary cache
         let max_len = objects.iter().map(|obj| bounder(obj).len()).max().unwrap();
@@ -94,8 +96,16 @@ impl BVHBase {
         }
     }
 
-    fn recursive_build<'a, T, F>(&mut self, offset: usize, depth: usize, objects_per_leaf: usize, objects: &mut [T], bounder: &F) -> (usize, (usize, usize))
-        where F: 'a + Fn(&T) -> &'a [BBox]
+    fn recursive_build<'a, T, F>(
+        &mut self,
+        offset: usize,
+        depth: usize,
+        objects_per_leaf: usize,
+        objects: &mut [T],
+        bounder: &F,
+    ) -> (usize, (usize, usize))
+    where
+        F: 'a + Fn(&T) -> &'a [BBox],
     {
         let me = self.nodes.len();
 
@@ -109,12 +119,13 @@ impl BVHBase {
                 // We make sure that it's worth having multiple time samples, and if not
                 // we reduce to the union of the time samples.
                 self.acc_bounds(objects, bounder);
-                let union_bounds = self.bounds_cache
-                    .iter()
-                    .fold(BBox::new(), |b1, b2| (b1 | *b2));
-                let average_area = self.bounds_cache
-                    .iter()
-                    .fold(0.0, |area, bb| area + bb.surface_area()) / self.bounds_cache.len() as f32;
+                let union_bounds = self.bounds_cache.iter().fold(
+                    BBox::new(),
+                    |b1, b2| (b1 | *b2),
+                );
+                let average_area = self.bounds_cache.iter().fold(0.0, |area, bb| {
+                    area + bb.surface_area()
+                }) / self.bounds_cache.len() as f32;
                 if union_bounds.surface_area() <= (average_area * USE_UNION_FACTOR) {
                     self.bounds.push(union_bounds);
                 } else {
@@ -123,13 +134,10 @@ impl BVHBase {
             }
 
             // Create node
-            self.nodes
-                .push(
-                    BVHBaseNode::Leaf {
-                        bounds_range: (bi, self.bounds.len()),
-                        object_range: (offset, offset + objects.len()),
-                    }
-                );
+            self.nodes.push(BVHBaseNode::Leaf {
+                bounds_range: (bi, self.bounds.len()),
+                object_range: (offset, offset + objects.len()),
+            });
 
             if self.depth < depth {
                 self.depth = depth;
@@ -138,26 +146,24 @@ impl BVHBase {
             return (me, (bi, self.bounds.len()));
         } else {
             // Not a leaf node
-            self.nodes
-                .push(
-                    BVHBaseNode::Internal {
-                        bounds_range: (0, 0),
-                        children_indices: (0, 0),
-                        split_axis: 0,
-                    }
-                );
+            self.nodes.push(BVHBaseNode::Internal {
+                bounds_range: (0, 0),
+                children_indices: (0, 0),
+                split_axis: 0,
+            });
 
             // Partition objects.
             // If we're too near the max depth, we do balanced building to
             // avoid exceeding max depth.
             // Otherwise we do SAH splitting to build better trees.
-            let (split_index, split_axis) = if (log2_64(objects.len() as u64) as usize) < (BVH_MAX_DEPTH - depth) {
-                // SAH splitting, when we have room to play
-                sah_split(objects, &bounder)
-            } else {
-                // Balanced splitting, when we don't have room to play
-                median_split(objects, &bounder)
-            };
+            let (split_index, split_axis) =
+                if (log2_64(objects.len() as u64) as usize) < (BVH_MAX_DEPTH - depth) {
+                    // SAH splitting, when we have room to play
+                    sah_split(objects, &bounder)
+                } else {
+                    // Balanced splitting, when we don't have room to play
+                    median_split(objects, &bounder)
+                };
 
             // Create child nodes
             let (c1_index, c1_bounds) = self.recursive_build(
@@ -189,7 +195,8 @@ impl BVHBase {
                 // We make sure that it's worth having multiple time samples, and if not
                 // we reduce to the union of the time samples.
                 let union_bounds = merged.iter().fold(BBox::new(), |b1, b2| (b1 | *b2));
-                let average_area = merged.iter().fold(0.0, |area, bb| area + bb.surface_area()) / merged.len() as f32;
+                let average_area = merged.iter().fold(0.0, |area, bb| area + bb.surface_area()) /
+                    merged.len() as f32;
                 if union_bounds.surface_area() <= (average_area * USE_UNION_FACTOR) {
                     self.bounds.push(union_bounds);
                 } else {

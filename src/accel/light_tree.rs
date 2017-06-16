@@ -26,8 +26,13 @@ struct Node {
 }
 
 impl<'a> LightTree<'a> {
-    pub fn from_objects<'b, T, F>(arena: &'a MemArena, objects: &mut [T], info_getter: F) -> LightTree<'a>
-        where F: 'b + Fn(&T) -> (&'b [BBox], f32)
+    pub fn from_objects<'b, T, F>(
+        arena: &'a MemArena,
+        objects: &mut [T],
+        info_getter: F,
+    ) -> LightTree<'a>
+    where
+        F: 'b + Fn(&T) -> (&'b [BBox], f32),
     {
         let mut builder = LightTreeBuilder::new();
         builder.recursive_build(0, 0, objects, &info_getter);
@@ -42,7 +47,15 @@ impl<'a> LightTree<'a> {
 
 
 impl<'a> LightAccel for LightTree<'a> {
-    fn select(&self, inc: Vector, pos: Point, nor: Normal, sc: &SurfaceClosure, time: f32, n: f32) -> Option<(usize, f32, f32)> {
+    fn select(
+        &self,
+        inc: Vector,
+        pos: Point,
+        nor: Normal,
+        sc: &SurfaceClosure,
+        time: f32,
+        n: f32,
+    ) -> Option<(usize, f32, f32)> {
         if self.nodes.len() == 0 {
             return None;
         }
@@ -141,8 +154,15 @@ impl LightTreeBuilder {
         }
     }
 
-    fn recursive_build<'a, T, F>(&mut self, offset: usize, depth: usize, objects: &mut [T], info_getter: &F) -> (usize, (usize, usize))
-        where F: 'a + Fn(&T) -> (&'a [BBox], f32)
+    fn recursive_build<'a, T, F>(
+        &mut self,
+        offset: usize,
+        depth: usize,
+        objects: &mut [T],
+        info_getter: &F,
+    ) -> (usize, (usize, usize))
+    where
+        F: 'a + Fn(&T) -> (&'a [BBox], f32),
     {
         let me_index = self.nodes.len();
 
@@ -153,15 +173,12 @@ impl LightTreeBuilder {
             let bi = self.bounds.len();
             let (obj_bounds, energy) = info_getter(&objects[0]);
             self.bounds.extend(obj_bounds);
-            self.nodes
-                .push(
-                    Node {
-                        is_leaf: true,
-                        bounds_range: (bi, self.bounds.len()),
-                        energy: energy,
-                        child_index: offset,
-                    }
-                );
+            self.nodes.push(Node {
+                is_leaf: true,
+                bounds_range: (bi, self.bounds.len()),
+                energy: energy,
+                child_index: offset,
+            });
 
             if self.depth < depth {
                 self.depth = depth;
@@ -170,21 +187,19 @@ impl LightTreeBuilder {
             return (me_index, (bi, self.bounds.len()));
         } else {
             // Not a leaf node
-            self.nodes
-                .push(
-                    Node {
-                        is_leaf: false,
-                        bounds_range: (0, 0),
-                        energy: 0.0,
-                        child_index: 0,
-                    }
-                );
+            self.nodes.push(Node {
+                is_leaf: false,
+                bounds_range: (0, 0),
+                energy: 0.0,
+                child_index: 0,
+            });
 
             // Partition objects.
             let (split_index, _) = sah_split(objects, &|obj_ref| info_getter(obj_ref).0);
 
             // Create child nodes
-            let (_, c1_bounds) = self.recursive_build(offset, depth + 1, &mut objects[..split_index], info_getter);
+            let (_, c1_bounds) =
+                self.recursive_build(offset, depth + 1, &mut objects[..split_index], info_getter);
             let (c2_index, c2_bounds) = self.recursive_build(
                 offset + split_index,
                 depth + 1,

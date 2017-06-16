@@ -26,7 +26,15 @@ pub trait LightSource: Boundable + Debug + Sync {
     ///
     /// Returns: The light arriving at the point arr, the vector to use for
     /// shadow testing, and the pdf of the sample.
-    fn sample(&self, space: &Matrix4x4, arr: Point, u: f32, v: f32, wavelength: f32, time: f32) -> (SpectralSample, Vector, f32);
+    fn sample(
+        &self,
+        space: &Matrix4x4,
+        arr: Point,
+        u: f32,
+        v: f32,
+        wavelength: f32,
+        time: f32,
+    ) -> (SpectralSample, Vector, f32);
 
 
     /// Calculates the pdf of sampling the given
@@ -37,7 +45,16 @@ pub trait LightSource: Boundable + Debug + Sync {
     /// are a valid sample for the light source (i.e. hits/lies on the light
     /// source).  No guarantees are made about the correctness of the return
     /// value if they are not valid.
-    fn sample_pdf(&self, space: &Matrix4x4, arr: Point, sample_dir: Vector, sample_u: f32, sample_v: f32, wavelength: f32, time: f32) -> f32;
+    fn sample_pdf(
+        &self,
+        space: &Matrix4x4,
+        arr: Point,
+        sample_dir: Vector,
+        sample_u: f32,
+        sample_v: f32,
+        wavelength: f32,
+        time: f32,
+    ) -> f32;
 
 
     /// Returns the color emitted in the given direction from the
@@ -48,7 +65,15 @@ pub trait LightSource: Boundable + Debug + Sync {
     ///     - v: Random parameter V.
     ///     - wavelength: The hero wavelength of light to sample at.
     ///     - time: The time to sample at.
-    fn outgoing(&self, space: &Matrix4x4, dir: Vector, u: f32, v: f32, wavelength: f32, time: f32) -> SpectralSample;
+    fn outgoing(
+        &self,
+        space: &Matrix4x4,
+        dir: Vector,
+        u: f32,
+        v: f32,
+        wavelength: f32,
+        time: f32,
+    ) -> SpectralSample;
 
 
     /// Returns whether the light has a delta distribution.

@@ -278,7 +278,8 @@ pub fn x_1931(wavelength: f32) -> f32 {
     let t1 = (wavelength - 442.0) * (if wavelength < 442.0 { 0.0624 } else { 0.0374 });
     let t2 = (wavelength - 599.8) * (if wavelength < 599.8 { 0.0264 } else { 0.0323 });
     let t3 = (wavelength - 501.1) * (if wavelength < 501.1 { 0.0490 } else { 0.0382 });
-    (0.362 * faster_exp(-0.5 * t1 * t1)) + (1.056 * faster_exp(-0.5 * t2 * t2)) - (0.065 * faster_exp(-0.5 * t3 * t3))
+    (0.362 * faster_exp(-0.5 * t1 * t1)) + (1.056 * faster_exp(-0.5 * t2 * t2)) -
+        (0.065 * faster_exp(-0.5 * t3 * t3))
 }
 
 pub fn y_1931(wavelength: f32) -> f32 {
