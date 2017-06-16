@@ -160,10 +160,12 @@ impl Float4 {
     #[inline]
     pub fn lt(&self, other: Float4) -> Bool4 {
         Bool4 {
-            data: [self.data[0] < other.data[0],
-                   self.data[1] < other.data[1],
-                   self.data[2] < other.data[2],
-                   self.data[3] < other.data[3]],
+            data: [
+                self.data[0] < other.data[0],
+                self.data[1] < other.data[1],
+                self.data[2] < other.data[2],
+                self.data[3] < other.data[3],
+            ],
         }
     }
 
@@ -176,10 +178,12 @@ impl Float4 {
     #[inline]
     pub fn lte(&self, other: Float4) -> Bool4 {
         Bool4 {
-            data: [self.data[0] <= other.data[0],
-                   self.data[1] <= other.data[1],
-                   self.data[2] <= other.data[2],
-                   self.data[3] <= other.data[3]],
+            data: [
+                self.data[0] <= other.data[0],
+                self.data[1] <= other.data[1],
+                self.data[2] <= other.data[2],
+                self.data[3] <= other.data[3],
+            ],
         }
     }
 
@@ -192,10 +196,12 @@ impl Float4 {
     #[inline]
     pub fn gt(&self, other: Float4) -> Bool4 {
         Bool4 {
-            data: [self.data[0] > other.data[0],
-                   self.data[1] > other.data[1],
-                   self.data[2] > other.data[2],
-                   self.data[3] > other.data[3]],
+            data: [
+                self.data[0] > other.data[0],
+                self.data[1] > other.data[1],
+                self.data[2] > other.data[2],
+                self.data[3] > other.data[3],
+            ],
         }
     }
 
@@ -208,10 +214,12 @@ impl Float4 {
     #[inline]
     pub fn gte(&self, other: Float4) -> Bool4 {
         Bool4 {
-            data: [self.data[0] >= other.data[0],
-                   self.data[1] >= other.data[1],
-                   self.data[2] >= other.data[2],
-                   self.data[3] >= other.data[3]],
+            data: [
+                self.data[0] >= other.data[0],
+                self.data[1] >= other.data[1],
+                self.data[2] >= other.data[2],
+                self.data[3] >= other.data[3],
+            ],
         }
     }
 
@@ -348,7 +356,8 @@ impl Float4 {
 impl PartialEq for Float4 {
     #[inline]
     fn eq(&self, other: &Float4) -> bool {
-        self.get_0() == other.get_0() && self.get_1() == other.get_1() && self.get_2() == other.get_2() && self.get_3() == other.get_3()
+        self.get_0() == other.get_0() && self.get_1() == other.get_1() &&
+            self.get_2() == other.get_2() && self.get_3() == other.get_3()
     }
 }
 
@@ -365,10 +374,12 @@ impl Add for Float4 {
     #[inline(always)]
     fn add(self, other: Float4) -> Float4 {
         Float4 {
-            data: [self.get_0() + other.get_0(),
-                   self.get_1() + other.get_1(),
-                   self.get_2() + other.get_2(),
-                   self.get_3() + other.get_3()],
+            data: [
+                self.get_0() + other.get_0(),
+                self.get_1() + other.get_1(),
+                self.get_2() + other.get_2(),
+                self.get_3() + other.get_3(),
+            ],
         }
     }
 }
@@ -394,10 +405,12 @@ impl Sub for Float4 {
     #[inline(always)]
     fn sub(self, other: Float4) -> Float4 {
         Float4 {
-            data: [self.get_0() - other.get_0(),
-                   self.get_1() - other.get_1(),
-                   self.get_2() - other.get_2(),
-                   self.get_3() - other.get_3()],
+            data: [
+                self.get_0() - other.get_0(),
+                self.get_1() - other.get_1(),
+                self.get_2() - other.get_2(),
+                self.get_3() - other.get_3(),
+            ],
         }
     }
 }
@@ -423,10 +436,12 @@ impl Mul for Float4 {
     #[inline(always)]
     fn mul(self, other: Float4) -> Float4 {
         Float4 {
-            data: [self.get_0() * other.get_0(),
-                   self.get_1() * other.get_1(),
-                   self.get_2() * other.get_2(),
-                   self.get_3() * other.get_3()],
+            data: [
+                self.get_0() * other.get_0(),
+                self.get_1() * other.get_1(),
+                self.get_2() * other.get_2(),
+                self.get_3() * other.get_3(),
+            ],
         }
     }
 }
@@ -443,10 +458,12 @@ impl Mul<f32> for Float4 {
     #[inline(always)]
     fn mul(self, other: f32) -> Float4 {
         Float4 {
-            data: [self.get_0() * other,
-                   self.get_1() * other,
-                   self.get_2() * other,
-                   self.get_3() * other],
+            data: [
+                self.get_0() * other,
+                self.get_1() * other,
+                self.get_2() * other,
+                self.get_3() * other,
+            ],
         }
     }
 }
@@ -479,10 +496,12 @@ impl Div for Float4 {
     #[inline(always)]
     fn div(self, other: Float4) -> Float4 {
         Float4 {
-            data: [self.get_0() / other.get_0(),
-                   self.get_1() / other.get_1(),
-                   self.get_2() / other.get_2(),
-                   self.get_3() / other.get_3()],
+            data: [
+                self.get_0() / other.get_0(),
+                self.get_1() / other.get_1(),
+                self.get_2() / other.get_2(),
+                self.get_3() / other.get_3(),
+            ],
         }
     }
 }
@@ -499,10 +518,12 @@ impl Div<f32> for Float4 {
     #[inline(always)]
     fn div(self, other: f32) -> Float4 {
         Float4 {
-            data: [self.get_0() / other,
-                   self.get_1() / other,
-                   self.get_2() / other,
-                   self.get_3() / other],
+            data: [
+                self.get_0() / other,
+                self.get_1() / other,
+                self.get_2() / other,
+                self.get_3() / other,
+            ],
         }
     }
 }
@@ -598,7 +619,8 @@ impl Bool4 {
 
     #[inline]
     pub fn to_bitmask(&self) -> u8 {
-        (self.get_0() as u8) | ((self.get_1() as u8) << 1) | ((self.get_2() as u8) << 2) | ((self.get_3() as u8) << 3)
+        (self.get_0() as u8) | ((self.get_1() as u8) << 1) | ((self.get_2() as u8) << 2) |
+            ((self.get_3() as u8) << 3)
     }
 }
 
@@ -614,10 +636,12 @@ impl BitAnd for Bool4 {
     #[inline]
     fn bitand(self, rhs: Bool4) -> Bool4 {
         Bool4 {
-            data: [self.data[0] && rhs.data[0],
-                   self.data[1] && rhs.data[1],
-                   self.data[2] && rhs.data[2],
-                   self.data[3] && rhs.data[3]],
+            data: [
+                self.data[0] && rhs.data[0],
+                self.data[1] && rhs.data[1],
+                self.data[2] && rhs.data[2],
+                self.data[3] && rhs.data[3],
+            ],
         }
     }
 }

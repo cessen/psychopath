@@ -20,10 +20,12 @@ impl Matrix4x4 {
     #[inline]
     pub fn new() -> Matrix4x4 {
         Matrix4x4 {
-            values: [Float4::new(1.0, 0.0, 0.0, 0.0),
-                     Float4::new(0.0, 1.0, 0.0, 0.0),
-                     Float4::new(0.0, 0.0, 1.0, 0.0),
-                     Float4::new(0.0, 0.0, 0.0, 1.0)],
+            values: [
+                Float4::new(1.0, 0.0, 0.0, 0.0),
+                Float4::new(0.0, 1.0, 0.0, 0.0),
+                Float4::new(0.0, 0.0, 1.0, 0.0),
+                Float4::new(0.0, 0.0, 0.0, 1.0),
+            ],
         }
     }
 
@@ -33,22 +35,43 @@ impl Matrix4x4 {
     /// i j k l
     /// m n o p
     #[inline]
-    pub fn new_from_values(a: f32, b: f32, c: f32, d: f32, e: f32, f: f32, g: f32, h: f32, i: f32, j: f32, k: f32, l: f32, m: f32, n: f32, o: f32, p: f32) -> Matrix4x4 {
+    pub fn new_from_values(
+        a: f32,
+        b: f32,
+        c: f32,
+        d: f32,
+        e: f32,
+        f: f32,
+        g: f32,
+        h: f32,
+        i: f32,
+        j: f32,
+        k: f32,
+        l: f32,
+        m: f32,
+        n: f32,
+        o: f32,
+        p: f32,
+    ) -> Matrix4x4 {
         Matrix4x4 {
-            values: [Float4::new(a, b, c, d),
-                     Float4::new(e, f, g, h),
-                     Float4::new(i, j, k, l),
-                     Float4::new(m, n, o, p)],
+            values: [
+                Float4::new(a, b, c, d),
+                Float4::new(e, f, g, h),
+                Float4::new(i, j, k, l),
+                Float4::new(m, n, o, p),
+            ],
         }
     }
 
     #[inline]
     pub fn from_location(loc: Point) -> Matrix4x4 {
         Matrix4x4 {
-            values: [Float4::new(1.0, 0.0, 0.0, loc.x()),
-                     Float4::new(0.0, 1.0, 0.0, loc.y()),
-                     Float4::new(0.0, 0.0, 1.0, loc.z()),
-                     Float4::new(0.0, 0.0, 0.0, 1.0)],
+            values: [
+                Float4::new(1.0, 0.0, 0.0, loc.x()),
+                Float4::new(0.0, 1.0, 0.0, loc.y()),
+                Float4::new(0.0, 0.0, 1.0, loc.z()),
+                Float4::new(0.0, 0.0, 0.0, 1.0),
+            ],
         }
     }
 
@@ -90,30 +113,32 @@ impl Matrix4x4 {
     pub fn transposed(&self) -> Matrix4x4 {
         Matrix4x4 {
             values: {
-                [Float4::new(
-                    self[0].get_0(),
-                    self[1].get_0(),
-                    self[2].get_0(),
-                    self[3].get_0(),
-                ),
-                 Float4::new(
-                    self[0].get_1(),
-                    self[1].get_1(),
-                    self[2].get_1(),
-                    self[3].get_1(),
-                ),
-                 Float4::new(
-                    self[0].get_2(),
-                    self[1].get_2(),
-                    self[2].get_2(),
-                    self[3].get_2(),
-                ),
-                 Float4::new(
-                    self[0].get_3(),
-                    self[1].get_3(),
-                    self[2].get_3(),
-                    self[3].get_3(),
-                )]
+                [
+                    Float4::new(
+                        self[0].get_0(),
+                        self[1].get_0(),
+                        self[2].get_0(),
+                        self[3].get_0(),
+                    ),
+                    Float4::new(
+                        self[0].get_1(),
+                        self[1].get_1(),
+                        self[2].get_1(),
+                        self[3].get_1(),
+                    ),
+                    Float4::new(
+                        self[0].get_2(),
+                        self[1].get_2(),
+                        self[2].get_2(),
+                        self[3].get_2(),
+                    ),
+                    Float4::new(
+                        self[0].get_3(),
+                        self[1].get_3(),
+                        self[2].get_3(),
+                        self[3].get_3(),
+                    ),
+                ]
             },
         }
     }
@@ -142,33 +167,35 @@ impl Matrix4x4 {
 
         Matrix4x4 {
             values: {
-                [Float4::new(
-                    ((self[1].get_1() * c5) - (self[1].get_2() * c4) + (self[1].get_3() * c3)) * invdet,
-                    ((-self[0].get_1() * c5) + (self[0].get_2() * c4) - (self[0].get_3() * c3)) * invdet,
-                    ((self[3].get_1() * s5) - (self[3].get_2() * s4) + (self[3].get_3() * s3)) * invdet,
-                    ((-self[2].get_1() * s5) + (self[2].get_2() * s4) - (self[2].get_3() * s3)) * invdet,
-                ),
+                [
+                    Float4::new(
+                        ((self[1].get_1() * c5) - (self[1].get_2() * c4) + (self[1].get_3() * c3)) * invdet,
+                        ((-self[0].get_1() * c5) + (self[0].get_2() * c4) - (self[0].get_3() * c3)) * invdet,
+                        ((self[3].get_1() * s5) - (self[3].get_2() * s4) + (self[3].get_3() * s3)) * invdet,
+                        ((-self[2].get_1() * s5) + (self[2].get_2() * s4) - (self[2].get_3() * s3)) * invdet,
+                    ),
 
-                 Float4::new(
-                    ((-self[1].get_0() * c5) + (self[1].get_2() * c2) - (self[1].get_3() * c1)) * invdet,
-                    ((self[0].get_0() * c5) - (self[0].get_2() * c2) + (self[0].get_3() * c1)) * invdet,
-                    ((-self[3].get_0() * s5) + (self[3].get_2() * s2) - (self[3].get_3() * s1)) * invdet,
-                    ((self[2].get_0() * s5) - (self[2].get_2() * s2) + (self[2].get_3() * s1)) * invdet,
-                ),
+                    Float4::new(
+                        ((-self[1].get_0() * c5) + (self[1].get_2() * c2) - (self[1].get_3() * c1)) * invdet,
+                        ((self[0].get_0() * c5) - (self[0].get_2() * c2) + (self[0].get_3() * c1)) * invdet,
+                        ((-self[3].get_0() * s5) + (self[3].get_2() * s2) - (self[3].get_3() * s1)) * invdet,
+                        ((self[2].get_0() * s5) - (self[2].get_2() * s2) + (self[2].get_3() * s1)) * invdet,
+                    ),
 
-                 Float4::new(
-                    ((self[1].get_0() * c4) - (self[1].get_1() * c2) + (self[1].get_3() * c0)) * invdet,
-                    ((-self[0].get_0() * c4) + (self[0].get_1() * c2) - (self[0].get_3() * c0)) * invdet,
-                    ((self[3].get_0() * s4) - (self[3].get_1() * s2) + (self[3].get_3() * s0)) * invdet,
-                    ((-self[2].get_0() * s4) + (self[2].get_1() * s2) - (self[2].get_3() * s0)) * invdet,
-                ),
+                    Float4::new(
+                        ((self[1].get_0() * c4) - (self[1].get_1() * c2) + (self[1].get_3() * c0)) * invdet,
+                        ((-self[0].get_0() * c4) + (self[0].get_1() * c2) - (self[0].get_3() * c0)) * invdet,
+                        ((self[3].get_0() * s4) - (self[3].get_1() * s2) + (self[3].get_3() * s0)) * invdet,
+                        ((-self[2].get_0() * s4) + (self[2].get_1() * s2) - (self[2].get_3() * s0)) * invdet,
+                    ),
 
-                 Float4::new(
-                    ((-self[1].get_0() * c3) + (self[1].get_1() * c1) - (self[1].get_2() * c0)) * invdet,
-                    ((self[0].get_0() * c3) - (self[0].get_1() * c1) + (self[0].get_2() * c0)) * invdet,
-                    ((-self[3].get_0() * s3) + (self[3].get_1() * s1) - (self[3].get_2() * s0)) * invdet,
-                    ((self[2].get_0() * s3) - (self[2].get_1() * s1) + (self[2].get_2() * s0)) * invdet,
-                )]
+                    Float4::new(
+                        ((-self[1].get_0() * c3) + (self[1].get_1() * c1) - (self[1].get_2() * c0)) * invdet,
+                        ((self[0].get_0() * c3) - (self[0].get_1() * c1) + (self[0].get_2() * c0)) * invdet,
+                        ((-self[3].get_0() * s3) + (self[3].get_1() * s1) - (self[3].get_2() * s0)) * invdet,
+                        ((self[2].get_0() * s3) - (self[2].get_1() * s1) + (self[2].get_2() * s0)) * invdet,
+                    ),
+                ]
             },
         }
     }
@@ -217,33 +244,35 @@ impl Mul<Matrix4x4> for Matrix4x4 {
     fn mul(self, other: Matrix4x4) -> Matrix4x4 {
         let m = self.transposed();
         Matrix4x4 {
-            values: [Float4::new(
-                (m[0] * other[0]).h_sum(),
-                (m[1] * other[0]).h_sum(),
-                (m[2] * other[0]).h_sum(),
-                (m[3] * other[0]).h_sum(),
-            ),
+            values: [
+                Float4::new(
+                    (m[0] * other[0]).h_sum(),
+                    (m[1] * other[0]).h_sum(),
+                    (m[2] * other[0]).h_sum(),
+                    (m[3] * other[0]).h_sum(),
+                ),
 
-                     Float4::new(
-                (m[0] * other[1]).h_sum(),
-                (m[1] * other[1]).h_sum(),
-                (m[2] * other[1]).h_sum(),
-                (m[3] * other[1]).h_sum(),
-            ),
+                Float4::new(
+                    (m[0] * other[1]).h_sum(),
+                    (m[1] * other[1]).h_sum(),
+                    (m[2] * other[1]).h_sum(),
+                    (m[3] * other[1]).h_sum(),
+                ),
 
-                     Float4::new(
-                (m[0] * other[2]).h_sum(),
-                (m[1] * other[2]).h_sum(),
-                (m[2] * other[2]).h_sum(),
-                (m[3] * other[2]).h_sum(),
-            ),
+                Float4::new(
+                    (m[0] * other[2]).h_sum(),
+                    (m[1] * other[2]).h_sum(),
+                    (m[2] * other[2]).h_sum(),
+                    (m[3] * other[2]).h_sum(),
+                ),
 
-                     Float4::new(
-                (m[0] * other[3]).h_sum(),
-                (m[1] * other[3]).h_sum(),
-                (m[2] * other[3]).h_sum(),
-                (m[3] * other[3]).h_sum(),
-            )],
+                Float4::new(
+                    (m[0] * other[3]).h_sum(),
+                    (m[1] * other[3]).h_sum(),
+                    (m[2] * other[3]).h_sum(),
+                    (m[3] * other[3]).h_sum(),
+                ),
+            ],
         }
     }
 }

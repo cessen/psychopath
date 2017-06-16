@@ -137,7 +137,10 @@ impl MemArena {
     /// the type's inherent alignment, whichever is greater.
     ///
     /// CAUTION: the memory returned is uninitialized.  Make sure to initalize before using!
-    pub unsafe fn alloc_uninitialized_with_alignment<'a, T: Copy>(&'a self, align: usize) -> &'a mut T {
+    pub unsafe fn alloc_uninitialized_with_alignment<'a, T: Copy>(
+        &'a self,
+        align: usize,
+    ) -> &'a mut T {
         assert!(size_of::<T>() > 0);
 
         let memory = self.alloc_raw(size_of::<T>(), max(align, align_of::<T>())) as *mut T;
@@ -162,7 +165,12 @@ impl MemArena {
     ///
     /// Additionally, the allocation will be made with the given byte alignment or
     /// the type's inherent alignment, whichever is greater.
-    pub fn alloc_array_with_alignment<'a, T: Copy>(&'a self, len: usize, value: T, align: usize) -> &'a mut [T] {
+    pub fn alloc_array_with_alignment<'a, T: Copy>(
+        &'a self,
+        len: usize,
+        value: T,
+        align: usize,
+    ) -> &'a mut [T] {
         let memory = unsafe { self.alloc_array_uninitialized_with_alignment(len, align) };
 
         for v in memory.iter_mut() {
@@ -189,7 +197,11 @@ impl MemArena {
     ///
     /// Additionally, the allocation will be made with the given byte alignment or
     /// the type's inherent alignment, whichever is greater.
-    pub fn copy_slice_with_alignment<'a, T: Copy>(&'a self, other: &[T], align: usize) -> &'a mut [T] {
+    pub fn copy_slice_with_alignment<'a, T: Copy>(
+        &'a self,
+        other: &[T],
+        align: usize,
+    ) -> &'a mut [T] {
         let memory = unsafe { self.alloc_array_uninitialized_with_alignment(other.len(), align) };
 
         for (v, other) in memory.iter_mut().zip(other.iter()) {
@@ -222,7 +234,11 @@ impl MemArena {
     /// the type's inherent alignment, whichever is greater.
     ///
     /// CAUTION: the memory returned is uninitialized.  Make sure to initalize before using!
-    pub unsafe fn alloc_array_uninitialized_with_alignment<'a, T: Copy>(&'a self, len: usize, align: usize) -> &'a mut [T] {
+    pub unsafe fn alloc_array_uninitialized_with_alignment<'a, T: Copy>(
+        &'a self,
+        len: usize,
+        align: usize,
+    ) -> &'a mut [T] {
         assert!(size_of::<T>() > 0);
 
         let array_mem_size = {
@@ -245,8 +261,10 @@ impl MemArena {
     unsafe fn alloc_raw(&self, size: usize, alignment: usize) -> *mut u8 {
         assert!(alignment > 0);
 
-        self.stat_space_allocated
-            .set(self.stat_space_allocated.get() + size); // Update stats
+        self.stat_space_allocated.set(
+            self.stat_space_allocated.get() +
+                size,
+        ); // Update stats
 
         let mut blocks = self.blocks.borrow_mut();
 
@@ -284,21 +302,27 @@ impl MemArena {
                 };
 
                 let waste_percentage = {
-                    let w1 = ((blocks[0].capacity() - blocks[0].len()) * 100) / blocks[0].capacity();
-                    let w2 = ((self.stat_space_occupied.get() - self.stat_space_allocated.get()) * 100) / self.stat_space_occupied.get();
+                    let w1 = ((blocks[0].capacity() - blocks[0].len()) * 100) /
+                        blocks[0].capacity();
+                    let w2 = ((self.stat_space_occupied.get() - self.stat_space_allocated.get()) *
+                                  100) /
+                        self.stat_space_occupied.get();
                     if w1 < w2 { w1 } else { w2 }
                 };
 
                 // If it's a "large allocation", give it its own memory block.
                 if (size + alignment) > next_size || waste_percentage > self.max_waste_percentage {
                     // Update stats
-                    self.stat_space_occupied
-                        .set(self.stat_space_occupied.get() + size + alignment - 1);
+                    self.stat_space_occupied.set(
+                        self.stat_space_occupied.get() + size + alignment -
+                            1,
+                    );
 
                     blocks.push(Vec::with_capacity(size + alignment - 1));
                     blocks.last_mut().unwrap().set_len(size + alignment - 1);
 
-                    let start_index = alignment_offset(blocks.last().unwrap().as_ptr() as usize, alignment);
+                    let start_index =
+                        alignment_offset(blocks.last().unwrap().as_ptr() as usize, alignment);
 
                     let block_ptr = blocks.last_mut().unwrap().as_mut_ptr();
                     return block_ptr.offset(start_index as isize);
@@ -306,14 +330,17 @@ impl MemArena {
                 // Otherwise create a new shared block.
                 else {
                     // Update stats
-                    self.stat_space_occupied
-                        .set(self.stat_space_occupied.get() + next_size);
+                    self.stat_space_occupied.set(
+                        self.stat_space_occupied.get() +
+                            next_size,
+                    );
 
                     blocks.push(Vec::with_capacity(next_size));
                     let block_count = blocks.len();
                     blocks.swap(0, block_count - 1);
 
-                    let start_index = alignment_offset(blocks.first().unwrap().as_ptr() as usize, alignment);
+                    let start_index =
+                        alignment_offset(blocks.first().unwrap().as_ptr() as usize, alignment);
 
                     blocks.first_mut().unwrap().set_len(start_index + size);
 

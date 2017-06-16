@@ -82,8 +82,8 @@ fn main() {
 fn write_conversion_functions(space_name: &str, to_xyz: [[f64; 3]; 3], f: &mut File) {
 
     f.write_all(
-            format!(
-                r#"
+        format!(
+            r#"
 #[inline]
 pub fn {}_to_xyz(rgb: (f32, f32, f32)) -> (f32, f32, f32) {{
     (
@@ -93,25 +93,23 @@ pub fn {}_to_xyz(rgb: (f32, f32, f32)) -> (f32, f32, f32) {{
     )
 }}
         "#,
-                space_name,
-                to_xyz[0][0],
-                to_xyz[0][1],
-                to_xyz[0][2],
-                to_xyz[1][0],
-                to_xyz[1][1],
-                to_xyz[1][2],
-                to_xyz[2][0],
-                to_xyz[2][1],
-                to_xyz[2][2]
-            )
-                    .as_bytes()
-        )
-        .unwrap();
+            space_name,
+            to_xyz[0][0],
+            to_xyz[0][1],
+            to_xyz[0][2],
+            to_xyz[1][0],
+            to_xyz[1][1],
+            to_xyz[1][2],
+            to_xyz[2][0],
+            to_xyz[2][1],
+            to_xyz[2][2]
+        ).as_bytes(),
+    ).unwrap();
 
     let inv = inverse(to_xyz);
     f.write_all(
-            format!(
-                r#"
+        format!(
+            r#"
 #[inline]
 pub fn xyz_to_{}(xyz: (f32, f32, f32)) -> (f32, f32, f32) {{
     (
@@ -121,25 +119,23 @@ pub fn xyz_to_{}(xyz: (f32, f32, f32)) -> (f32, f32, f32) {{
     )
 }}
         "#,
-                space_name,
-                inv[0][0],
-                inv[0][1],
-                inv[0][2],
-                inv[1][0],
-                inv[1][1],
-                inv[1][2],
-                inv[2][0],
-                inv[2][1],
-                inv[2][2]
-            )
-                    .as_bytes()
-        )
-        .unwrap();
+            space_name,
+            inv[0][0],
+            inv[0][1],
+            inv[0][2],
+            inv[1][0],
+            inv[1][1],
+            inv[1][2],
+            inv[2][0],
+            inv[2][1],
+            inv[2][2]
+        ).as_bytes(),
+    ).unwrap();
 
     let e_to_xyz = adapt_to_e(to_xyz, 1.0);
     f.write_all(
-            format!(
-                r#"
+        format!(
+            r#"
 #[inline]
 pub fn {}_e_to_xyz(rgb: (f32, f32, f32)) -> (f32, f32, f32) {{
     (
@@ -149,25 +145,23 @@ pub fn {}_e_to_xyz(rgb: (f32, f32, f32)) -> (f32, f32, f32) {{
     )
 }}
         "#,
-                space_name,
-                e_to_xyz[0][0],
-                e_to_xyz[0][1],
-                e_to_xyz[0][2],
-                e_to_xyz[1][0],
-                e_to_xyz[1][1],
-                e_to_xyz[1][2],
-                e_to_xyz[2][0],
-                e_to_xyz[2][1],
-                e_to_xyz[2][2]
-            )
-                    .as_bytes()
-        )
-        .unwrap();
+            space_name,
+            e_to_xyz[0][0],
+            e_to_xyz[0][1],
+            e_to_xyz[0][2],
+            e_to_xyz[1][0],
+            e_to_xyz[1][1],
+            e_to_xyz[1][2],
+            e_to_xyz[2][0],
+            e_to_xyz[2][1],
+            e_to_xyz[2][2]
+        ).as_bytes(),
+    ).unwrap();
 
     let inv_e = inverse(e_to_xyz);
     f.write_all(
-            format!(
-                r#"
+        format!(
+            r#"
 #[inline]
 pub fn xyz_to_{}_e(xyz: (f32, f32, f32)) -> (f32, f32, f32) {{
     (
@@ -177,20 +171,18 @@ pub fn xyz_to_{}_e(xyz: (f32, f32, f32)) -> (f32, f32, f32) {{
     )
 }}
         "#,
-                space_name,
-                inv_e[0][0],
-                inv_e[0][1],
-                inv_e[0][2],
-                inv_e[1][0],
-                inv_e[1][1],
-                inv_e[1][2],
-                inv_e[2][0],
-                inv_e[2][1],
-                inv_e[2][2]
-            )
-                    .as_bytes()
-        )
-        .unwrap();
+            space_name,
+            inv_e[0][0],
+            inv_e[0][1],
+            inv_e[0][2],
+            inv_e[1][0],
+            inv_e[1][1],
+            inv_e[1][2],
+            inv_e[2][0],
+            inv_e[2][1],
+            inv_e[2][2]
+        ).as_bytes(),
+    ).unwrap();
 }
 
 
@@ -208,13 +200,20 @@ fn rgb_to_xyz(chroma: Chromaticities, y: f64) -> [[f64; 3]; 3] {
     let z = (1.0 - chroma.w.0 - chroma.w.1) * y / chroma.w.1;
 
     // Scale factors for matrix rows
-    let d = chroma.r.0 * (chroma.b.1 - chroma.g.1) + chroma.b.0 * (chroma.g.1 - chroma.r.1) + chroma.g.0 * (chroma.r.1 - chroma.b.1);
+    let d = chroma.r.0 * (chroma.b.1 - chroma.g.1) + chroma.b.0 * (chroma.g.1 - chroma.r.1) +
+        chroma.g.0 * (chroma.r.1 - chroma.b.1);
 
-    let sr = (x * (chroma.b.1 - chroma.g.1) - chroma.g.0 * (y * (chroma.b.1 - 1.0) + chroma.b.1 * (x + z)) + chroma.b.0 * (y * (chroma.g.1 - 1.0) + chroma.g.1 * (x + z))) / d;
+    let sr = (x * (chroma.b.1 - chroma.g.1) -
+                  chroma.g.0 * (y * (chroma.b.1 - 1.0) + chroma.b.1 * (x + z)) +
+                  chroma.b.0 * (y * (chroma.g.1 - 1.0) + chroma.g.1 * (x + z))) / d;
 
-    let sg = (x * (chroma.r.1 - chroma.b.1) + chroma.r.0 * (y * (chroma.b.1 - 1.0) + chroma.b.1 * (x + z)) - chroma.b.0 * (y * (chroma.r.1 - 1.0) + chroma.r.1 * (x + z))) / d;
+    let sg = (x * (chroma.r.1 - chroma.b.1) +
+                  chroma.r.0 * (y * (chroma.b.1 - 1.0) + chroma.b.1 * (x + z)) -
+                  chroma.b.0 * (y * (chroma.r.1 - 1.0) + chroma.r.1 * (x + z))) / d;
 
-    let sb = (x * (chroma.g.1 - chroma.r.1) - chroma.r.0 * (y * (chroma.g.1 - 1.0) + chroma.g.1 * (x + z)) + chroma.g.0 * (y * (chroma.r.1 - 1.0) + chroma.r.1 * (x + z))) / d;
+    let sb = (x * (chroma.g.1 - chroma.r.1) -
+                  chroma.r.0 * (y * (chroma.g.1 - 1.0) + chroma.g.1 * (x + z)) +
+                  chroma.g.0 * (y * (chroma.r.1 - 1.0) + chroma.r.1 * (x + z))) / d;
 
     // Assemble the matrix
     let mut mat = [[0.0; 3]; 3];
