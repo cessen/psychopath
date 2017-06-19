@@ -92,7 +92,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                         };
                         let mat_inv = mat_space.inverse();
                         let tri = (tri.0 * mat_inv, tri.1 * mat_inv, tri.2 * mat_inv);
-                        if let Some((t, _, _)) = triangle::intersect_ray(wr, tri) {
+                        if let Some((t, _, _, _)) = triangle::intersect_ray(wr, tri) {
                             if t < r.max_t {
                                 if r.is_occlusion() {
                                     isects[r.id as usize] = SurfaceIntersection::Occlude;
