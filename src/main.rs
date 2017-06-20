@@ -28,6 +28,7 @@ mod bbox;
 mod boundable;
 mod camera;
 mod color;
+mod fp_utils;
 mod hash;
 mod hilbert;
 mod image;

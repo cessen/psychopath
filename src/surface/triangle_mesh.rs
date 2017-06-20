@@ -6,6 +6,7 @@ use accel::BVH;
 use bbox::BBox;
 use boundable::Boundable;
 use color::XYZ;
+use fp_utils::fp_gamma;
 use lerp::{lerp, lerp_slice, lerp_slice_with};
 use math::{Point, Matrix4x4, cross};
 use ray::{Ray, AccelRay};
@@ -92,17 +93,29 @@ impl<'a> Surface for TriangleMesh<'a> {
                         };
                         let mat_inv = mat_space.inverse();
                         let tri = (tri.0 * mat_inv, tri.1 * mat_inv, tri.2 * mat_inv);
-                        if let Some((t, _, _, _)) = triangle::intersect_ray(wr, tri) {
+                        if let Some((t, b0, b1, b2)) = triangle::intersect_ray(wr, tri) {
                             if t < r.max_t {
                                 if r.is_occlusion() {
                                     isects[r.id as usize] = SurfaceIntersection::Occlude;
                                     r.mark_done();
                                 } else {
+                                    // Calculate intersection point and error magnitudes
+                                    let pos = ((tri.0.into_vector() * b0)
+                                        + (tri.1.into_vector() * b1)
+                                        + (tri.2.into_vector() * b2)).into_point();
+
+                                    let pos_err = ((tri.0.into_vector().abs() * b0)
+                                        + (tri.1.into_vector().abs() * b1)
+                                        + (tri.2.into_vector().abs() * b2))
+                                        * fp_gamma(7);
+
+                                    // Fill in intersection data
                                     isects[r.id as usize] = SurfaceIntersection::Hit {
                                         intersection_data: SurfaceIntersectionData {
                                             incoming: wr.dir,
                                             t: t,
-                                            pos: wr.orig + (wr.dir * t),
+                                            pos: pos,
+                                            pos_err: pos_err,
                                             nor: cross(tri.0 - tri.1, tri.0 - tri.2)
                                                 .into_normal(), // TODO
                                             nor_g: cross(tri.0 - tri.1, tri.0 - tri.2)

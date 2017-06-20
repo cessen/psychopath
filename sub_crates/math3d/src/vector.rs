@@ -6,7 +6,7 @@ use std::ops::{Add, Sub, Mul, Div, Neg};
 use float4::Float4;
 
 use super::{DotProduct, CrossProduct};
-use super::{Matrix4x4, Normal};
+use super::{Matrix4x4, Point, Normal};
 
 
 /// A direction vector in 3d homogeneous space.
@@ -34,6 +34,16 @@ impl Vector {
     #[inline(always)]
     pub fn normalized(&self) -> Vector {
         *self / self.length()
+    }
+
+    #[inline(always)]
+    pub fn abs(&self) -> Vector {
+        Vector::new(self.x().abs(), self.y().abs(), self.z().abs())
+    }
+
+    #[inline(always)]
+    pub fn into_point(self) -> Point {
+        Point::new(self.x(), self.y(), self.z())
     }
 
     #[inline(always)]

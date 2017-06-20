@@ -10,10 +10,11 @@ use scoped_threadpool::Pool;
 
 use halton;
 
-use algorithm::partition_pair;
 use accel::ACCEL_TRAV_TIME;
+use algorithm::partition_pair;
 use color::{Color, XYZ, SpectralSample, map_0_1_to_wavelength};
 use float4::Float4;
+use fp_utils::robust_ray_origin;
 use hash::hash_u32;
 use hilbert;
 use image::Image;
@@ -477,14 +478,13 @@ impl LightPath {
 
                             // Calculate the shadow ray for testing if the light is
                             // in shadow or not.
-                            // TODO: use proper ray offsets for avoiding self-shadowing
-                            // rather than this hacky stupid stuff.
-                            *ray = Ray::new(
-                                idata.pos + shadow_vec.normalized() * 0.001,
+                            let offset_pos = robust_ray_origin(
+                                idata.pos,
+                                idata.pos_err,
+                                idata.nor_g.normalized(),
                                 shadow_vec,
-                                self.time,
-                                true,
                             );
+                            *ray = Ray::new(offset_pos, shadow_vec, self.time, true);
 
                             // For distant lights
                             if is_infinite {
@@ -518,12 +518,14 @@ impl LightPath {
                             self.next_attentuation_fac = filter.e / pdf;
 
                             // Calculate the ray for this bounce
-                            self.next_bounce_ray = Some(Ray::new(
-                                idata.pos + dir.normalized() * 0.0001,
+                            let offset_pos = robust_ray_origin(
+                                idata.pos,
+                                idata.pos_err,
+                                idata.nor_g.normalized(),
                                 dir,
-                                self.time,
-                                false,
-                            ));
+                            );
+                            self.next_bounce_ray =
+                                Some(Ray::new(offset_pos, dir, self.time, false));
 
                             true
                         } else {

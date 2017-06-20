@@ -37,6 +37,7 @@ pub enum SurfaceIntersection {
 pub struct SurfaceIntersectionData {
     pub incoming: Vector, // Direction of the incoming ray
     pub pos: Point, // Position of the intersection
+    pub pos_err: Vector, // Error magnitudes of the intersection position
     pub nor: Normal, // Shading normal
     pub nor_g: Normal, // True geometric normal
     pub local_space: Matrix4x4, // Matrix from global space to local space
