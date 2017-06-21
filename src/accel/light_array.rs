@@ -1,40 +1,45 @@
+use mem_arena::MemArena;
+
 use bbox::BBox;
 use math::{Vector, Point, Normal};
 use shading::surface_closure::SurfaceClosure;
 
 use super::LightAccel;
 
-#[derive(Debug, Clone)]
-pub struct LightArray {
-    indices: Vec<usize>,
+#[derive(Debug, Copy, Clone)]
+pub struct LightArray<'a> {
+    indices: &'a [usize],
     aprx_energy: f32,
 }
 
-impl LightArray {
+impl<'a> LightArray<'a> {
     #[allow(dead_code)]
-    pub fn new<'a, T, F>(things: &mut [T], q: F) -> LightArray
+    pub fn from_objects<'b, T, F>(
+        arena: &'a MemArena,
+        objects: &mut [T],
+        info_getter: F,
+    ) -> LightArray<'a>
     where
-        F: 'a + Fn(&T) -> Option<(&'a [BBox], f32)>,
+        F: 'b + Fn(&T) -> (&'b [BBox], f32),
     {
         let mut indices = Vec::new();
         let mut aprx_energy = 0.0;
-        for (i, thing) in things.iter().enumerate() {
-            if let Some((_, power)) = q(thing) {
-                if power > 0.0 {
-                    indices.push(i);
-                    aprx_energy += power;
-                }
+        for (i, thing) in objects.iter().enumerate() {
+            let (_, power) = info_getter(thing);
+            if power > 0.0 {
+                indices.push(i);
+                aprx_energy += power;
             }
         }
 
         LightArray {
-            indices: indices,
+            indices: arena.copy_slice(&indices),
             aprx_energy: aprx_energy,
         }
     }
 }
 
-impl LightAccel for LightArray {
+impl<'a> LightAccel for LightArray<'a> {
     fn select(
         &self,
         inc: Vector,

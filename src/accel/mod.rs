@@ -11,6 +11,7 @@ use shading::surface_closure::SurfaceClosure;
 
 pub use self::bvh::{BVH, BVHNode};
 pub use self::light_tree::LightTree;
+pub use self::light_array::LightArray;
 
 // Track BVH traversal time
 thread_local! {
