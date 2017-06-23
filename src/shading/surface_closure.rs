@@ -123,7 +123,7 @@ fn schlick_fresnel(ior_ratio: f32, c: f32) -> f32 {
 /// Utility function that calculates the fresnel reflection factor of a given
 /// incoming ray against a surface with the given normal-reflectance factor.
 ///
-/// frensel_fac: The ratio of light reflected back if the ray were to
+/// fresnel_fac: The ratio of light reflected back if the ray were to
 ///              hit the surface head-on (perpendicular to the surface).
 /// c The cosine of the angle between the incoming light and the
 ///   surface's normal.  Probably calculated e.g. with a normalized
