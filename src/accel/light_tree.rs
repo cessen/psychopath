@@ -9,8 +9,8 @@ use shading::surface_closure::SurfaceClosure;
 use super::LightAccel;
 use super::objects_split::sah_split;
 
-const LEVEL_COLLAPSE: usize = 1; // Number of levels of the binary tree to
-// collapse together (1 = no collapsing)
+const LEVEL_COLLAPSE: usize = 5; // Number of levels of the binary tree to
+// collapse together (1 = no collapsing, leave as binary tree)
 const ARITY: usize = 1 << LEVEL_COLLAPSE; // Arity of the final tree
 
 
@@ -152,24 +152,14 @@ impl<'a> LightAccel for LightTree<'a> {
             // Get the approximate amount of light contribution from the
             // composite light source.
             let approx_contrib = {
-                let mut approx_contrib = 0.0;
-                let steps = 2;
-                let fstep = 1.0 / (steps as f32);
-                for i in 0..steps {
-                    let r2 = {
-                        let step = fstep * (i + 1) as f32;
-                        let r = r * step;
-                        r * r
-                    };
-                    let cos_theta_max = if dist2 <= r2 {
-                        -1.0
-                    } else {
-                        let sin_theta_max2 = (r2 / dist2).min(1.0);
-                        (1.0 - sin_theta_max2).sqrt()
-                    };
-                    approx_contrib += sc.estimate_eval_over_solid_angle(inc, d, nor, cos_theta_max);
-                }
-                approx_contrib * fstep
+                let r2 = r * r;
+                let cos_theta_max = if dist2 <= r2 {
+                    -1.0
+                } else {
+                    let sin_theta_max2 = (r2 / dist2).min(1.0);
+                    (1.0 - sin_theta_max2).sqrt()
+                };
+                sc.estimate_eval_over_solid_angle(inc, d, nor, cos_theta_max)
             };
 
             node_ref.energy() * inv_surface_area * approx_contrib
@@ -192,11 +182,11 @@ impl<'a> LightAccel for LightTree<'a> {
                     }
                     if total <= 0.0 {
                         let p = 1.0 / children.len() as f32;
-                        for prob in &mut ps {
+                        for prob in &mut ps[..] {
                             *prob = p;
                         }
                     } else {
-                        for prob in &mut ps {
+                        for prob in &mut ps[..] {
                             *prob = *prob / total;
                         }
                     }
@@ -264,7 +254,7 @@ impl LightTreeBuilder {
     // Returns the number of children of this node, assuming a collapse
     // number of `LEVEL_COLLAPSE`.
     pub fn node_child_count(&self, node_index: usize) -> usize {
-        self.node_child_count_recurse(LEVEL_COLLAPSE, node_index).0
+        self.node_child_count_recurse(LEVEL_COLLAPSE, node_index)
     }
 
     // Returns the index of the nth child, assuming a collapse
@@ -276,12 +266,21 @@ impl LightTreeBuilder {
 
     // Returns the number of children of this node, assuming a collapse
     // number of `level_collapse`.
-    pub fn node_child_count_recurse(
-        &self,
-        level_collapse: usize,
-        node_index: usize,
-    ) -> (usize, usize) {
-        (2, 0)
+    pub fn node_child_count_recurse(&self, level_collapse: usize, node_index: usize) -> usize {
+        if level_collapse > 0 {
+            if self.nodes[node_index].is_leaf {
+                return 1;
+            } else {
+                let a = self.node_child_count_recurse(level_collapse - 1, node_index + 1);
+                let b = self.node_child_count_recurse(
+                    level_collapse - 1,
+                    self.nodes[node_index].child_index,
+                );
+                return a + b;
+            }
+        } else {
+            return 1;
+        }
     }
 
     // Returns the index of the nth child, assuming a collapse
@@ -292,10 +291,19 @@ impl LightTreeBuilder {
         node_index: usize,
         child_n: usize,
     ) -> (usize, usize) {
-        match child_n {
-            0 => (node_index + 1, 0),
-            1 => (self.nodes[node_index].child_index, 0),
-            _ => unreachable!(),
+        if level_collapse > 0 && !self.nodes[node_index].is_leaf {
+            let (index, rem) =
+                self.node_nth_child_index_recurse(level_collapse - 1, node_index + 1, child_n);
+            if rem == 0 {
+                return (index, 0);
+            }
+            return self.node_nth_child_index_recurse(
+                level_collapse - 1,
+                self.nodes[node_index].child_index,
+                rem - 1,
+            );
+        } else {
+            return (node_index, child_n);
         }
     }
 
