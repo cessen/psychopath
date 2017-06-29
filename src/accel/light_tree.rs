@@ -106,14 +106,16 @@ impl<'a> LightTree<'a> {
             let bounds_range = base.nodes[node_index].bounds_range;
             let bounds = arena.copy_slice(&base.bounds[bounds_range.0..bounds_range.1]);
 
-            let mut children = unsafe { arena.alloc_array_uninitialized::<Node>(2) };
-            LightTree::construct_from_builder(arena, base, node_index + 1, &mut children[0]);
-            LightTree::construct_from_builder(
-                arena,
-                base,
-                base.nodes[node_index].child_index,
-                &mut children[1],
-            );
+            let child_count = base.node_child_count(node_index);
+            let mut children = unsafe { arena.alloc_array_uninitialized::<Node>(child_count) };
+            for i in 0..child_count {
+                LightTree::construct_from_builder(
+                    arena,
+                    base,
+                    base.node_nth_child_index(node_index, i),
+                    &mut children[i],
+                );
+            }
 
             *node_mem = Node::Inner {
                 children: children,
@@ -257,6 +259,44 @@ impl LightTreeBuilder {
 
     pub fn root_node_index(&self) -> usize {
         0
+    }
+
+    // Returns the number of children of this node, assuming a collapse
+    // number of `LEVEL_COLLAPSE`.
+    pub fn node_child_count(&self, node_index: usize) -> usize {
+        self.node_child_count_recurse(LEVEL_COLLAPSE, node_index).0
+    }
+
+    // Returns the index of the nth child, assuming a collapse
+    // number of `LEVEL_COLLAPSE`.
+    pub fn node_nth_child_index(&self, node_index: usize, child_n: usize) -> usize {
+        self.node_nth_child_index_recurse(LEVEL_COLLAPSE, node_index, child_n)
+            .0
+    }
+
+    // Returns the number of children of this node, assuming a collapse
+    // number of `level_collapse`.
+    pub fn node_child_count_recurse(
+        &self,
+        level_collapse: usize,
+        node_index: usize,
+    ) -> (usize, usize) {
+        (2, 0)
+    }
+
+    // Returns the index of the nth child, assuming a collapse
+    // number of `level_collapse`.
+    pub fn node_nth_child_index_recurse(
+        &self,
+        level_collapse: usize,
+        node_index: usize,
+        child_n: usize,
+    ) -> (usize, usize) {
+        match child_n {
+            0 => (node_index + 1, 0),
+            1 => (self.nodes[node_index].child_index, 0),
+            _ => unreachable!(),
+        }
     }
 
     fn recursive_build<'a, T, F>(
