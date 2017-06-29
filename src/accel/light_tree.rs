@@ -9,8 +9,9 @@ use shading::surface_closure::SurfaceClosure;
 use super::LightAccel;
 use super::objects_split::sah_split;
 
-// const LEVEL_COLLAPSE: usize = 2;  // Number of levels of the binary tree to collapse together (1 = no collapsing)
-// const ARITY: usize = 1 << LEVEL_COLLAPSE;  // Arity of the final tree
+const LEVEL_COLLAPSE: usize = 1; // Number of levels of the binary tree to
+// collapse together (1 = no collapsing)
+const ARITY: usize = 1 << LEVEL_COLLAPSE; // Arity of the final tree
 
 
 #[derive(Copy, Clone, Debug)]
@@ -177,28 +178,40 @@ impl<'a> LightAccel for LightTree<'a> {
         let mut tot_prob = 1.0;
         let mut n = n;
         loop {
-            if let Node::Inner { children, bounds, .. } = *node {
-                // Calculate the relative probabilities of the two children
-                let (p1, p2) = {
-                    let p1 = node_prob(&children[0]);
-                    let p2 = node_prob(&children[1]);
-                    let total = p1 + p2;
-
-                    if total <= 0.0 {
-                        (0.5, 0.5)
-                    } else {
-                        (p1 / total, p2 / total)
+            if let Node::Inner { children, .. } = *node {
+                // Calculate the relative probabilities of the children
+                let ps = {
+                    let mut ps = [0.0; ARITY];
+                    let mut total = 0.0;
+                    for (i, child) in children.iter().enumerate() {
+                        let p = node_prob(child);
+                        ps[i] = p;
+                        total += p;
                     }
+                    if total <= 0.0 {
+                        let p = 1.0 / children.len() as f32;
+                        for prob in &mut ps {
+                            *prob = p;
+                        }
+                    } else {
+                        for prob in &mut ps {
+                            *prob = *prob / total;
+                        }
+                    }
+                    ps
                 };
 
-                if n <= p1 {
-                    tot_prob *= p1;
-                    node = &children[0];
-                    n /= p1;
-                } else {
-                    tot_prob *= p2;
-                    node = &children[1];
-                    n = (n - p1) / p2;
+                // Pick child and update probabilities
+                let mut base = 0.0;
+                for (i, &p) in ps.iter().enumerate() {
+                    if (n <= base + p) || (i == children.len() - 1) {
+                        tot_prob *= p;
+                        node = &children[i];
+                        n = (n - base) / p;
+                        break;
+                    } else {
+                        base += p;
+                    }
                 }
             } else {
                 break;
