@@ -9,9 +9,10 @@ use shading::surface_closure::SurfaceClosure;
 use super::LightAccel;
 use super::objects_split::sah_split;
 
-const LEVEL_COLLAPSE: usize = 5; // Number of levels of the binary tree to
-// collapse together (1 = no collapsing, leave as binary tree)
-const ARITY: usize = 1 << LEVEL_COLLAPSE; // Arity of the final tree
+const ARITY_LOG2: usize = 5; // Determines how much to collapse the binary tree,
+// implicitly defining the light tree's arity.  1 = no collapsing, leave as binary
+// tree.
+const ARITY: usize = 1 << ARITY_LOG2; // Arity of the final tree
 
 
 #[derive(Copy, Clone, Debug)]
@@ -252,15 +253,15 @@ impl LightTreeBuilder {
     }
 
     // Returns the number of children of this node, assuming a collapse
-    // number of `LEVEL_COLLAPSE`.
+    // number of `ARITY_LOG2`.
     pub fn node_child_count(&self, node_index: usize) -> usize {
-        self.node_child_count_recurse(LEVEL_COLLAPSE, node_index)
+        self.node_child_count_recurse(ARITY_LOG2, node_index)
     }
 
     // Returns the index of the nth child, assuming a collapse
-    // number of `LEVEL_COLLAPSE`.
+    // number of `ARITY_LOG2`.
     pub fn node_nth_child_index(&self, node_index: usize, child_n: usize) -> usize {
-        self.node_nth_child_index_recurse(LEVEL_COLLAPSE, node_index, child_n)
+        self.node_nth_child_index_recurse(ARITY_LOG2, node_index, child_n)
             .0
     }
 
