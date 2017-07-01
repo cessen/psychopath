@@ -31,6 +31,10 @@ version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "bvh_order"
+version = "0.1.0"
+
+[[package]]
 name = "byteorder"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -158,6 +162,7 @@ name = "psychopath"
 version = "0.1.0"
 dependencies = [
  "base64 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bvh_order 0.1.0",
  "clap 2.24.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "color 0.1.0",
  "crossbeam 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
