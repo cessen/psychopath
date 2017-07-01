@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use mem_arena::MemArena;
 
 use accel::{LightAccel, LightTree};
-use accel::BVH;
+use accel::BVH4;
 use bbox::{BBox, transform_bbox_slice_from};
 use boundable::Boundable;
 use color::SpectralSample;
@@ -28,7 +28,7 @@ pub struct Assembly<'a> {
     pub assemblies: &'a [Assembly<'a>],
 
     // Object accel
-    pub object_accel: BVH<'a>,
+    pub object_accel: BVH4<'a>,
 
     // Light accel
     pub light_accel: LightTree<'a>,
@@ -251,7 +251,7 @@ impl<'a> AssemblyBuilder<'a> {
         let (bis, bbs) = self.instance_bounds();
 
         // Build object accel
-        let object_accel = BVH::from_objects(self.arena, &mut self.instances[..], 1, |inst| {
+        let object_accel = BVH4::from_objects(self.arena, &mut self.instances[..], 1, |inst| {
             &bbs[bis[inst.id]..bis[inst.id + 1]]
         });
 
@@ -311,7 +311,7 @@ impl<'a> AssemblyBuilder<'a> {
 
 
     /// Returns a pair of vectors with the bounds of all instances.
-    /// This is used for building the assembly's BVH.
+    /// This is used for building the assembly's BVH4.
     fn instance_bounds(&self) -> (Vec<usize>, Vec<BBox>) {
         let mut indices = vec![0];
         let mut bounds = Vec::new();

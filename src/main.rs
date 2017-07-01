@@ -1,3 +1,4 @@
+extern crate bvh_order;
 extern crate color as color_util;
 extern crate float4;
 extern crate halton;
@@ -62,7 +63,7 @@ use ray::{Ray, AccelRay};
 use surface::SurfaceIntersection;
 use renderer::LightPath;
 use bbox::BBox;
-use accel::BVHNode;
+use accel::{BVHNode, BVH4Node};
 use timer::Timer;
 
 
@@ -181,6 +182,7 @@ fn main() {
         println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
         println!("BBox size: {} bytes", mem::size_of::<BBox>());
         println!("BVHNode size: {} bytes", mem::size_of::<BVHNode>());
+        println!("BVH4Node size: {} bytes", mem::size_of::<BVH4Node>());
         return;
     }
 
