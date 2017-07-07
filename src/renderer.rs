@@ -10,7 +10,7 @@ use scoped_threadpool::Pool;
 
 use halton;
 
-use accel::ACCEL_TRAV_TIME;
+use accel::{ACCEL_TRAV_TIME, ACCEL_NODE_RAY_TESTS};
 use algorithm::partition_pair;
 use color::{Color, XYZ, SpectralSample, map_0_1_to_wavelength};
 use float4::Float4;
@@ -40,6 +40,7 @@ pub struct Renderer<'a> {
 pub struct RenderStats {
     pub trace_time: f64,
     pub accel_traversal_time: f64,
+    pub accel_node_visits: u64,
     pub initial_ray_generation_time: f64,
     pub ray_generation_time: f64,
     pub sample_writing_time: f64,
@@ -51,6 +52,7 @@ impl RenderStats {
         RenderStats {
             trace_time: 0.0,
             accel_traversal_time: 0.0,
+            accel_node_visits: 0,
             initial_ray_generation_time: 0.0,
             ray_generation_time: 0.0,
             sample_writing_time: 0.0,
@@ -61,6 +63,7 @@ impl RenderStats {
     fn collect(&mut self, other: RenderStats) {
         self.trace_time += other.trace_time;
         self.accel_traversal_time += other.accel_traversal_time;
+        self.accel_node_visits += other.accel_node_visits;
         self.initial_ray_generation_time += other.initial_ray_generation_time;
         self.ray_generation_time += other.ray_generation_time;
         self.sample_writing_time += other.sample_writing_time;
@@ -340,6 +343,10 @@ impl<'a> Renderer<'a> {
         ACCEL_TRAV_TIME.with(|att| {
             stats.accel_traversal_time = att.get();
             att.set(0.0);
+        });
+        ACCEL_NODE_RAY_TESTS.with(|anv| {
+            stats.accel_node_visits = anv.get();
+            anv.set(0);
         });
 
         // Collect stats

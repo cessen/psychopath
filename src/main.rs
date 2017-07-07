@@ -316,6 +316,7 @@ fn main() {
                         "\t\t\tTraversal:            {:.3}s",
                         ntime * rstats.accel_traversal_time
                     );
+                    println!("\t\t\tRay/node tests:       {}", rstats.accel_node_visits);
                     println!(
                         "\t\tInitial ray generation: {:.3}s",
                         ntime * rstats.initial_ray_generation_time

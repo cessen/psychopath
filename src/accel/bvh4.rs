@@ -14,6 +14,7 @@ use timer::Timer;
 use bvh_order::{TRAVERSAL_TABLE, SplitAxes, calc_traversal_code};
 use super::bvh_base::{BVHBase, BVHBaseNode, BVH_MAX_DEPTH};
 use super::ACCEL_TRAV_TIME;
+use super::ACCEL_NODE_RAY_TESTS;
 
 
 #[derive(Copy, Clone, Debug)]
@@ -79,6 +80,7 @@ impl<'a> BVH4<'a> {
 
         let mut timer = Timer::new();
         let mut trav_time: f64 = 0.0;
+        let mut node_tests: u64 = 0;
 
         let traversal_table = {
             let ray_sign_is_neg = [
@@ -97,6 +99,7 @@ impl<'a> BVH4<'a> {
         let mut stack_ptr = 1;
 
         while stack_ptr > 0 {
+            node_tests += ray_i_stack[stack_ptr] as u64;
             match node_stack[stack_ptr] {
                 &BVH4Node::Inner {
                     traversal_code,
@@ -194,6 +197,10 @@ impl<'a> BVH4<'a> {
         ACCEL_TRAV_TIME.with(|att| {
             let v = att.get();
             att.set(v + trav_time);
+        });
+        ACCEL_NODE_RAY_TESTS.with(|anv| {
+            let v = anv.get();
+            anv.set(v + node_tests);
         });
     }
 
