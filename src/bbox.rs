@@ -44,15 +44,15 @@ impl BBox {
         let t2 = (self.max.co - ray.orig.co) * ray.dir_inv.co;
 
         // Find the far and near intersection
-        let mut near_t = t1.v_min(t2);
         let mut far_t = t1.v_max(t2);
-        near_t.set_3(0.0);
+        let mut near_t = t1.v_min(t2);
         far_t.set_3(std::f32::INFINITY);
-        let hitt0 = near_t.h_max();
-        let hitt1 = far_t.h_min() * BBOX_MAXT_ADJUST;
+        near_t.set_3(0.0);
+        let far_hit_t = fast_minf32(far_t.h_min() * BBOX_MAXT_ADJUST, ray.max_t);
+        let near_hit_t = near_t.h_max();
 
         // Did we hit?
-        return hitt0 <= fast_minf32(hitt1, ray.max_t);
+        return near_hit_t <= far_hit_t;
     }
 
     // Creates a new BBox transformed into a different space.
