@@ -8,7 +8,7 @@ use boundable::Boundable;
 use color::XYZ;
 use fp_utils::fp_gamma;
 use lerp::{lerp, lerp_slice, lerp_slice_with};
-use math::{Point, Matrix4x4, cross};
+use math::{Point, Vector, Matrix4x4, cross};
 use ray::{Ray, AccelRay};
 use shading::surface_closure::{SurfaceClosureUnion, GTRClosure, LambertClosure};
 
@@ -104,10 +104,10 @@ impl<'a> Surface for TriangleMesh<'a> {
                                         + (tri.1.into_vector() * b1)
                                         + (tri.2.into_vector() * b2)).into_point();
 
-                                    let pos_err = ((tri.0.into_vector().abs() * b0)
-                                        + (tri.1.into_vector().abs() * b1)
-                                        + (tri.2.into_vector().abs() * b2))
-                                        * fp_gamma(7);
+                                    let pos_err = (((tri.0.into_vector().abs() * b0)
+                                            + (tri.1.into_vector().abs() * b1)
+                                            + (tri.2.into_vector().abs() * b2))
+                                            * fp_gamma(7)).co.h_max();
 
                                     // Fill in intersection data
                                     isects[r.id as usize] = SurfaceIntersection::Hit {
