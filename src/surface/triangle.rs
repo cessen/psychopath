@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use fp_utils::fp_gamma;
 use math::Point;
 use ray::Ray;
 
@@ -79,16 +80,64 @@ pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32,
     let p0z = sz * p0.get_n(zi);
     let p1z = sz * p1.get_n(zi);
     let p2z = sz * p2.get_n(zi);
-    let t = (e0 * p0z) + (e1 * p1z) + (e2 * p2z);
+    let t_scaled = (e0 * p0z) + (e1 * p1z) + (e2 * p2z);
 
     // Check if the hitpoint t is within ray min/max t.
-    if det > 0.0 && (t <= 0.0 || t > (ray.max_t * det)) {
+    if det > 0.0 && (t_scaled <= 0.0 || t_scaled > (ray.max_t * det)) {
         return None;
-    } else if det < 0.0 && (t >= 0.0 || t < (ray.max_t * det)) {
+    } else if det < 0.0 && (t_scaled >= 0.0 || t_scaled < (ray.max_t * det)) {
         return None;
     }
 
-    // Return t and the hitpoint barycentric coordinates.
+    // Calculate t and the hitpoint barycentric coordinates.
     let inv_det = 1.0 / det;
-    Some((t * inv_det, e0 * inv_det, e1 * inv_det, e2 * inv_det))
+    let b0 = e0 * inv_det;
+    let b1 = e1 * inv_det;
+    let b2 = e2 * inv_det;
+    let t = t_scaled * inv_det;
+
+    // Check error bounds on t for very close hit points.
+    // The technique used here is from "Physically Based Rendering: From Theory
+    // to Implementation" third edition by Pharr et al.
+    {
+        // Calculate delta z
+        let max_zt = max_abs_3(p0z, p1z, p2z);
+        let dz = fp_gamma(3) * max_zt;
+
+        // Calculate delta x and y
+        let max_xt = max_abs_3(p0x, p1x, p2x);
+        let max_yt = max_abs_3(p0y, p1y, p2y);
+        let dx = fp_gamma(5) * (max_xt + max_zt);
+        let dy = fp_gamma(5) * (max_yt + max_zt);
+
+        // Calculate delta e
+        let de = 2.0 * ((fp_gamma(2) * max_xt * max_yt) + (dy * max_xt + dx * max_yt));
+
+        // Calculate delta t
+        let max_e = max_abs_3(e0, e1, e2);
+        let dt = 3.0 * ((fp_gamma(3) * max_e * max_zt) + (de * max_zt + dz * max_e)) *
+            inv_det.abs();
+
+        // Finally, do the check
+        if t <= dt {
+            return None;
+        }
+    }
+
+    // Return t and barycentric coordinates
+    Some((t, b0, b1, b2))
+}
+
+fn max_abs_3(a: f32, b: f32, c: f32) -> f32 {
+    let a = a.abs();
+    let b = b.abs();
+    let c = c.abs();
+
+    if a > b && a > c {
+        a
+    } else if b > c {
+        b
+    } else {
+        c
+    }
 }
