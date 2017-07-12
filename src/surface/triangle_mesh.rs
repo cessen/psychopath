@@ -8,7 +8,7 @@ use boundable::Boundable;
 use color::XYZ;
 use fp_utils::fp_gamma;
 use lerp::{lerp, lerp_slice, lerp_slice_with};
-use math::{Point, Vector, Matrix4x4, cross};
+use math::{Point, Matrix4x4, cross};
 use ray::{Ray, AccelRay};
 use shading::surface_closure::{SurfaceClosureUnion, GTRClosure, LambertClosure};
 
@@ -74,25 +74,51 @@ impl<'a> Surface for TriangleMesh<'a> {
         isects: &mut [SurfaceIntersection],
         space: &[Matrix4x4],
     ) {
+        // Precalculate transform for non-motion blur cases
+        let static_mat_space = if space.len() == 1 {
+            lerp_slice(space, 0.0).inverse()
+        } else {
+            Matrix4x4::new()
+        };
+
         self.accel
             .traverse(
                 &mut accel_rays[..], &self.indices, |tri_i, rs| {
                     for r in rs {
                         let wr = &wrays[r.id as usize];
+
+                        // Get triangle
                         let tri = lerp_slice_with(
                             &self.geo[*tri_i..(*tri_i + self.time_samples)],
                             wr.time,
                             |a, b, t| (lerp(a.0, b.0, t), lerp(a.1, b.1, t), lerp(a.2, b.2, t)),
                         );
-                        // TODO: when there's no transforms, we don't have to
-                        // transform the triangles at all.
-                        let mat_space = if space.len() > 0 {
-                            lerp_slice(space, wr.time)
+
+                        // Transform triangle as necessary, and get transform
+                        // space.
+                        let (mat_space, tri) = if space.len() > 0 {
+                            if space.len() > 1 {
+                                // Per-ray transform, for motion blur
+                                let mat_space = lerp_slice(space, wr.time).inverse();
+                                (mat_space,
+                                    (tri.0 * mat_space,
+                                     tri.1 * mat_space,
+                                     tri.2 * mat_space)
+                                )
+                            } else {
+                                // Same transform for all rays
+                                (static_mat_space,
+                                    (tri.0 * static_mat_space,
+                                     tri.1 * static_mat_space,
+                                     tri.2 * static_mat_space)
+                                )
+                            }
                         } else {
-                            Matrix4x4::new()
+                            // No transforms
+                            (Matrix4x4::new(), tri)
                         };
-                        let mat_inv = mat_space.inverse();
-                        let tri = (tri.0 * mat_inv, tri.1 * mat_inv, tri.2 * mat_inv);
+
+                        // Test ray against triangle
                         if let Some((t, b0, b1, b2)) = triangle::intersect_ray(wr, tri) {
                             if t < r.max_t {
                                 if r.is_occlusion() {
