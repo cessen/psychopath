@@ -212,7 +212,9 @@ where
             for div in 0..(SAH_BIN_COUNT - 1) {
                 let left_cost = sah_bins[d][div].0.surface_area() * sah_bins[d][div].2 as f32;
                 let right_cost = sah_bins[d][div].1.surface_area() * sah_bins[d][div].3 as f32;
-                let tot_cost = left_cost + right_cost;
+                let left_diag = sah_bins[d][div].0.diagonal();
+                let right_diag = sah_bins[d][div].1.diagonal();
+                let tot_cost = (left_cost * left_diag) + (right_cost * right_diag);
                 if tot_cost < smallest_cost {
                     dim = d;
                     div_n = sah_divs[d][div];
