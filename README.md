@@ -52,7 +52,7 @@ help out as I have time!
 - Motion blur:
   - Camera motion blur
   - Deformation motion blur
-  - Transforms and transform motion blur
+  - Transform motion blur
 - Focal blur / DoF
 - Spectral rendering (via monte carlo sampling)
 - Full hierarchical instancing
