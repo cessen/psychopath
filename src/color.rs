@@ -85,7 +85,7 @@ impl SpectralSample {
 impl Add for SpectralSample {
     type Output = SpectralSample;
     fn add(self, rhs: SpectralSample) -> Self::Output {
-        assert!(self.hero_wavelength == rhs.hero_wavelength);
+        assert_eq!(self.hero_wavelength, rhs.hero_wavelength);
         SpectralSample {
             e: self.e + rhs.e,
             hero_wavelength: self.hero_wavelength,
@@ -95,7 +95,7 @@ impl Add for SpectralSample {
 
 impl AddAssign for SpectralSample {
     fn add_assign(&mut self, rhs: SpectralSample) {
-        assert!(self.hero_wavelength == rhs.hero_wavelength);
+        assert_eq!(self.hero_wavelength, rhs.hero_wavelength);
         self.e = self.e + rhs.e;
     }
 }
@@ -103,7 +103,7 @@ impl AddAssign for SpectralSample {
 impl Mul for SpectralSample {
     type Output = SpectralSample;
     fn mul(self, rhs: SpectralSample) -> Self::Output {
-        assert!(self.hero_wavelength == rhs.hero_wavelength);
+        assert_eq!(self.hero_wavelength, rhs.hero_wavelength);
         SpectralSample {
             e: self.e * rhs.e,
             hero_wavelength: self.hero_wavelength,
@@ -113,7 +113,7 @@ impl Mul for SpectralSample {
 
 impl MulAssign for SpectralSample {
     fn mul_assign(&mut self, rhs: SpectralSample) {
-        assert!(self.hero_wavelength == rhs.hero_wavelength);
+        assert_eq!(self.hero_wavelength, rhs.hero_wavelength);
         self.e = self.e * rhs.e;
     }
 }

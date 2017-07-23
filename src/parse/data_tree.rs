@@ -34,7 +34,7 @@ impl<'a> DataTree<'a> {
 
         remaining_text = skip_ws_and_comments(remaining_text);
 
-        if remaining_text.1.len() == 0 {
+        if remaining_text.1.is_empty() {
             return Ok(DataTree::Internal {
                 type_name: "ROOT",
                 ident: None,
@@ -48,42 +48,42 @@ impl<'a> DataTree<'a> {
     }
 
     pub fn type_name(&'a self) -> &'a str {
-        match self {
-            &DataTree::Internal { type_name, .. } => type_name,
-            &DataTree::Leaf { type_name, .. } => type_name,
+        match *self {
+            DataTree::Internal { type_name, .. } |
+            DataTree::Leaf { type_name, .. } => type_name,
         }
     }
 
     pub fn byte_offset(&'a self) -> usize {
-        match self {
-            &DataTree::Internal { byte_offset, .. } => byte_offset,
-            &DataTree::Leaf { byte_offset, .. } => byte_offset,
+        match *self {
+            DataTree::Internal { byte_offset, .. } |
+            DataTree::Leaf { byte_offset, .. } => byte_offset,
         }
     }
 
     pub fn is_internal(&self) -> bool {
-        match self {
-            &DataTree::Internal { .. } => true,
-            &DataTree::Leaf { .. } => false,
+        match *self {
+            DataTree::Internal { .. } => true,
+            DataTree::Leaf { .. } => false,
         }
     }
 
     pub fn is_leaf(&self) -> bool {
-        match self {
-            &DataTree::Internal { .. } => false,
-            &DataTree::Leaf { .. } => true,
+        match *self {
+            DataTree::Internal { .. } => false,
+            DataTree::Leaf { .. } => true,
         }
     }
 
     pub fn leaf_contents(&'a self) -> Option<&'a str> {
-        match self {
-            &DataTree::Internal { .. } => None,
-            &DataTree::Leaf { contents, .. } => Some(contents),
+        match *self {
+            DataTree::Internal { .. } => None,
+            DataTree::Leaf { contents, .. } => Some(contents),
         }
     }
 
     pub fn iter_children(&'a self) -> slice::Iter<'a, DataTree<'a>> {
-        if let &DataTree::Internal { ref children, .. } = self {
+        if let DataTree::Internal { ref children, .. } = *self {
             children.iter()
         } else {
             [].iter()
@@ -91,7 +91,7 @@ impl<'a> DataTree<'a> {
     }
 
     pub fn iter_children_with_type(&'a self, type_name: &'static str) -> DataTreeFilterIter<'a> {
-        if let &DataTree::Internal { ref children, .. } = self {
+        if let DataTree::Internal { ref children, .. } = *self {
             DataTreeFilterIter {
                 type_name: type_name,
                 iter: children.iter(),
@@ -108,7 +108,7 @@ impl<'a> DataTree<'a> {
         &'a self,
         type_name: &'static str,
     ) -> DataTreeFilterInternalIter<'a> {
-        if let &DataTree::Internal { ref children, .. } = self {
+        if let DataTree::Internal { ref children, .. } = *self {
             DataTreeFilterInternalIter {
                 type_name: type_name,
                 iter: children.iter(),
@@ -125,7 +125,7 @@ impl<'a> DataTree<'a> {
         &'a self,
         type_name: &'static str,
     ) -> DataTreeFilterLeafIter<'a> {
-        if let &DataTree::Internal { ref children, .. } = self {
+        if let DataTree::Internal { ref children, .. } = *self {
             DataTreeFilterLeafIter {
                 type_name: type_name,
                 iter: children.iter(),
@@ -167,7 +167,7 @@ impl<'a> DataTree<'a> {
 }
 
 
-/// An iterator over the children of a DataTree node that filters out the
+/// An iterator over the children of a `DataTree` node that filters out the
 /// children not matching a specified type name.
 pub struct DataTreeFilterIter<'a> {
     type_name: &'a str,
@@ -193,7 +193,7 @@ impl<'a> Iterator for DataTreeFilterIter<'a> {
 }
 
 
-/// An iterator over the children of a DataTree node that filters out the
+/// An iterator over the children of a `DataTree` node that filters out the
 /// children that aren't internal nodes and that don't match a specified
 /// type name.
 pub struct DataTreeFilterInternalIter<'a> {
@@ -233,7 +233,7 @@ impl<'a> Iterator for DataTreeFilterInternalIter<'a> {
 }
 
 
-/// An iterator over the children of a DataTree node that filters out the
+/// An iterator over the children of a `DataTree` node that filters out the
 /// children that aren't internal nodes and that don't match a specified
 /// type name.
 pub struct DataTreeFilterLeafIter<'a> {
@@ -387,7 +387,7 @@ fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
 }
 
 
-fn parse_leaf_content<'a>(source_text: (usize, &'a str)) -> (&'a str, (usize, &'a str)) {
+fn parse_leaf_content(source_text: (usize, &str)) -> (&str, (usize, &str)) {
     let mut si = 1;
     let mut escaped = false;
     let mut reached_end = true;
@@ -521,7 +521,7 @@ fn is_ident_char(c: char) -> bool {
     !is_ws(c) && !is_reserved_char(c)
 }
 
-fn skip_ws<'a>(text: &'a str) -> &'a str {
+fn skip_ws(text: &str) -> &str {
     let mut si = 0;
     let mut reached_end = true;
     for (i, c) in text.char_indices() {
@@ -539,7 +539,7 @@ fn skip_ws<'a>(text: &'a str) -> &'a str {
     return &text[si..];
 }
 
-fn skip_comment<'a>(text: &'a str) -> &'a str {
+fn skip_comment(text: &str) -> &str {
     let mut si = 0;
     if Some('#') == text.chars().nth(0) {
         let mut reached_end = true;
@@ -559,7 +559,7 @@ fn skip_comment<'a>(text: &'a str) -> &'a str {
     return &text[si..];
 }
 
-fn skip_ws_and_comments<'a>(text: (usize, &'a str)) -> (usize, &'a str) {
+fn skip_ws_and_comments(text: (usize, &str)) -> (usize, &str) {
     let mut remaining_text = text.1;
 
     loop {

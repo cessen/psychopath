@@ -20,10 +20,10 @@ pub enum SurfaceClosureUnion {
 
 impl SurfaceClosureUnion {
     pub fn as_surface_closure(&self) -> &SurfaceClosure {
-        match self {
-            &SurfaceClosureUnion::EmitClosure(ref closure) => closure as &SurfaceClosure,
-            &SurfaceClosureUnion::LambertClosure(ref closure) => closure as &SurfaceClosure,
-            &SurfaceClosureUnion::GTRClosure(ref closure) => closure as &SurfaceClosure,
+        match *self {
+            SurfaceClosureUnion::EmitClosure(ref closure) => closure as &SurfaceClosure,
+            SurfaceClosureUnion::LambertClosure(ref closure) => closure as &SurfaceClosure,
+            SurfaceClosureUnion::GTRClosure(ref closure) => closure as &SurfaceClosure,
         }
     }
 }
@@ -86,11 +86,11 @@ pub trait SurfaceClosure {
 /// Utility function that calculates the fresnel reflection factor of a given
 /// incoming ray against a surface with the given ior outside/inside ratio.
 ///
-/// ior_ratio: The ratio of the outside material ior (probably 1.0 for air)
-///            over the inside ior.
-/// c: The cosine of the angle between the incoming light and the
-///    surface's normal.  Probably calculated e.g. with a normalized
-///    dot product.
+/// `ior_ratio`: The ratio of the outside material ior (probably 1.0 for air)
+///              over the inside ior.
+/// `c`: The cosine of the angle between the incoming light and the
+///      surface's normal.  Probably calculated e.g. with a normalized
+///      dot product.
 #[allow(dead_code)]
 fn dielectric_fresnel(ior_ratio: f32, c: f32) -> f32 {
     let g = (ior_ratio - 1.0 + (c * c)).sqrt();
@@ -103,31 +103,32 @@ fn dielectric_fresnel(ior_ratio: f32, c: f32) -> f32 {
     let f5 = (c * f1) + 1.0;
     let f6 = 1.0 + ((f4 * f4) / (f5 * f5));
 
-    return 0.5 * f3 * f6;
+    0.5 * f3 * f6
 }
 
 
 /// Schlick's approximation of the fresnel reflection factor.
 ///
-/// Same interface as dielectric_fresnel(), above.
+/// Same interface as `dielectric_fresnel()`, above.
 #[allow(dead_code)]
 fn schlick_fresnel(ior_ratio: f32, c: f32) -> f32 {
     let f1 = (1.0 - ior_ratio) / (1.0 + ior_ratio);
     let f2 = f1 * f1;
     let c1 = 1.0 - c;
     let c2 = c1 * c1;
-    return f2 + ((1.0 - f2) * c1 * c2 * c2);
+
+    f2 + ((1.0 - f2) * c1 * c2 * c2)
 }
 
 
 /// Utility function that calculates the fresnel reflection factor of a given
 /// incoming ray against a surface with the given normal-reflectance factor.
 ///
-/// frensel_fac: The ratio of light reflected back if the ray were to
-///              hit the surface head-on (perpendicular to the surface).
-/// c The cosine of the angle between the incoming light and the
-///   surface's normal.  Probably calculated e.g. with a normalized
-///   dot product.
+/// `frensel_fac`: The ratio of light reflected back if the ray were to
+///                hit the surface head-on (perpendicular to the surface).
+/// `c`: The cosine of the angle between the incoming light and the
+///      surface's normal.  Probably calculated e.g. with a normalized
+///      dot product.
 #[allow(dead_code)]
 fn dielectric_fresnel_from_fac(fresnel_fac: f32, c: f32) -> f32 {
     let tmp1 = fresnel_fac.sqrt() - 1.0;
@@ -142,16 +143,16 @@ fn dielectric_fresnel_from_fac(fresnel_fac: f32, c: f32) -> f32 {
     let ior_ratio = tmp2 * tmp2;
 
     // Calculate fresnel factor
-    return dielectric_fresnel(ior_ratio, c);
+    dielectric_fresnel(ior_ratio, c)
 }
 
 
-/// Schlick's approximation version of dielectric_fresnel_from_fac() above.
+/// Schlick's approximation version of `dielectric_fresnel_from_fac()` above.
 #[allow(dead_code)]
 fn schlick_fresnel_from_fac(frensel_fac: f32, c: f32) -> f32 {
     let c1 = 1.0 - c;
     let c2 = c1 * c1;
-    return frensel_fac + ((1.0 - frensel_fac) * c1 * c2 * c2);
+    frensel_fac + ((1.0 - frensel_fac) * c1 * c2 * c2)
 }
 
 
@@ -429,14 +430,12 @@ impl GTRClosure {
         let roughness2 = rough * rough;
 
         // Calculate D - Distribution
-        let dist = if nh <= 0.0 {
+        if nh <= 0.0 {
             0.0
         } else {
             let nh2 = nh * nh;
             self.normalization_factor / (1.0 + ((roughness2 - 1.0) * nh2)).powf(self.tail_shape)
-        };
-
-        dist
+        }
     }
 }
 
@@ -567,7 +566,7 @@ impl SurfaceClosure for GTRClosure {
             };
 
             // Final result
-            return col_f * (dist * g1 * g2) * INV_PI;
+            col_f * (dist * g1 * g2) * INV_PI
         }
     }
 
@@ -588,7 +587,7 @@ impl SurfaceClosure for GTRClosure {
         // Calculate needed dot products
         let nh = clamp(dot(nn, hh), -1.0, 1.0);
 
-        return self.dist(nh, self.roughness) * INV_PI;
+        self.dist(nh, self.roughness) * INV_PI
     }
 
 
@@ -639,6 +638,6 @@ impl SurfaceClosure for GTRClosure {
             (1.0f32).min(self.roughness.sqrt() + (2.0 * theta / PI_32)),
         );
 
-        return fac * (1.0f32).min(1.0 - cos_theta) * INV_PI;
+        fac * (1.0f32).min(1.0 - cos_theta) * INV_PI
     }
 }

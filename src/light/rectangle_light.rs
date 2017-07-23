@@ -51,8 +51,8 @@ impl<'a> LightSource for RectangleLight<'a> {
         time: f32,
     ) -> (SpectralSample, Vector, f32) {
         // Calculate time interpolated values
-        let dim = lerp_slice(&self.dimensions, time);
-        let col = lerp_slice(&self.colors, time);
+        let dim = lerp_slice(self.dimensions, time);
+        let col = lerp_slice(self.colors, time);
 
         // TODO: Is this right?  Do we need to get the surface area post-transform?
         let surface_area_inv: f64 = 1.0 / (dim.0 as f64 * dim.1 as f64);
@@ -105,7 +105,7 @@ impl<'a> LightSource for RectangleLight<'a> {
         let pdf = 1.0 / (area_1 + area_2); // PDF of the ray direction being sampled
         let spectral_sample = (col * surface_area_inv as f32 * 0.5).to_spectral_sample(wavelength);
 
-        return (spectral_sample, shadow_vec, pdf as f32);
+        (spectral_sample, shadow_vec, pdf as f32)
     }
 
     fn sample_pdf(
@@ -121,7 +121,7 @@ impl<'a> LightSource for RectangleLight<'a> {
         // We're not using these, silence warnings
         let _ = (sample_dir, sample_u, sample_v, wavelength);
 
-        let dim = lerp_slice(&self.dimensions, time);
+        let dim = lerp_slice(self.dimensions, time);
 
         // Get the four corners of the rectangle, transformed into world space
         let space_inv = space.inverse();
@@ -156,8 +156,8 @@ impl<'a> LightSource for RectangleLight<'a> {
         // We're not using these, silence warnings
         let _ = (space, dir, u, v);
 
-        let dim = lerp_slice(&self.dimensions, time);
-        let col = lerp_slice(&self.colors, time);
+        let dim = lerp_slice(self.dimensions, time);
+        let col = lerp_slice(self.colors, time);
 
         // TODO: Is this right?  Do we need to get the surface area post-transform?
         let surface_area_inv: f64 = 1.0 / (dim.0 as f64 * dim.1 as f64);
@@ -179,7 +179,7 @@ impl<'a> LightSource for RectangleLight<'a> {
 }
 
 impl<'a> Boundable for RectangleLight<'a> {
-    fn bounds<'b>(&'b self) -> &'b [BBox] {
-        &self.bounds_
+    fn bounds(&self) -> &[BBox] {
+        self.bounds_
     }
 }

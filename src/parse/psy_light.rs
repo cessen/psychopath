@@ -19,16 +19,16 @@ pub fn parse_distant_disk_light<'a>(
     arena: &'a MemArena,
     tree: &'a DataTree,
 ) -> Result<DistantDiskLight<'a>, PsyParseError> {
-    if let &DataTree::Internal { ref children, .. } = tree {
+    if let DataTree::Internal { ref children, .. } = *tree {
         let mut radii = Vec::new();
         let mut directions = Vec::new();
         let mut colors = Vec::new();
 
         // Parse
         for child in children.iter() {
-            match child {
+            match *child {
                 // Radius
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
@@ -42,7 +42,7 @@ pub fn parse_distant_disk_light<'a>(
                 }
 
                 // Direction
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
@@ -58,7 +58,7 @@ pub fn parse_distant_disk_light<'a>(
                 }
 
                 // Color
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
@@ -91,15 +91,15 @@ pub fn parse_sphere_light<'a>(
     arena: &'a MemArena,
     tree: &'a DataTree,
 ) -> Result<SphereLight<'a>, PsyParseError> {
-    if let &DataTree::Internal { ref children, .. } = tree {
+    if let DataTree::Internal { ref children, .. } = *tree {
         let mut radii = Vec::new();
         let mut colors = Vec::new();
 
         // Parse
         for child in children.iter() {
-            match child {
+            match *child {
                 // Radius
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
@@ -113,7 +113,7 @@ pub fn parse_sphere_light<'a>(
                 }
 
                 // Color
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
@@ -145,15 +145,15 @@ pub fn parse_rectangle_light<'a>(
     arena: &'a MemArena,
     tree: &'a DataTree,
 ) -> Result<RectangleLight<'a>, PsyParseError> {
-    if let &DataTree::Internal { ref children, .. } = tree {
+    if let DataTree::Internal { ref children, .. } = *tree {
         let mut dimensions = Vec::new();
         let mut colors = Vec::new();
 
         // Parse
         for child in children.iter() {
-            match child {
+            match *child {
                 // Dimensions
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
@@ -169,7 +169,7 @@ pub fn parse_rectangle_light<'a>(
                 }
 
                 // Color
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,

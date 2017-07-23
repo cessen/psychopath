@@ -54,8 +54,8 @@ impl<'a> LightSource for SphereLight<'a> {
         let pos = Point::new(0.0, 0.0, 0.0);
 
         // Calculate time interpolated values
-        let radius: f64 = lerp_slice(&self.radii, time) as f64;
-        let col = lerp_slice(&self.colors, time);
+        let radius: f64 = lerp_slice(self.radii, time) as f64;
+        let col = lerp_slice(self.colors, time);
         let surface_area_inv: f64 = 1.0 / (4.0 * PI_64 * radius * radius);
 
 
@@ -131,7 +131,7 @@ impl<'a> LightSource for SphereLight<'a> {
 
         let arr = arr * *space;
         let pos = Point::new(0.0, 0.0, 0.0);
-        let radius: f64 = lerp_slice(&self.radii, time) as f64;
+        let radius: f64 = lerp_slice(self.radii, time) as f64;
 
         let d2: f64 = (pos - arr).length2() as f64; // Distance from center of sphere squared
         let d: f64 = d2.sqrt(); // Distance from center of sphere
@@ -142,9 +142,9 @@ impl<'a> LightSource for SphereLight<'a> {
             let cos_theta_max2: f64 = 1.0 - sin_theta_max2;
             let cos_theta_max: f64 = cos_theta_max2.sqrt();
 
-            return uniform_sample_cone_pdf(cos_theta_max) as f32;
+            uniform_sample_cone_pdf(cos_theta_max) as f32
         } else {
-            return (1.0 / (4.0 * PI_64)) as f32;
+            (1.0 / (4.0 * PI_64)) as f32
         }
     }
 
@@ -161,8 +161,8 @@ impl<'a> LightSource for SphereLight<'a> {
         let _ = (space, dir, u, v);
 
         // TODO: use transform space correctly
-        let radius = lerp_slice(&self.radii, time) as f64;
-        let col = lerp_slice(&self.colors, time);
+        let radius = lerp_slice(self.radii, time) as f64;
+        let col = lerp_slice(self.colors, time);
         let surface_area = 4.0 * PI_64 * radius * radius;
         (col / surface_area as f32).to_spectral_sample(wavelength)
     }
@@ -181,7 +181,7 @@ impl<'a> LightSource for SphereLight<'a> {
 }
 
 impl<'a> Boundable for SphereLight<'a> {
-    fn bounds<'b>(&'b self) -> &'b [BBox] {
-        &self.bounds_
+    fn bounds(&self) -> &[BBox] {
+        self.bounds_
     }
 }

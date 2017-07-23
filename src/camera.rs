@@ -25,20 +25,20 @@ impl<'a> Camera<'a> {
         mut aperture_radii: Vec<f32>,
         mut focus_distances: Vec<f32>,
     ) -> Camera<'a> {
-        assert!(transforms.len() != 0, "Camera has no transform(s)!");
-        assert!(fovs.len() != 0, "Camera has no fov(s)!");
+        assert!(!transforms.is_empty(), "Camera has no transform(s)!");
+        assert!(!fovs.is_empty(), "Camera has no fov(s)!");
 
         // Aperture needs focus distance and vice-versa.
-        if aperture_radii.len() == 0 || focus_distances.len() == 0 {
+        if aperture_radii.is_empty() || focus_distances.is_empty() {
             aperture_radii = vec![0.0];
             focus_distances = vec![1.0];
 
-            if aperture_radii.len() == 0 && focus_distances.len() != 0 {
+            if aperture_radii.is_empty() && !focus_distances.is_empty() {
                 println!(
                     "WARNING: camera has aperture radius but no focus distance.  Disabling \
                           focal blur."
                 );
-            } else if aperture_radii.len() != 0 && focus_distances.len() == 0 {
+            } else if !aperture_radii.is_empty() && focus_distances.is_empty() {
                 println!(
                     "WARNING: camera has focus distance but no aperture radius.  Disabling \
                           focal blur."
@@ -71,10 +71,10 @@ impl<'a> Camera<'a> {
 
     pub fn generate_ray(&self, x: f32, y: f32, time: f32, u: f32, v: f32) -> Ray {
         // Get time-interpolated camera settings
-        let transform = lerp_slice(&self.transforms, time);
-        let tfov = lerp_slice(&self.tfovs, time);
-        let aperture_radius = lerp_slice(&self.aperture_radii, time);
-        let focus_distance = lerp_slice(&self.focus_distances, time);
+        let transform = lerp_slice(self.transforms, time);
+        let tfov = lerp_slice(self.tfovs, time);
+        let aperture_radius = lerp_slice(self.aperture_radii, time);
+        let focus_distance = lerp_slice(self.focus_distances, time);
 
         // Ray origin
         let orig = {

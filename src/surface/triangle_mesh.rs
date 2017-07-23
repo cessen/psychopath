@@ -30,7 +30,7 @@ impl<'a> TriangleMesh<'a> {
         time_samples: usize,
         triangles: Vec<(Point, Point, Point)>,
     ) -> TriangleMesh<'b> {
-        assert!(triangles.len() % time_samples == 0);
+        assert_eq!(triangles.len() % time_samples, 0);
 
         let mut indices: Vec<usize> = (0..(triangles.len() / time_samples))
             .map(|n| n * time_samples)
@@ -38,7 +38,7 @@ impl<'a> TriangleMesh<'a> {
 
         let bounds = {
             let mut bounds = Vec::new();
-            for tri in triangles.iter() {
+            for tri in &triangles {
                 let minimum = tri.0.min(tri.1.min(tri.2));
                 let maximum = tri.0.max(tri.1.max(tri.2));
                 bounds.push(BBox::from_points(minimum, maximum));
@@ -60,7 +60,7 @@ impl<'a> TriangleMesh<'a> {
 }
 
 impl<'a> Boundable for TriangleMesh<'a> {
-    fn bounds<'b>(&'b self) -> &'b [BBox] {
+    fn bounds(&self) -> &[BBox] {
         self.accel.bounds()
     }
 }
@@ -83,7 +83,7 @@ impl<'a> Surface for TriangleMesh<'a> {
 
         self.accel
             .traverse(
-                &mut accel_rays[..], &self.indices, |tri_i, rs| {
+                &mut accel_rays[..], self.indices, |tri_i, rs| {
                     for r in rs {
                         let wr = &wrays[r.id as usize];
 
@@ -96,7 +96,7 @@ impl<'a> Surface for TriangleMesh<'a> {
 
                         // Transform triangle as necessary, and get transform
                         // space.
-                        let (mat_space, tri) = if space.len() > 0 {
+                        let (mat_space, tri) = if !space.is_empty() {
                             if space.len() > 1 {
                                 // Per-ray transform, for motion blur
                                 let mat_space = lerp_slice(space, wr.time).inverse();

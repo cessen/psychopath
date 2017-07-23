@@ -1,5 +1,9 @@
 #![allow(dead_code)]
+
+use std::f32;
+
 pub use math3d::{Matrix4x4, Normal, Point, Vector, DotProduct, dot, CrossProduct, cross};
+
 
 /// Clamps a value between a min and max.
 pub fn clamp<T: PartialOrd>(v: T, lower: T, upper: T) -> T {
@@ -49,7 +53,7 @@ pub fn log2_64(mut value: u64) -> u64 {
         (1, (1 << 1) - 1),
     ];
 
-    for &(i, j) in POWERS.iter() {
+    for &(i, j) in &POWERS {
         let tmp = value >> i;
         if tmp != 0 {
             log += i;
@@ -112,7 +116,7 @@ pub fn logit(p: f32, width: f32) -> f32 {
 pub fn fast_logit(p: f32, width: f32) -> f32 {
     let n = 0.001 + (p * 0.998);
 
-    fast_ln((n / (1.0 - n))) * width * (0.6266 / 4.0)
+    fast_ln(n / (1.0 - n)) * width * (0.6266 / 4.0)
 }
 
 
@@ -124,7 +128,7 @@ pub fn fast_ln(x: f32) -> f32 {
 
     let mut y = unsafe { transmute_copy::<f32, u32>(&x) as f32 };
     y *= 8.2629582881927490e-8;
-    return y - 87.989971088;
+    y - 87.989971088
 }
 
 pub fn fast_pow2(p: f32) -> f32 {
@@ -149,11 +153,11 @@ pub fn fast_log2(x: f32) -> f32 {
     let y = xi as f32 * 1.1920928955078125e-7;
     let mx = unsafe { transmute_copy::<u32, f32>(&((xi & 0x007FFFFF) | 0x3f000000)) };
 
-    return y - 124.22551499 - 1.498030302 * mx - 1.72587999 / (0.3520887068 + mx);
+    y - 124.22551499 - 1.498030302 * mx - 1.72587999 / (0.3520887068 + mx)
 }
 
 pub fn fast_exp(p: f32) -> f32 {
-    fast_pow2(1.442695040 * p)
+    fast_pow2(f32::consts::LOG2_E * p)
 }
 
 pub fn fast_pow(x: f32, p: f32) -> f32 {
@@ -170,7 +174,7 @@ pub fn faster_pow2(p: f32) -> f32 {
 }
 
 pub fn faster_exp(p: f32) -> f32 {
-    faster_pow2(1.442695040 * p)
+    faster_pow2(f32::consts::LOG2_E * p)
 }
 
 

@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::result::Result;
+use std::f32;
 
 use nom;
 use nom::IResult;
@@ -37,8 +38,8 @@ pub enum PsyParseError {
 
 impl PsyParseError {
     pub fn print(&self, psy_content: &str) {
-        match self {
-            &PsyParseError::UnknownError(offset) => {
+        match *self {
+            PsyParseError::UnknownError(offset) => {
                 let line = line_count_to_byte_offset(psy_content, offset);
                 println!(
                     "Line {}: Unknown parse error.  If you get this message, please report \
@@ -47,37 +48,37 @@ impl PsyParseError {
                 );
             }
 
-            &PsyParseError::UnknownVariant(offset, error) => {
+            PsyParseError::UnknownVariant(offset, error) => {
                 let line = line_count_to_byte_offset(psy_content, offset);
                 println!("Line {}: {}", line, error);
             }
 
-            &PsyParseError::ExpectedInternalNode(offset, error) => {
+            PsyParseError::ExpectedInternalNode(offset, error) => {
                 let line = line_count_to_byte_offset(psy_content, offset);
                 println!("Line {}: {}", line, error);
             }
 
-            &PsyParseError::ExpectedLeafNode(offset, error) => {
+            PsyParseError::ExpectedLeafNode(offset, error) => {
                 let line = line_count_to_byte_offset(psy_content, offset);
                 println!("Line {}: {}", line, error);
             }
 
-            &PsyParseError::MissingNode(offset, error) => {
+            PsyParseError::MissingNode(offset, error) => {
                 let line = line_count_to_byte_offset(psy_content, offset);
                 println!("Line {}: {}", line, error);
             }
 
-            &PsyParseError::IncorrectLeafData(offset, error) => {
+            PsyParseError::IncorrectLeafData(offset, error) => {
                 let line = line_count_to_byte_offset(psy_content, offset);
                 println!("Line {}: {}", line, error);
             }
 
-            &PsyParseError::WrongNodeCount(offset, error, count) => {
+            PsyParseError::WrongNodeCount(offset, error, count) => {
                 let line = line_count_to_byte_offset(psy_content, offset);
                 println!("Line {}: {}  Found: {}", line, error, count);
             }
 
-            &PsyParseError::InstancedMissingData(offset, error, ref data_name) => {
+            PsyParseError::InstancedMissingData(offset, error, ref data_name) => {
                 let line = line_count_to_byte_offset(psy_content, offset);
                 println!("Line {}: {} Data name: '{}'", line, error, data_name);
             }
@@ -86,11 +87,11 @@ impl PsyParseError {
 }
 
 fn line_count_to_byte_offset(text: &str, offset: usize) -> usize {
-    text[..offset].matches("\n").count() + 1
+    text[..offset].matches('\n').count() + 1
 }
 
 
-/// Takes in a DataTree representing a Scene node and returns
+/// Takes in a `DataTree` representing a Scene node and returns
 pub fn parse_scene<'a>(
     arena: &'a MemArena,
     tree: &'a DataTree,
@@ -167,7 +168,7 @@ pub fn parse_scene<'a>(
     )?;
 
     // Put scene together
-    let scene_name = if let &DataTree::Internal { ident, .. } = tree {
+    let scene_name = if let DataTree::Internal { ident, .. } = *tree {
         if let Some(name) = ident {
             Some(name.to_string())
         } else {
@@ -202,13 +203,13 @@ pub fn parse_scene<'a>(
 
 
 fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
-    if let &DataTree::Internal { ref children, .. } = tree {
+    if let DataTree::Internal { ref children, .. } = *tree {
         let mut found_path = false;
         let mut path = String::new();
 
         for child in children {
-            match child {
-                &DataTree::Leaf {
+            match *child {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
@@ -243,7 +244,7 @@ fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
         }
 
         if found_path {
-            return Ok((path));
+            return Ok(path);
         } else {
             return Err(PsyParseError::MissingNode(
                 tree.byte_offset(),
@@ -263,7 +264,7 @@ fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
 
 
 fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyParseError> {
-    if let &DataTree::Internal { ref children, .. } = tree {
+    if let DataTree::Internal { ref children, .. } = *tree {
         let mut found_res = false;
         let mut found_spp = false;
         let mut res = (0, 0);
@@ -271,9 +272,9 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
         let mut seed = 0;
 
         for child in children {
-            match child {
+            match *child {
                 // Resolution
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
@@ -294,7 +295,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
                 }
 
                 // SamplesPerPixel
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
@@ -314,7 +315,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
                 }
 
                 // Seed
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
@@ -359,7 +360,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
 
 
 fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a>, PsyParseError> {
-    if let &DataTree::Internal { ref children, .. } = tree {
+    if let DataTree::Internal { ref children, .. } = *tree {
         let mut mats = Vec::new();
         let mut fovs = Vec::new();
         let mut focus_distances = Vec::new();
@@ -367,15 +368,15 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
 
         // Parse
         for child in children.iter() {
-            match child {
+            match *child {
                 // Fov
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
                 } if type_name == "Fov" => {
                     if let IResult::Done(_, fov) = ws_f32(contents.as_bytes()) {
-                        fovs.push(fov * (3.1415926536 / 180.0));
+                        fovs.push(fov * (f32::consts::PI / 180.0));
                     } else {
                         // Found Fov, but its contents is not in the right format
                         return Err(PsyParseError::IncorrectLeafData(
@@ -388,7 +389,7 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
                 }
 
                 // FocalDistance
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
@@ -407,7 +408,7 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
                 }
 
                 // ApertureRadius
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
@@ -426,7 +427,7 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
                 }
 
                 // Transform
-                &DataTree::Leaf {
+                DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
@@ -490,8 +491,8 @@ fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>,
                     bgs.iter_children_with_type("Type").count(),
                 ));
             }
-            if let &DataTree::Leaf { contents, .. } =
-                bgs.iter_children_with_type("Type").nth(0).unwrap()
+            if let DataTree::Leaf { contents, .. } =
+                *bgs.iter_children_with_type("Type").nth(0).unwrap()
             {
                 contents.trim()
             } else {
@@ -544,9 +545,9 @@ fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>,
 
         // Parse light sources
         for child in tree.iter_children() {
-            match child {
-                &DataTree::Internal { type_name, .. } if type_name == "DistantDiskLight" => {
-                    lights.push(arena.alloc(parse_distant_disk_light(arena, &child)?));
+            match *child {
+                DataTree::Internal { type_name, .. } if type_name == "DistantDiskLight" => {
+                    lights.push(arena.alloc(parse_distant_disk_light(arena, child)?));
                 }
 
                 _ => {}
@@ -619,9 +620,9 @@ pub fn parse_matrix(contents: &str) -> Result<Matrix4x4, PsyParseError> {
 }
 
 pub fn make_transform_format_error(byte_offset: usize) -> PsyParseError {
-    return PsyParseError::IncorrectLeafData(
+    PsyParseError::IncorrectLeafData(
         byte_offset,
         "Transform should be sixteen integers specified in \
                                              the form '[# # # # # # # # # # # # # # # #]'.",
-    );
+    )
 }

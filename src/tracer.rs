@@ -33,7 +33,7 @@ impl<'a> Tracer<'a> {
             |wr| AccelRay::new(wr, ids.next().unwrap()),
         ));
 
-        return self.inner.trace(wrays, &mut self.rays[..]);
+        self.inner.trace(wrays, &mut self.rays[..])
     }
 }
 
@@ -56,11 +56,11 @@ impl<'a> TracerInner<'a> {
         );
 
         let mut ray_sets = split_rays_by_direction(&mut rays[..]);
-        for ray_set in ray_sets.iter_mut().filter(|ray_set| ray_set.len() > 0) {
+        for ray_set in ray_sets.iter_mut().filter(|ray_set| !ray_set.is_empty()) {
             self.trace_assembly(self.root, wrays, ray_set);
         }
 
-        return &self.isects;
+        &self.isects
     }
 
     fn trace_assembly<'b>(
@@ -102,7 +102,7 @@ impl<'a> TracerInner<'a> {
                     // TODO: do this in a way that's less confusing.  Probably split
                     // the tracing code out into a trace_instance() method or
                     // something.
-                    let mut tmp = if let Some(_) = inst.transform_indices {
+                    let mut tmp = if inst.transform_indices.is_some() {
                         split_rays_by_direction(rs)
                     } else {
                         [
@@ -116,14 +116,14 @@ impl<'a> TracerInner<'a> {
                             &mut [],
                         ]
                     };
-                    let mut ray_sets = if let Some(_) = inst.transform_indices {
+                    let mut ray_sets = if inst.transform_indices.is_some() {
                         &mut tmp[..]
                     } else {
                         &mut tmp[..1]
                     };
 
                     // Loop through the split ray slices and trace them
-                    for ray_set in ray_sets.iter_mut().filter(|ray_set| ray_set.len() > 0) {
+                    for ray_set in ray_sets.iter_mut().filter(|ray_set| !ray_set.is_empty()) {
                         match inst.instance_type {
                             InstanceType::Object => {
                                 self.trace_object(
@@ -145,13 +145,13 @@ impl<'a> TracerInner<'a> {
                 }
 
                 // Un-transform rays if needed
-                if let Some(_) = inst.transform_indices {
+                if inst.transform_indices.is_some() {
                     // Pop transforms off stack
                     self.xform_stack.pop();
 
                     // Undo transforms
                     let xforms = self.xform_stack.top();
-                    if xforms.len() > 0 {
+                    if !xforms.is_empty() {
                         for ray in &mut rs[..] {
                             let id = ray.id;
                             let t = ray.time;
@@ -172,12 +172,12 @@ impl<'a> TracerInner<'a> {
     }
 
     fn trace_object<'b>(&'b mut self, obj: &Object, wrays: &[Ray], rays: &mut [AccelRay]) {
-        match obj {
-            &Object::Surface(ref surface) => {
+        match *obj {
+            Object::Surface(surface) => {
                 surface.intersect_rays(rays, wrays, &mut self.isects, self.xform_stack.top());
             }
 
-            &Object::Light(_) => {
+            Object::Light(_) => {
                 // TODO
             }
         }

@@ -23,8 +23,8 @@ pub fn parse_assembly<'a>(
             match child.type_name() {
                 // Sub-Assembly
                 "Assembly" => {
-                    if let &DataTree::Internal { ident: Some(ident), .. } = child {
-                        builder.add_assembly(ident, parse_assembly(arena, &child)?);
+                    if let DataTree::Internal { ident: Some(ident), .. } = *child {
+                        builder.add_assembly(ident, parse_assembly(arena, child)?);
                     } else {
                         return Err(PsyParseError::UnknownError(child.byte_offset()));
                     }
@@ -68,10 +68,10 @@ pub fn parse_assembly<'a>(
 
                 // MeshSurface
                 "MeshSurface" => {
-                    if let &DataTree::Internal { ident: Some(ident), .. } = child {
+                    if let DataTree::Internal { ident: Some(ident), .. } = *child {
                         builder.add_object(
                             ident,
-                            Object::Surface(arena.alloc(parse_mesh_surface(arena, &child)?)),
+                            Object::Surface(arena.alloc(parse_mesh_surface(arena, child)?)),
                         );
                     } else {
                         // TODO: error condition of some kind, because no ident
@@ -85,10 +85,10 @@ pub fn parse_assembly<'a>(
 
                 // Sphere Light
                 "SphereLight" => {
-                    if let &DataTree::Internal { ident: Some(ident), .. } = child {
+                    if let DataTree::Internal { ident: Some(ident), .. } = *child {
                         builder.add_object(
                             ident,
-                            Object::Light(arena.alloc(parse_sphere_light(arena, &child)?)),
+                            Object::Light(arena.alloc(parse_sphere_light(arena, child)?)),
                         );
                     } else {
                         // No ident
@@ -98,10 +98,10 @@ pub fn parse_assembly<'a>(
 
                 // Rectangle Light
                 "RectangleLight" => {
-                    if let &DataTree::Internal { ident: Some(ident), .. } = child {
+                    if let DataTree::Internal { ident: Some(ident), .. } = *child {
                         builder.add_object(
                             ident,
-                            Object::Light(arena.alloc(parse_rectangle_light(arena, &child)?)),
+                            Object::Light(arena.alloc(parse_rectangle_light(arena, child)?)),
                         );
                     } else {
                         // No ident
@@ -111,7 +111,7 @@ pub fn parse_assembly<'a>(
 
                 // Surface shader
                 "SurfaceShader" => {
-                    if let &DataTree::Internal { ident: Some(_), .. } = child {
+                    if let DataTree::Internal { ident: Some(_), .. } = *child {
                         // TODO
                         //unimplemented!()
                     } else {

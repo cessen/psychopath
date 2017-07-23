@@ -47,7 +47,7 @@ impl Image {
         assert!(x < self.res.0);
         assert!(y < self.res.1);
 
-        let data: &Vec<XYZ> = unsafe { mem::transmute(self.data.get()) };
+        let data: &Vec<XYZ> = unsafe { &*self.data.get() };
         data[self.res.0 * y + x]
     }
 
@@ -55,7 +55,7 @@ impl Image {
         assert!(x < self.res.0);
         assert!(y < self.res.1);
 
-        let data: &mut Vec<XYZ> = unsafe { mem::transmute(self.data.get()) };
+        let data: &mut Vec<XYZ> = unsafe { &mut *self.data.get() };
         data[self.res.0 * y + x] = value;
     }
 
@@ -187,11 +187,11 @@ impl Image {
         let mut fb = {
             // Create the frame buffer
             let mut fb = openexr::FrameBuffer::new(self.res.0, self.res.1);
-            fb.insert_channels(&["R", "G", "B"], &mut image);
+            fb.insert_channels(&["R", "G", "B"], &image);
             fb
         };
 
-        wr.write_pixels(&mut fb).unwrap();
+        wr.write_pixels(&fb).unwrap();
     }
 }
 
@@ -208,8 +208,8 @@ impl<'a> Bucket<'a> {
         assert!(x >= self.min.0 && x < self.max.0);
         assert!(y >= self.min.1 && y < self.max.1);
 
-        let img: &mut Image = unsafe { mem::transmute(self.img) };
-        let data: &Vec<XYZ> = unsafe { mem::transmute(img.data.get()) };
+        let img: &mut Image = unsafe { &mut *self.img };
+        let data: &Vec<XYZ> = unsafe { &mut *img.data.get() };
 
         data[img.res.0 * y as usize + x as usize]
     }
@@ -218,8 +218,8 @@ impl<'a> Bucket<'a> {
         assert!(x >= self.min.0 && x < self.max.0);
         assert!(y >= self.min.1 && y < self.max.1);
 
-        let img: &mut Image = unsafe { mem::transmute(self.img) };
-        let data: &mut Vec<XYZ> = unsafe { mem::transmute(img.data.get()) };
+        let img: &mut Image = unsafe { &mut *self.img };
+        let data: &mut Vec<XYZ> = unsafe { &mut *img.data.get() };
 
         data[img.res.0 * y as usize + x as usize] = value;
     }
@@ -258,7 +258,7 @@ impl<'a> Bucket<'a> {
 
 impl<'a> Drop for Bucket<'a> {
     fn drop(&mut self) {
-        let img: &mut Image = unsafe { mem::transmute(self.img) };
+        let img: &mut Image = unsafe { &mut *self.img };
         let tmp = img.checked_out_blocks.lock().unwrap();
         let mut bucket_list = tmp.borrow_mut();
 

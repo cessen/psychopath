@@ -21,19 +21,19 @@ pub fn lerp<T: Lerp>(a: T, b: T, alpha: f32) -> T {
 /// Interpolates a slice of data as if each adjecent pair of elements
 /// represent a linear segment.
 pub fn lerp_slice<T: Lerp + Copy>(s: &[T], alpha: f32) -> T {
-    debug_assert!(s.len() > 0);
+    debug_assert!(!s.is_empty());
     debug_assert!(alpha >= 0.0);
     debug_assert!(alpha <= 1.0);
 
     if s.len() == 1 || alpha == 1.0 {
-        return *s.last().unwrap();
+        *s.last().unwrap()
     } else {
         let tmp = alpha * ((s.len() - 1) as f32);
         let i1 = tmp as usize;
         let i2 = i1 + 1;
         let alpha2 = tmp - (i1 as f32);
 
-        return lerp(s[i1], s[i2], alpha2);
+        lerp(s[i1], s[i2], alpha2)
     }
 }
 
@@ -42,19 +42,19 @@ where
     T: Copy,
     F: Fn(T, T, f32) -> T,
 {
-    debug_assert!(s.len() > 0);
+    debug_assert!(!s.is_empty());
     debug_assert!(alpha >= 0.0);
     debug_assert!(alpha <= 1.0);
 
     if s.len() == 1 || alpha == 1.0 {
-        return *s.last().unwrap();
+        *s.last().unwrap()
     } else {
         let tmp = alpha * ((s.len() - 1) as f32);
         let i1 = tmp as usize;
         let i2 = i1 + 1;
         let alpha2 = tmp - (i1 as f32);
 
-        return f(s[i1], s[i2], alpha2);
+        f(s[i1], s[i2], alpha2)
     }
 }
 

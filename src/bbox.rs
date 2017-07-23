@@ -52,7 +52,7 @@ impl BBox {
         let near_hit_t = near_t.h_max();
 
         // Did we hit?
-        return near_hit_t <= far_hit_t;
+        near_hit_t <= far_hit_t
     }
 
     // Creates a new BBox transformed into a different space.
@@ -71,13 +71,13 @@ impl BBox {
 
         // Transform BBox corners and make new bbox
         let mut b = BBox::new();
-        for v in vs.iter() {
+        for v in &vs {
             let v = *v * xform;
             b.min = v.min(b.min);
             b.max = v.max(b.max);
         }
 
-        return b;
+        b
     }
 
     pub fn surface_area(&self) -> f32 {
@@ -95,7 +95,7 @@ impl BBox {
 }
 
 
-/// Union of two BBoxes.
+/// Union of two `BBox`es.
 impl BitOr for BBox {
     type Output = BBox;
 
@@ -113,7 +113,7 @@ impl BitOrAssign for BBox {
     }
 }
 
-/// Expand BBox by a point.
+/// Expand `BBox` by a point.
 impl BitOr<Point> for BBox {
     type Output = BBox;
 
@@ -146,8 +146,8 @@ pub fn transform_bbox_slice_from(bbs_in: &[BBox], xforms: &[Matrix4x4], bbs_out:
     bbs_out.clear();
 
     // Transform the bounding boxes
-    if xforms.len() == 0 {
-        return;
+    if xforms.is_empty() {
+        bbs_out.extend_from_slice(bbs_in);
     } else if bbs_in.len() == xforms.len() {
         for (bb, xf) in Iterator::zip(bbs_in.iter(), xforms.iter()) {
             bbs_out.push(bb.transformed(xf.inverse()));

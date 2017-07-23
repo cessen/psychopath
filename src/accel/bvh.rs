@@ -48,7 +48,7 @@ impl<'a> BVH<'a> {
     where
         F: 'b + Fn(&T) -> &'b [BBox],
     {
-        if objects.len() == 0 {
+        if objects.is_empty() {
             BVH {
                 root: None,
                 depth: 0,
@@ -96,8 +96,8 @@ impl<'a> BVH<'a> {
 
         while stack_ptr > 0 {
             node_tests += ray_i_stack[stack_ptr] as u64;
-            match node_stack[stack_ptr] {
-                &BVHNode::Internal {
+            match *node_stack[stack_ptr] {
+                BVHNode::Internal {
                     children,
                     bounds_start,
                     bounds_len,
@@ -124,7 +124,7 @@ impl<'a> BVH<'a> {
                     }
                 }
 
-                &BVHNode::Leaf {
+                BVHNode::Leaf {
                     object_range,
                     bounds_start,
                     bounds_len,
@@ -161,13 +161,14 @@ impl<'a> BVH<'a> {
         });
     }
 
+    #[cfg_attr(feature = "cargo-clippy", allow(mut_from_ref))]
     fn construct_from_base(
         arena: &'a MemArena,
         base: &BVHBase,
         node_index: usize,
     ) -> &'a mut BVHNode<'a> {
-        match &base.nodes[node_index] {
-            &BVHBaseNode::Internal {
+        match base.nodes[node_index] {
+            BVHBaseNode::Internal {
                 bounds_range,
                 children_indices,
                 split_axis,
@@ -188,10 +189,10 @@ impl<'a> BVH<'a> {
                     children: (child1, child2),
                 };
 
-                return node;
+                node
             }
 
-            &BVHBaseNode::Leaf {
+            BVHBaseNode::Leaf {
                 bounds_range,
                 object_range,
             } => {
@@ -204,7 +205,7 @@ impl<'a> BVH<'a> {
                     object_range: object_range,
                 };
 
-                return node;
+                node
             }
         }
     }
@@ -215,18 +216,17 @@ lazy_static! {
 }
 
 impl<'a> Boundable for BVH<'a> {
-    fn bounds<'b>(&'b self) -> &'b [BBox] {
+    fn bounds(&self) -> &[BBox] {
         match self.root {
             None => &DEGENERATE_BOUNDS[..],
             Some(root) => {
-                match root {
-                    &BVHNode::Internal {
+                match *root {
+                    BVHNode::Internal {
                         bounds_start,
                         bounds_len,
                         ..
-                    } => unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) },
-
-                    &BVHNode::Leaf {
+                    } |
+                    BVHNode::Leaf {
                         bounds_start,
                         bounds_len,
                         ..

@@ -1,3 +1,11 @@
+#![cfg_attr(feature = "cargo-clippy", allow(float_cmp))]
+#![cfg_attr(feature = "cargo-clippy", allow(inline_always))]
+#![cfg_attr(feature = "cargo-clippy", allow(many_single_char_names))]
+#![cfg_attr(feature = "cargo-clippy", allow(needless_lifetimes))]
+#![cfg_attr(feature = "cargo-clippy", allow(needless_return))]
+#![cfg_attr(feature = "cargo-clippy", allow(or_fun_call))]
+#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
+
 extern crate bvh_order;
 extern crate color as color_util;
 extern crate float4;
@@ -274,18 +282,18 @@ fn main() {
                     if !args.is_present("serialized_output") {
                         println!("\tOverriding scene spp: {}", spp);
                     }
-                    r.spp = usize::from_str(&spp).unwrap();
+                    r.spp = usize::from_str(spp).unwrap();
                 }
 
                 let max_samples_per_bucket =
                     if let Some(max_samples_per_bucket) = args.value_of("max_bucket_samples") {
-                        u32::from_str(&max_samples_per_bucket).unwrap()
+                        u32::from_str(max_samples_per_bucket).unwrap()
                     } else {
                         4096
                     };
 
                 let thread_count = if let Some(threads) = args.value_of("threads") {
-                    u32::from_str(&threads).unwrap()
+                    u32::from_str(threads).unwrap()
                 } else {
                     num_cpus::get() as u32
                 };

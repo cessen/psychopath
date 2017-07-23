@@ -4,14 +4,13 @@ const N: u32 = 1 << 16;
 
 // Utility function used by the functions below.
 fn hil_rot(n: u32, rx: u32, ry: u32, x: &mut u32, y: &mut u32) {
+    use std::mem;
     if ry == 0 {
         if rx == 1 {
             *x = (n - 1).wrapping_sub(*x);
             *y = (n - 1).wrapping_sub(*y);
         }
-        let t = *x;
-        *x = *y;
-        *y = t;
+        mem::swap(x, y);
     }
 }
 

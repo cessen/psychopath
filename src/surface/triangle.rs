@@ -83,9 +83,9 @@ pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32,
     let t_scaled = (e0 * p0z) + (e1 * p1z) + (e2 * p2z);
 
     // Check if the hitpoint t is within ray min/max t.
-    if det > 0.0 && (t_scaled <= 0.0 || t_scaled > (ray.max_t * det)) {
-        return None;
-    } else if det < 0.0 && (t_scaled >= 0.0 || t_scaled < (ray.max_t * det)) {
+    if (det > 0.0 && (t_scaled <= 0.0 || t_scaled > (ray.max_t * det))) ||
+        (det < 0.0 && (t_scaled >= 0.0 || t_scaled < (ray.max_t * det)))
+    {
         return None;
     }
 

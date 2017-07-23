@@ -45,12 +45,12 @@ impl<'a> Assembly<'a> {
         time: f32,
         intr: &SurfaceIntersection,
     ) -> Option<(SpectralSample, Vector, f32, f32)> {
-        if let &SurfaceIntersection::Hit {
+        if let SurfaceIntersection::Hit {
             intersection_data: idata,
             closure,
-        } = intr
+        } = *intr
         {
-            let sel_xform = if xform_stack.top().len() > 0 {
+            let sel_xform = if !xform_stack.top().is_empty() {
                 lerp_slice(xform_stack.top(), time)
             } else {
                 Matrix4x4::new()
@@ -69,20 +69,20 @@ impl<'a> Assembly<'a> {
                 match inst.instance_type {
 
                     InstanceType::Object => {
-                        match &self.objects[inst.data_index] {
-                            &Object::Light(ref light) => {
+                        match self.objects[inst.data_index] {
+                            Object::Light(light) => {
                                 // Get the world-to-object space transform of the light
                                 let xform = if let Some((a, b)) = inst.transform_indices {
                                     let pxforms = xform_stack.top();
                                     let xform = lerp_slice(&self.xforms[a..b], time);
-                                    if pxforms.len() > 0 {
+                                    if !pxforms.is_empty() {
                                         lerp_slice(pxforms, time) * xform
                                     } else {
                                         xform
                                     }
                                 } else {
                                     let pxforms = xform_stack.top();
-                                    if pxforms.len() > 0 {
+                                    if !pxforms.is_empty() {
                                         lerp_slice(pxforms, time)
                                     } else {
                                         Matrix4x4::new()
@@ -117,7 +117,7 @@ impl<'a> Assembly<'a> {
                         );
 
                         // Pop the assembly's transforms off the transform stack.
-                        if let Some(_) = inst.transform_indices {
+                        if inst.transform_indices.is_some() {
                             xform_stack.pop();
                         }
 
@@ -135,7 +135,7 @@ impl<'a> Assembly<'a> {
 }
 
 impl<'a> Boundable for Assembly<'a> {
-    fn bounds<'b>(&'b self) -> &'b [BBox] {
+    fn bounds(&self) -> &[BBox] {
         self.object_accel.bounds()
     }
 }
@@ -208,7 +208,7 @@ impl<'a> AssemblyBuilder<'a> {
 
         // Map zero-length transforms to None
         let xforms = if let Some(xf) = xforms {
-            if xf.len() > 0 { Some(xf) } else { None }
+            if !xf.is_empty() { Some(xf) } else { None }
         } else {
             None
         };
@@ -274,7 +274,7 @@ impl<'a> AssemblyBuilder<'a> {
                         .approximate_energy() > 0.0
                 }
             })
-            .map(|&a| a)
+            .cloned()
             .collect();
 
         // Build light accel
@@ -282,7 +282,7 @@ impl<'a> AssemblyBuilder<'a> {
             let bounds = &bbs[bis[inst.id]..bis[inst.id + 1]];
             let energy = match inst.instance_type {
                 InstanceType::Object => {
-                    if let Object::Light(ref light) = self.objects[inst.data_index] {
+                    if let Object::Light(light) = self.objects[inst.data_index] {
                         light.approximate_energy()
                     } else {
                         0.0
@@ -316,7 +316,7 @@ impl<'a> AssemblyBuilder<'a> {
         let mut indices = vec![0];
         let mut bounds = Vec::new();
 
-        for inst in self.instances.iter() {
+        for inst in &self.instances {
             let mut bbs = Vec::new();
             let mut bbs2 = Vec::new();
 
@@ -325,9 +325,9 @@ impl<'a> AssemblyBuilder<'a> {
                 InstanceType::Object => {
                     // Push bounds onto bbs
                     let obj = &self.objects[inst.data_index];
-                    match obj {
-                        &Object::Surface(ref s) => bbs.extend(s.bounds()),
-                        &Object::Light(ref l) => bbs.extend(l.bounds()),
+                    match *obj {
+                        Object::Surface(s) => bbs.extend(s.bounds()),
+                        Object::Light(l) => bbs.extend(l.bounds()),
                     }
                 }
 
@@ -341,7 +341,7 @@ impl<'a> AssemblyBuilder<'a> {
             // Transform the bounding boxes, if necessary
             if let Some((xstart, xend)) = inst.transform_indices {
                 let xf = &self.xforms[xstart..xend];
-                transform_bbox_slice_from(&bbs, &xf, &mut bbs2);
+                transform_bbox_slice_from(&bbs, xf, &mut bbs2);
             } else {
                 bbs2.clear();
                 bbs2.extend(bbs);
@@ -352,7 +352,7 @@ impl<'a> AssemblyBuilder<'a> {
             indices.push(bounds.len());
         }
 
-        return (indices, bounds);
+        (indices, bounds)
     }
 }
 

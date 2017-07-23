@@ -232,10 +232,8 @@ impl<'a> Renderer<'a> {
                 if let Some(b) = job_queue.try_pop() {
                     bucket = b;
                     break;
-                } else {
-                    if *all_jobs_queued.read().unwrap() == true {
-                        break 'render_loop;
-                    }
+                } else if *all_jobs_queued.read().unwrap() {
+                    break 'render_loop;
                 }
             }
 
@@ -293,7 +291,7 @@ impl<'a> Renderer<'a> {
                 let min = (bucket.x, bucket.y);
                 let max = (bucket.x + bucket.w, bucket.y + bucket.h);
                 let mut img_bucket = image.get_bucket(min, max);
-                for path in paths.iter() {
+                for path in &paths {
                     let path_col = SpectralSample::from_parts(path.color, path.wavelength);
                     let mut col = img_bucket.get(path.pixel_co.0, path.pixel_co.1);
                     col += XYZ::from_spectral_sample(&path_col) / self.spp as f32;
@@ -438,10 +436,10 @@ impl LightPath {
             // Result of Camera or bounce ray, prepare next bounce and light rays
             LightPathEvent::CameraRay |
             LightPathEvent::BounceRay => {
-                if let &surface::SurfaceIntersection::Hit {
+                if let surface::SurfaceIntersection::Hit {
                     intersection_data: ref idata,
                     ref closure,
-                } = isect
+                } = *isect
                 {
                     // Hit something!  Do the stuff
 
@@ -544,10 +542,7 @@ impl LightPath {
                     };
 
                     // Book keeping for next event
-                    if found_light && do_bounce {
-                        self.event = LightPathEvent::ShadowRay;
-                        return true;
-                    } else if found_light {
+                    if found_light {
                         self.event = LightPathEvent::ShadowRay;
                         return true;
                     } else if do_bounce {
@@ -574,7 +569,7 @@ impl LightPath {
             LightPathEvent::ShadowRay => {
                 // If the light was not in shadow, add it's light to the film
                 // plane.
-                if let &surface::SurfaceIntersection::Miss = isect {
+                if let surface::SurfaceIntersection::Miss = *isect {
                     self.color += self.pending_color_addition;
                 }
 

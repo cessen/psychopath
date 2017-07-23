@@ -53,7 +53,7 @@ impl<'a> LightAccel for LightArray<'a> {
 
         assert!(n >= 0.0 && n <= 1.0);
 
-        if self.indices.len() == 0 {
+        if self.indices.is_empty() {
             return None;
         }
 

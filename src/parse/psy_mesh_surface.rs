@@ -51,7 +51,7 @@ pub fn parse_mesh_surface<'a>(
 
         // Make sure all time samples have same vert count
         if let Some(fvc) = first_vert_count {
-            assert!(vert_count == fvc);
+            assert_eq!(vert_count, fvc);
         } else {
             first_vert_count = Some(vert_count);
         }
@@ -85,7 +85,7 @@ pub fn parse_mesh_surface<'a>(
     let mut triangles = Vec::new();
     let vert_count = first_vert_count.unwrap();
     let mut ii = 0;
-    for fvc in face_vert_counts.iter() {
+    for fvc in &face_vert_counts {
         if *fvc >= 3 {
             // Store the polygon, split up into triangles if >3 verts
             let v1 = ii;

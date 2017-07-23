@@ -40,9 +40,9 @@ pub enum BVHBaseNode {
 
 impl BVHBaseNode {
     pub fn bounds_range(&self) -> (usize, usize) {
-        match self {
-            &BVHBaseNode::Internal { bounds_range, .. } => bounds_range,
-            &BVHBaseNode::Leaf { bounds_range, .. } => bounds_range,
+        match *self {
+            BVHBaseNode::Internal { bounds_range, .. } |
+            BVHBaseNode::Leaf { bounds_range, .. } => bounds_range,
         }
     }
 }
@@ -82,7 +82,7 @@ impl BVHBase {
 
         for obj in objects.iter() {
             let bounds = bounder(obj);
-            debug_assert!(bounds.len() > 0);
+            debug_assert!(!bounds.is_empty());
             if bounds.len() == max_len {
                 for i in 0..bounds.len() {
                     self.bounds_cache[i] |= bounds[i];
@@ -109,7 +109,7 @@ impl BVHBase {
     {
         let me = self.nodes.len();
 
-        if objects.len() == 0 {
+        if objects.is_empty() {
             return (0, (0, 0));
         } else if objects.len() <= objects_per_leaf {
             // Leaf node

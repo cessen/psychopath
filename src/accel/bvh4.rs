@@ -49,7 +49,7 @@ impl<'a> BVH4<'a> {
     where
         F: 'b + Fn(&T) -> &'b [BBox],
     {
-        if objects.len() == 0 {
+        if objects.is_empty() {
             BVH4 {
                 root: None,
                 depth: 0,
@@ -100,8 +100,8 @@ impl<'a> BVH4<'a> {
 
         while stack_ptr > 0 {
             node_tests += ray_i_stack[stack_ptr] as u64;
-            match node_stack[stack_ptr] {
-                &BVH4Node::Inner {
+            match *node_stack[stack_ptr] {
+                BVH4Node::Inner {
                     traversal_code,
                     bounds_start,
                     bounds_len,
@@ -167,7 +167,7 @@ impl<'a> BVH4<'a> {
                     }
                 }
 
-                &BVH4Node::Leaf {
+                BVH4Node::Leaf {
                     object_range,
                     bounds_start,
                     bounds_len,
@@ -210,8 +210,8 @@ impl<'a> BVH4<'a> {
         node_index: usize,
         node_mem: &mut BVH4Node<'a>,
     ) {
-        match &base.nodes[node_index] {
-            &BVHBaseNode::Internal {
+        match base.nodes[node_index] {
+            BVHBaseNode::Internal {
                 bounds_range,
                 children_indices,
                 split_axis,
@@ -223,14 +223,14 @@ impl<'a> BVH4<'a> {
                 let child_count: usize;
                 let child_indices: [usize; 4];
                 let split_info: SplitAxes;
-                match child_l {
-                    &BVHBaseNode::Internal {
+                match *child_l {
+                    BVHBaseNode::Internal {
                         children_indices: i_l,
                         split_axis: s_l,
                         ..
                     } => {
-                        match child_r {
-                            &BVHBaseNode::Internal {
+                        match *child_r {
+                            BVHBaseNode::Internal {
                                 children_indices: i_r,
                                 split_axis: s_r,
                                 ..
@@ -240,7 +240,7 @@ impl<'a> BVH4<'a> {
                                 child_indices = [i_l.0, i_l.1, i_r.0, i_r.1];
                                 split_info = SplitAxes::Full((split_axis, s_l, s_r));
                             }
-                            &BVHBaseNode::Leaf { .. } => {
+                            BVHBaseNode::Leaf { .. } => {
                                 // Three nodes with left split
                                 child_count = 3;
                                 child_indices = [i_l.0, i_l.1, children_indices.1, 0];
@@ -248,9 +248,9 @@ impl<'a> BVH4<'a> {
                             }
                         }
                     }
-                    &BVHBaseNode::Leaf { .. } => {
-                        match child_r {
-                            &BVHBaseNode::Internal {
+                    BVHBaseNode::Leaf { .. } => {
+                        match *child_r {
+                            BVHBaseNode::Internal {
                                 children_indices: i_r,
                                 split_axis: s_r,
                                 ..
@@ -260,7 +260,7 @@ impl<'a> BVH4<'a> {
                                 child_indices = [children_indices.0, i_r.0, i_r.1, 0];
                                 split_info = SplitAxes::Right((split_axis, s_r));
                             }
-                            &BVHBaseNode::Leaf { .. } => {
+                            BVHBaseNode::Leaf { .. } => {
                                 // Two nodes
                                 child_count = 2;
                                 child_indices = [children_indices.0, children_indices.1, 0, 0];
@@ -293,7 +293,7 @@ impl<'a> BVH4<'a> {
                 };
             }
 
-            &BVHBaseNode::Leaf {
+            BVHBaseNode::Leaf {
                 bounds_range,
                 object_range,
             } => {
@@ -314,18 +314,17 @@ lazy_static! {
 }
 
 impl<'a> Boundable for BVH4<'a> {
-    fn bounds<'b>(&'b self) -> &'b [BBox] {
+    fn bounds(&self) -> &[BBox] {
         match self.root {
             None => &DEGENERATE_BOUNDS[..],
             Some(root) => {
-                match root {
-                    &BVH4Node::Inner {
+                match *root {
+                    BVH4Node::Inner {
                         bounds_start,
                         bounds_len,
                         ..
-                    } => unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) },
-
-                    &BVH4Node::Leaf {
+                    } |
+                    BVH4Node::Leaf {
                         bounds_start,
                         bounds_len,
                         ..

@@ -37,7 +37,7 @@ pub fn square_to_circle(x: f32, y: f32) -> (f32, f32) {
 pub fn cosine_sample_hemisphere(u: f32, v: f32) -> Vector {
     let (u, v) = square_to_circle((u * 2.0) - 1.0, (v * 2.0) - 1.0);
     let z = (1.0 - ((u * u) + (v * v))).max(0.0).sqrt();
-    return Vector::new(u, v, z);
+    Vector::new(u, v, z)
 }
 
 pub fn uniform_sample_hemisphere(u: f32, v: f32) -> Vector {
@@ -61,9 +61,9 @@ pub fn uniform_sample_sphere(u: f32, v: f32) -> Vector {
 /// Samples a solid angle defined by a cone originating from (0,0,0)
 /// and pointing down the positive z-axis.
 ///
-/// u, v: sampling variables, should each be in the interval [0,1]
-/// cos_theta_max: cosine of the max angle from the z-axis, defining
-///                the outer extent of the cone.
+/// `u`, `v`: sampling variables, should each be in the interval [0,1]
+/// `cos_theta_max`: cosine of the max angle from the z-axis, defining
+///                  the outer extent of the cone.
 pub fn uniform_sample_cone(u: f32, v: f32, cos_theta_max: f64) -> Vector {
     let cos_theta = (1.0 - u as f64) + (u as f64 * cos_theta_max);
     let sin_theta = (1.0 - (cos_theta * cos_theta)).sqrt();

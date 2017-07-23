@@ -30,9 +30,9 @@ impl TransformStack {
     }
 
     pub fn push(&mut self, xforms: &[Matrix4x4]) {
-        assert!(xforms.len() > 0);
+        assert!(!xforms.is_empty());
 
-        if self.stack.len() == 0 {
+        if self.stack.is_empty() {
             self.stack.extend(xforms);
         } else {
             let sil = self.stack_indices.len();
@@ -66,7 +66,7 @@ impl TransformStack {
         self.stack_indices.pop();
     }
 
-    pub fn top<'a>(&'a self) -> &'a [Matrix4x4] {
+    pub fn top(&self) -> &[Matrix4x4] {
         let sil = self.stack_indices.len();
         let i1 = self.stack_indices[sil - 2];
         let i2 = self.stack_indices[sil - 1];

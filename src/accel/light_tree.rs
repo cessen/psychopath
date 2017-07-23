@@ -37,23 +37,23 @@ enum Node<'a> {
 
 impl<'a> Node<'a> {
     fn bounds(&self) -> &'a [BBox] {
-        match self {
-            &Node::Inner { ref bounds, .. } => bounds,
-            &Node::Leaf { ref bounds, .. } => bounds,
+        match *self {
+            Node::Inner { bounds, .. } |
+            Node::Leaf { bounds, .. } => bounds,
         }
     }
 
     fn energy(&self) -> f32 {
-        match self {
-            &Node::Inner { energy, .. } => energy,
-            &Node::Leaf { energy, .. } => energy,
+        match *self {
+            Node::Inner { energy, .. } |
+            Node::Leaf { energy, .. } => energy,
         }
     }
 
     fn light_index(&self) -> usize {
-        match self {
-            &Node::Inner { .. } => panic!(),
-            &Node::Leaf { light_index, .. } => light_index,
+        match *self {
+            Node::Inner { .. } => panic!(),
+            Node::Leaf { light_index, .. } => light_index,
         }
     }
 }
@@ -67,7 +67,7 @@ impl<'a> LightTree<'a> {
     where
         F: 'b + Fn(&T) -> (&'b [BBox], f32),
     {
-        if objects.len() == 0 {
+        if objects.is_empty() {
             LightTree {
                 root: None,
                 depth: 0,
@@ -170,44 +170,40 @@ impl<'a> LightAccel for LightTree<'a> {
         let mut node = self.root.unwrap();
         let mut tot_prob = 1.0;
         let mut n = n;
-        loop {
-            if let Node::Inner { children, .. } = *node {
-                // Calculate the relative probabilities of the children
-                let ps = {
-                    let mut ps = [0.0; ARITY];
-                    let mut total = 0.0;
-                    for (i, child) in children.iter().enumerate() {
-                        let p = node_prob(child);
-                        ps[i] = p;
-                        total += p;
+        while let Node::Inner { children, .. } = *node {
+            // Calculate the relative probabilities of the children
+            let ps = {
+                let mut ps = [0.0; ARITY];
+                let mut total = 0.0;
+                for (i, child) in children.iter().enumerate() {
+                    let p = node_prob(child);
+                    ps[i] = p;
+                    total += p;
+                }
+                if total <= 0.0 {
+                    let p = 1.0 / children.len() as f32;
+                    for prob in &mut ps[..] {
+                        *prob = p;
                     }
-                    if total <= 0.0 {
-                        let p = 1.0 / children.len() as f32;
-                        for prob in &mut ps[..] {
-                            *prob = p;
-                        }
-                    } else {
-                        for prob in &mut ps[..] {
-                            *prob = *prob / total;
-                        }
-                    }
-                    ps
-                };
-
-                // Pick child and update probabilities
-                let mut base = 0.0;
-                for (i, &p) in ps.iter().enumerate() {
-                    if (n <= base + p) || (i == children.len() - 1) {
-                        tot_prob *= p;
-                        node = &children[i];
-                        n = (n - base) / p;
-                        break;
-                    } else {
-                        base += p;
+                } else {
+                    for prob in &mut ps[..] {
+                        *prob /= total;
                     }
                 }
-            } else {
-                break;
+                ps
+            };
+
+            // Pick child and update probabilities
+            let mut base = 0.0;
+            for (i, &p) in ps.iter().enumerate() {
+                if (n <= base + p) || (i == children.len() - 1) {
+                    tot_prob *= p;
+                    node = &children[i];
+                    n = (n - base) / p;
+                    break;
+                } else {
+                    base += p;
+                }
             }
         }
 
@@ -216,7 +212,7 @@ impl<'a> LightAccel for LightTree<'a> {
     }
 
     fn approximate_energy(&self) -> f32 {
-        if let Some(ref node) = self.root {
+        if let Some(node) = self.root {
             node.energy()
         } else {
             0.0
@@ -270,17 +266,18 @@ impl LightTreeBuilder {
     pub fn node_child_count_recurse(&self, level_collapse: usize, node_index: usize) -> usize {
         if level_collapse > 0 {
             if self.nodes[node_index].is_leaf {
-                return 1;
+                1
             } else {
                 let a = self.node_child_count_recurse(level_collapse - 1, node_index + 1);
                 let b = self.node_child_count_recurse(
                     level_collapse - 1,
                     self.nodes[node_index].child_index,
                 );
-                return a + b;
+
+                a + b
             }
         } else {
-            return 1;
+            1
         }
     }
 
@@ -320,7 +317,7 @@ impl LightTreeBuilder {
     {
         let me_index = self.nodes.len();
 
-        if objects.len() == 0 {
+        if objects.is_empty() {
             return (0, (0, 0));
         } else if objects.len() == 1 {
             // Leaf node

@@ -170,7 +170,7 @@ where
     // Pre-calc SAH div points
     let sah_divs = {
         let mut sah_divs = [[0.0f32; SAH_BIN_COUNT - 1]; 3];
-        for d in 0..3 {
+        for d in 0..sah_divs.len() {
             let extent = bounds.max.get_n(d) - bounds.min.get_n(d);
             for div in 0..(SAH_BIN_COUNT - 1) {
                 let part = extent * ((div + 1) as f32 / SAH_BIN_COUNT as f32);
