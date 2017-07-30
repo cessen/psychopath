@@ -59,8 +59,9 @@ help out as I have time!
 - Light Tree sampling for efficient handling of large numbers of lights. (See [this thread](http://ompf2.com/viewtopic.php?f=3&t=1938) for an overview of the technique.)
 
 ## Todo / In-Progress
-- [ ] Simple material/shading system for surfaces.
 - [ ] Smooth shaded triangle meshes.
+- [ ] Simple material/shading system for surfaces.
+- [ ] Multiple importance sampling
 - [ ] Direct rendering of Catmull-Clark subdivision surfaces.
 
 
