@@ -7,7 +7,7 @@ use bbox::BBox;
 use boundable::Boundable;
 use color::XYZ;
 use fp_utils::fp_gamma;
-use lerp::{lerp, lerp_slice, lerp_slice_with};
+use lerp::lerp_slice;
 use math::{Point, Matrix4x4, cross};
 use ray::{Ray, AccelRay};
 use shading::surface_closure::{SurfaceClosureUnion, GTRClosure, LambertClosure};
@@ -18,42 +18,71 @@ use super::triangle;
 
 #[derive(Copy, Clone, Debug)]
 pub struct TriangleMesh<'a> {
-    time_samples: usize,
-    geo: &'a [(Point, Point, Point)],
-    indices: &'a [usize],
+    time_sample_count: usize,
+    vertices: &'a [Point], // Vertices, with the time samples for each vertex stored contiguously
+    indices: &'a [(u32, u32, u32, u32)], // (v0_idx, v1_idx, v2_idx, original_tri_idx)
     accel: BVH4<'a>,
 }
 
 impl<'a> TriangleMesh<'a> {
-    pub fn from_triangles<'b>(
+    pub fn from_verts_and_indices<'b>(
         arena: &'b MemArena,
-        time_samples: usize,
-        triangles: Vec<(Point, Point, Point)>,
+        verts: Vec<Vec<Point>>,
+        tri_indices: Vec<(usize, usize, usize)>,
     ) -> TriangleMesh<'b> {
-        assert_eq!(triangles.len() % time_samples, 0);
+        let vert_count = verts[0].len();
+        let time_sample_count = verts.len();
 
-        let mut indices: Vec<usize> = (0..(triangles.len() / time_samples))
-            .map(|n| n * time_samples)
-            .collect();
+        // Copy verts over to a contiguous area of memory, reorganizing them
+        // so that each vertices' time samples are contiguous in memory.
+        let vertices = {
+            let mut vertices =
+                unsafe { arena.alloc_array_uninitialized(vert_count * time_sample_count) };
 
+            for vi in 0..vert_count {
+                for ti in 0..time_sample_count {
+                    vertices[(vi * time_sample_count) + ti] = verts[ti][vi];
+                }
+            }
+
+            vertices
+        };
+
+        // Copy triangle vertex indices over, appending the triangle index itself to the tuple
+        let mut indices = {
+            let mut indices = unsafe { arena.alloc_array_uninitialized(tri_indices.len()) };
+            for (i, tri_i) in tri_indices.iter().enumerate() {
+                indices[i] = (tri_i.0 as u32, tri_i.2 as u32, tri_i.1 as u32, i as u32);
+            }
+            indices
+        };
+
+        // Create bounds array for use during BVH construction
         let bounds = {
-            let mut bounds = Vec::new();
-            for tri in &triangles {
-                let minimum = tri.0.min(tri.1.min(tri.2));
-                let maximum = tri.0.max(tri.1.max(tri.2));
-                bounds.push(BBox::from_points(minimum, maximum));
+            let mut bounds = Vec::with_capacity(indices.len() * time_sample_count);
+            for tri in &tri_indices {
+                for ti in 0..time_sample_count {
+                    let p0 = verts[ti][tri.0];
+                    let p1 = verts[ti][tri.1];
+                    let p2 = verts[ti][tri.2];
+                    let minimum = p0.min(p1.min(p2));
+                    let maximum = p0.max(p1.max(p2));
+                    bounds.push(BBox::from_points(minimum, maximum));
+                }
             }
             bounds
         };
 
-        let accel = BVH4::from_objects(arena, &mut indices[..], 3, |tri_i| {
-            &bounds[*tri_i..(*tri_i + time_samples)]
+        // Build BVH
+        let accel = BVH4::from_objects(arena, &mut indices[..], 3, |tri| {
+            &bounds[(tri.3 as usize * time_sample_count)..
+                        ((tri.3 as usize + 1) * time_sample_count)]
         });
 
         TriangleMesh {
-            time_samples: time_samples,
-            geo: arena.copy_slice(&triangles),
-            indices: arena.copy_slice(&indices),
+            time_sample_count: time_sample_count,
+            vertices: vertices,
+            indices: indices,
             accel: accel,
         }
     }
@@ -83,16 +112,31 @@ impl<'a> Surface for TriangleMesh<'a> {
 
         self.accel
             .traverse(
-                &mut accel_rays[..], self.indices, |tri_i, rs| {
+                &mut accel_rays[..], self.indices, |tri_indices, rs| {
                     for r in rs {
                         let wr = &wrays[r.id as usize];
 
                         // Get triangle
-                        let tri = lerp_slice_with(
-                            &self.geo[*tri_i..(*tri_i + self.time_samples)],
-                            wr.time,
-                            |a, b, t| (lerp(a.0, b.0, t), lerp(a.1, b.1, t), lerp(a.2, b.2, t)),
-                        );
+                        let tri = {
+                            let p0_slice = &self.vertices[
+                                (tri_indices.0 as usize * self.time_sample_count)..
+                                ((tri_indices.0 as usize + 1) * self.time_sample_count)
+                            ];
+                            let p1_slice = &self.vertices[
+                                (tri_indices.1 as usize * self.time_sample_count)..
+                                ((tri_indices.1 as usize + 1) * self.time_sample_count)
+                            ];
+                            let p2_slice = &self.vertices[
+                                (tri_indices.2 as usize * self.time_sample_count)..
+                                ((tri_indices.2 as usize + 1) * self.time_sample_count)
+                            ];
+
+                            let p0 = lerp_slice(p0_slice, wr.time);
+                            let p1 = lerp_slice(p1_slice, wr.time);
+                            let p2 = lerp_slice(p2_slice, wr.time);
+
+                            (p0, p1, p2)
+                        };
 
                         // Transform triangle as necessary, and get transform
                         // space.

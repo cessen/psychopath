@@ -25,7 +25,7 @@ pub fn parse_mesh_surface<'a>(
     arena: &'a MemArena,
     tree: &'a DataTree,
 ) -> Result<TriangleMesh<'a>, PsyParseError> {
-    let mut verts = Vec::new();
+    let mut verts = Vec::new(); // Vec of vecs, one for each time sample
     let mut face_vert_counts = Vec::new();
     let mut face_vert_indices = Vec::new();
 
@@ -33,30 +33,25 @@ pub fn parse_mesh_surface<'a>(
     // and other validation.
 
     // Get verts
-    let mut time_samples = 0;
-    let mut first_vert_count = None;
     for (_, text, _) in tree.iter_leaf_children_with_type("Vertices") {
         let mut raw_text = text.trim().as_bytes();
 
         // Collect verts for this time sample
-        let mut vert_count = 0;
+        let mut tverts = Vec::new();
         while let IResult::Done(remaining, vert) =
             closure!(tuple!(ws_f32, ws_f32, ws_f32))(raw_text)
         {
             raw_text = remaining;
 
-            verts.push(Point::new(vert.0, vert.1, vert.2));
-            vert_count += 1;
+            tverts.push(Point::new(vert.0, vert.1, vert.2));
         }
+        verts.push(tverts);
+    }
 
-        // Make sure all time samples have same vert count
-        if let Some(fvc) = first_vert_count {
-            assert_eq!(vert_count, fvc);
-        } else {
-            first_vert_count = Some(vert_count);
-        }
-
-        time_samples += 1;
+    // Make sure all time samples have same vert count
+    let vert_count = verts[0].len();
+    for vs in &verts {
+        assert_eq!(vert_count, vs.len());
     }
 
     // Get face vert counts
@@ -82,23 +77,18 @@ pub fn parse_mesh_surface<'a>(
     }
 
     // Build triangle mesh
-    let mut triangles = Vec::new();
-    let vert_count = first_vert_count.unwrap();
+    let mut tri_vert_indices = Vec::new();
     let mut ii = 0;
     for fvc in &face_vert_counts {
         if *fvc >= 3 {
             // Store the polygon, split up into triangles if >3 verts
             let v1 = ii;
             for vi in 0..(fvc - 2) {
-                // Store all the time samples of each triangle contiguously
-                for time_sample in 0..time_samples {
-                    let start_vi = vert_count * time_sample;
-                    triangles.push((
-                        verts[start_vi + face_vert_indices[v1]],
-                        verts[start_vi + face_vert_indices[v1 + vi + 1]],
-                        verts[start_vi + face_vert_indices[v1 + vi + 2]],
-                    ));
-                }
+                tri_vert_indices.push((
+                    face_vert_indices[v1],
+                    face_vert_indices[v1 + vi + 1],
+                    face_vert_indices[v1 + vi + 2],
+                ));
             }
         } else {
             // TODO: proper error
@@ -108,5 +98,9 @@ pub fn parse_mesh_surface<'a>(
         ii += *fvc;
     }
 
-    Ok(TriangleMesh::from_triangles(arena, time_samples, triangles))
+    Ok(TriangleMesh::from_verts_and_indices(
+        arena,
+        verts,
+        tri_vert_indices,
+    ))
 }
