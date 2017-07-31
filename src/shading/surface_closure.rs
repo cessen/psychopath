@@ -265,20 +265,25 @@ impl SurfaceClosure for LambertClosure {
         uv: (f32, f32),
         wavelength: f32,
     ) -> (Vector, SpectralSample, f32) {
-        let nn = if dot(nor_g.into_vector(), inc) <= 0.0 {
-            nor.normalized()
+        let (nn, flipped_nor_g) = if dot(nor_g.into_vector(), inc) <= 0.0 {
+            (nor.normalized().into_vector(), nor_g.into_vector())
         } else {
-            -nor.normalized()
-        }.into_vector();
+            (-nor.normalized().into_vector(), -nor_g.into_vector())
+        };
 
         // Generate a random ray direction in the hemisphere
-        // of the surface.
+        // of the shading surface normal.
         let dir = cosine_sample_hemisphere(uv.0, uv.1);
         let pdf = dir.z() * INV_PI;
         let out = zup_to_vec(dir, nn);
-        let filter = self.evaluate(inc, out, nor, nor_g, wavelength);
 
-        (out, filter, pdf)
+        // Make sure it's not on the wrong side of the geometric normal.
+        if dot(flipped_nor_g, out) >= 0.0 {
+            let filter = self.evaluate(inc, out, nor, nor_g, wavelength);
+            (out, filter, pdf)
+        } else {
+            (out, SpectralSample::from_value(0.0, 0.0), 0.0)
+        }
     }
 
     fn evaluate(
@@ -289,26 +294,32 @@ impl SurfaceClosure for LambertClosure {
         nor_g: Normal,
         wavelength: f32,
     ) -> SpectralSample {
-        let v = out.normalized();
-        let nn = if dot(nor_g.into_vector(), inc) <= 0.0 {
-            nor.normalized()
+        let (nn, flipped_nor_g) = if dot(nor_g.into_vector(), inc) <= 0.0 {
+            (nor.normalized().into_vector(), nor_g.into_vector())
         } else {
-            -nor.normalized()
-        }.into_vector();
-        let fac = dot(nn, v).max(0.0) * INV_PI;
+            (-nor.normalized().into_vector(), -nor_g.into_vector())
+        };
 
-        self.col.to_spectral_sample(wavelength) * fac
+        if dot(flipped_nor_g, out) >= 0.0 {
+            let fac = dot(nn, out.normalized()).max(0.0) * INV_PI;
+            self.col.to_spectral_sample(wavelength) * fac
+        } else {
+            SpectralSample::from_value(0.0, 0.0)
+        }
     }
 
     fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> f32 {
-        let v = out.normalized();
-        let nn = if dot(nor_g.into_vector(), inc) <= 0.0 {
-            nor.normalized()
+        let (nn, flipped_nor_g) = if dot(nor_g.into_vector(), inc) <= 0.0 {
+            (nor.normalized().into_vector(), nor_g.into_vector())
         } else {
-            -nor.normalized()
-        }.into_vector();
+            (-nor.normalized().into_vector(), -nor_g.into_vector())
+        };
 
-        dot(nn, v).max(0.0) * INV_PI
+        if dot(flipped_nor_g, out) >= 0.0 {
+            dot(nn, out.normalized()).max(0.0) * INV_PI
+        } else {
+            0.0
+        }
     }
 
     fn estimate_eval_over_solid_angle(
@@ -361,7 +372,7 @@ impl SurfaceClosure for LambertClosure {
             return 1.0;
         } else {
             let v = out.normalized();
-            let nn = if dot(nor.into_vector(), inc) <= 0.0 {
+            let nn = if dot(nor_g.into_vector(), inc) <= 0.0 {
                 nor.normalized()
             } else {
                 -nor.normalized()
@@ -486,11 +497,11 @@ impl SurfaceClosure for GTRClosure {
         wavelength: f32,
     ) -> (Vector, SpectralSample, f32) {
         // Get normalized surface normal
-        let nn = if dot(nor_g.into_vector(), inc) < 0.0 {
-            nor.normalized()
+        let (nn, flipped_nor_g) = if dot(nor_g.into_vector(), inc) <= 0.0 {
+            (nor.normalized().into_vector(), nor_g.into_vector())
         } else {
-            -nor.normalized() // If back-facing, flip normal
-        }.into_vector();
+            (-nor.normalized().into_vector(), -nor_g.into_vector())
+        };
 
         // Generate a random ray direction in the hemisphere
         // of the surface.
@@ -501,10 +512,15 @@ impl SurfaceClosure for GTRClosure {
         half_dir = zup_to_vec(half_dir, nn).normalized();
 
         let out = inc - (half_dir * 2.0 * dot(inc, half_dir));
-        let filter = self.evaluate(inc, out, nor, nor_g, wavelength);
-        let pdf = self.sample_pdf(inc, out, nor, nor_g);
 
-        (out, filter, pdf)
+        // Make sure it's not on the wrong side of the geometric normal.
+        if dot(flipped_nor_g, out) >= 0.0 {
+            let filter = self.evaluate(inc, out, nor, nor_g, wavelength);
+            let pdf = self.sample_pdf(inc, out, nor, nor_g);
+            (out, filter, pdf)
+        } else {
+            (out, SpectralSample::from_value(0.0, 0.0), 0.0)
+        }
     }
 
 
@@ -522,13 +538,14 @@ impl SurfaceClosure for GTRClosure {
         let hh = (aa + bb).normalized(); // Half-way between aa and bb
 
         // Surface normal
-        let nn = if dot(nor_g.into_vector(), hh) < 0.0 {
-            -nor.normalized() // If back-facing, flip normal
+        let (nn, flipped_nor_g) = if dot(nor_g.into_vector(), inc) <= 0.0 {
+            (nor.normalized().into_vector(), nor_g.into_vector())
         } else {
-            nor.normalized()
-        }.into_vector();
+            (-nor.normalized().into_vector(), -nor_g.into_vector())
+        };
 
-        if dot(nn, aa) < 0.0 {
+        // Make sure everything's on the correct side of the surface
+        if dot(nn, aa) < 0.0 || dot(nn, bb) < 0.0 || dot(flipped_nor_g, bb) < 0.0 {
             return SpectralSample::from_value(0.0, 0.0);
         }
 
@@ -622,13 +639,14 @@ impl SurfaceClosure for GTRClosure {
         let hh = (aa + bb).normalized(); // Half-way between aa and bb
 
         // Surface normal
-        let nn = if dot(nor_g.into_vector(), hh) < 0.0 {
-            -nor.normalized() // If back-facing, flip normal
+        let (nn, flipped_nor_g) = if dot(nor_g.into_vector(), inc) <= 0.0 {
+            (nor.normalized().into_vector(), nor_g.into_vector())
         } else {
-            nor.normalized()
-        }.into_vector();
+            (-nor.normalized().into_vector(), -nor_g.into_vector())
+        };
 
-        if dot(nn, aa) < 0.0 {
+        // Make sure everything's on the correct side of the surface
+        if dot(nn, aa) < 0.0 || dot(nn, bb) < 0.0 || dot(flipped_nor_g, bb) < 0.0 {
             return 0.0;
         }
 
