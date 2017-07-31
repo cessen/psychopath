@@ -166,11 +166,15 @@ class Mesh:
             w.write("SubdivisionSurface $%s {\n" % self.name)
             w.indent()
 
-        # Write vertices
+        # Write vertices and (if it's smooth shaded) normals
         for ti in range(len(self.time_meshes)):
             w.write("Vertices [")
             w.write(" ".join([("%f" % i) for vert in self.time_meshes[ti].vertices for i in vert.co]), False)
             w.write("]\n", False)
+            if self.time_meshes[0].polygons[0].use_smooth and self.ob.data.psychopath.is_subdivision_surface == False:
+                w.write("Normals [")
+                w.write(" ".join([("%f" % i) for vert in self.time_meshes[ti].vertices for i in vert.normal]), False)
+                w.write("]\n", False)
 
         # Write face vertex counts
         w.write("FaceVertCounts [")

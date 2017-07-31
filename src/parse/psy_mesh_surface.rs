@@ -6,7 +6,7 @@ use nom::IResult;
 
 use mem_arena::MemArena;
 
-use math::Point;
+use math::{Point, Normal};
 use surface::triangle_mesh::TriangleMesh;
 
 use super::basics::{ws_usize, ws_f32};
@@ -26,6 +26,7 @@ pub fn parse_mesh_surface<'a>(
     tree: &'a DataTree,
 ) -> Result<TriangleMesh<'a>, PsyParseError> {
     let mut verts = Vec::new(); // Vec of vecs, one for each time sample
+    let mut normals = Vec::new(); // Vec of vecs, on for each time sample
     let mut face_vert_counts = Vec::new();
     let mut face_vert_indices = Vec::new();
 
@@ -52,6 +53,30 @@ pub fn parse_mesh_surface<'a>(
     let vert_count = verts[0].len();
     for vs in &verts {
         assert_eq!(vert_count, vs.len());
+    }
+
+    // Get normals, if they exist
+    for (_, text, _) in tree.iter_leaf_children_with_type("Normals") {
+        let mut raw_text = text.trim().as_bytes();
+
+        // Collect verts for this time sample
+        let mut tnormals = Vec::new();
+        while let IResult::Done(remaining, nor) =
+            closure!(tuple!(ws_f32, ws_f32, ws_f32))(raw_text)
+        {
+            raw_text = remaining;
+
+            tnormals.push(Normal::new(nor.0, nor.1, nor.2).normalized());
+        }
+        normals.push(tnormals);
+    }
+
+    // Make sure normal's time samples and vert count match the vertices
+    if !normals.is_empty() {
+        assert_eq!(normals.len(), verts.len());
+        for ns in &normals {
+            assert_eq!(vert_count, ns.len());
+        }
     }
 
     // Get face vert counts
@@ -101,6 +126,11 @@ pub fn parse_mesh_surface<'a>(
     Ok(TriangleMesh::from_verts_and_indices(
         arena,
         verts,
+        if normals.is_empty() {
+            None
+        } else {
+            Some(normals)
+        },
         tri_vert_indices,
     ))
 }
