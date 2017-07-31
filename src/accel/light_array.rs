@@ -45,11 +45,12 @@ impl<'a> LightAccel for LightArray<'a> {
         inc: Vector,
         pos: Point,
         nor: Normal,
+        nor_g: Normal,
         sc: &SurfaceClosure,
         time: f32,
         n: f32,
     ) -> Option<(usize, f32, f32)> {
-        let _ = (inc, pos, nor, sc, time); // Not using these, silence warnings
+        let _ = (inc, pos, nor, nor_g, sc, time); // Not using these, silence warnings
 
         assert!(n >= 0.0 && n <= 1.0);
 

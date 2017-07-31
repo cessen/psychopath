@@ -467,36 +467,41 @@ impl LightPath {
                     {
                         // Check if pdf is zero, to avoid NaN's.
                         if light_pdf > 0.0 {
-                            // Calculate and store the light that will be contributed
-                            // to the film plane if the light is not in shadow.
-                            self.pending_color_addition = {
-                                let material = closure.as_surface_closure();
-                                let la = material.evaluate(
-                                    ray.dir,
-                                    shadow_vec,
-                                    idata.nor,
-                                    self.wavelength,
-                                );
-                                light_color.e * la.e * self.light_attenuation /
-                                    (light_pdf * light_sel_pdf)
-                            };
-
-                            // Calculate the shadow ray for testing if the light is
-                            // in shadow or not.
-                            let offset_pos = robust_ray_origin(
-                                idata.pos,
-                                idata.pos_err,
-                                idata.nor_g.normalized(),
+                            let material = closure.as_surface_closure();
+                            let attenuation = material.evaluate(
+                                ray.dir,
                                 shadow_vec,
+                                idata.nor,
+                                idata.nor_g,
+                                self.wavelength,
                             );
-                            *ray = Ray::new(offset_pos, shadow_vec, self.time, true);
 
-                            // For distant lights
-                            if is_infinite {
-                                ray.max_t = std::f32::INFINITY;
+                            if attenuation.e.h_max() > 0.0 {
+                                // Calculate and store the light that will be contributed
+                                // to the film plane if the light is not in shadow.
+                                self.pending_color_addition = light_color.e * attenuation.e *
+                                    self.light_attenuation /
+                                    (light_pdf * light_sel_pdf);
+
+                                // Calculate the shadow ray for testing if the light is
+                                // in shadow or not.
+                                let offset_pos = robust_ray_origin(
+                                    idata.pos,
+                                    idata.pos_err,
+                                    idata.nor_g.normalized(),
+                                    shadow_vec,
+                                );
+                                *ray = Ray::new(offset_pos, shadow_vec, self.time, true);
+
+                                // For distant lights
+                                if is_infinite {
+                                    ray.max_t = std::f32::INFINITY;
+                                }
+
+                                true
+                            } else {
+                                false
                             }
-
-                            true
                         } else {
                             false
                         }
@@ -513,11 +518,17 @@ impl LightPath {
                             let material = closure.as_surface_closure();
                             let u = self.next_lds_samp();
                             let v = self.next_lds_samp();
-                            material.sample(idata.incoming, idata.nor, (u, v), self.wavelength)
+                            material.sample(
+                                idata.incoming,
+                                idata.nor,
+                                idata.nor_g,
+                                (u, v),
+                                self.wavelength,
+                            )
                         };
 
                         // Check if pdf is zero, to avoid NaN's.
-                        if pdf > 0.0 {
+                        if (pdf > 0.0) && (filter.e.h_max() > 0.0) {
                             // Account for the additional light attenuation from
                             // this bounce
                             self.next_attentuation_fac = filter.e / pdf;

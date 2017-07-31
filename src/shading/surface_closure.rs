@@ -36,9 +36,10 @@ pub trait SurfaceClosure {
     /// Given an incoming ray and sample values, generates an outgoing ray and
     /// color filter.
     ///
-    /// inc: Incoming light direction.
-    /// nor: The surface normal at the surface point.
-    /// uv:  The sampling values.
+    /// inc:   Incoming light direction.
+    /// nor:   The shading surface normal at the surface point.
+    /// nor_g: The geometric surface normal at the surface point.
+    /// uv:    The sampling values.
     /// wavelength: The wavelength of light to sample at.
     ///
     /// Returns a tuple with the generated outgoing light direction, color filter, and pdf.
@@ -46,27 +47,37 @@ pub trait SurfaceClosure {
         &self,
         inc: Vector,
         nor: Normal,
+        nor_g: Normal,
         uv: (f32, f32),
         wavelength: f32,
     ) -> (Vector, SpectralSample, f32);
 
     /// Evaluates the closure for the given incoming and outgoing rays.
     ///
-    /// inc: The incoming light direction.
-    /// out: The outgoing light direction.
-    /// nor: The surface normal of the reflecting/transmitting surface point.
+    /// inc:   The incoming light direction.
+    /// out:   The outgoing light direction.
+    /// nor:   The shading surface normal at the surface point.
+    /// nor_g: The geometric surface normal at the surface point.
     /// wavelength: The wavelength of light to evaluate for.
     ///
     /// Returns the resulting filter color.
-    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, wavelength: f32) -> SpectralSample;
+    fn evaluate(
+        &self,
+        inc: Vector,
+        out: Vector,
+        nor: Normal,
+        nor_g: Normal,
+        wavelength: f32,
+    ) -> SpectralSample;
 
     /// Returns the pdf for the given 'in' direction producing the given 'out'
     /// direction with the given differential geometry.
     ///
     /// inc: The incoming light direction.
     /// out: The outgoing light direction.
-    /// nor: The surface normal of the reflecting/transmitting surface point.
-    fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal) -> f32;
+    /// nor:   The shading surface normal at the surface point.
+    /// nor_g: The geometric surface normal at the surface point.
+    fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> f32;
 
     /// Returns an estimate of the sum total energy that evaluate() would return
     /// when 'out' is evaluated over a circular solid angle.
@@ -78,6 +89,7 @@ pub trait SurfaceClosure {
         inc: Vector,
         out: Vector,
         nor: Normal,
+        nor_g: Normal,
         cos_theta: f32,
     ) -> f32;
 }
@@ -180,10 +192,11 @@ impl SurfaceClosure for EmitClosure {
         &self,
         inc: Vector,
         nor: Normal,
+        nor_g: Normal,
         uv: (f32, f32),
         wavelength: f32,
     ) -> (Vector, SpectralSample, f32) {
-        let _ = (inc, nor, uv); // Not using these, silence warning
+        let _ = (inc, nor, nor_g, uv); // Not using these, silence warning
 
         (
             Vector::new(0.0, 0.0, 0.0),
@@ -192,14 +205,21 @@ impl SurfaceClosure for EmitClosure {
         )
     }
 
-    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, wavelength: f32) -> SpectralSample {
-        let _ = (inc, out, nor); // Not using these, silence warning
+    fn evaluate(
+        &self,
+        inc: Vector,
+        out: Vector,
+        nor: Normal,
+        nor_g: Normal,
+        wavelength: f32,
+    ) -> SpectralSample {
+        let _ = (inc, out, nor, nor_g); // Not using these, silence warning
 
         SpectralSample::new(wavelength)
     }
 
-    fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal) -> f32 {
-        let _ = (inc, out, nor); // Not using these, silence warning
+    fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> f32 {
+        let _ = (inc, out, nor, nor_g); // Not using these, silence warning
 
         1.0
     }
@@ -209,9 +229,10 @@ impl SurfaceClosure for EmitClosure {
         inc: Vector,
         out: Vector,
         nor: Normal,
+        nor_g: Normal,
         cos_theta: f32,
     ) -> f32 {
-        let _ = (inc, out, nor, cos_theta); // Not using these, silence warning
+        let _ = (inc, out, nor, nor_g, cos_theta); // Not using these, silence warning
 
         // TODO: what to do here?
         unimplemented!()
@@ -240,10 +261,11 @@ impl SurfaceClosure for LambertClosure {
         &self,
         inc: Vector,
         nor: Normal,
+        nor_g: Normal,
         uv: (f32, f32),
         wavelength: f32,
     ) -> (Vector, SpectralSample, f32) {
-        let nn = if dot(nor.into_vector(), inc) <= 0.0 {
+        let nn = if dot(nor_g.into_vector(), inc) <= 0.0 {
             nor.normalized()
         } else {
             -nor.normalized()
@@ -254,14 +276,21 @@ impl SurfaceClosure for LambertClosure {
         let dir = cosine_sample_hemisphere(uv.0, uv.1);
         let pdf = dir.z() * INV_PI;
         let out = zup_to_vec(dir, nn);
-        let filter = self.evaluate(inc, out, nor, wavelength);
+        let filter = self.evaluate(inc, out, nor, nor_g, wavelength);
 
         (out, filter, pdf)
     }
 
-    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, wavelength: f32) -> SpectralSample {
+    fn evaluate(
+        &self,
+        inc: Vector,
+        out: Vector,
+        nor: Normal,
+        nor_g: Normal,
+        wavelength: f32,
+    ) -> SpectralSample {
         let v = out.normalized();
-        let nn = if dot(nor.into_vector(), inc) <= 0.0 {
+        let nn = if dot(nor_g.into_vector(), inc) <= 0.0 {
             nor.normalized()
         } else {
             -nor.normalized()
@@ -271,9 +300,9 @@ impl SurfaceClosure for LambertClosure {
         self.col.to_spectral_sample(wavelength) * fac
     }
 
-    fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal) -> f32 {
+    fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> f32 {
         let v = out.normalized();
-        let nn = if dot(nor.into_vector(), inc) <= 0.0 {
+        let nn = if dot(nor_g.into_vector(), inc) <= 0.0 {
             nor.normalized()
         } else {
             -nor.normalized()
@@ -287,8 +316,11 @@ impl SurfaceClosure for LambertClosure {
         inc: Vector,
         out: Vector,
         nor: Normal,
+        nor_g: Normal,
         cos_theta: f32,
     ) -> f32 {
+        let _ = nor_g; // Not using this, silence warning
+
         assert!(cos_theta >= -1.0 && cos_theta <= 1.0);
 
         // Analytically calculates lambert shading from a uniform light source
@@ -449,11 +481,12 @@ impl SurfaceClosure for GTRClosure {
         &self,
         inc: Vector,
         nor: Normal,
+        nor_g: Normal,
         uv: (f32, f32),
         wavelength: f32,
     ) -> (Vector, SpectralSample, f32) {
         // Get normalized surface normal
-        let nn = if dot(nor.into_vector(), inc) < 0.0 {
+        let nn = if dot(nor_g.into_vector(), inc) < 0.0 {
             nor.normalized()
         } else {
             -nor.normalized() // If back-facing, flip normal
@@ -468,25 +501,36 @@ impl SurfaceClosure for GTRClosure {
         half_dir = zup_to_vec(half_dir, nn).normalized();
 
         let out = inc - (half_dir * 2.0 * dot(inc, half_dir));
-        let filter = self.evaluate(inc, out, nor, wavelength);
-        let pdf = self.sample_pdf(inc, out, nor);
+        let filter = self.evaluate(inc, out, nor, nor_g, wavelength);
+        let pdf = self.sample_pdf(inc, out, nor, nor_g);
 
         (out, filter, pdf)
     }
 
 
-    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, wavelength: f32) -> SpectralSample {
+    fn evaluate(
+        &self,
+        inc: Vector,
+        out: Vector,
+        nor: Normal,
+        nor_g: Normal,
+        wavelength: f32,
+    ) -> SpectralSample {
         // Calculate needed vectors, normalized
         let aa = -inc.normalized(); // Vector pointing to where "in" came from
         let bb = out.normalized(); // Out
         let hh = (aa + bb).normalized(); // Half-way between aa and bb
 
         // Surface normal
-        let nn = if dot(nor.into_vector(), hh) < 0.0 {
+        let nn = if dot(nor_g.into_vector(), hh) < 0.0 {
             -nor.normalized() // If back-facing, flip normal
         } else {
             nor.normalized()
         }.into_vector();
+
+        if dot(nn, aa) < 0.0 {
+            return SpectralSample::from_value(0.0, 0.0);
+        }
 
         // Calculate needed dot products
         let na = clamp(dot(nn, aa), -1.0, 1.0);
@@ -571,18 +615,22 @@ impl SurfaceClosure for GTRClosure {
     }
 
 
-    fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal) -> f32 {
+    fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> f32 {
         // Calculate needed vectors, normalized
         let aa = -inc.normalized(); // Vector pointing to where "in" came from
         let bb = out.normalized(); // Out
         let hh = (aa + bb).normalized(); // Half-way between aa and bb
 
         // Surface normal
-        let nn = if dot(nor.into_vector(), hh) < 0.0 {
+        let nn = if dot(nor_g.into_vector(), hh) < 0.0 {
             -nor.normalized() // If back-facing, flip normal
         } else {
             nor.normalized()
         }.into_vector();
+
+        if dot(nn, aa) < 0.0 {
+            return 0.0;
+        }
 
         // Calculate needed dot products
         let nh = clamp(dot(nn, hh), -1.0, 1.0);
@@ -596,11 +644,15 @@ impl SurfaceClosure for GTRClosure {
         inc: Vector,
         out: Vector,
         nor: Normal,
+        nor_g: Normal,
         cos_theta: f32,
     ) -> f32 {
         // TODO: all of the stuff in this function is horribly hacky.
         // Find a proper way to approximate the light contribution from a
         // solid angle.
+
+        let _ = nor_g; // Not using this, silence warning
+
         assert!(cos_theta >= -1.0);
         assert!(cos_theta <= 1.0);
 

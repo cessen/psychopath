@@ -134,6 +134,7 @@ impl<'a> LightAccel for LightTree<'a> {
         inc: Vector,
         pos: Point,
         nor: Normal,
+        nor_g: Normal,
         sc: &SurfaceClosure,
         time: f32,
         n: f32,
@@ -160,7 +161,7 @@ impl<'a> LightAccel for LightTree<'a> {
                     let sin_theta_max2 = (r2 / dist2).min(1.0);
                     (1.0 - sin_theta_max2).sqrt()
                 };
-                sc.estimate_eval_over_solid_angle(inc, d, nor, cos_theta_max)
+                sc.estimate_eval_over_solid_angle(inc, d, nor, nor_g, cos_theta_max)
             };
 
             node_ref.energy() * inv_surface_area * approx_contrib

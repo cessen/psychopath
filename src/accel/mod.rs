@@ -28,6 +28,7 @@ pub trait LightAccel {
         inc: Vector,
         pos: Point,
         nor: Normal,
+        nor_g: Normal,
         sc: &SurfaceClosure,
         time: f32,
         n: f32,
