@@ -225,7 +225,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                                     let n1 = lerp_slice(n1_slice, wr.time).normalized();
                                     let n2 = lerp_slice(n2_slice, wr.time).normalized();
 
-                                    let s_nor = (n0 * b0) + (n1 * b1) + (n2 * b2);
+                                    let s_nor = ((n0 * b0) + (n1 * b1) + (n2 * b2)) * mat_space;
                                     if dot(s_nor, geo_normal) >= 0.0 {
                                         s_nor
                                     } else {
