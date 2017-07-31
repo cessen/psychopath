@@ -112,7 +112,8 @@ class Assembly:
             mesh_name = group_prefix + escape_name("__" + ob.name + "__" + ob.data.name + "_")
         else:
             mesh_name = group_prefix + escape_name("__" + ob.data.name + "_")
-        should_export_mesh = mesh_name not in self.mesh_names
+        has_faces = len(ob.data.polygons) > 0
+        should_export_mesh = has_faces and (mesh_name not in self.mesh_names)
         
         # Get mesh
         if should_export_mesh:
