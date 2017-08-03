@@ -15,17 +15,19 @@ pub struct Ray {
     pub dir: Vector,
     pub max_t: f32,
     pub time: f32,
+    pub wavelength: f32,
     pub flags: u32,
 }
 
 impl Ray {
-    pub fn new(orig: Point, dir: Vector, time: f32, is_occ: bool) -> Ray {
+    pub fn new(orig: Point, dir: Vector, time: f32, wavelength: f32, is_occ: bool) -> Ray {
         if !is_occ {
             Ray {
                 orig: orig,
                 dir: dir,
                 max_t: std::f32::INFINITY,
                 time: time,
+                wavelength: wavelength,
                 flags: 0,
             }
         } else {
@@ -34,6 +36,7 @@ impl Ray {
                 dir: dir,
                 max_t: 1.0,
                 time: time,
+                wavelength: wavelength,
                 flags: OCCLUSION_FLAG,
             }
         }

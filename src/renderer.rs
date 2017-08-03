@@ -412,6 +412,7 @@ impl LightPath {
                 image_plane_co.0,
                 image_plane_co.1,
                 time,
+                wavelength,
                 lens_uv.0,
                 lens_uv.1,
             ),
@@ -468,13 +469,8 @@ impl LightPath {
                         // Check if pdf is zero, to avoid NaN's.
                         if light_pdf > 0.0 {
                             let material = closure.as_surface_closure();
-                            let attenuation = material.evaluate(
-                                ray.dir,
-                                shadow_vec,
-                                idata.nor,
-                                idata.nor_g,
-                                self.wavelength,
-                            );
+                            let attenuation =
+                                material.evaluate(ray.dir, shadow_vec, idata.nor, idata.nor_g);
 
                             if attenuation.e.h_max() > 0.0 {
                                 // Calculate and store the light that will be contributed
@@ -491,7 +487,13 @@ impl LightPath {
                                     idata.nor_g.normalized(),
                                     shadow_vec,
                                 );
-                                *ray = Ray::new(offset_pos, shadow_vec, self.time, true);
+                                *ray = Ray::new(
+                                    offset_pos,
+                                    shadow_vec,
+                                    self.time,
+                                    self.wavelength,
+                                    true,
+                                );
 
                                 // For distant lights
                                 if is_infinite {
@@ -518,13 +520,7 @@ impl LightPath {
                             let material = closure.as_surface_closure();
                             let u = self.next_lds_samp();
                             let v = self.next_lds_samp();
-                            material.sample(
-                                idata.incoming,
-                                idata.nor,
-                                idata.nor_g,
-                                (u, v),
-                                self.wavelength,
-                            )
+                            material.sample(idata.incoming, idata.nor, idata.nor_g, (u, v))
                         };
 
                         // Check if pdf is zero, to avoid NaN's.
@@ -541,7 +537,7 @@ impl LightPath {
                                 dir,
                             );
                             self.next_bounce_ray =
-                                Some(Ray::new(offset_pos, dir, self.time, false));
+                                Some(Ray::new(offset_pos, dir, self.time, self.wavelength, false));
 
                             true
                         } else {

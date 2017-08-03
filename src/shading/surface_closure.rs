@@ -2,7 +2,7 @@
 
 use std::f32::consts::PI as PI_32;
 
-use color::{XYZ, SpectralSample, Color};
+use color::SpectralSample;
 use math::{Vector, Normal, dot, clamp, zup_to_vec};
 use sampling::cosine_sample_hemisphere;
 use lerp::lerp;
@@ -29,6 +29,10 @@ impl SurfaceClosureUnion {
 }
 
 /// Trait for surface closures.
+///
+/// Note: each surface closure is assumed to be bound to a particular hero
+/// wavelength.  This is implicit in the `sample`, `evaluate`, and `sample_pdf`
+/// functions below.
 pub trait SurfaceClosure {
     /// Returns whether the closure has a delta distribution or not.
     fn is_delta(&self) -> bool;
@@ -40,7 +44,6 @@ pub trait SurfaceClosure {
     /// nor:   The shading surface normal at the surface point.
     /// nor_g: The geometric surface normal at the surface point.
     /// uv:    The sampling values.
-    /// wavelength: The wavelength of light to sample at.
     ///
     /// Returns a tuple with the generated outgoing light direction, color filter, and pdf.
     fn sample(
@@ -49,7 +52,6 @@ pub trait SurfaceClosure {
         nor: Normal,
         nor_g: Normal,
         uv: (f32, f32),
-        wavelength: f32,
     ) -> (Vector, SpectralSample, f32);
 
     /// Evaluates the closure for the given incoming and outgoing rays.
@@ -61,14 +63,7 @@ pub trait SurfaceClosure {
     /// wavelength: The wavelength of light to evaluate for.
     ///
     /// Returns the resulting filter color.
-    fn evaluate(
-        &self,
-        inc: Vector,
-        out: Vector,
-        nor: Normal,
-        nor_g: Normal,
-        wavelength: f32,
-    ) -> SpectralSample;
+    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> SpectralSample;
 
     /// Returns the pdf for the given 'in' direction producing the given 'out'
     /// direction with the given differential geometry.
@@ -174,12 +169,16 @@ fn schlick_fresnel_from_fac(frensel_fac: f32, c: f32) -> f32 {
 /// behave like a standard closure!
 #[derive(Debug, Copy, Clone)]
 pub struct EmitClosure {
-    col: XYZ,
+    col: SpectralSample,
 }
 
 impl EmitClosure {
-    pub fn emitted_color(&self, wavelength: f32) -> SpectralSample {
-        self.col.to_spectral_sample(wavelength)
+    pub fn new(color: SpectralSample) -> EmitClosure {
+        EmitClosure { col: color }
+    }
+
+    pub fn emitted_color(&self) -> SpectralSample {
+        self.col
     }
 }
 
@@ -194,28 +193,16 @@ impl SurfaceClosure for EmitClosure {
         nor: Normal,
         nor_g: Normal,
         uv: (f32, f32),
-        wavelength: f32,
     ) -> (Vector, SpectralSample, f32) {
         let _ = (inc, nor, nor_g, uv); // Not using these, silence warning
 
-        (
-            Vector::new(0.0, 0.0, 0.0),
-            SpectralSample::new(wavelength),
-            1.0,
-        )
+        (Vector::new(0.0, 0.0, 0.0), self.col, 1.0)
     }
 
-    fn evaluate(
-        &self,
-        inc: Vector,
-        out: Vector,
-        nor: Normal,
-        nor_g: Normal,
-        wavelength: f32,
-    ) -> SpectralSample {
+    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> SpectralSample {
         let _ = (inc, out, nor, nor_g); // Not using these, silence warning
 
-        SpectralSample::new(wavelength)
+        self.col
     }
 
     fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> f32 {
@@ -243,11 +230,11 @@ impl SurfaceClosure for EmitClosure {
 /// Lambertian surface closure
 #[derive(Debug, Copy, Clone)]
 pub struct LambertClosure {
-    col: XYZ,
+    col: SpectralSample,
 }
 
 impl LambertClosure {
-    pub fn new(col: XYZ) -> LambertClosure {
+    pub fn new(col: SpectralSample) -> LambertClosure {
         LambertClosure { col: col }
     }
 }
@@ -263,7 +250,6 @@ impl SurfaceClosure for LambertClosure {
         nor: Normal,
         nor_g: Normal,
         uv: (f32, f32),
-        wavelength: f32,
     ) -> (Vector, SpectralSample, f32) {
         let (nn, flipped_nor_g) = if dot(nor_g.into_vector(), inc) <= 0.0 {
             (nor.normalized().into_vector(), nor_g.into_vector())
@@ -279,21 +265,14 @@ impl SurfaceClosure for LambertClosure {
 
         // Make sure it's not on the wrong side of the geometric normal.
         if dot(flipped_nor_g, out) >= 0.0 {
-            let filter = self.evaluate(inc, out, nor, nor_g, wavelength);
+            let filter = self.evaluate(inc, out, nor, nor_g);
             (out, filter, pdf)
         } else {
-            (out, SpectralSample::from_value(0.0, 0.0), 0.0)
+            (out, SpectralSample::new(0.0), 0.0)
         }
     }
 
-    fn evaluate(
-        &self,
-        inc: Vector,
-        out: Vector,
-        nor: Normal,
-        nor_g: Normal,
-        wavelength: f32,
-    ) -> SpectralSample {
+    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> SpectralSample {
         let (nn, flipped_nor_g) = if dot(nor_g.into_vector(), inc) <= 0.0 {
             (nor.normalized().into_vector(), nor_g.into_vector())
         } else {
@@ -302,9 +281,9 @@ impl SurfaceClosure for LambertClosure {
 
         if dot(flipped_nor_g, out) >= 0.0 {
             let fac = dot(nn, out.normalized()).max(0.0) * INV_PI;
-            self.col.to_spectral_sample(wavelength) * fac
+            self.col * fac
         } else {
-            SpectralSample::from_value(0.0, 0.0)
+            SpectralSample::new(0.0)
         }
     }
 
@@ -389,7 +368,7 @@ impl SurfaceClosure for LambertClosure {
 /// The GTR microfacet BRDF from the Disney Principled BRDF paper.
 #[derive(Debug, Copy, Clone)]
 pub struct GTRClosure {
-    col: XYZ,
+    col: SpectralSample,
     roughness: f32,
     tail_shape: f32,
     fresnel: f32, // [0.0, 1.0] determines how much fresnel reflection comes into play
@@ -397,7 +376,7 @@ pub struct GTRClosure {
 }
 
 impl GTRClosure {
-    pub fn new(col: XYZ, roughness: f32, tail_shape: f32, fresnel: f32) -> GTRClosure {
+    pub fn new(col: SpectralSample, roughness: f32, tail_shape: f32, fresnel: f32) -> GTRClosure {
         let mut closure = GTRClosure {
             col: col,
             roughness: roughness,
@@ -494,7 +473,6 @@ impl SurfaceClosure for GTRClosure {
         nor: Normal,
         nor_g: Normal,
         uv: (f32, f32),
-        wavelength: f32,
     ) -> (Vector, SpectralSample, f32) {
         // Get normalized surface normal
         let (nn, flipped_nor_g) = if dot(nor_g.into_vector(), inc) <= 0.0 {
@@ -515,23 +493,16 @@ impl SurfaceClosure for GTRClosure {
 
         // Make sure it's not on the wrong side of the geometric normal.
         if dot(flipped_nor_g, out) >= 0.0 {
-            let filter = self.evaluate(inc, out, nor, nor_g, wavelength);
+            let filter = self.evaluate(inc, out, nor, nor_g);
             let pdf = self.sample_pdf(inc, out, nor, nor_g);
             (out, filter, pdf)
         } else {
-            (out, SpectralSample::from_value(0.0, 0.0), 0.0)
+            (out, SpectralSample::new(0.0), 0.0)
         }
     }
 
 
-    fn evaluate(
-        &self,
-        inc: Vector,
-        out: Vector,
-        nor: Normal,
-        nor_g: Normal,
-        wavelength: f32,
-    ) -> SpectralSample {
+    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> SpectralSample {
         // Calculate needed vectors, normalized
         let aa = -inc.normalized(); // Vector pointing to where "in" came from
         let bb = out.normalized(); // Out
@@ -546,7 +517,7 @@ impl SurfaceClosure for GTRClosure {
 
         // Make sure everything's on the correct side of the surface
         if dot(nn, aa) < 0.0 || dot(nn, bb) < 0.0 || dot(flipped_nor_g, bb) < 0.0 {
-            return SpectralSample::from_value(0.0, 0.0);
+            return SpectralSample::new(0.0);
         }
 
         // Calculate needed dot products
@@ -561,30 +532,29 @@ impl SurfaceClosure for GTRClosure {
 
         // Calculate F - Fresnel
         let col_f = {
-            let mut col_f = self.col.to_spectral_sample(wavelength);
-
             let rev_fresnel = 1.0 - self.fresnel;
             let c0 = lerp(
-                schlick_fresnel_from_fac(col_f.e.get_0(), hb),
-                col_f.e.get_0(),
+                schlick_fresnel_from_fac(self.col.e.get_0(), hb),
+                self.col.e.get_0(),
                 rev_fresnel,
             );
             let c1 = lerp(
-                schlick_fresnel_from_fac(col_f.e.get_1(), hb),
-                col_f.e.get_1(),
+                schlick_fresnel_from_fac(self.col.e.get_1(), hb),
+                self.col.e.get_1(),
                 rev_fresnel,
             );
             let c2 = lerp(
-                schlick_fresnel_from_fac(col_f.e.get_2(), hb),
-                col_f.e.get_2(),
+                schlick_fresnel_from_fac(self.col.e.get_2(), hb),
+                self.col.e.get_2(),
                 rev_fresnel,
             );
             let c3 = lerp(
-                schlick_fresnel_from_fac(col_f.e.get_3(), hb),
-                col_f.e.get_3(),
+                schlick_fresnel_from_fac(self.col.e.get_3(), hb),
+                self.col.e.get_3(),
                 rev_fresnel,
             );
 
+            let mut col_f = self.col;
             col_f.e.set_0(c0);
             col_f.e.set_1(c1);
             col_f.e.set_2(c2);

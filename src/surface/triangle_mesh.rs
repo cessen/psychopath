@@ -10,7 +10,7 @@ use fp_utils::fp_gamma;
 use lerp::lerp_slice;
 use math::{Point, Normal, Matrix4x4, dot, cross};
 use ray::{Ray, AccelRay};
-use shading::surface_closure::{SurfaceClosureUnion, GTRClosure, LambertClosure};
+use shading::{SurfaceShader, SimpleSurfaceShader};
 
 use super::{Surface, SurfaceIntersection, SurfaceIntersectionData};
 use super::triangle;
@@ -235,28 +235,30 @@ impl<'a> Surface for TriangleMesh<'a> {
                                     geo_normal
                                 };
 
+                                let intersection_data = SurfaceIntersectionData {
+                                    incoming: wr.dir,
+                                    t: t,
+                                    pos: pos,
+                                    pos_err: pos_err,
+                                    nor: shading_normal,
+                                    nor_g: geo_normal,
+                                    uv: (0.0, 0.0), // TODO
+                                    local_space: mat_space,
+                                };
+
                                 // Fill in intersection data
                                 isects[r.id as usize] = SurfaceIntersection::Hit {
-                                    intersection_data: SurfaceIntersectionData {
-                                        incoming: wr.dir,
-                                        t: t,
-                                        pos: pos,
-                                        pos_err: pos_err,
-                                        nor: shading_normal,
-                                        nor_g: geo_normal,
-                                        uv: (0.0, 0.0), // TODO
-                                        local_space: mat_space,
-                                    },
-                                    // TODO: get surface closure from surface shader.
-                                    closure: SurfaceClosureUnion::LambertClosure(
-                                        LambertClosure::new(XYZ::new(0.8, 0.8, 0.8)),
-                                    ),
-// closure:
-//     SurfaceClosureUnion::GTRClosure(
-//         GTRClosure::new(XYZ::new(0.8, 0.8, 0.8),
-//                         0.1,
-//                         2.0,
-//                         1.0)),
+                                    intersection_data: intersection_data,
+                                    // TODO: get surface shader from user-defined shader.
+                                    closure: SimpleSurfaceShader::Lambert {
+                                        color: XYZ::new(0.8, 0.8, 0.8),
+                                    }.shade(&intersection_data, wr.wavelength),
+                                    // closure: SimpleSurfaceShader::GTR {
+                                    //     color: XYZ::new(0.8, 0.8, 0.8),
+                                    //     roughness: 0.1,
+                                    //     tail_shape: 2.0,
+                                    //     fresnel: 1.0,
+                                    // }.shade(&intersection_data, wr.wavelength),
                                 };
                                 r.max_t = t;
                             }

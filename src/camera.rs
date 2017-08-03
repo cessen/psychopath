@@ -69,7 +69,7 @@ impl<'a> Camera<'a> {
         }
     }
 
-    pub fn generate_ray(&self, x: f32, y: f32, time: f32, u: f32, v: f32) -> Ray {
+    pub fn generate_ray(&self, x: f32, y: f32, time: f32, wavelength: f32, u: f32, v: f32) -> Ray {
         // Get time-interpolated camera settings
         let transform = lerp_slice(self.transforms, time);
         let tfov = lerp_slice(self.tfovs, time);
@@ -89,6 +89,6 @@ impl<'a> Camera<'a> {
             1.0,
         ).normalized();
 
-        Ray::new(orig * transform, dir * transform, time, false)
+        Ray::new(orig * transform, dir * transform, time, wavelength, false)
     }
 }
