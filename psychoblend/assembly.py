@@ -12,6 +12,7 @@ class Assembly:
         self.objects = []
         self.instances = []
 
+        self.material_names = set()
         self.mesh_names = set()
         self.assembly_names = set()
 
@@ -119,10 +120,19 @@ class Assembly:
         if should_export_mesh:
             self.mesh_names.add(mesh_name)
             self.objects += [Mesh(self.render_engine, ob, mesh_name)]
+
+            # Get materials
+            for ms in ob.material_slots:
+                if ms != None:
+                    if ms.material.name not in self.material_names:
+                        self.material_names.add(ms.material.name)
+                        self.materials += [Material(self.render_engine, ms.material)]
+
             return mesh_name
         else:
             return None
-    
+
+
     def get_sphere_lamp(self, ob, group_prefix):
         name = group_prefix + "__" + escape_name(ob.name)
         self.objects += [SphereLamp(self.render_engine, ob, name)]
@@ -281,5 +291,46 @@ class Instance:
         w.write("Data [$%s]\n" % self.data_name)
         for mat in self.time_xforms:
             w.write("Transform [%s]\n" % mat2str(mat.inverted()))
+        for ms in self.ob.material_slots:
+            if ms != None:
+                w.write("SurfaceShaderBind [$%s]\n" % escape_name(ms.material.name))
+                break
         w.unindent()
         w.write("}\n")
+
+
+class Material:
+    def __init__(self, render_engine, material):
+        self.mat = material
+
+    def take_sample(self, render_engine, time, translation_offset):
+        # TODO: motion blur of material settings
+        pass
+
+    def export(self, render_engine, w):
+        render_engine.update_stats("", "Psychopath: Exporting %s" % self.mat.name)
+
+        w.write("SurfaceShader $%s {\n" % escape_name(self.mat.name))
+        w.indent()
+        if self.mat.psychopath.surface_shader_type == 'Emit':
+            w.write("Type [Emit]\n")
+            color = self.mat.psychopath.color
+            w.write("Color [%f %f %f]\n" % (color[0], color[1], color[2]))
+        elif self.mat.psychopath.surface_shader_type == 'Lambert':
+            w.write("Type [Lambert]\n")
+            color = self.mat.psychopath.color
+            w.write("Color [%f %f %f]\n" % (color[0], color[1], color[2]))
+        elif self.mat.psychopath.surface_shader_type == 'GTR':
+            w.write("Type [GTR]\n")
+            color = self.mat.psychopath.color
+            w.write("Color [%f %f %f]\n" % (color[0], color[1], color[2]))
+            w.write("Roughness [%f]\n" % self.mat.psychopath.roughness)
+            w.write("TailShape [%f]\n" % self.mat.psychopath.tail_shape)
+            w.write("Fresnel [%f]\n" % self.mat.psychopath.fresnel)
+        else:
+            raise "Unsupported surface shader type '%s'" % self.mat.psychopath.surface_shader_type
+        w.unindent()
+        w.write("}\n")
+
+    def cleanup(self):
+        pass

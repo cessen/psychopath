@@ -7,7 +7,7 @@ use scene::{Assembly, Object, InstanceType};
 use surface::SurfaceIntersection;
 use transform_stack::TransformStack;
 use shading::{SurfaceShader, SimpleSurfaceShader};
-use color::XYZ;
+use color::{XYZ, rec709_to_xyz};
 
 
 pub struct Tracer<'a> {
@@ -185,8 +185,9 @@ impl<'a> TracerInner<'a> {
     ) {
         match *obj {
             Object::Surface(surface) => {
-                let unassigned_shader =
-                    SimpleSurfaceShader::Lambert { color: XYZ::new(1.0, 0.0, 1.0) };
+                let unassigned_shader = SimpleSurfaceShader::Lambert {
+                    color: XYZ::from_tuple(rec709_to_xyz((1.0, 0.0, 1.0))),
+                };
                 let shader = surface_shader.unwrap_or(&unassigned_shader);
 
                 surface.intersect_rays(
