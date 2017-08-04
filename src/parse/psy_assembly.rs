@@ -9,6 +9,7 @@ use scene::{Assembly, AssemblyBuilder, Object};
 use super::DataTree;
 use super::psy_light::{parse_sphere_light, parse_rectangle_light};
 use super::psy_mesh_surface::parse_mesh_surface;
+use super::psy_surface_shader::parse_surface_shader;
 use super::psy::{parse_matrix, PsyParseError};
 
 
@@ -45,6 +46,22 @@ pub fn parse_assembly<'a>(
                         child.iter_leaf_children_with_type("Data").nth(0).unwrap().1
                     };
 
+                    // Get surface shader binding, if any.
+                    let surface_shader_name = if child
+                        .iter_leaf_children_with_type("SurfaceShaderBind")
+                        .count() > 0
+                    {
+                        Some(
+                            child
+                                .iter_leaf_children_with_type("SurfaceShaderBind")
+                                .nth(0)
+                                .unwrap()
+                                .1,
+                        )
+                    } else {
+                        None
+                    };
+
                     // Get xforms
                     let mut xforms = Vec::new();
                     for (_, contents, _) in child.iter_leaf_children_with_type("Transform") {
@@ -53,7 +70,7 @@ pub fn parse_assembly<'a>(
 
                     // Add instance
                     if builder.name_exists(name) {
-                        builder.add_instance(name, Some(&xforms));
+                        builder.add_instance(name, surface_shader_name, Some(&xforms));
                     } else {
                         return Err(PsyParseError::InstancedMissingData(
                             child.iter_leaf_children_with_type("Data").nth(0).unwrap().2,
@@ -63,6 +80,20 @@ pub fn parse_assembly<'a>(
                                                                         exist.",
                             name.to_string(),
                         ));
+                    }
+                }
+
+                // SurfaceShader
+                "SurfaceShader" => {
+                    if let DataTree::Internal { ident: Some(ident), .. } = *child {
+                        builder.add_surface_shader(ident, parse_surface_shader(arena, child)?);
+                    } else {
+                        // TODO: error condition of some kind, because no ident
+                        panic!(
+                            "SurfaceShader encountered that was a leaf, but SurfaceShaders cannot \
+                                be a leaf: {}",
+                            child.byte_offset()
+                        );
                     }
                 }
 
@@ -109,17 +140,6 @@ pub fn parse_assembly<'a>(
                     }
                 }
 
-                // Surface shader
-                "SurfaceShader" => {
-                    if let DataTree::Internal { ident: Some(_), .. } = *child {
-                        // TODO
-                        //unimplemented!()
-                    } else {
-                        // No ident
-                        return Err(PsyParseError::UnknownError(child.byte_offset()));
-                    }
-                }
-
                 _ => {
                     // TODO: some kind of error, because not a known type name
                 }
@@ -143,12 +163,6 @@ pub fn parse_assembly<'a>(
                 // else if (child.type == "Sphere") {
                 //     assembly->add_object(child.name, parse_sphere(child));
                 // }
-                //
-                // // Surface shader
-                // else if (child.type == "SurfaceShader") {
-                //     assembly->add_surface_shader(child.name, parse_surface_shader(child));
-                // }
-                //
             }
         }
     } else {

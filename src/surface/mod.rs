@@ -8,6 +8,7 @@ use std::fmt::Debug;
 use boundable::Boundable;
 use math::{Point, Vector, Normal, Matrix4x4};
 use ray::{Ray, AccelRay};
+use shading::SurfaceShader;
 use shading::surface_closure::SurfaceClosureUnion;
 
 
@@ -17,6 +18,7 @@ pub trait Surface: Boundable + Debug + Sync {
         accel_rays: &mut [AccelRay],
         wrays: &[Ray],
         isects: &mut [SurfaceIntersection],
+        shader: &SurfaceShader,
         space: &[Matrix4x4],
     );
 }

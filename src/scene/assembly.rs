@@ -11,6 +11,7 @@ use lerp::lerp_slice;
 use light::LightSource;
 use math::{Matrix4x4, Vector};
 use surface::{Surface, SurfaceIntersection};
+use shading::SurfaceShader;
 use transform_stack::TransformStack;
 
 
@@ -20,6 +21,9 @@ pub struct Assembly<'a> {
     pub instances: &'a [Instance],
     pub light_instances: &'a [Instance],
     pub xforms: &'a [Matrix4x4],
+
+    // Surface shader list
+    pub surface_shaders: &'a [&'a SurfaceShader],
 
     // Object list
     pub objects: &'a [Object<'a>],
@@ -150,6 +154,10 @@ pub struct AssemblyBuilder<'a> {
     instances: Vec<Instance>,
     xforms: Vec<Matrix4x4>,
 
+    // Shader list
+    surface_shaders: Vec<&'a SurfaceShader>,
+    surface_shader_map: HashMap<String, usize>, // map Name -> Index
+
     // Object list
     objects: Vec<Object<'a>>,
     object_map: HashMap<String, usize>, // map Name -> Index
@@ -166,11 +174,27 @@ impl<'a> AssemblyBuilder<'a> {
             arena: arena,
             instances: Vec::new(),
             xforms: Vec::new(),
+            surface_shaders: Vec::new(),
+            surface_shader_map: HashMap::new(),
             objects: Vec::new(),
             object_map: HashMap::new(),
             assemblies: Vec::new(),
             assembly_map: HashMap::new(),
         }
+    }
+
+    pub fn add_surface_shader(&mut self, name: &str, shader: &'a SurfaceShader) {
+        // Make sure the name hasn't already been used.
+        if self.surface_shader_map.contains_key(name) {
+            panic!("Attempted to add surface shader to assembly with a name that already exists.");
+        }
+
+        // Add shader
+        self.surface_shader_map.insert(
+            name.to_string(),
+            self.surface_shaders.len(),
+        );
+        self.surface_shaders.push(shader);
     }
 
     pub fn add_object(&mut self, name: &str, obj: Object<'a>) {
@@ -201,7 +225,12 @@ impl<'a> AssemblyBuilder<'a> {
         self.assemblies.push(asmb);
     }
 
-    pub fn add_instance(&mut self, name: &str, xforms: Option<&[Matrix4x4]>) {
+    pub fn add_instance(
+        &mut self,
+        name: &str,
+        surface_shader_name: Option<&str>,
+        xforms: Option<&[Matrix4x4]>,
+    ) {
         // Make sure name exists
         if !self.name_exists(name) {
             panic!("Attempted to add instance with a name that doesn't exist.");
@@ -219,6 +248,12 @@ impl<'a> AssemblyBuilder<'a> {
             Instance {
                 instance_type: InstanceType::Object,
                 data_index: self.object_map[name],
+                surface_shader_index: surface_shader_name.map(|name| {
+                    *self.surface_shader_map.get(name).expect(&format!(
+                        "Unknown surface shader '{}'.",
+                        name
+                    ))
+                }),
                 id: self.instances.len(),
                 transform_indices: xforms.map(
                     |xf| (self.xforms.len(), self.xforms.len() + xf.len()),
@@ -228,6 +263,12 @@ impl<'a> AssemblyBuilder<'a> {
             Instance {
                 instance_type: InstanceType::Assembly,
                 data_index: self.assembly_map[name],
+                surface_shader_index: surface_shader_name.map(|name| {
+                    *self.surface_shader_map.get(name).expect(&format!(
+                        "Unknown surface shader '{}'.",
+                        name
+                    ))
+                }),
                 id: self.instances.len(),
                 transform_indices: xforms.map(
                     |xf| (self.xforms.len(), self.xforms.len() + xf.len()),
@@ -303,6 +344,7 @@ impl<'a> AssemblyBuilder<'a> {
             instances: self.arena.copy_slice(&self.instances),
             light_instances: self.arena.copy_slice(&light_instances),
             xforms: self.arena.copy_slice(&self.xforms),
+            surface_shaders: self.arena.copy_slice(&self.surface_shaders),
             objects: self.arena.copy_slice(&self.objects),
             assemblies: self.arena.copy_slice(&self.assemblies),
             object_accel: object_accel,
@@ -370,6 +412,7 @@ pub enum Object<'a> {
 pub struct Instance {
     pub instance_type: InstanceType,
     pub data_index: usize,
+    pub surface_shader_index: Option<usize>,
     pub id: usize,
     pub transform_indices: Option<(usize, usize)>,
 }

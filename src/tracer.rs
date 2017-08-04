@@ -6,6 +6,8 @@ use ray::{Ray, AccelRay};
 use scene::{Assembly, Object, InstanceType};
 use surface::SurfaceIntersection;
 use transform_stack::TransformStack;
+use shading::{SurfaceShader, SimpleSurfaceShader};
+use color::XYZ;
 
 
 pub struct Tracer<'a> {
@@ -128,6 +130,9 @@ impl<'a> TracerInner<'a> {
                             InstanceType::Object => {
                                 self.trace_object(
                                     &assembly.objects[inst.data_index],
+                                    inst.surface_shader_index.map(
+                                        |i| assembly.surface_shaders[i],
+                                    ),
                                     wrays,
                                     ray_set,
                                 );
@@ -171,10 +176,26 @@ impl<'a> TracerInner<'a> {
         );
     }
 
-    fn trace_object<'b>(&'b mut self, obj: &Object, wrays: &[Ray], rays: &mut [AccelRay]) {
+    fn trace_object<'b>(
+        &'b mut self,
+        obj: &Object,
+        surface_shader: Option<&SurfaceShader>,
+        wrays: &[Ray],
+        rays: &mut [AccelRay],
+    ) {
         match *obj {
             Object::Surface(surface) => {
-                surface.intersect_rays(rays, wrays, &mut self.isects, self.xform_stack.top());
+                let unassigned_shader =
+                    SimpleSurfaceShader::Lambert { color: XYZ::new(1.0, 0.0, 1.0) };
+                let shader = surface_shader.unwrap_or(&unassigned_shader);
+
+                surface.intersect_rays(
+                    rays,
+                    wrays,
+                    &mut self.isects,
+                    shader,
+                    self.xform_stack.top(),
+                );
             }
 
             Object::Light(_) => {

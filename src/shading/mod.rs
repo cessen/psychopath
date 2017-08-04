@@ -7,7 +7,7 @@ use self::surface_closure::{SurfaceClosureUnion, EmitClosure, LambertClosure, GT
 use surface::SurfaceIntersectionData;
 
 /// Trait for surface shaders.
-pub trait SurfaceShader: Debug {
+pub trait SurfaceShader: Debug + Sync {
     /// Takes the result of a surface intersection and returns the surface
     /// closure to be evaluated at that intersection point.
     fn shade(&self, data: &SurfaceIntersectionData, wavelength: f32) -> SurfaceClosureUnion;
@@ -24,7 +24,7 @@ pub trait SurfaceShader: Debug {
 /// are no ordinary donuts.  To call them large is actually doing
 /// them a great injustice, for they are each the size of a small
 /// building.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum SimpleSurfaceShader {
     Emit { color: XYZ },
     Lambert { color: XYZ },

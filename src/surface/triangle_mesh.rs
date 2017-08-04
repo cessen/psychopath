@@ -5,12 +5,11 @@ use mem_arena::MemArena;
 use accel::BVH4;
 use bbox::BBox;
 use boundable::Boundable;
-use color::XYZ;
 use fp_utils::fp_gamma;
 use lerp::lerp_slice;
 use math::{Point, Normal, Matrix4x4, dot, cross};
 use ray::{Ray, AccelRay};
-use shading::{SurfaceShader, SimpleSurfaceShader};
+use shading::SurfaceShader;
 
 use super::{Surface, SurfaceIntersection, SurfaceIntersectionData};
 use super::triangle;
@@ -123,6 +122,7 @@ impl<'a> Surface for TriangleMesh<'a> {
         accel_rays: &mut [AccelRay],
         wrays: &[Ray],
         isects: &mut [SurfaceIntersection],
+        shader: &SurfaceShader,
         space: &[Matrix4x4],
     ) {
         // Precalculate transform for non-motion blur cases
@@ -249,16 +249,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                                 // Fill in intersection data
                                 isects[r.id as usize] = SurfaceIntersection::Hit {
                                     intersection_data: intersection_data,
-                                    // TODO: get surface shader from user-defined shader.
-                                    closure: SimpleSurfaceShader::Lambert {
-                                        color: XYZ::new(0.8, 0.8, 0.8),
-                                    }.shade(&intersection_data, wr.wavelength),
-                                    // closure: SimpleSurfaceShader::GTR {
-                                    //     color: XYZ::new(0.8, 0.8, 0.8),
-                                    //     roughness: 0.1,
-                                    //     tail_shape: 2.0,
-                                    //     fresnel: 1.0,
-                                    // }.shade(&intersection_data, wr.wavelength),
+                                    closure: shader.shade(&intersection_data, wr.wavelength),
                                 };
                                 r.max_t = t;
                             }
