@@ -184,14 +184,10 @@ impl Image {
                 .set_compression(openexr::Compression::PIZ_COMPRESSION),
         ).unwrap();
 
-        let mut fb = {
-            // Create the frame buffer
-            let mut fb = openexr::FrameBuffer::new(self.res.0, self.res.1);
-            fb.insert_channels(&["R", "G", "B"], &image);
-            fb
-        };
-
-        wr.write_pixels(&fb).unwrap();
+        wr.write_pixels(
+            openexr::FrameBuffer::new(self.res.0, self.res.1)
+                .insert_channels(&["R", "G", "B"], &image),
+        ).unwrap();
     }
 }
 
