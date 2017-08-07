@@ -57,12 +57,8 @@ help out as I have time!
 - Spectral rendering (via monte carlo sampling)
 - Full hierarchical instancing
 - Light Tree sampling for efficient handling of large numbers of lights. (See [this thread](http://ompf2.com/viewtopic.php?f=3&t=1938) for an overview of the technique.)
-
-## Todo / In-Progress
-- [ ] Simple material/shading system for surfaces.
-- [ ] Multiple importance sampling
-- [ ] Direct rendering of Catmull-Clark subdivision surfaces.
-
+- Shading:
+  - A simple material system that supports single-color Lambert and GTR BRDFs assigned per-instance.
 
 # PsychoBlend
 
@@ -77,6 +73,7 @@ issue and I'll try to troubleshoot/fix it as I have time!
 ## Features Supported
 - Meshes (rendered as flat-shaded triangle meshes)
 - Point, area, and sun lamps (exported as sphere, rectangle, and distant disc lights, respectively)
+- Simple materials assigned per-object.
 - Focal blur / DoF
 - Camera, transform, and deformation motion blur
 - Exports dupligroups with full hierarchical instancing
