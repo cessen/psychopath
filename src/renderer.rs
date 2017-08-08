@@ -444,6 +444,15 @@ impl LightPath {
                 {
                     // Hit something!  Do the stuff
 
+                    // If it's an emission closure, handle specially:
+                    // - Collect light from the emission.
+                    // - Terminate the path.
+                    use shading::surface_closure::SurfaceClosureUnion;
+                    if let &SurfaceClosureUnion::EmitClosure(ref clsr) = closure {
+                        self.color += clsr.emitted_color().e * self.light_attenuation;
+                        return false;
+                    }
+
                     // Prepare light ray
                     let light_n = self.next_lds_samp();
                     let light_uvw = (
