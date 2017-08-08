@@ -10,7 +10,12 @@ use surface::SurfaceIntersectionData;
 pub trait SurfaceShader: Debug + Sync {
     /// Takes the result of a surface intersection and returns the surface
     /// closure to be evaluated at that intersection point.
-    fn shade(&self, data: &SurfaceIntersectionData, wavelength: f32) -> SurfaceClosureUnion;
+    fn shade(
+        &self,
+        data: &SurfaceIntersectionData,
+        time: f32,
+        wavelength: f32,
+    ) -> SurfaceClosureUnion;
 }
 
 /// Clearly we must eat this brownie before the world ends, lest it
@@ -37,8 +42,13 @@ pub enum SimpleSurfaceShader {
 }
 
 impl SurfaceShader for SimpleSurfaceShader {
-    fn shade(&self, data: &SurfaceIntersectionData, wavelength: f32) -> SurfaceClosureUnion {
-        let _ = data; // Silence "unused" compiler warning
+    fn shade(
+        &self,
+        data: &SurfaceIntersectionData,
+        time: f32,
+        wavelength: f32,
+    ) -> SurfaceClosureUnion {
+        let _ = (data, time); // Silence "unused" compiler warning
 
         match *self {
             SimpleSurfaceShader::Emit { color } => {
