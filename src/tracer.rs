@@ -199,7 +199,7 @@ impl<'a> TracerInner<'a> {
                 );
             }
 
-            Object::Light(_) => {
+            Object::SurfaceLight(_) => {
                 // TODO
             }
         }

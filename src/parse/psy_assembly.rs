@@ -119,7 +119,7 @@ pub fn parse_assembly<'a>(
                     if let DataTree::Internal { ident: Some(ident), .. } = *child {
                         builder.add_object(
                             ident,
-                            Object::Light(arena.alloc(parse_sphere_light(arena, child)?)),
+                            Object::SurfaceLight(arena.alloc(parse_sphere_light(arena, child)?)),
                         );
                     } else {
                         // No ident
@@ -132,7 +132,9 @@ pub fn parse_assembly<'a>(
                     if let DataTree::Internal { ident: Some(ident), .. } = *child {
                         builder.add_object(
                             ident,
-                            Object::Light(arena.alloc(parse_rectangle_light(arena, child)?)),
+                            Object::SurfaceLight(
+                                arena.alloc(parse_rectangle_light(arena, child)?),
+                            ),
                         );
                     } else {
                         // No ident

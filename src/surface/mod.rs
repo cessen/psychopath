@@ -8,8 +8,8 @@ use std::fmt::Debug;
 use boundable::Boundable;
 use math::{Point, Vector, Normal, Matrix4x4};
 use ray::{Ray, AccelRay};
-use shading::SurfaceShader;
 use shading::surface_closure::SurfaceClosureUnion;
+use shading::SurfaceShader;
 
 
 pub trait Surface: Boundable + Debug + Sync {

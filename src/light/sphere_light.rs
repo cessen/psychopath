@@ -9,10 +9,11 @@ use lerp::lerp_slice;
 use math::{Vector, Point, Matrix4x4, dot, coordinate_system_from_vector};
 use ray::{Ray, AccelRay};
 use sampling::{uniform_sample_cone, uniform_sample_cone_pdf, uniform_sample_sphere};
-use surface::{SurfaceIntersection, SurfaceIntersectionData};
 use shading::surface_closure::{SurfaceClosureUnion, EmitClosure};
+use shading::SurfaceShader;
+use surface::{Surface, SurfaceIntersection, SurfaceIntersectionData};
 
-use super::LightSource;
+use super::SurfaceLight;
 
 // TODO: handle case where radius = 0.0.
 
@@ -40,10 +41,45 @@ impl<'a> SphereLight<'a> {
             bounds_: arena.copy_slice(&bbs),
         }
     }
+
+    // TODO: this is only used from within `intersect_rays`, and could be done
+    // more efficiently by inlining it there.
+    fn sample_pdf(
+        &self,
+        space: &Matrix4x4,
+        arr: Point,
+        sample_dir: Vector,
+        sample_u: f32,
+        sample_v: f32,
+        wavelength: f32,
+        time: f32,
+    ) -> f32 {
+        // We're not using these, silence warnings
+        let _ = (sample_dir, sample_u, sample_v, wavelength);
+
+        let arr = arr * *space;
+        let pos = Point::new(0.0, 0.0, 0.0);
+        let radius: f64 = lerp_slice(self.radii, time) as f64;
+
+        let d2: f64 = (pos - arr).length2() as f64; // Distance from center of sphere squared
+        let d: f64 = d2.sqrt(); // Distance from center of sphere
+
+        if d > radius {
+            // Calculate the portion of the sphere visible from the point
+            let sin_theta_max2: f64 = ((radius * radius) / d2).min(1.0);
+            let cos_theta_max2: f64 = 1.0 - sin_theta_max2;
+            let cos_theta_max: f64 = cos_theta_max2.sqrt();
+
+            uniform_sample_cone_pdf(cos_theta_max) as f32
+        } else {
+            (1.0 / (4.0 * PI_64)) as f32
+        }
+    }
 }
 
-impl<'a> LightSource for SphereLight<'a> {
-    fn sample(
+
+impl<'a> SurfaceLight for SphereLight<'a> {
+    fn sample_from_point(
         &self,
         space: &Matrix4x4,
         arr: Point,
@@ -60,7 +96,6 @@ impl<'a> LightSource for SphereLight<'a> {
         let radius: f64 = lerp_slice(self.radii, time) as f64;
         let col = lerp_slice(self.colors, time);
         let surface_area_inv: f64 = 1.0 / (4.0 * PI_64 * radius * radius);
-
 
         // Create a coordinate system from the vector between the
         // point and the center of the light
@@ -119,57 +154,6 @@ impl<'a> LightSource for SphereLight<'a> {
         }
     }
 
-    fn sample_pdf(
-        &self,
-        space: &Matrix4x4,
-        arr: Point,
-        sample_dir: Vector,
-        sample_u: f32,
-        sample_v: f32,
-        wavelength: f32,
-        time: f32,
-    ) -> f32 {
-        // We're not using these, silence warnings
-        let _ = (sample_dir, sample_u, sample_v, wavelength);
-
-        let arr = arr * *space;
-        let pos = Point::new(0.0, 0.0, 0.0);
-        let radius: f64 = lerp_slice(self.radii, time) as f64;
-
-        let d2: f64 = (pos - arr).length2() as f64; // Distance from center of sphere squared
-        let d: f64 = d2.sqrt(); // Distance from center of sphere
-
-        if d > radius {
-            // Calculate the portion of the sphere visible from the point
-            let sin_theta_max2: f64 = ((radius * radius) / d2).min(1.0);
-            let cos_theta_max2: f64 = 1.0 - sin_theta_max2;
-            let cos_theta_max: f64 = cos_theta_max2.sqrt();
-
-            uniform_sample_cone_pdf(cos_theta_max) as f32
-        } else {
-            (1.0 / (4.0 * PI_64)) as f32
-        }
-    }
-
-    fn outgoing(
-        &self,
-        space: &Matrix4x4,
-        dir: Vector,
-        u: f32,
-        v: f32,
-        wavelength: f32,
-        time: f32,
-    ) -> SpectralSample {
-        // We're not using these, silence warnings
-        let _ = (space, dir, u, v);
-
-        // TODO: use transform space correctly
-        let radius = lerp_slice(self.radii, time) as f64;
-        let col = lerp_slice(self.colors, time);
-        let surface_area = 4.0 * PI_64 * radius * radius;
-        (col / surface_area as f32).to_spectral_sample(wavelength)
-    }
-
     fn is_delta(&self) -> bool {
         false
     }
@@ -181,14 +165,20 @@ impl<'a> LightSource for SphereLight<'a> {
         ) / self.colors.len() as f32;
         color.y
     }
+}
 
+
+impl<'a> Surface for SphereLight<'a> {
     fn intersect_rays(
         &self,
         accel_rays: &mut [AccelRay],
         wrays: &[Ray],
         isects: &mut [SurfaceIntersection],
+        shader: &SurfaceShader,
         space: &[Matrix4x4],
     ) {
+        let _ = shader; // Silence 'unused' warning
+
         for r in accel_rays.iter_mut() {
             let wr = &wrays[r.id as usize];
 
@@ -315,6 +305,7 @@ impl<'a> LightSource for SphereLight<'a> {
         }
     }
 }
+
 
 impl<'a> Boundable for SphereLight<'a> {
     fn bounds(&self) -> &[BBox] {

@@ -60,7 +60,8 @@ impl<'a> Scene<'a> {
                 // World lights
                 let n = n / wl_prob;
                 let (i, p) = weighted_choice(self.world.lights, n, |l| l.approximate_energy());
-                let (ss, sv, pdf) = self.world.lights[i].sample(uvw.0, uvw.1, wavelength, time);
+                let (ss, sv, pdf) =
+                    self.world.lights[i].sample_from_point(uvw.0, uvw.1, wavelength, time);
                 return Some((ss, sv, pdf, p * wl_prob, true));
             } else {
                 // Local lights

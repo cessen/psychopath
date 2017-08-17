@@ -8,7 +8,7 @@ use bbox::{BBox, transform_bbox_slice_from};
 use boundable::Boundable;
 use color::SpectralSample;
 use lerp::lerp_slice;
-use light::LightSource;
+use light::SurfaceLight;
 use math::{Matrix4x4, Vector};
 use surface::{Surface, SurfaceIntersection};
 use shading::SurfaceShader;
@@ -75,7 +75,7 @@ impl<'a> Assembly<'a> {
 
                     InstanceType::Object => {
                         match self.objects[inst.data_index] {
-                            Object::Light(light) => {
+                            Object::SurfaceLight(light) => {
                                 // Get the world-to-object space transform of the light
                                 let xform = if let Some((a, b)) = inst.transform_indices {
                                     let pxforms = xform_stack.top();
@@ -95,8 +95,14 @@ impl<'a> Assembly<'a> {
                                 };
 
                                 // Sample the light
-                                let (color, shadow_vec, pdf) =
-                                    light.sample(&xform, idata.pos, uvw.0, uvw.1, wavelength, time);
+                                let (color, shadow_vec, pdf) = light.sample_from_point(
+                                    &xform,
+                                    idata.pos,
+                                    uvw.0,
+                                    uvw.1,
+                                    wavelength,
+                                    time,
+                                );
                                 return Some((color, shadow_vec, pdf, sel_pdf));
                             }
 
@@ -303,7 +309,7 @@ impl<'a> AssemblyBuilder<'a> {
             .iter()
             .filter(|inst| match inst.instance_type {
                 InstanceType::Object => {
-                    if let Object::Light(_) = self.objects[inst.data_index] {
+                    if let Object::SurfaceLight(_) = self.objects[inst.data_index] {
                         true
                     } else {
                         false
@@ -324,7 +330,7 @@ impl<'a> AssemblyBuilder<'a> {
             let bounds = &bbs[bis[inst.id]..bis[inst.id + 1]];
             let energy = match inst.instance_type {
                 InstanceType::Object => {
-                    if let Object::Light(light) = self.objects[inst.data_index] {
+                    if let Object::SurfaceLight(light) = self.objects[inst.data_index] {
                         light.approximate_energy()
                     } else {
                         0.0
@@ -370,7 +376,7 @@ impl<'a> AssemblyBuilder<'a> {
                     let obj = &self.objects[inst.data_index];
                     match *obj {
                         Object::Surface(s) => bbs.extend(s.bounds()),
-                        Object::Light(l) => bbs.extend(l.bounds()),
+                        Object::SurfaceLight(l) => bbs.extend(l.bounds()),
                     }
                 }
 
@@ -404,7 +410,7 @@ impl<'a> AssemblyBuilder<'a> {
 #[derive(Copy, Clone, Debug)]
 pub enum Object<'a> {
     Surface(&'a Surface),
-    Light(&'a LightSource),
+    SurfaceLight(&'a SurfaceLight),
 }
 
 
