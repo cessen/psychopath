@@ -185,7 +185,7 @@ impl<'a> TracerInner<'a> {
     ) {
         match *obj {
             Object::Surface(surface) => {
-                let unassigned_shader = SimpleSurfaceShader::Lambert {
+                let unassigned_shader = SimpleSurfaceShader::Emit {
                     color: XYZ::from_tuple(rec709_to_xyz((1.0, 0.0, 1.0))),
                 };
                 let shader = surface_shader.unwrap_or(&unassigned_shader);
@@ -199,8 +199,19 @@ impl<'a> TracerInner<'a> {
                 );
             }
 
-            Object::SurfaceLight(_) => {
-                // TODO
+            Object::SurfaceLight(surface) => {
+                // Lights don't use shaders
+                let bogus_shader = SimpleSurfaceShader::Emit {
+                    color: XYZ::from_tuple(rec709_to_xyz((1.0, 0.0, 1.0))),
+                };
+
+                surface.intersect_rays(
+                    rays,
+                    wrays,
+                    &mut self.isects,
+                    &bogus_shader,
+                    self.xform_stack.top(),
+                );
             }
         }
     }

@@ -192,7 +192,8 @@ impl<'a> Surface for RectangleLight<'a> {
         space: &[Matrix4x4],
     ) {
         let _ = (accel_rays, wrays, isects, shader, space);
-        unimplemented!()
+        // TODO
+        // unimplemented!()
     }
 }
 

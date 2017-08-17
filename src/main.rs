@@ -44,6 +44,7 @@ mod image;
 mod lerp;
 mod light;
 mod math;
+mod mis;
 mod parse;
 mod ray;
 mod renderer;

@@ -15,6 +15,11 @@ use surface::{Surface, SurfaceIntersection, SurfaceIntersectionData};
 
 use super::SurfaceLight;
 
+// TODO: use proper error bounds for sample generation to avoid self-shadowing
+// instead of these fudge factors.
+const SAMPLE_RADIUS_EXPAND_FACTOR: f32 = 1.001;
+const SAMPLE_RADIUS_SHRINK_FACTOR: f32 = 0.99;
+
 // TODO: handle case where radius = 0.0.
 
 #[derive(Copy, Clone, Debug)]
@@ -140,14 +145,23 @@ impl<'a> SurfaceLight for SphereLight<'a> {
             );
 
             // Calculate the final values and return everything.
-            let shadow_vec = ((x * sample.x()) + (y * sample.y()) + (z * sample.z())) *
-                space.inverse();
+            let shadow_vec = {
+                let sample_vec = (x * sample.x()) + (y * sample.y()) + (z * sample.z());
+                let sample_point = (arr + sample_vec).into_vector().normalized() * radius as f32;
+                let adjusted_sample_point = sample_point * SAMPLE_RADIUS_EXPAND_FACTOR;
+                (adjusted_sample_point.into_point() - arr) * space.inverse()
+            };
             let pdf = uniform_sample_cone_pdf(cos_theta_max);
             let spectral_sample = (col * surface_area_inv as f32).to_spectral_sample(wavelength);
             return (spectral_sample, shadow_vec, pdf as f32);
         } else {
             // If we're inside the sphere, there's light from every direction.
-            let shadow_vec = uniform_sample_sphere(u, v) * space.inverse();
+            let shadow_vec = {
+                let sample_vec = uniform_sample_sphere(u, v);
+                let sample_point = (arr + sample_vec).into_vector().normalized() * radius as f32;
+                let adjusted_sample_point = sample_point * SAMPLE_RADIUS_SHRINK_FACTOR;
+                (adjusted_sample_point.into_point() - arr) * space.inverse()
+            };
             let pdf = 1.0 / (4.0 * PI_64);
             let spectral_sample = (col * surface_area_inv as f32).to_spectral_sample(wavelength);
             return (spectral_sample, shadow_vec, pdf as f32);

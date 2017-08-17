@@ -19,6 +19,7 @@ use hash::hash_u32;
 use hilbert;
 use image::Image;
 use math::{fast_logit, upper_power_of_two};
+use mis::power_heuristic;
 use ray::Ray;
 use scene::Scene;
 use surface;
@@ -372,8 +373,9 @@ pub struct LightPath {
     wavelength: f32,
 
     next_bounce_ray: Option<Ray>,
-    next_attentuation_fac: Float4,
+    next_attenuation_fac: Float4,
 
+    closure_sample_pdf: f32,
     light_attenuation: Float4,
     pending_color_addition: Float4,
     color: Float4,
@@ -401,8 +403,9 @@ impl LightPath {
                 wavelength: wavelength,
 
                 next_bounce_ray: None,
-                next_attentuation_fac: Float4::splat(1.0),
+                next_attenuation_fac: Float4::splat(1.0),
 
+                closure_sample_pdf: 1.0,
                 light_attenuation: Float4::splat(1.0),
                 pending_color_addition: Float4::splat(0.0),
                 color: Float4::splat(0.0),
@@ -449,9 +452,19 @@ impl LightPath {
                     // - Terminate the path.
                     use shading::surface_closure::SurfaceClosureUnion;
                     if let &SurfaceClosureUnion::EmitClosure(ref clsr) = closure {
-                        self.color += clsr.emitted_color().e * self.light_attenuation;
+                        if let LightPathEvent::CameraRay = self.event {
+                            self.color += clsr.emitted_color().e;
+                        } else {
+                            let mis_pdf =
+                                power_heuristic(self.closure_sample_pdf, idata.sample_pdf);
+                            self.color += clsr.emitted_color().e * self.light_attenuation / mis_pdf;
+                        };
+
                         return false;
                     }
+
+                    // Roll the previous closure pdf into the attentuation
+                    self.light_attenuation /= self.closure_sample_pdf;
 
                     // Prepare light ray
                     let light_n = self.next_lds_samp();
@@ -482,11 +495,20 @@ impl LightPath {
                                 material.evaluate(ray.dir, shadow_vec, idata.nor, idata.nor_g);
 
                             if attenuation.e.h_max() > 0.0 {
+                                // Calculate MIS
+                                let closure_pdf = material.sample_pdf(
+                                    ray.dir,
+                                    shadow_vec,
+                                    idata.nor,
+                                    idata.nor_g,
+                                );
+                                let light_mis_pdf = power_heuristic(light_pdf, closure_pdf);
+
                                 // Calculate and store the light that will be contributed
                                 // to the film plane if the light is not in shadow.
                                 self.pending_color_addition = light_color.e * attenuation.e *
                                     self.light_attenuation /
-                                    (light_pdf * light_sel_pdf);
+                                    (light_mis_pdf * light_sel_pdf);
 
                                 // Calculate the shadow ray for testing if the light is
                                 // in shadow or not.
@@ -536,7 +558,8 @@ impl LightPath {
                         if (pdf > 0.0) && (filter.e.h_max() > 0.0) {
                             // Account for the additional light attenuation from
                             // this bounce
-                            self.next_attentuation_fac = filter.e / pdf;
+                            self.next_attenuation_fac = filter.e;
+                            self.closure_sample_pdf = pdf;
 
                             // Calculate the ray for this bounce
                             let offset_pos = robust_ray_origin(
@@ -564,7 +587,7 @@ impl LightPath {
                     } else if do_bounce {
                         *ray = self.next_bounce_ray.unwrap();
                         self.event = LightPathEvent::BounceRay;
-                        self.light_attenuation *= self.next_attentuation_fac;
+                        self.light_attenuation *= self.next_attenuation_fac;
                         return true;
                     } else {
                         return false;
@@ -575,7 +598,8 @@ impl LightPath {
                         .world
                         .background_color
                         .to_spectral_sample(self.wavelength)
-                        .e * self.light_attenuation;
+                        .e * self.light_attenuation /
+                        self.closure_sample_pdf;
                     return false;
                 }
             }
@@ -592,7 +616,7 @@ impl LightPath {
                 // Set up for the next bounce, if any
                 if let Some(ref nbr) = self.next_bounce_ray {
                     *ray = *nbr;
-                    self.light_attenuation *= self.next_attentuation_fac;
+                    self.light_attenuation *= self.next_attenuation_fac;
                     self.event = LightPathEvent::BounceRay;
                     return true;
                 } else {
