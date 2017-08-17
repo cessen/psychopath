@@ -46,4 +46,5 @@ pub struct SurfaceIntersectionData {
     pub local_space: Matrix4x4, // Matrix from global space to local space
     pub t: f32, // Ray t-value at the intersection point
     pub uv: (f32, f32), // 2d surface parameters
+    pub sample_pdf: f32, // The PDF of getting this point by explicitly sampling the surface
 }

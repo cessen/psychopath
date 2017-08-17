@@ -244,6 +244,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                                     nor_g: geo_normal,
                                     uv: (0.0, 0.0), // TODO
                                     local_space: mat_space,
+                                    sample_pdf: 0.0,
                                 };
 
                                 // Fill in intersection data

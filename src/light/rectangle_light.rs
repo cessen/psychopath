@@ -5,7 +5,9 @@ use boundable::Boundable;
 use color::{XYZ, SpectralSample, Color};
 use lerp::lerp_slice;
 use math::{Vector, Point, Matrix4x4};
+use ray::{Ray, AccelRay};
 use sampling::{spherical_triangle_solid_angle, uniform_sample_spherical_triangle};
+use surface::SurfaceIntersection;
 
 use super::LightSource;
 
@@ -175,6 +177,16 @@ impl<'a> LightSource for RectangleLight<'a> {
             |a, &b| a + b,
         ) / self.colors.len() as f32;
         color.y
+    }
+
+    fn intersect_rays(
+        &self,
+        accel_rays: &mut [AccelRay],
+        wrays: &[Ray],
+        isects: &mut [SurfaceIntersection],
+        space: &[Matrix4x4],
+    ) {
+        unimplemented!()
     }
 }
 

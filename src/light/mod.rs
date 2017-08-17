@@ -7,6 +7,8 @@ use std::fmt::Debug;
 use boundable::Boundable;
 use color::SpectralSample;
 use math::{Vector, Point, Matrix4x4};
+use ray::{Ray, AccelRay};
+use surface::SurfaceIntersection;
 
 pub use self::distant_disk_light::DistantDiskLight;
 pub use self::rectangle_light::RectangleLight;
@@ -38,13 +40,17 @@ pub trait LightSource: Boundable + Debug + Sync {
 
 
     /// Calculates the pdf of sampling the given
-    /// sample_dir/sample_u/sample_v from the given point arr.  This is used
+    /// `sample_dir`/`sample_u`/`sample_v` from the given point `arr`.  This is used
     /// primarily to calculate probabilities for multiple importance sampling.
     ///
     /// NOTE: this function CAN assume that sample_dir, sample_u, and sample_v
     /// are a valid sample for the light source (i.e. hits/lies on the light
     /// source).  No guarantees are made about the correctness of the return
     /// value if they are not valid.
+    ///
+    /// TODO: this probably shouldn't be part of the public interface.  In the
+    /// rest of the renderer, the PDF is always calculated by the `sample` and
+    /// and `intersect_rays` methods.
     fn sample_pdf(
         &self,
         space: &Matrix4x4,
@@ -65,6 +71,10 @@ pub trait LightSource: Boundable + Debug + Sync {
     ///     - v: Random parameter V.
     ///     - wavelength: The hero wavelength of light to sample at.
     ///     - time: The time to sample at.
+    ///
+    /// TODO: this probably shouldn't be part of the public interface.  In the
+    /// rest of the renderer, this is handled by the `sample` and
+    /// `intersect_rays` methods.
     fn outgoing(
         &self,
         space: &Matrix4x4,
@@ -88,6 +98,14 @@ pub trait LightSource: Boundable + Debug + Sync {
     /// source.  Note that this does not need to be exact: it is used for
     /// importance sampling.
     fn approximate_energy(&self) -> f32;
+
+    fn intersect_rays(
+        &self,
+        accel_rays: &mut [AccelRay],
+        wrays: &[Ray],
+        isects: &mut [SurfaceIntersection],
+        space: &[Matrix4x4],
+    );
 }
 
 
