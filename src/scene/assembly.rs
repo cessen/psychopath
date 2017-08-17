@@ -9,7 +9,7 @@ use boundable::Boundable;
 use color::SpectralSample;
 use lerp::lerp_slice;
 use light::SurfaceLight;
-use math::{Matrix4x4, Vector};
+use math::{Matrix4x4, Normal, Point};
 use surface::{Surface, SurfaceIntersection};
 use shading::SurfaceShader;
 use transform_stack::TransformStack;
@@ -39,7 +39,7 @@ pub struct Assembly<'a> {
 }
 
 impl<'a> Assembly<'a> {
-    // Returns (light_color, shadow_vector, pdf, selection_pdf)
+    // Returns (light_color, (sample_point, normal, point_err), pdf, selection_pdf)
     pub fn sample_lights(
         &self,
         xform_stack: &mut TransformStack,
@@ -48,7 +48,7 @@ impl<'a> Assembly<'a> {
         wavelength: f32,
         time: f32,
         intr: &SurfaceIntersection,
-    ) -> Option<(SpectralSample, Vector, f32, f32)> {
+    ) -> Option<(SpectralSample, (Point, Normal, f32), f32, f32)> {
         if let SurfaceIntersection::Hit {
             intersection_data: idata,
             closure,
@@ -95,7 +95,7 @@ impl<'a> Assembly<'a> {
                                 };
 
                                 // Sample the light
-                                let (color, shadow_vec, pdf) = light.sample_from_point(
+                                let (color, sample_geo, pdf) = light.sample_from_point(
                                     &xform,
                                     idata.pos,
                                     uvw.0,
@@ -103,7 +103,7 @@ impl<'a> Assembly<'a> {
                                     wavelength,
                                     time,
                                 );
-                                return Some((color, shadow_vec, pdf, sel_pdf));
+                                return Some((color, sample_geo, pdf, sel_pdf));
                             }
 
                             _ => unimplemented!(),

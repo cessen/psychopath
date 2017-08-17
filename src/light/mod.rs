@@ -5,7 +5,7 @@ mod sphere_light;
 use std::fmt::Debug;
 
 use color::SpectralSample;
-use math::{Vector, Point, Matrix4x4};
+use math::{Vector, Normal, Point, Matrix4x4};
 use surface::Surface;
 
 pub use self::distant_disk_light::DistantDiskLight;
@@ -24,8 +24,12 @@ pub trait SurfaceLight: Surface {
     /// - `wavelength`: The wavelength of light to sample at.
     /// - `time`: The time to sample at.
     ///
-    /// Returns: The light arriving at the point arr, the vector to use for
-    /// shadow testing, and the pdf of the sample.
+    /// Returns:
+    /// - The light arriving at the point arr.
+    /// - A tuple with the sample point on the light, the surface normal at
+    ///   that point, and the point's error magnitude.  These are used
+    ///   elsewhere to create a robust shadow ray.
+    /// - The pdf of the sample.
     fn sample_from_point(
         &self,
         space: &Matrix4x4,
@@ -34,7 +38,7 @@ pub trait SurfaceLight: Surface {
         v: f32,
         wavelength: f32,
         time: f32,
-    ) -> (SpectralSample, Vector, f32);
+    ) -> (SpectralSample, (Point, Normal, f32), f32);
 
 
     /// Returns whether the light has a delta distribution.

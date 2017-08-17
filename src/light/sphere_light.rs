@@ -6,7 +6,7 @@ use bbox::BBox;
 use boundable::Boundable;
 use color::{XYZ, SpectralSample, Color};
 use lerp::lerp_slice;
-use math::{Vector, Point, Matrix4x4, dot, coordinate_system_from_vector};
+use math::{Vector, Normal, Point, Matrix4x4, dot, coordinate_system_from_vector};
 use ray::{Ray, AccelRay};
 use sampling::{uniform_sample_cone, uniform_sample_cone_pdf, uniform_sample_sphere};
 use shading::surface_closure::{SurfaceClosureUnion, EmitClosure};
@@ -17,8 +17,7 @@ use super::SurfaceLight;
 
 // TODO: use proper error bounds for sample generation to avoid self-shadowing
 // instead of these fudge factors.
-const SAMPLE_RADIUS_EXPAND_FACTOR: f32 = 1.001;
-const SAMPLE_RADIUS_SHRINK_FACTOR: f32 = 0.99;
+const SAMPLE_POINT_FUDGE: f32 = 0.001;
 
 // TODO: handle case where radius = 0.0.
 
@@ -92,10 +91,13 @@ impl<'a> SurfaceLight for SphereLight<'a> {
         v: f32,
         wavelength: f32,
         time: f32,
-    ) -> (SpectralSample, Vector, f32) {
+    ) -> (SpectralSample, (Point, Normal, f32), f32) {
         // TODO: track fp error due to transforms
         let arr = arr * *space;
         let pos = Point::new(0.0, 0.0, 0.0);
+
+        // Precalculate local->world space transform matrix
+        let inv_space = space.inverse();
 
         // Calculate time interpolated values
         let radius: f64 = lerp_slice(self.radii, time) as f64;
@@ -109,6 +111,14 @@ impl<'a> SurfaceLight for SphereLight<'a> {
         let d = d2.sqrt(); // Distance from center of sphere
         let (z, x, y) = coordinate_system_from_vector(z);
         let (x, y, z) = (x.normalized(), y.normalized(), z.normalized());
+
+        // Pre-calculate sample point error magnitude.
+        // TODO: do this properly.  This is a total hack.
+        let sample_point_err = {
+            let v = Vector::new(radius as f32, radius as f32, radius as f32);
+            let v2 = v * inv_space;
+            v2.length() * SAMPLE_POINT_FUDGE
+        };
 
         // If we're outside the sphere, sample the surface based on
         // the angle it subtends from the point being lit.
@@ -145,26 +155,40 @@ impl<'a> SurfaceLight for SphereLight<'a> {
             );
 
             // Calculate the final values and return everything.
-            let shadow_vec = {
+            let (sample_point, normal) = {
                 let sample_vec = (x * sample.x()) + (y * sample.y()) + (z * sample.z());
-                let sample_point = (arr + sample_vec).into_vector().normalized() * radius as f32;
-                let adjusted_sample_point = sample_point * SAMPLE_RADIUS_EXPAND_FACTOR;
-                (adjusted_sample_point.into_point() - arr) * space.inverse()
+                let normal = (arr + sample_vec).into_vector().normalized();
+                let point = normal * radius as f32;
+                (
+                    point.into_point() * inv_space,
+                    normal.into_normal() * inv_space,
+                )
             };
             let pdf = uniform_sample_cone_pdf(cos_theta_max);
             let spectral_sample = (col * surface_area_inv as f32).to_spectral_sample(wavelength);
-            return (spectral_sample, shadow_vec, pdf as f32);
+            return (
+                spectral_sample,
+                (sample_point, normal, sample_point_err),
+                pdf as f32,
+            );
         } else {
             // If we're inside the sphere, there's light from every direction.
-            let shadow_vec = {
+            let (sample_point, normal) = {
                 let sample_vec = uniform_sample_sphere(u, v);
-                let sample_point = (arr + sample_vec).into_vector().normalized() * radius as f32;
-                let adjusted_sample_point = sample_point * SAMPLE_RADIUS_SHRINK_FACTOR;
-                (adjusted_sample_point.into_point() - arr) * space.inverse()
+                let normal = (arr + sample_vec).into_vector().normalized();
+                let point = normal * radius as f32;
+                (
+                    point.into_point() * inv_space,
+                    normal.into_normal() * inv_space,
+                )
             };
             let pdf = 1.0 / (4.0 * PI_64);
             let spectral_sample = (col * surface_area_inv as f32).to_spectral_sample(wavelength);
-            return (spectral_sample, shadow_vec, pdf as f32);
+            return (
+                spectral_sample,
+                (sample_point, normal, sample_point_err),
+                pdf as f32,
+            );
         }
     }
 

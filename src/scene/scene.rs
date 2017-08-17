@@ -2,7 +2,7 @@ use accel::LightAccel;
 use algorithm::weighted_choice;
 use camera::Camera;
 use color::SpectralSample;
-use math::Vector;
+use math::{Vector, Normal, Point};
 use surface::SurfaceIntersection;
 use transform_stack::TransformStack;
 
@@ -27,7 +27,7 @@ impl<'a> Scene<'a> {
         wavelength: f32,
         time: f32,
         intr: &SurfaceIntersection,
-    ) -> Option<(SpectralSample, Vector, f32, f32, bool)> {
+    ) -> SceneLightSample {
         // TODO: this just selects between world lights and local lights
         // with a 50/50 chance.  We should do something more sophisticated
         // than this, accounting for the estimated impact of the lights
@@ -52,7 +52,7 @@ impl<'a> Scene<'a> {
 
         // Decide either world or local lights, and select and sample a light.
         if tot_energy <= 0.0 {
-            return None;
+            return SceneLightSample::None;
         } else {
             let wl_prob = wl_energy / tot_energy;
 
@@ -62,12 +62,17 @@ impl<'a> Scene<'a> {
                 let (i, p) = weighted_choice(self.world.lights, n, |l| l.approximate_energy());
                 let (ss, sv, pdf) =
                     self.world.lights[i].sample_from_point(uvw.0, uvw.1, wavelength, time);
-                return Some((ss, sv, pdf, p * wl_prob, true));
+                return SceneLightSample::Distant {
+                    color: ss,
+                    direction: sv,
+                    pdf: pdf,
+                    selection_pdf: p * wl_prob,
+                };
             } else {
                 // Local lights
                 let n = (n - wl_prob) / (1.0 - wl_prob);
 
-                if let Some((ss, sv, pdf, spdf)) =
+                if let Some((ss, sgeo, pdf, spdf)) =
                     self.root.sample_lights(
                         xform_stack,
                         n,
@@ -77,11 +82,68 @@ impl<'a> Scene<'a> {
                         intr,
                     )
                 {
-                    return Some((ss, sv, pdf, spdf * (1.0 - wl_prob), false));
+                    return SceneLightSample::Surface {
+                        color: ss,
+                        sample_geo: sgeo,
+                        pdf: pdf,
+                        selection_pdf: spdf * (1.0 - wl_prob),
+                    };
                 } else {
-                    return None;
+                    return SceneLightSample::None;
                 }
             }
+        }
+    }
+}
+
+
+#[derive(Debug, Copy, Clone)]
+pub enum SceneLightSample {
+    None,
+    Distant {
+        color: SpectralSample,
+        direction: Vector,
+        pdf: f32,
+        selection_pdf: f32,
+    },
+    Surface {
+        color: SpectralSample,
+        sample_geo: (Point, Normal, f32),
+        pdf: f32,
+        selection_pdf: f32,
+    },
+}
+
+impl SceneLightSample {
+    pub fn is_none(&self) -> bool {
+        if let SceneLightSample::None = *self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn color(&self) -> SpectralSample {
+        match *self {
+            SceneLightSample::None => panic!(),
+            SceneLightSample::Distant { color, .. } => color,
+            SceneLightSample::Surface { color, .. } => color,
+        }
+    }
+
+    pub fn pdf(&self) -> f32 {
+        match *self {
+            SceneLightSample::None => panic!(),
+            SceneLightSample::Distant { pdf, .. } => pdf,
+            SceneLightSample::Surface { pdf, .. } => pdf,
+        }
+    }
+
+    pub fn selection_pdf(&self) -> f32 {
+        match *self {
+            SceneLightSample::None => panic!(),
+            SceneLightSample::Distant { selection_pdf, .. } => selection_pdf,
+            SceneLightSample::Surface { selection_pdf, .. } => selection_pdf,
         }
     }
 }

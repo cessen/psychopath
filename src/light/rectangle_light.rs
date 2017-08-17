@@ -4,7 +4,7 @@ use bbox::BBox;
 use boundable::Boundable;
 use color::{XYZ, SpectralSample, Color};
 use lerp::lerp_slice;
-use math::{Vector, Point, Matrix4x4};
+use math::{Vector, Normal, Point, Matrix4x4};
 use ray::{Ray, AccelRay};
 use sampling::{spherical_triangle_solid_angle, uniform_sample_spherical_triangle};
 use shading::SurfaceShader;
@@ -109,7 +109,7 @@ impl<'a> SurfaceLight for RectangleLight<'a> {
         v: f32,
         wavelength: f32,
         time: f32,
-    ) -> (SpectralSample, Vector, f32) {
+    ) -> (SpectralSample, (Point, Normal, f32), f32) {
         // Calculate time interpolated values
         let dim = lerp_slice(self.dimensions, time);
         let col = lerp_slice(self.colors, time);
@@ -159,13 +159,18 @@ impl<'a> SurfaceLight for RectangleLight<'a> {
             sample_point_local.set_z(0.0);
         }
         let sample_point = sample_point_local * space_inv;
-        let shadow_vec = sample_point - arr;
+        let normal = Normal::new(0.0, 0.0, 1.0) * space_inv;
+        let point_err = 0.0001; // TODO: this is a hack, do properly.
 
         // Calculate pdf and light energy
         let pdf = 1.0 / (area_1 + area_2); // PDF of the ray direction being sampled
         let spectral_sample = (col * surface_area_inv as f32 * 0.5).to_spectral_sample(wavelength);
 
-        (spectral_sample, shadow_vec, pdf as f32)
+        (
+            spectral_sample,
+            (sample_point, normal, point_err),
+            pdf as f32,
+        )
     }
 
     fn is_delta(&self) -> bool {

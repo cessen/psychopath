@@ -21,7 +21,7 @@ use image::Image;
 use math::{fast_logit, upper_power_of_two};
 use mis::power_heuristic;
 use ray::Ray;
-use scene::Scene;
+use scene::{Scene, SceneLightSample};
 use surface;
 use timer::Timer;
 use tracer::Tracer;
@@ -463,7 +463,7 @@ impl LightPath {
                         return false;
                     }
 
-                    // Roll the previous closure pdf into the attentuation
+                    // Roll the previous closure pdf into the attenauation
                     self.light_attenuation /= self.closure_sample_pdf;
 
                     // Prepare light ray
@@ -474,72 +474,104 @@ impl LightPath {
                         self.next_lds_samp(),
                     );
                     xform_stack.clear();
-                    let found_light = if let Some((light_color,
-                                                   shadow_vec,
-                                                   light_pdf,
-                                                   light_sel_pdf,
-                                                   is_infinite)) =
-                        scene.sample_lights(
-                            xform_stack,
-                            light_n,
-                            light_uvw,
-                            self.wavelength,
-                            self.time,
-                            isect,
-                        )
+                    let light_info = scene.sample_lights(
+                        xform_stack,
+                        light_n,
+                        light_uvw,
+                        self.wavelength,
+                        self.time,
+                        isect,
+                    );
+                    let found_light = if light_info.is_none() || light_info.pdf() <= 0.0 ||
+                        light_info.selection_pdf() <= 0.0
                     {
-                        // Check if pdf is zero, to avoid NaN's.
-                        if light_pdf > 0.0 {
-                            let material = closure.as_surface_closure();
-                            let attenuation =
-                                material.evaluate(ray.dir, shadow_vec, idata.nor, idata.nor_g);
-
-                            if attenuation.e.h_max() > 0.0 {
-                                // Calculate MIS
-                                let closure_pdf = material.sample_pdf(
-                                    ray.dir,
-                                    shadow_vec,
-                                    idata.nor,
-                                    idata.nor_g,
-                                );
-                                let light_mis_pdf = power_heuristic(light_pdf, closure_pdf);
-
-                                // Calculate and store the light that will be contributed
-                                // to the film plane if the light is not in shadow.
-                                self.pending_color_addition = light_color.e * attenuation.e *
-                                    self.light_attenuation /
-                                    (light_mis_pdf * light_sel_pdf);
-
-                                // Calculate the shadow ray for testing if the light is
-                                // in shadow or not.
-                                let offset_pos = robust_ray_origin(
-                                    idata.pos,
-                                    idata.pos_err,
-                                    idata.nor_g.normalized(),
-                                    shadow_vec,
-                                );
-                                *ray = Ray::new(
-                                    offset_pos,
-                                    shadow_vec,
-                                    self.time,
-                                    self.wavelength,
-                                    true,
-                                );
-
-                                // For distant lights
-                                if is_infinite {
-                                    ray.max_t = std::f32::INFINITY;
-                                }
-
-                                true
-                            } else {
-                                false
-                            }
-                        } else {
-                            false
-                        }
-                    } else {
                         false
+                    } else {
+                        let light_pdf = light_info.pdf();
+                        let light_sel_pdf = light_info.selection_pdf();
+                        let material = closure.as_surface_closure();
+
+                        // Calculate the shadow ray and surface closure stuff
+                        let (attenuation, closure_pdf, shadow_ray) = match light_info {
+                            SceneLightSample::None => unreachable!(),
+
+                            // Distant light
+                            SceneLightSample::Distant { direction, .. } => {
+                                let attenuation =
+                                    material.evaluate(ray.dir, direction, idata.nor, idata.nor_g);
+                                let closure_pdf =
+                                    material.sample_pdf(ray.dir, direction, idata.nor, idata.nor_g);
+                                let mut shadow_ray = {
+                                    // Calculate the shadow ray for testing if the light is
+                                    // in shadow or not.
+                                    let offset_pos = robust_ray_origin(
+                                        idata.pos,
+                                        idata.pos_err,
+                                        idata.nor_g.normalized(),
+                                        direction,
+                                    );
+                                    Ray::new(
+                                        offset_pos,
+                                        direction,
+                                        self.time,
+                                        self.wavelength,
+                                        true,
+                                    )
+                                };
+                                shadow_ray.max_t = std::f32::INFINITY;
+                                (attenuation, closure_pdf, shadow_ray)
+                            }
+
+                            // Surface light
+                            SceneLightSample::Surface { sample_geo, .. } => {
+                                let dir = sample_geo.0 - idata.pos;
+                                let attenuation =
+                                    material.evaluate(ray.dir, dir, idata.nor, idata.nor_g);
+                                let closure_pdf =
+                                    material.sample_pdf(ray.dir, dir, idata.nor, idata.nor_g);
+                                let shadow_ray = {
+                                    // Calculate the shadow ray for testing if the light is
+                                    // in shadow or not.
+                                    let offset_pos = robust_ray_origin(
+                                        idata.pos,
+                                        idata.pos_err,
+                                        idata.nor_g.normalized(),
+                                        dir,
+                                    );
+                                    let offset_end = robust_ray_origin(
+                                        sample_geo.0,
+                                        sample_geo.2,
+                                        sample_geo.1.normalized(),
+                                        -dir,
+                                    );
+                                    Ray::new(
+                                        offset_pos,
+                                        offset_end - offset_pos,
+                                        self.time,
+                                        self.wavelength,
+                                        true,
+                                    )
+                                };
+                                (attenuation, closure_pdf, shadow_ray)
+                            }
+                        };
+
+                        // If there's any possible contribution, set up for a
+                        // light ray.
+                        if attenuation.e.h_max() <= 0.0 {
+                            false
+                        } else {
+                            // Calculate and store the light that will be contributed
+                            // to the film plane if the light is not in shadow.
+                            let light_mis_pdf = power_heuristic(light_pdf, closure_pdf);
+                            self.pending_color_addition = light_info.color().e * attenuation.e *
+                                self.light_attenuation /
+                                (light_mis_pdf * light_sel_pdf);
+
+                            *ray = shadow_ray;
+
+                            true
+                        }
                     };
 
                     // Prepare bounce ray
