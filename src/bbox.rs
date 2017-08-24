@@ -92,6 +92,10 @@ impl BBox {
     pub fn diagonal(&self) -> f32 {
         (self.max - self.min).length()
     }
+
+    pub fn diagonal2(&self) -> f32 {
+        (self.max - self.min).length2()
+    }
 }
 
 

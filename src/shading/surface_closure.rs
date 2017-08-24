@@ -75,17 +75,18 @@ pub trait SurfaceClosure {
     fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> f32;
 
     /// Returns an estimate of the sum total energy that evaluate() would return
-    /// when 'out' is evaluated over a circular solid angle.
+    /// when integrated over a spherical light source with a center at relative
+    /// position 'to_light_center' and squared radius 'light_radius_squared'.
     /// This is used for importance sampling, so does not need to be exact,
     /// but it does need to be non-zero anywhere that an exact solution would
     /// be non-zero.
-    fn estimate_eval_over_solid_angle(
+    fn estimate_eval_over_sphere_light(
         &self,
         inc: Vector,
-        out: Vector,
+        to_light_center: Vector,
+        light_radius_squared: f32,
         nor: Normal,
         nor_g: Normal,
-        cos_theta: f32,
     ) -> f32;
 }
 
@@ -211,15 +212,16 @@ impl SurfaceClosure for EmitClosure {
         1.0
     }
 
-    fn estimate_eval_over_solid_angle(
+    fn estimate_eval_over_sphere_light(
         &self,
         inc: Vector,
-        out: Vector,
+        to_light_center: Vector,
+        light_radius_squared: f32,
         nor: Normal,
         nor_g: Normal,
-        cos_theta: f32,
     ) -> f32 {
-        let _ = (inc, out, nor, nor_g, cos_theta); // Not using these, silence warning
+        // Not using these, silence warning
+        let _ = (inc, to_light_center, light_radius_squared, nor, nor_g);
 
         // TODO: what to do here?
         unimplemented!()
@@ -301,17 +303,15 @@ impl SurfaceClosure for LambertClosure {
         }
     }
 
-    fn estimate_eval_over_solid_angle(
+    fn estimate_eval_over_sphere_light(
         &self,
         inc: Vector,
-        out: Vector,
+        to_light_center: Vector,
+        light_radius_squared: f32,
         nor: Normal,
         nor_g: Normal,
-        cos_theta: f32,
     ) -> f32 {
         let _ = nor_g; // Not using this, silence warning
-
-        assert!(cos_theta >= -1.0 && cos_theta <= 1.0);
 
         // Analytically calculates lambert shading from a uniform light source
         // subtending a circular solid angle.
@@ -347,10 +347,14 @@ impl SurfaceClosure for LambertClosure {
             }
         }
 
-        if cos_theta < 0.0 {
-            return 1.0;
+        let dist2 = to_light_center.length2();
+        if dist2 <= light_radius_squared {
+            return (light_radius_squared / dist2).min(4.0);
         } else {
-            let v = out.normalized();
+            let sin_theta_max2 = (light_radius_squared / dist2).min(1.0);
+            let cos_theta_max = (1.0 - sin_theta_max2).sqrt();
+
+            let v = to_light_center.normalized();
             let nn = if dot(nor_g.into_vector(), inc) <= 0.0 {
                 nor.normalized()
             } else {
@@ -359,7 +363,7 @@ impl SurfaceClosure for LambertClosure {
 
             let cos_nv = dot(nn, v).max(-1.0).min(1.0);
 
-            return sphere_lambert(cos_nv, cos_theta);
+            return sphere_lambert(cos_nv, cos_theta_max);
         }
     }
 }
@@ -627,13 +631,13 @@ impl SurfaceClosure for GTRClosure {
     }
 
 
-    fn estimate_eval_over_solid_angle(
+    fn estimate_eval_over_sphere_light(
         &self,
         inc: Vector,
-        out: Vector,
+        to_light_center: Vector,
+        light_radius_squared: f32,
         nor: Normal,
         nor_g: Normal,
-        cos_theta: f32,
     ) -> f32 {
         // TODO: all of the stuff in this function is horribly hacky.
         // Find a proper way to approximate the light contribution from a
@@ -641,8 +645,12 @@ impl SurfaceClosure for GTRClosure {
 
         let _ = nor_g; // Not using this, silence warning
 
-        assert!(cos_theta >= -1.0);
-        assert!(cos_theta <= 1.0);
+        let dist2 = to_light_center.length2();
+        let sin_theta_max2 = (light_radius_squared / dist2).min(1.0);
+        let cos_theta_max = (1.0 - sin_theta_max2).sqrt();
+
+        assert!(cos_theta_max >= -1.0);
+        assert!(cos_theta_max <= 1.0);
 
         // Surface normal
         let nn = if dot(nor.into_vector(), inc) < 0.0 {
@@ -652,7 +660,7 @@ impl SurfaceClosure for GTRClosure {
         }.into_vector();
 
         let aa = -inc.normalized(); // Vector pointing to where "in" came from
-        let bb = out.normalized(); // Out
+        let bb = to_light_center.normalized(); // Out
 
         // Brute-force method
         //let mut fac = 0.0;
@@ -660,7 +668,7 @@ impl SurfaceClosure for GTRClosure {
         //for i in 0..N {
         //    let uu = Halton::sample(0, i);
         //    let vv = Halton::sample(1, i);
-        //    let mut samp = uniform_sample_cone(uu, vv, cos_theta);
+        //    let mut samp = uniform_sample_cone(uu, vv, cos_theta_max);
         //    samp = zup_to_vec(samp, bb).normalized();
         //    if dot(nn, samp) > 0.0 {
         //        let hh = (aa+samp).normalized();
@@ -670,7 +678,7 @@ impl SurfaceClosure for GTRClosure {
         //fac /= N * N;
 
         // Approximate method
-        let theta = cos_theta.acos();
+        let theta = cos_theta_max.acos();
         let hh = (aa + bb).normalized();
         let nh = clamp(dot(nn, hh), -1.0, 1.0);
         let fac = self.dist(
@@ -678,6 +686,6 @@ impl SurfaceClosure for GTRClosure {
             (1.0f32).min(self.roughness.sqrt() + (2.0 * theta / PI_32)),
         );
 
-        fac * (1.0f32).min(1.0 - cos_theta) * INV_PI
+        fac * (1.0f32).min(1.0 - cos_theta_max) * INV_PI
     }
 }

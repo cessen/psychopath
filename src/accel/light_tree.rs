@@ -9,7 +9,7 @@ use shading::surface_closure::SurfaceClosure;
 use super::LightAccel;
 use super::objects_split::sah_split;
 
-const ARITY_LOG2: usize = 5; // Determines how much to collapse the binary tree,
+const ARITY_LOG2: usize = 3; // Determines how much to collapse the binary tree,
 // implicitly defining the light tree's arity.  1 = no collapsing, leave as binary
 // tree.
 const ARITY: usize = 1 << ARITY_LOG2; // Arity of the final tree
@@ -147,23 +147,12 @@ impl<'a> LightAccel for LightTree<'a> {
         let node_prob = |node_ref: &Node| {
             let bbox = lerp_slice(node_ref.bounds(), time);
             let d = bbox.center() - pos;
-            let dist2 = d.length2();
-            let r = bbox.diagonal() * 0.5;
-            let inv_surface_area = 1.0 / (r * r);
+            let r2 = bbox.diagonal2() * 0.25;
+            let inv_surface_area = 1.0 / r2;
 
             // Get the approximate amount of light contribution from the
             // composite light source.
-            let approx_contrib = {
-                let r2 = r * r;
-                let cos_theta_max = if dist2 <= r2 {
-                    -1.0
-                } else {
-                    let sin_theta_max2 = (r2 / dist2).min(1.0);
-                    (1.0 - sin_theta_max2).sqrt()
-                };
-                sc.estimate_eval_over_solid_angle(inc, d, nor, nor_g, cos_theta_max)
-            };
-
+            let approx_contrib = sc.estimate_eval_over_sphere_light(inc, d, r2, nor, nor_g);
             node_ref.energy() * inv_surface_area * approx_contrib
         };
 
