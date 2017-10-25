@@ -227,7 +227,7 @@ impl<'a> Surface for SphereLight<'a> {
             let radius = lerp_slice(self.radii, r.time); // Radius of the sphere
 
             // Get the ray origin and direction in local space
-            let orig = r.orig.into_vector();
+            let orig = (r.orig * xform).into_vector();
             let dir = wr.dir * xform;
 
             // Code adapted to Rust from https://github.com/Tecla/Rayito
