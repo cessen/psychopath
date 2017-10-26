@@ -4,14 +4,18 @@ use bbox::BBox;
 use boundable::Boundable;
 use color::{XYZ, SpectralSample, Color};
 use lerp::lerp_slice;
-use math::{Vector, Normal, Point, Matrix4x4, cross};
+use math::{Vector, Normal, Point, Matrix4x4, cross, dot};
 use ray::{Ray, AccelRay};
-use sampling::{spherical_triangle_solid_angle, uniform_sample_spherical_triangle};
+use sampling::{spherical_triangle_solid_angle, uniform_sample_spherical_triangle,
+               triangle_surface_area, uniform_sample_triangle};
 use shading::surface_closure::{SurfaceClosureUnion, EmitClosure};
 use shading::SurfaceShader;
 use surface::{Surface, SurfaceIntersection, SurfaceIntersectionData, triangle};
 
 use super::SurfaceLight;
+
+
+const SIMPLE_SAMPLING_THRESHOLD: f32 = 0.01;
 
 
 #[derive(Copy, Clone, Debug)]
@@ -50,13 +54,12 @@ impl<'a> RectangleLight<'a> {
         space: &Matrix4x4,
         arr: Point,
         sample_dir: Vector,
-        sample_u: f32,
-        sample_v: f32,
+        hit_point: Point,
         wavelength: f32,
         time: f32,
     ) -> f32 {
         // We're not using these, silence warnings
-        let _ = (sample_dir, sample_u, sample_v, wavelength);
+        let _ = wavelength;
 
         let dim = lerp_slice(self.dimensions, time);
 
@@ -78,7 +81,18 @@ impl<'a> RectangleLight<'a> {
         let area_1 = spherical_triangle_solid_angle(sp2, sp1, sp3);
         let area_2 = spherical_triangle_solid_angle(sp4, sp1, sp3);
 
-        1.0 / (area_1 + area_2)
+        // World-space surface normal
+        let normal = Normal::new(0.0, 0.0, 1.0) * space_inv;
+
+        // PDF
+        if (area_1 + area_2) < SIMPLE_SAMPLING_THRESHOLD {
+            let area = triangle_surface_area(p2, p1, p3) + triangle_surface_area(p4, p1, p3);
+            (hit_point - arr).length2() /
+                dot(sample_dir.normalized(), normal.into_vector().normalized()).abs() /
+                area
+        } else {
+            1.0 / (area_1 + area_2)
+        }
     }
 
     // fn outgoing(
@@ -117,7 +131,8 @@ impl<'a> SurfaceLight for RectangleLight<'a> {
         let dim = lerp_slice(self.dimensions, time);
         let col = lerp_slice(self.colors, time);
 
-        let surface_area_inv: f64 = 1.0 / (dim.0 as f64 * dim.1 as f64);
+        let surface_area: f64 = dim.0 as f64 * dim.1 as f64;
+        let surface_area_inv: f64 = 1.0 / surface_area;
 
         // Get the four corners of the rectangle, transformed into world space
         let space_inv = space.inverse();
@@ -126,53 +141,104 @@ impl<'a> SurfaceLight for RectangleLight<'a> {
         let p3 = Point::new(dim.0 * -0.5, dim.1 * -0.5, 0.0) * space_inv;
         let p4 = Point::new(dim.0 * 0.5, dim.1 * -0.5, 0.0) * space_inv;
 
-        // Get the four corners of the rectangle, projected on to the unit
-        // sphere centered around arr.
-        let sp1 = (p1 - arr).normalized();
-        let sp2 = (p2 - arr).normalized();
-        let sp3 = (p3 - arr).normalized();
-        let sp4 = (p4 - arr).normalized();
+        // Get the four corners of the rectangle relative to arr.
+        let lp1 = p1 - arr;
+        let lp2 = p2 - arr;
+        let lp3 = p3 - arr;
+        let lp4 = p4 - arr;
+
+        // Four corners projected on to the unit sphere.
+        let sp1 = lp1.normalized();
+        let sp2 = lp2.normalized();
+        let sp3 = lp3.normalized();
+        let sp4 = lp4.normalized();
 
         // Get the solid angles of the rectangle split into two triangles
         let area_1 = spherical_triangle_solid_angle(sp2, sp1, sp3);
         let area_2 = spherical_triangle_solid_angle(sp4, sp1, sp3);
 
-        // Normalize the solid angles for selection purposes
-        let prob_1 = area_1 / (area_1 + area_2);
-        let prob_2 = 1.0 - prob_1;
-
-        // Select one of the triangles and sample it
-        let shadow_vec = if u < prob_1 {
-            uniform_sample_spherical_triangle(sp2, sp1, sp3, v, u / prob_1)
-        } else {
-            uniform_sample_spherical_triangle(sp4, sp1, sp3, v, 1.0 - ((u - prob_1) / prob_2))
-        };
-
-        // Project shadow_vec back onto the light's surface
-        let arr_local = arr * *space;
-        let shadow_vec_local = shadow_vec * *space;
-        let shadow_vec_local = shadow_vec_local * (-arr_local.z() / shadow_vec_local.z());
-        let mut sample_point_local = arr_local + shadow_vec_local;
-        {
-            let x = sample_point_local.x().max(dim.0 * -0.5).min(dim.0 * 0.5);
-            let y = sample_point_local.y().max(dim.1 * -0.5).min(dim.1 * 0.5);
-            sample_point_local.set_x(x);
-            sample_point_local.set_y(y);
-            sample_point_local.set_z(0.0);
-        }
-        let sample_point = sample_point_local * space_inv;
+        // Calculate world-space surface normal
         let normal = Normal::new(0.0, 0.0, 1.0) * space_inv;
-        let point_err = 0.0001; // TODO: this is a hack, do properly.
 
-        // Calculate pdf and light energy
-        let pdf = 1.0 / (area_1 + area_2); // PDF of the ray direction being sampled
-        let spectral_sample = (col * surface_area_inv as f32 * 0.5).to_spectral_sample(wavelength);
+        if (area_1 + area_2) < SIMPLE_SAMPLING_THRESHOLD {
+            // Simple sampling for more distant lights
+            let surface_area_1 = triangle_surface_area(p2, p1, p3);
+            let surface_area_2 = triangle_surface_area(p4, p1, p3);
+            let sample_point = {
+                // Select which triangle to sample
+                let threshhold = surface_area_1 / (surface_area_1 + surface_area_2);
+                if u < threshhold {
+                    uniform_sample_triangle(
+                        p2.into_vector(),
+                        p1.into_vector(),
+                        p3.into_vector(),
+                        v,
+                        u / threshhold,
+                    )
+                } else {
+                    uniform_sample_triangle(
+                        p4.into_vector(),
+                        p1.into_vector(),
+                        p3.into_vector(),
+                        v,
+                        (u - threshhold) / (1.0 - threshhold),
+                    )
+                }
+            }.into_point();
+            let shadow_vec = sample_point - arr;
+            let spectral_sample =
+                (col * surface_area_inv as f32 * 0.5).to_spectral_sample(wavelength);
+            let pdf = (sample_point - arr).length2() /
+                dot(shadow_vec.normalized(), normal.into_vector().normalized()).abs() /
+                (surface_area_1 + surface_area_2);
+            let point_err = 0.0001; // TODO: this is a hack, do properly.
+            (spectral_sample, (sample_point, normal, point_err), pdf)
+        } else {
+            // Sophisticated sampling for close lights.
 
-        (
-            spectral_sample,
-            (sample_point, normal, point_err),
-            pdf as f32,
-        )
+            // Normalize the solid angles for selection purposes
+            let prob_1 = if area_1.is_infinite() {
+                1.0
+            } else if area_2.is_infinite() {
+                0.0
+            } else {
+                area_1 / (area_1 + area_2)
+            };
+            let prob_2 = 1.0 - prob_1;
+
+            // Select one of the triangles and sample it
+            let shadow_vec = if u < prob_1 {
+                uniform_sample_spherical_triangle(sp2, sp1, sp3, v, u / prob_1)
+            } else {
+                uniform_sample_spherical_triangle(sp4, sp1, sp3, v, 1.0 - ((u - prob_1) / prob_2))
+            };
+
+            // Project shadow_vec back onto the light's surface
+            let arr_local = arr * *space;
+            let shadow_vec_local = shadow_vec * *space;
+            let shadow_vec_local = shadow_vec_local * (-arr_local.z() / shadow_vec_local.z());
+            let mut sample_point_local = arr_local + shadow_vec_local;
+            {
+                let x = sample_point_local.x().max(dim.0 * -0.5).min(dim.0 * 0.5);
+                let y = sample_point_local.y().max(dim.1 * -0.5).min(dim.1 * 0.5);
+                sample_point_local.set_x(x);
+                sample_point_local.set_y(y);
+                sample_point_local.set_z(0.0);
+            }
+            let sample_point = sample_point_local * space_inv;
+            let point_err = 0.0001; // TODO: this is a hack, do properly.
+
+            // Calculate pdf and light energy
+            let pdf = 1.0 / (area_1 + area_2); // PDF of the ray direction being sampled
+            let spectral_sample =
+                (col * surface_area_inv as f32 * 0.5).to_spectral_sample(wavelength);
+
+            (
+                spectral_sample,
+                (sample_point, normal, point_err),
+                pdf as f32,
+            )
+        }
     }
 
     fn is_delta(&self) -> bool {
@@ -239,8 +305,7 @@ impl<'a> Surface for RectangleLight<'a> {
                                     &xform,
                                     wr.orig,
                                     wr.dir,
-                                    0.0,
-                                    0.0,
+                                    pos,
                                     wr.wavelength,
                                     r.time,
                                 ),

@@ -4,7 +4,7 @@ use std::f32::consts::FRAC_PI_4 as QPI_32;
 use std::f32::consts::PI as PI_32;
 use std::f64::consts::PI as PI_64;
 
-use math::{Vector, dot};
+use math::{Vector, Point, cross, dot};
 
 
 /// Maps the unit square to the unit circle.
@@ -78,6 +78,22 @@ pub fn uniform_sample_cone(u: f32, v: f32, cos_theta_max: f64) -> Vector {
 pub fn uniform_sample_cone_pdf(cos_theta_max: f64) -> f64 {
     // 1.0 / solid angle
     1.0 / (2.0 * PI_64 * (1.0 - cos_theta_max))
+}
+
+/// Generates a uniform sample on a triangle given two uniform random
+/// variables i and j in [0, 1].
+pub fn uniform_sample_triangle(va: Vector, vb: Vector, vc: Vector, i: f32, j: f32) -> Vector {
+    let isqrt = i.sqrt();
+    let a = 1.0 - isqrt;
+    let b = isqrt * (1.0 - j);
+    let c = j * isqrt;
+
+    (va * a) + (vb * b) + (vc * c)
+}
+
+/// Calculates the surface area of a triangle.
+pub fn triangle_surface_area(p0: Point, p1: Point, p2: Point) -> f32 {
+    0.5 * cross(p1 - p0, p2 - p0).length()
 }
 
 /// Calculates the projected solid angle of a spherical triangle.
