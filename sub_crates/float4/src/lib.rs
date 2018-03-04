@@ -263,7 +263,7 @@ impl Float4 {
         );
         #[cfg(feature = "simd_perf")]
         {
-            self.data = self.data.replace(n, v);
+            self.data = self.data.replace(n as u32, v);
         }
         #[cfg(not(feature = "simd_perf"))]
         unsafe {
@@ -304,7 +304,7 @@ impl Float4 {
         );
         #[cfg(feature = "simd_perf")]
         {
-            self.data.extract(n)
+            self.data.extract(n as u32)
         }
         #[cfg(not(feature = "simd_perf"))]
         unsafe { *self.data.get_unchecked(n) }
@@ -569,7 +569,7 @@ impl Bool4 {
         );
         #[cfg(feature = "simd_perf")]
         {
-            self.data.extract(n)
+            self.data.extract(n as u32)
         }
         #[cfg(not(feature = "simd_perf"))]
         {
