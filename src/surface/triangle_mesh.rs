@@ -67,7 +67,7 @@ impl<'a> TriangleMesh<'a> {
         };
 
         // Copy triangle vertex indices over, appending the triangle index itself to the tuple
-        let mut indices = {
+        let indices = {
             let mut indices = unsafe { arena.alloc_array_uninitialized(tri_indices.len()) };
             for (i, tri_i) in tri_indices.iter().enumerate() {
                 indices[i] = (tri_i.0 as u32, tri_i.2 as u32, tri_i.1 as u32, i as u32);

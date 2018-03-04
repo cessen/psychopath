@@ -105,7 +105,7 @@ impl MemArena {
 
     /// Allocates memory for and initializes a type T, returning a mutable reference to it.
     pub fn alloc<'a, T: Copy>(&'a self, value: T) -> &'a mut T {
-        let mut memory = unsafe { self.alloc_uninitialized() };
+        let memory = unsafe { self.alloc_uninitialized() };
         *memory = value;
         memory
     }
@@ -115,7 +115,7 @@ impl MemArena {
     /// Additionally, the allocation will be made with the given byte alignment or
     /// the type's inherent alignment, whichever is greater.
     pub fn alloc_with_alignment<'a, T: Copy>(&'a self, value: T, align: usize) -> &'a mut T {
-        let mut memory = unsafe { self.alloc_uninitialized_with_alignment(align) };
+        let memory = unsafe { self.alloc_uninitialized_with_alignment(align) };
         *memory = value;
         memory
     }

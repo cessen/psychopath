@@ -114,7 +114,7 @@ impl<'a> TracerInner<'a> {
                             &mut [],
                         ]
                     };
-                    let mut ray_sets = if inst.transform_indices.is_some() {
+                    let ray_sets = if inst.transform_indices.is_some() {
                         &mut tmp[..]
                     } else {
                         &mut tmp[..1]

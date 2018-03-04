@@ -56,7 +56,7 @@ impl<'a> BVH4<'a> {
         } else {
             let base = BVHBase::from_objects(objects, objects_per_leaf, bounder);
 
-            let mut root = unsafe { arena.alloc_uninitialized::<BVH4Node>() };
+            let root = unsafe { arena.alloc_uninitialized::<BVH4Node>() };
             BVH4::construct_from_base(arena, &base, base.root_node_index(), root);
             BVH4 {
                 root: Some(root),

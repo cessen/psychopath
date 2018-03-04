@@ -73,7 +73,7 @@ impl<'a> LightTree<'a> {
             let mut builder = LightTreeBuilder::new();
             builder.recursive_build(0, 0, objects, &info_getter);
 
-            let mut root = unsafe { arena.alloc_uninitialized::<Node>() };
+            let root = unsafe { arena.alloc_uninitialized::<Node>() };
             LightTree::construct_from_builder(arena, &builder, builder.root_node_index(), root);
 
             LightTree {
@@ -105,7 +105,7 @@ impl<'a> LightTree<'a> {
             let bounds = arena.copy_slice(&base.bounds[bounds_range.0..bounds_range.1]);
 
             let child_count = base.node_child_count(node_index);
-            let mut children = unsafe { arena.alloc_array_uninitialized::<Node>(child_count) };
+            let children = unsafe { arena.alloc_array_uninitialized::<Node>(child_count) };
             for i in 0..child_count {
                 LightTree::construct_from_builder(
                     arena,
