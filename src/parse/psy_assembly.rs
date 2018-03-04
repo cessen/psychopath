@@ -7,11 +7,10 @@ use mem_arena::MemArena;
 use scene::{Assembly, AssemblyBuilder, Object};
 
 use super::DataTree;
-use super::psy_light::{parse_sphere_light, parse_rectangle_light};
+use super::psy_light::{parse_rectangle_light, parse_sphere_light};
 use super::psy_mesh_surface::parse_mesh_surface;
 use super::psy_surface_shader::parse_surface_shader;
 use super::psy::{parse_matrix, PsyParseError};
-
 
 pub fn parse_assembly<'a>(
     arena: &'a MemArena,
@@ -24,7 +23,10 @@ pub fn parse_assembly<'a>(
             match child.type_name() {
                 // Sub-Assembly
                 "Assembly" => {
-                    if let DataTree::Internal { ident: Some(ident), .. } = *child {
+                    if let DataTree::Internal {
+                        ident: Some(ident), ..
+                    } = *child
+                    {
                         builder.add_assembly(ident, parse_assembly(arena, child)?);
                     } else {
                         return Err(PsyParseError::UnknownError(child.byte_offset()));
@@ -75,9 +77,9 @@ pub fn parse_assembly<'a>(
                         return Err(PsyParseError::InstancedMissingData(
                             child.iter_leaf_children_with_type("Data").nth(0).unwrap().2,
                             "Attempted to add \
-                                                                        instance for data with \
-                                                                        a name that doesn't \
-                                                                        exist.",
+                             instance for data with \
+                             a name that doesn't \
+                             exist.",
                             name.to_string(),
                         ));
                     }
@@ -85,13 +87,16 @@ pub fn parse_assembly<'a>(
 
                 // SurfaceShader
                 "SurfaceShader" => {
-                    if let DataTree::Internal { ident: Some(ident), .. } = *child {
+                    if let DataTree::Internal {
+                        ident: Some(ident), ..
+                    } = *child
+                    {
                         builder.add_surface_shader(ident, parse_surface_shader(arena, child)?);
                     } else {
                         // TODO: error condition of some kind, because no ident
                         panic!(
                             "SurfaceShader encountered that was a leaf, but SurfaceShaders cannot \
-                                be a leaf: {}",
+                             be a leaf: {}",
                             child.byte_offset()
                         );
                     }
@@ -99,7 +104,10 @@ pub fn parse_assembly<'a>(
 
                 // MeshSurface
                 "MeshSurface" => {
-                    if let DataTree::Internal { ident: Some(ident), .. } = *child {
+                    if let DataTree::Internal {
+                        ident: Some(ident), ..
+                    } = *child
+                    {
                         builder.add_object(
                             ident,
                             Object::Surface(arena.alloc(parse_mesh_surface(arena, child)?)),
@@ -108,7 +116,7 @@ pub fn parse_assembly<'a>(
                         // TODO: error condition of some kind, because no ident
                         panic!(
                             "MeshSurface encountered that was a leaf, but MeshSurfaces cannot \
-                                be a leaf: {}",
+                             be a leaf: {}",
                             child.byte_offset()
                         );
                     }
@@ -116,7 +124,10 @@ pub fn parse_assembly<'a>(
 
                 // Sphere Light
                 "SphereLight" => {
-                    if let DataTree::Internal { ident: Some(ident), .. } = *child {
+                    if let DataTree::Internal {
+                        ident: Some(ident), ..
+                    } = *child
+                    {
                         builder.add_object(
                             ident,
                             Object::SurfaceLight(arena.alloc(parse_sphere_light(arena, child)?)),
@@ -129,12 +140,13 @@ pub fn parse_assembly<'a>(
 
                 // Rectangle Light
                 "RectangleLight" => {
-                    if let DataTree::Internal { ident: Some(ident), .. } = *child {
+                    if let DataTree::Internal {
+                        ident: Some(ident), ..
+                    } = *child
+                    {
                         builder.add_object(
                             ident,
-                            Object::SurfaceLight(
-                                arena.alloc(parse_rectangle_light(arena, child)?),
-                            ),
+                            Object::SurfaceLight(arena.alloc(parse_rectangle_light(arena, child)?)),
                         );
                     } else {
                         // No ident
@@ -144,27 +156,25 @@ pub fn parse_assembly<'a>(
 
                 _ => {
                     // TODO: some kind of error, because not a known type name
-                }
-
-                // // Bilinear Patch
-                // "BilinearPatch" => {
-                //     assembly->add_object(child.name, parse_bilinear_patch(child));
-                // }
-                //
-                // // Bicubic Patch
-                // else if (child.type == "BicubicPatch") {
-                //     assembly->add_object(child.name, parse_bicubic_patch(child));
-                // }
-                //
-                // // Subdivision surface
-                // else if (child.type == "SubdivisionSurface") {
-                //     assembly->add_object(child.name, parse_subdivision_surface(child));
-                // }
-                //
-                // // Sphere
-                // else if (child.type == "Sphere") {
-                //     assembly->add_object(child.name, parse_sphere(child));
-                // }
+                } // // Bilinear Patch
+                  // "BilinearPatch" => {
+                  //     assembly->add_object(child.name, parse_bilinear_patch(child));
+                  // }
+                  //
+                  // // Bicubic Patch
+                  // else if (child.type == "BicubicPatch") {
+                  //     assembly->add_object(child.name, parse_bicubic_patch(child));
+                  // }
+                  //
+                  // // Subdivision surface
+                  // else if (child.type == "SubdivisionSurface") {
+                  //     assembly->add_object(child.name, parse_subdivision_surface(child));
+                  // }
+                  //
+                  // // Sphere
+                  // else if (child.type == "Sphere") {
+                  //     assembly->add_object(child.name, parse_sphere(child));
+                  // }
             }
         }
     } else {

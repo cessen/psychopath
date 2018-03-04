@@ -6,13 +6,12 @@ use accel::BVH4;
 use bbox::BBox;
 use boundable::Boundable;
 use lerp::lerp_slice;
-use math::{Point, Normal, Matrix4x4, dot, cross};
-use ray::{Ray, AccelRay};
+use math::{cross, dot, Matrix4x4, Normal, Point};
+use ray::{AccelRay, Ray};
 use shading::SurfaceShader;
 
 use super::{Surface, SurfaceIntersection, SurfaceIntersectionData};
 use super::triangle;
-
 
 #[derive(Copy, Clone, Debug)]
 pub struct TriangleMesh<'a> {
@@ -94,8 +93,8 @@ impl<'a> TriangleMesh<'a> {
 
         // Build BVH
         let accel = BVH4::from_objects(arena, &mut indices[..], 3, |tri| {
-            &bounds[(tri.3 as usize * time_sample_count)..
-                        ((tri.3 as usize + 1) * time_sample_count)]
+            &bounds
+                [(tri.3 as usize * time_sample_count)..((tri.3 as usize + 1) * time_sample_count)]
         });
 
         TriangleMesh {
@@ -114,7 +113,6 @@ impl<'a> Boundable for TriangleMesh<'a> {
     }
 }
 
-
 impl<'a> Surface for TriangleMesh<'a> {
     fn intersect_rays(
         &self,
@@ -131,27 +129,25 @@ impl<'a> Surface for TriangleMesh<'a> {
             Matrix4x4::new()
         };
 
-        self.accel.traverse(
-            &mut accel_rays[..],
-            self.indices,
-            |tri_indices, rs| {
+        self.accel
+            .traverse(&mut accel_rays[..], self.indices, |tri_indices, rs| {
                 for r in rs {
                     let wr = &wrays[r.id as usize];
 
                     // Get triangle
                     let tri = {
-                        let p0_slice = &self.vertices[(tri_indices.0 as usize *
-                                                           self.time_sample_count)..
-                                                          ((tri_indices.0 as usize + 1) *
-                                                               self.time_sample_count)];
-                        let p1_slice = &self.vertices[(tri_indices.1 as usize *
-                                                           self.time_sample_count)..
-                                                          ((tri_indices.1 as usize + 1) *
-                                                               self.time_sample_count)];
-                        let p2_slice = &self.vertices[(tri_indices.2 as usize *
-                                                           self.time_sample_count)..
-                                                          ((tri_indices.2 as usize + 1) *
-                                                               self.time_sample_count)];
+                        let p0_slice = &self.vertices[(tri_indices.0 as usize
+                                                          * self.time_sample_count)
+                                                          ..((tri_indices.0 as usize + 1)
+                                                              * self.time_sample_count)];
+                        let p1_slice = &self.vertices[(tri_indices.1 as usize
+                                                          * self.time_sample_count)
+                                                          ..((tri_indices.1 as usize + 1)
+                                                              * self.time_sample_count)];
+                        let p2_slice = &self.vertices[(tri_indices.2 as usize
+                                                          * self.time_sample_count)
+                                                          ..((tri_indices.2 as usize + 1)
+                                                              * self.time_sample_count)];
 
                         let p0 = lerp_slice(p0_slice, wr.time);
                         let p1 = lerp_slice(p1_slice, wr.time);
@@ -166,18 +162,20 @@ impl<'a> Surface for TriangleMesh<'a> {
                         if space.len() > 1 {
                             // Per-ray transform, for motion blur
                             let mat_space = lerp_slice(space, wr.time).inverse();
-                            (mat_space, (
-                                tri.0 * mat_space,
-                                tri.1 * mat_space,
-                                tri.2 * mat_space,
-                            ))
+                            (
+                                mat_space,
+                                (tri.0 * mat_space, tri.1 * mat_space, tri.2 * mat_space),
+                            )
                         } else {
                             // Same transform for all rays
-                            (static_mat_space, (
-                                tri.0 * static_mat_space,
-                                tri.1 * static_mat_space,
-                                tri.2 * static_mat_space,
-                            ))
+                            (
+                                static_mat_space,
+                                (
+                                    tri.0 * static_mat_space,
+                                    tri.1 * static_mat_space,
+                                    tri.2 * static_mat_space,
+                                ),
+                            )
                         }
                     } else {
                         // No transforms
@@ -199,18 +197,18 @@ impl<'a> Surface for TriangleMesh<'a> {
 
                                 // Calculate interpolated surface normal, if any
                                 let shading_normal = if let Some(normals) = self.normals {
-                                    let n0_slice = &normals[(tri_indices.0 as usize *
-                                                                 self.time_sample_count)..
-                                                                ((tri_indices.0 as usize + 1) *
-                                                                     self.time_sample_count)];
-                                    let n1_slice = &normals[(tri_indices.1 as usize *
-                                                                 self.time_sample_count)..
-                                                                ((tri_indices.1 as usize + 1) *
-                                                                     self.time_sample_count)];
-                                    let n2_slice = &normals[(tri_indices.2 as usize *
-                                                                 self.time_sample_count)..
-                                                                ((tri_indices.2 as usize + 1) *
-                                                                     self.time_sample_count)];
+                                    let n0_slice = &normals[(tri_indices.0 as usize
+                                                                * self.time_sample_count)
+                                                                ..((tri_indices.0 as usize + 1)
+                                                                    * self.time_sample_count)];
+                                    let n1_slice = &normals[(tri_indices.1 as usize
+                                                                * self.time_sample_count)
+                                                                ..((tri_indices.1 as usize + 1)
+                                                                    * self.time_sample_count)];
+                                    let n2_slice = &normals[(tri_indices.2 as usize
+                                                                * self.time_sample_count)
+                                                                ..((tri_indices.2 as usize + 1)
+                                                                    * self.time_sample_count)];
 
                                     let n0 = lerp_slice(n0_slice, wr.time).normalized();
                                     let n1 = lerp_slice(n1_slice, wr.time).normalized();
@@ -252,7 +250,6 @@ impl<'a> Surface for TriangleMesh<'a> {
                         }
                     }
                 }
-            },
-        );
+            });
     }
 }

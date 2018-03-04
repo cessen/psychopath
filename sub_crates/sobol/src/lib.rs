@@ -23,7 +23,7 @@
 mod matrices;
 
 pub use matrices::NUM_DIMENSIONS;
-use matrices::{SIZE, MATRICES};
+use matrices::{MATRICES, SIZE};
 
 /// Compute one component of the Sobol'-sequence, where the component
 /// corresponds to the dimension parameter, and the index specifies

@@ -39,7 +39,6 @@ pub fn xy2d(x: u32, y: u32) -> u32 {
     d
 }
 
-
 /// Convert hilbert curve index to (x,y).
 ///
 /// d: The hilbert curve index.

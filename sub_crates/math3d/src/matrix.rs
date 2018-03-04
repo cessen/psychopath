@@ -7,13 +7,11 @@ use float4::Float4;
 
 use super::Point;
 
-
 /// A 4x4 matrix, used for transforms
 #[derive(Debug, Copy, Clone)]
 pub struct Matrix4x4 {
     pub values: [Float4; 4],
 }
-
 
 impl Matrix4x4 {
     /// Creates a new identity matrix
@@ -143,7 +141,6 @@ impl Matrix4x4 {
         }
     }
 
-
     /// Returns the inverse of the Matrix
     #[inline]
     pub fn inverse(&self) -> Matrix4x4 {
@@ -169,38 +166,50 @@ impl Matrix4x4 {
             values: {
                 [
                     Float4::new(
-                        ((self[1].get_1() * c5) - (self[1].get_2() * c4) + (self[1].get_3() * c3)) * invdet,
-                        ((-self[0].get_1() * c5) + (self[0].get_2() * c4) - (self[0].get_3() * c3)) * invdet,
-                        ((self[3].get_1() * s5) - (self[3].get_2() * s4) + (self[3].get_3() * s3)) * invdet,
-                        ((-self[2].get_1() * s5) + (self[2].get_2() * s4) - (self[2].get_3() * s3)) * invdet,
+                        ((self[1].get_1() * c5) - (self[1].get_2() * c4) + (self[1].get_3() * c3))
+                            * invdet,
+                        ((-self[0].get_1() * c5) + (self[0].get_2() * c4) - (self[0].get_3() * c3))
+                            * invdet,
+                        ((self[3].get_1() * s5) - (self[3].get_2() * s4) + (self[3].get_3() * s3))
+                            * invdet,
+                        ((-self[2].get_1() * s5) + (self[2].get_2() * s4) - (self[2].get_3() * s3))
+                            * invdet,
                     ),
-
                     Float4::new(
-                        ((-self[1].get_0() * c5) + (self[1].get_2() * c2) - (self[1].get_3() * c1)) * invdet,
-                        ((self[0].get_0() * c5) - (self[0].get_2() * c2) + (self[0].get_3() * c1)) * invdet,
-                        ((-self[3].get_0() * s5) + (self[3].get_2() * s2) - (self[3].get_3() * s1)) * invdet,
-                        ((self[2].get_0() * s5) - (self[2].get_2() * s2) + (self[2].get_3() * s1)) * invdet,
+                        ((-self[1].get_0() * c5) + (self[1].get_2() * c2) - (self[1].get_3() * c1))
+                            * invdet,
+                        ((self[0].get_0() * c5) - (self[0].get_2() * c2) + (self[0].get_3() * c1))
+                            * invdet,
+                        ((-self[3].get_0() * s5) + (self[3].get_2() * s2) - (self[3].get_3() * s1))
+                            * invdet,
+                        ((self[2].get_0() * s5) - (self[2].get_2() * s2) + (self[2].get_3() * s1))
+                            * invdet,
                     ),
-
                     Float4::new(
-                        ((self[1].get_0() * c4) - (self[1].get_1() * c2) + (self[1].get_3() * c0)) * invdet,
-                        ((-self[0].get_0() * c4) + (self[0].get_1() * c2) - (self[0].get_3() * c0)) * invdet,
-                        ((self[3].get_0() * s4) - (self[3].get_1() * s2) + (self[3].get_3() * s0)) * invdet,
-                        ((-self[2].get_0() * s4) + (self[2].get_1() * s2) - (self[2].get_3() * s0)) * invdet,
+                        ((self[1].get_0() * c4) - (self[1].get_1() * c2) + (self[1].get_3() * c0))
+                            * invdet,
+                        ((-self[0].get_0() * c4) + (self[0].get_1() * c2) - (self[0].get_3() * c0))
+                            * invdet,
+                        ((self[3].get_0() * s4) - (self[3].get_1() * s2) + (self[3].get_3() * s0))
+                            * invdet,
+                        ((-self[2].get_0() * s4) + (self[2].get_1() * s2) - (self[2].get_3() * s0))
+                            * invdet,
                     ),
-
                     Float4::new(
-                        ((-self[1].get_0() * c3) + (self[1].get_1() * c1) - (self[1].get_2() * c0)) * invdet,
-                        ((self[0].get_0() * c3) - (self[0].get_1() * c1) + (self[0].get_2() * c0)) * invdet,
-                        ((-self[3].get_0() * s3) + (self[3].get_1() * s1) - (self[3].get_2() * s0)) * invdet,
-                        ((self[2].get_0() * s3) - (self[2].get_1() * s1) + (self[2].get_2() * s0)) * invdet,
+                        ((-self[1].get_0() * c3) + (self[1].get_1() * c1) - (self[1].get_2() * c0))
+                            * invdet,
+                        ((self[0].get_0() * c3) - (self[0].get_1() * c1) + (self[0].get_2() * c0))
+                            * invdet,
+                        ((-self[3].get_0() * s3) + (self[3].get_1() * s1) - (self[3].get_2() * s0))
+                            * invdet,
+                        ((self[2].get_0() * s3) - (self[2].get_1() * s1) + (self[2].get_2() * s0))
+                            * invdet,
                     ),
                 ]
             },
         }
     }
 }
-
 
 impl Index<usize> for Matrix4x4 {
     type Output = Float4;
@@ -211,14 +220,12 @@ impl Index<usize> for Matrix4x4 {
     }
 }
 
-
 impl IndexMut<usize> for Matrix4x4 {
     #[inline(always)]
     fn index_mut<'a>(&'a mut self, _index: usize) -> &'a mut Float4 {
         &mut self.values[_index]
     }
 }
-
 
 impl PartialEq for Matrix4x4 {
     #[inline]
@@ -235,7 +242,6 @@ impl PartialEq for Matrix4x4 {
     }
 }
 
-
 /// Multiply two matrices together
 impl Mul<Matrix4x4> for Matrix4x4 {
     type Output = Matrix4x4;
@@ -251,21 +257,18 @@ impl Mul<Matrix4x4> for Matrix4x4 {
                     (m[2] * other[0]).h_sum(),
                     (m[3] * other[0]).h_sum(),
                 ),
-
                 Float4::new(
                     (m[0] * other[1]).h_sum(),
                     (m[1] * other[1]).h_sum(),
                     (m[2] * other[1]).h_sum(),
                     (m[3] * other[1]).h_sum(),
                 ),
-
                 Float4::new(
                     (m[0] * other[2]).h_sum(),
                     (m[1] * other[2]).h_sum(),
                     (m[2] * other[2]).h_sum(),
                     (m[3] * other[2]).h_sum(),
                 ),
-
                 Float4::new(
                     (m[0] * other[3]).h_sum(),
                     (m[1] * other[3]).h_sum(),
@@ -276,10 +279,6 @@ impl Mul<Matrix4x4> for Matrix4x4 {
         }
     }
 }
-
-
-
-
 
 #[cfg(test)]
 mod tests {

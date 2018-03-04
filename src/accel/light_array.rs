@@ -1,7 +1,7 @@
 use mem_arena::MemArena;
 
 use bbox::BBox;
-use math::{Vector, Point, Normal};
+use math::{Normal, Point, Vector};
 use shading::surface_closure::SurfaceClosure;
 
 use super::LightAccel;

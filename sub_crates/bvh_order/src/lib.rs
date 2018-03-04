@@ -19,9 +19,9 @@ include!(concat!(env!("OUT_DIR"), "/table_inc.rs"));
 #[derive(Debug, Copy, Clone)]
 pub enum SplitAxes {
     Full((u8, u8, u8)), // top, left, right
-    Left((u8, u8)), // top, left
-    Right((u8, u8)), // top, right
-    TopOnly(u8), // top
+    Left((u8, u8)),     // top, left
+    Right((u8, u8)),    // top, right
+    TopOnly(u8),        // top
 }
 
 /// Calculates the traversal code for a BVH4 node based on the splits and

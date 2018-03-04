@@ -3,7 +3,6 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-
 #[derive(Copy, Clone)]
 struct Chromaticities {
     r: (f64, f64),
@@ -11,7 +10,6 @@ struct Chromaticities {
     b: (f64, f64),
     w: (f64, f64),
 }
-
 
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
@@ -77,10 +75,8 @@ fn main() {
     }
 }
 
-
 /// Generates conversion functions for the given rgb to xyz transform matrix.
 fn write_conversion_functions(space_name: &str, to_xyz: [[f64; 3]; 3], f: &mut File) {
-
     f.write_all(
         format!(
             r#"
@@ -185,7 +181,6 @@ pub fn xyz_to_{}_e(xyz: (f32, f32, f32)) -> (f32, f32, f32) {{
     ).unwrap();
 }
 
-
 /// Port of the RGBtoXYZ function from the ACES CTL reference implementation.
 /// See lib/IlmCtlMath/CtlColorSpace.cpp in the CTL reference implementation.
 ///
@@ -200,20 +195,20 @@ fn rgb_to_xyz(chroma: Chromaticities, y: f64) -> [[f64; 3]; 3] {
     let z = (1.0 - chroma.w.0 - chroma.w.1) * y / chroma.w.1;
 
     // Scale factors for matrix rows
-    let d = chroma.r.0 * (chroma.b.1 - chroma.g.1) + chroma.b.0 * (chroma.g.1 - chroma.r.1) +
-        chroma.g.0 * (chroma.r.1 - chroma.b.1);
+    let d = chroma.r.0 * (chroma.b.1 - chroma.g.1) + chroma.b.0 * (chroma.g.1 - chroma.r.1)
+        + chroma.g.0 * (chroma.r.1 - chroma.b.1);
 
-    let sr = (x * (chroma.b.1 - chroma.g.1) -
-                  chroma.g.0 * (y * (chroma.b.1 - 1.0) + chroma.b.1 * (x + z)) +
-                  chroma.b.0 * (y * (chroma.g.1 - 1.0) + chroma.g.1 * (x + z))) / d;
+    let sr = (x * (chroma.b.1 - chroma.g.1)
+        - chroma.g.0 * (y * (chroma.b.1 - 1.0) + chroma.b.1 * (x + z))
+        + chroma.b.0 * (y * (chroma.g.1 - 1.0) + chroma.g.1 * (x + z))) / d;
 
-    let sg = (x * (chroma.r.1 - chroma.b.1) +
-                  chroma.r.0 * (y * (chroma.b.1 - 1.0) + chroma.b.1 * (x + z)) -
-                  chroma.b.0 * (y * (chroma.r.1 - 1.0) + chroma.r.1 * (x + z))) / d;
+    let sg = (x * (chroma.r.1 - chroma.b.1)
+        + chroma.r.0 * (y * (chroma.b.1 - 1.0) + chroma.b.1 * (x + z))
+        - chroma.b.0 * (y * (chroma.r.1 - 1.0) + chroma.r.1 * (x + z))) / d;
 
-    let sb = (x * (chroma.g.1 - chroma.r.1) -
-                  chroma.r.0 * (y * (chroma.g.1 - 1.0) + chroma.g.1 * (x + z)) +
-                  chroma.g.0 * (y * (chroma.r.1 - 1.0) + chroma.r.1 * (x + z))) / d;
+    let sb = (x * (chroma.g.1 - chroma.r.1)
+        - chroma.r.0 * (y * (chroma.g.1 - 1.0) + chroma.g.1 * (x + z))
+        + chroma.g.0 * (y * (chroma.r.1 - 1.0) + chroma.r.1 * (x + z))) / d;
 
     // Assemble the matrix
     let mut mat = [[0.0; 3]; 3];
@@ -232,7 +227,6 @@ fn rgb_to_xyz(chroma: Chromaticities, y: f64) -> [[f64; 3]; 3] {
 
     mat
 }
-
 
 /// Chromatically adapts a matrix from `rgb_to_xyz` to a whitepoint of E.
 ///
@@ -258,7 +252,6 @@ fn adapt_to_e(mat: [[f64; 3]; 3], y: f64) -> [[f64; 3]; 3] {
 
     mat2
 }
-
 
 /// Calculates the inverse of the given 3x3 matrix.
 ///

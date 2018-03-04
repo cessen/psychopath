@@ -23,7 +23,6 @@ pub fn dot<T: DotProduct>(a: T, b: T) -> f32 {
     a.dot(b)
 }
 
-
 /// Trait for calculating cross products.
 pub trait CrossProduct {
     #[inline]

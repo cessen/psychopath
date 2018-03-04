@@ -1,13 +1,12 @@
 #![allow(dead_code)]
 
 use std::cmp::PartialEq;
-use std::ops::{Add, Sub, Mul};
+use std::ops::{Add, Mul, Sub};
 
 use float4::Float4;
 
 use super::Matrix4x4;
 use super::Vector;
-
 
 /// A position in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
@@ -18,14 +17,18 @@ pub struct Point {
 impl Point {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Point {
-        Point { co: Float4::new(x, y, z, 1.0) }
+        Point {
+            co: Float4::new(x, y, z, 1.0),
+        }
     }
 
     /// Returns the point in standardized coordinates, where the
     /// fourth homogeneous component has been normalized to 1.0.
     #[inline(always)]
     pub fn norm(&self) -> Point {
-        Point { co: self.co / self.co.get_3() }
+        Point {
+            co: self.co / self.co.get_3(),
+        }
     }
 
     #[inline(always)]
@@ -33,7 +36,9 @@ impl Point {
         let n1 = self.norm();
         let n2 = other.norm();
 
-        Point { co: n1.co.v_min(n2.co) }
+        Point {
+            co: n1.co.v_min(n2.co),
+        }
     }
 
     #[inline(always)]
@@ -41,7 +46,9 @@ impl Point {
         let n1 = self.norm();
         let n2 = other.norm();
 
-        Point { co: n1.co.v_max(n2.co) }
+        Point {
+            co: n1.co.v_max(n2.co),
+        }
     }
 
     #[inline(always)]
@@ -90,7 +97,6 @@ impl Point {
     }
 }
 
-
 impl PartialEq for Point {
     #[inline(always)]
     fn eq(&self, other: &Point) -> bool {
@@ -98,23 +104,25 @@ impl PartialEq for Point {
     }
 }
 
-
 impl Add<Vector> for Point {
     type Output = Point;
 
     #[inline(always)]
     fn add(self, other: Vector) -> Point {
-        Point { co: self.co + other.co }
+        Point {
+            co: self.co + other.co,
+        }
     }
 }
-
 
 impl Sub for Point {
     type Output = Vector;
 
     #[inline(always)]
     fn sub(self, other: Point) -> Vector {
-        Vector { co: self.norm().co - other.norm().co }
+        Vector {
+            co: self.norm().co - other.norm().co,
+        }
     }
 }
 
@@ -123,7 +131,9 @@ impl Sub<Vector> for Point {
 
     #[inline(always)]
     fn sub(self, other: Vector) -> Point {
-        Point { co: self.co - other.co }
+        Point {
+            co: self.co - other.co,
+        }
     }
 }
 
@@ -143,11 +153,10 @@ impl Mul<Matrix4x4> for Point {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::{Vector, Matrix4x4};
+    use super::super::{Matrix4x4, Vector};
 
     #[test]
     fn norm() {

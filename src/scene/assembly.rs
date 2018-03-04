@@ -4,7 +4,7 @@ use mem_arena::MemArena;
 
 use accel::{LightAccel, LightTree};
 use accel::BVH4;
-use bbox::{BBox, transform_bbox_slice_from};
+use bbox::{transform_bbox_slice_from, BBox};
 use boundable::Boundable;
 use color::SpectralSample;
 use lerp::lerp_slice;
@@ -13,7 +13,6 @@ use math::{Matrix4x4, Normal, Point};
 use surface::{Surface, SurfaceIntersection};
 use shading::SurfaceShader;
 use transform_stack::TransformStack;
-
 
 #[derive(Copy, Clone, Debug)]
 pub struct Assembly<'a> {
@@ -59,20 +58,17 @@ impl<'a> Assembly<'a> {
             } else {
                 Matrix4x4::new()
             };
-            if let Some((light_i, sel_pdf, whittled_n)) =
-                self.light_accel.select(
-                    idata.incoming * sel_xform,
-                    idata.pos * sel_xform,
-                    idata.nor * sel_xform,
-                    idata.nor_g * sel_xform,
-                    closure.as_surface_closure(),
-                    time,
-                    n,
-                )
-            {
+            if let Some((light_i, sel_pdf, whittled_n)) = self.light_accel.select(
+                idata.incoming * sel_xform,
+                idata.pos * sel_xform,
+                idata.nor * sel_xform,
+                idata.nor_g * sel_xform,
+                closure.as_surface_closure(),
+                time,
+                n,
+            ) {
                 let inst = self.light_instances[light_i];
                 match inst.instance_type {
-
                     InstanceType::Object => {
                         match self.objects[inst.data_index] {
                             Object::SurfaceLight(light) => {
@@ -151,7 +147,6 @@ impl<'a> Boundable for Assembly<'a> {
     }
 }
 
-
 #[derive(Debug)]
 pub struct AssemblyBuilder<'a> {
     arena: &'a MemArena,
@@ -172,7 +167,6 @@ pub struct AssemblyBuilder<'a> {
     assemblies: Vec<Assembly<'a>>,
     assembly_map: HashMap<String, usize>, // map Name -> Index
 }
-
 
 impl<'a> AssemblyBuilder<'a> {
     pub fn new(arena: &'a MemArena) -> AssemblyBuilder<'a> {
@@ -196,10 +190,8 @@ impl<'a> AssemblyBuilder<'a> {
         }
 
         // Add shader
-        self.surface_shader_map.insert(
-            name.to_string(),
-            self.surface_shaders.len(),
-        );
+        self.surface_shader_map
+            .insert(name.to_string(), self.surface_shaders.len());
         self.surface_shaders.push(shader);
     }
 
@@ -219,15 +211,13 @@ impl<'a> AssemblyBuilder<'a> {
         if self.name_exists(name) {
             panic!(
                 "Attempted to add assembly to another assembly with a name that already \
-                    exists."
+                 exists."
             );
         }
 
         // Add assembly
-        self.assembly_map.insert(
-            name.to_string(),
-            self.assemblies.len(),
-        );
+        self.assembly_map
+            .insert(name.to_string(), self.assemblies.len());
         self.assemblies.push(asmb);
     }
 
@@ -244,7 +234,11 @@ impl<'a> AssemblyBuilder<'a> {
 
         // Map zero-length transforms to None
         let xforms = if let Some(xf) = xforms {
-            if !xf.is_empty() { Some(xf) } else { None }
+            if !xf.is_empty() {
+                Some(xf)
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -255,30 +249,26 @@ impl<'a> AssemblyBuilder<'a> {
                 instance_type: InstanceType::Object,
                 data_index: self.object_map[name],
                 surface_shader_index: surface_shader_name.map(|name| {
-                    *self.surface_shader_map.get(name).expect(&format!(
-                        "Unknown surface shader '{}'.",
-                        name
-                    ))
+                    *self.surface_shader_map
+                        .get(name)
+                        .expect(&format!("Unknown surface shader '{}'.", name))
                 }),
                 id: self.instances.len(),
-                transform_indices: xforms.map(
-                    |xf| (self.xforms.len(), self.xforms.len() + xf.len()),
-                ),
+                transform_indices: xforms
+                    .map(|xf| (self.xforms.len(), self.xforms.len() + xf.len())),
             }
         } else {
             Instance {
                 instance_type: InstanceType::Assembly,
                 data_index: self.assembly_map[name],
                 surface_shader_index: surface_shader_name.map(|name| {
-                    *self.surface_shader_map.get(name).expect(&format!(
-                        "Unknown surface shader '{}'.",
-                        name
-                    ))
+                    *self.surface_shader_map
+                        .get(name)
+                        .expect(&format!("Unknown surface shader '{}'.", name))
                 }),
                 id: self.instances.len(),
-                transform_indices: xforms.map(
-                    |xf| (self.xforms.len(), self.xforms.len() + xf.len()),
-                ),
+                transform_indices: xforms
+                    .map(|xf| (self.xforms.len(), self.xforms.len() + xf.len())),
             }
         };
 
@@ -337,11 +327,9 @@ impl<'a> AssemblyBuilder<'a> {
                     }
                 }
 
-                InstanceType::Assembly => {
-                    self.assemblies[inst.data_index]
-                        .light_accel
-                        .approximate_energy()
-                }
+                InstanceType::Assembly => self.assemblies[inst.data_index]
+                    .light_accel
+                    .approximate_energy(),
             };
             (bounds, energy)
         });
@@ -357,7 +345,6 @@ impl<'a> AssemblyBuilder<'a> {
             light_accel: light_accel,
         }
     }
-
 
     /// Returns a pair of vectors with the bounds of all instances.
     /// This is used for building the assembly's BVH4.
@@ -405,14 +392,11 @@ impl<'a> AssemblyBuilder<'a> {
     }
 }
 
-
-
 #[derive(Copy, Clone, Debug)]
 pub enum Object<'a> {
     Surface(&'a Surface),
     SurfaceLight(&'a SurfaceLight),
 }
-
 
 #[derive(Debug, Copy, Clone)]
 pub struct Instance {

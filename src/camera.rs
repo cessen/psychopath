@@ -3,10 +3,9 @@
 use mem_arena::MemArena;
 
 use lerp::lerp_slice;
-use math::{Vector, Point, Matrix4x4};
+use math::{Matrix4x4, Point, Vector};
 use ray::Ray;
 use sampling::square_to_circle;
-
 
 #[derive(Copy, Clone, Debug)]
 pub struct Camera<'a> {
@@ -36,12 +35,12 @@ impl<'a> Camera<'a> {
             if aperture_radii.is_empty() && !focus_distances.is_empty() {
                 println!(
                     "WARNING: camera has aperture radius but no focus distance.  Disabling \
-                          focal blur."
+                     focal blur."
                 );
             } else if !aperture_radii.is_empty() && focus_distances.is_empty() {
                 println!(
                     "WARNING: camera has focus distance but no aperture radius.  Disabling \
-                          focal blur."
+                     focal blur."
                 );
             }
         }

@@ -5,8 +5,7 @@ use bbox::BBox;
 use lerp::lerp_slice;
 use math::log2_64;
 
-use super::objects_split::{sah_split, median_split};
-
+use super::objects_split::{median_split, sah_split};
 
 pub const BVH_MAX_DEPTH: usize = 42;
 
@@ -41,8 +40,9 @@ pub enum BVHBaseNode {
 impl BVHBaseNode {
     pub fn bounds_range(&self) -> (usize, usize) {
         match *self {
-            BVHBaseNode::Internal { bounds_range, .. } |
-            BVHBaseNode::Leaf { bounds_range, .. } => bounds_range,
+            BVHBaseNode::Internal { bounds_range, .. } | BVHBaseNode::Leaf { bounds_range, .. } => {
+                bounds_range
+            }
         }
     }
 }
@@ -119,13 +119,13 @@ impl BVHBase {
                 // We make sure that it's worth having multiple time samples, and if not
                 // we reduce to the union of the time samples.
                 self.acc_bounds(objects, bounder);
-                let union_bounds = self.bounds_cache.iter().fold(
-                    BBox::new(),
-                    |b1, b2| (b1 | *b2),
-                );
-                let average_area = self.bounds_cache.iter().fold(0.0, |area, bb| {
-                    area + bb.surface_area()
-                }) / self.bounds_cache.len() as f32;
+                let union_bounds = self.bounds_cache
+                    .iter()
+                    .fold(BBox::new(), |b1, b2| (b1 | *b2));
+                let average_area = self.bounds_cache
+                    .iter()
+                    .fold(0.0, |area, bb| area + bb.surface_area())
+                    / self.bounds_cache.len() as f32;
                 if union_bounds.surface_area() <= (average_area * USE_UNION_FACTOR) {
                     self.bounds.push(union_bounds);
                 } else {
@@ -195,15 +195,14 @@ impl BVHBase {
                 // We make sure that it's worth having multiple time samples, and if not
                 // we reduce to the union of the time samples.
                 let union_bounds = merged.iter().fold(BBox::new(), |b1, b2| (b1 | *b2));
-                let average_area = merged.iter().fold(0.0, |area, bb| area + bb.surface_area()) /
-                    merged.len() as f32;
+                let average_area = merged.iter().fold(0.0, |area, bb| area + bb.surface_area())
+                    / merged.len() as f32;
                 if union_bounds.surface_area() <= (average_area * USE_UNION_FACTOR) {
                     self.bounds.push(union_bounds);
                 } else {
                     self.bounds.extend(merged.drain(0..));
                 }
             }
-
 
             // Set node
             self.nodes[me] = BVHBaseNode::Internal {

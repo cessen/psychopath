@@ -4,7 +4,6 @@ use std::iter::Iterator;
 use std::result::Result;
 use std::slice;
 
-
 #[derive(Debug, Eq, PartialEq)]
 pub enum DataTree<'a> {
     Internal {
@@ -20,7 +19,6 @@ pub enum DataTree<'a> {
         byte_offset: usize,
     },
 }
-
 
 impl<'a> DataTree<'a> {
     pub fn from_str(source_text: &'a str) -> Result<DataTree<'a>, ParseError> {
@@ -49,15 +47,15 @@ impl<'a> DataTree<'a> {
 
     pub fn type_name(&'a self) -> &'a str {
         match *self {
-            DataTree::Internal { type_name, .. } |
-            DataTree::Leaf { type_name, .. } => type_name,
+            DataTree::Internal { type_name, .. } | DataTree::Leaf { type_name, .. } => type_name,
         }
     }
 
     pub fn byte_offset(&'a self) -> usize {
         match *self {
-            DataTree::Internal { byte_offset, .. } |
-            DataTree::Leaf { byte_offset, .. } => byte_offset,
+            DataTree::Internal { byte_offset, .. } | DataTree::Leaf { byte_offset, .. } => {
+                byte_offset
+            }
         }
     }
 
@@ -166,7 +164,6 @@ impl<'a> DataTree<'a> {
     }
 }
 
-
 /// An iterator over the children of a `DataTree` node that filters out the
 /// children not matching a specified type name.
 pub struct DataTreeFilterIter<'a> {
@@ -192,7 +189,6 @@ impl<'a> Iterator for DataTreeFilterIter<'a> {
     }
 }
 
-
 /// An iterator over the children of a `DataTree` node that filters out the
 /// children that aren't internal nodes and that don't match a specified
 /// type name.
@@ -208,11 +204,11 @@ impl<'a> Iterator for DataTreeFilterInternalIter<'a> {
         loop {
             match self.iter.next() {
                 Some(&DataTree::Internal {
-                         type_name,
-                         ident,
-                         ref children,
-                         byte_offset,
-                     }) => {
+                    type_name,
+                    ident,
+                    ref children,
+                    byte_offset,
+                }) => {
                     if type_name == self.type_name {
                         return Some((type_name, ident, children, byte_offset));
                     } else {
@@ -231,7 +227,6 @@ impl<'a> Iterator for DataTreeFilterInternalIter<'a> {
         }
     }
 }
-
 
 /// An iterator over the children of a `DataTree` node that filters out the
 /// children that aren't internal nodes and that don't match a specified
@@ -252,10 +247,10 @@ impl<'a> Iterator for DataTreeFilterLeafIter<'a> {
                 }
 
                 Some(&DataTree::Leaf {
-                         type_name,
-                         contents,
-                         byte_offset,
-                     }) => {
+                    type_name,
+                    contents,
+                    byte_offset,
+                }) => {
                     if type_name == self.type_name {
                         return Some((type_name, contents, byte_offset));
                     } else {
@@ -271,7 +266,6 @@ impl<'a> Iterator for DataTreeFilterLeafIter<'a> {
     }
 }
 
-
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum ParseError {
     MissingOpener(usize),
@@ -284,9 +278,6 @@ pub enum ParseError {
     UnknownToken(usize),
     Other((usize, &'static str)),
 }
-
-
-
 
 // ================================================================
 
@@ -386,7 +377,6 @@ fn parse_node<'a>(source_text: (usize, &'a str)) -> ParseResult<'a> {
     }
 }
 
-
 fn parse_leaf_content(source_text: (usize, &str)) -> (&str, (usize, &str)) {
     let mut si = 1;
     let mut escaped = false;
@@ -407,12 +397,11 @@ fn parse_leaf_content(source_text: (usize, &str)) -> (&str, (usize, &str)) {
         si = source_text.1.len();
     }
 
-    return (&source_text.1[0..si], (
-        source_text.0 + si,
-        &source_text.1[si..],
-    ));
+    return (
+        &source_text.1[0..si],
+        (source_text.0 + si, &source_text.1[si..]),
+    );
 }
-
 
 fn next_token<'a>(source_text: (usize, &'a str)) -> (Token<'a>, (usize, &'a str)) {
     let text1 = skip_ws_and_comments(source_text);
@@ -480,13 +469,12 @@ fn next_token<'a>(source_text: (usize, &'a str)) -> (Token<'a>, (usize, &'a str)
                         si = text1.1.len();
                     }
 
-                    return (Token::TypeName(&text1.1[0..si]), (
-                        text1.0 + si,
-                        &text1.1[si..],
-                    ));
+                    return (
+                        Token::TypeName(&text1.1[0..si]),
+                        (text1.0 + si, &text1.1[si..]),
+                    );
                 }
             }
-
         }
     } else {
         return (Token::End, text1);
@@ -576,9 +564,6 @@ fn skip_ws_and_comments(text: (usize, &str)) -> (usize, &str) {
     return (offset, remaining_text);
 }
 
-
-
-
 // ================================================================
 
 #[cfg(test)]
@@ -623,10 +608,10 @@ mod tests {
     fn tokenize_5() {
         let input = (0, " $hi\\ t\\#he\\[re ");
 
-        assert_eq!(next_token(input), (
-            Token::Ident("$hi\\ t\\#he\\[re"),
-            (15, " "),
-        ));
+        assert_eq!(
+            next_token(input),
+            (Token::Ident("$hi\\ t\\#he\\[re"), (15, " "),)
+        );
     }
 
     #[test]
@@ -657,18 +642,24 @@ mod tests {
         let (token7, input8) = next_token(input7);
         let (token8, input9) = next_token(input8);
 
-        assert_eq!((token1, input2), (Token::TypeName("Thing"), (
-            5,
-            " $yar { # A comment\n\tThing2 []\n}",
-        )));
-        assert_eq!((token2, input3), (Token::Ident("$yar"), (
-            10,
-            " { # A comment\n\tThing2 []\n}",
-        )));
-        assert_eq!((token3, input4), (Token::OpenInner, (
-            12,
-            " # A comment\n\tThing2 []\n}",
-        )));
+        assert_eq!(
+            (token1, input2),
+            (
+                Token::TypeName("Thing"),
+                (5, " $yar { # A comment\n\tThing2 []\n}",)
+            )
+        );
+        assert_eq!(
+            (token2, input3),
+            (
+                Token::Ident("$yar"),
+                (10, " { # A comment\n\tThing2 []\n}",)
+            )
+        );
+        assert_eq!(
+            (token3, input4),
+            (Token::OpenInner, (12, " # A comment\n\tThing2 []\n}",))
+        );
         assert_eq!(
             (token4, input5),
             (Token::TypeName("Thing2"), (32, " []\n}"))

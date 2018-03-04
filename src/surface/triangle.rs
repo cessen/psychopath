@@ -4,7 +4,6 @@ use fp_utils::fp_gamma;
 use math::Point;
 use ray::Ray;
 
-
 /// Intersects `ray` with `tri`, returning `Some((t, b0, b1, b2))`, or `None`
 /// if no intersection.
 ///
@@ -83,8 +82,8 @@ pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32,
     let t_scaled = (e0 * p0z) + (e1 * p1z) + (e2 * p2z);
 
     // Check if the hitpoint t is within ray min/max t.
-    if (det > 0.0 && (t_scaled <= 0.0 || t_scaled > (ray.max_t * det))) ||
-        (det < 0.0 && (t_scaled >= 0.0 || t_scaled < (ray.max_t * det)))
+    if (det > 0.0 && (t_scaled <= 0.0 || t_scaled > (ray.max_t * det)))
+        || (det < 0.0 && (t_scaled >= 0.0 || t_scaled < (ray.max_t * det)))
     {
         return None;
     }
@@ -115,8 +114,8 @@ pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32,
 
         // Calculate delta t
         let max_e = max_abs_3(e0, e1, e2);
-        let dt = 3.0 * ((fp_gamma(3) * max_e * max_zt) + (de * max_zt + dz * max_e)) *
-            inv_det.abs();
+        let dt =
+            3.0 * ((fp_gamma(3) * max_e * max_zt) + (de * max_zt + dz * max_e)) * inv_det.abs();
 
         // Finally, do the check
         if t <= dt {
@@ -133,12 +132,13 @@ pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32,
 ///
 /// Returns the point and the error magnitude of the point.
 pub fn surface_point(tri: (Point, Point, Point), bary: (f32, f32, f32)) -> (Point, f32) {
-    let pos = ((tri.0.into_vector() * bary.0) + (tri.1.into_vector() * bary.1) +
-                   (tri.2.into_vector() * bary.2))
+    let pos = ((tri.0.into_vector() * bary.0) + (tri.1.into_vector() * bary.1)
+        + (tri.2.into_vector() * bary.2))
         .into_point();
 
-    let pos_err = (((tri.0.into_vector().abs() * bary.0) + (tri.1.into_vector().abs() * bary.1) +
-                        (tri.2.into_vector().abs() * bary.2)) * fp_gamma(7)).co
+    let pos_err = (((tri.0.into_vector().abs() * bary.0) + (tri.1.into_vector().abs() * bary.1)
+        + (tri.2.into_vector().abs() * bary.2)) * fp_gamma(7))
+        .co
         .h_max();
 
     (pos, pos_err)

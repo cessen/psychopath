@@ -1,13 +1,12 @@
 #![allow(dead_code)]
 
 use std::cmp::PartialEq;
-use std::ops::{Add, Sub, Mul, Div, Neg};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use float4::Float4;
 
-use super::{DotProduct, CrossProduct};
+use super::{CrossProduct, DotProduct};
 use super::{Matrix4x4, Vector};
-
 
 /// A surface normal in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
@@ -18,7 +17,9 @@ pub struct Normal {
 impl Normal {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Normal {
-        Normal { co: Float4::new(x, y, z, 0.0) }
+        Normal {
+            co: Float4::new(x, y, z, 0.0),
+        }
     }
 
     #[inline(always)]
@@ -82,7 +83,6 @@ impl Normal {
     }
 }
 
-
 impl PartialEq for Normal {
     #[inline(always)]
     fn eq(&self, other: &Normal) -> bool {
@@ -90,33 +90,36 @@ impl PartialEq for Normal {
     }
 }
 
-
 impl Add for Normal {
     type Output = Normal;
 
     #[inline(always)]
     fn add(self, other: Normal) -> Normal {
-        Normal { co: self.co + other.co }
+        Normal {
+            co: self.co + other.co,
+        }
     }
 }
-
 
 impl Sub for Normal {
     type Output = Normal;
 
     #[inline(always)]
     fn sub(self, other: Normal) -> Normal {
-        Normal { co: self.co - other.co }
+        Normal {
+            co: self.co - other.co,
+        }
     }
 }
-
 
 impl Mul<f32> for Normal {
     type Output = Normal;
 
     #[inline(always)]
     fn mul(self, other: f32) -> Normal {
-        Normal { co: self.co * other }
+        Normal {
+            co: self.co * other,
+        }
     }
 }
 
@@ -137,16 +140,16 @@ impl Mul<Matrix4x4> for Normal {
     }
 }
 
-
 impl Div<f32> for Normal {
     type Output = Normal;
 
     #[inline(always)]
     fn div(self, other: f32) -> Normal {
-        Normal { co: self.co / other }
+        Normal {
+            co: self.co / other,
+        }
     }
 }
-
 
 impl Neg for Normal {
     type Output = Normal;
@@ -157,14 +160,12 @@ impl Neg for Normal {
     }
 }
 
-
 impl DotProduct for Normal {
     #[inline(always)]
     fn dot(self, other: Normal) -> f32 {
         (self.co * other.co).h_sum()
     }
 }
-
 
 impl CrossProduct for Normal {
     #[inline]
@@ -180,11 +181,10 @@ impl CrossProduct for Normal {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::{Matrix4x4, CrossProduct, DotProduct};
+    use super::super::{CrossProduct, DotProduct, Matrix4x4};
 
     #[test]
     fn add() {

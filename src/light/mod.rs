@@ -5,13 +5,12 @@ mod sphere_light;
 use std::fmt::Debug;
 
 use color::SpectralSample;
-use math::{Vector, Normal, Point, Matrix4x4};
+use math::{Matrix4x4, Normal, Point, Vector};
 use surface::Surface;
 
 pub use self::distant_disk_light::DistantDiskLight;
 pub use self::rectangle_light::RectangleLight;
 pub use self::sphere_light::SphereLight;
-
 
 /// A finite light source that can be bounded in space.
 pub trait SurfaceLight: Surface {
@@ -40,14 +39,12 @@ pub trait SurfaceLight: Surface {
         time: f32,
     ) -> (SpectralSample, (Point, Normal, f32), f32);
 
-
     /// Returns whether the light has a delta distribution.
     ///
     /// If a light has no chance of a ray hitting it through random process
     /// then it is a delta light source.  For example, point light sources,
     /// lights that only emit in a single direction, etc.
     fn is_delta(&self) -> bool;
-
 
     /// Returns an approximation of the total energy emitted by the surface.
     ///
@@ -56,7 +53,6 @@ pub trait SurfaceLight: Surface {
     /// sampling.
     fn approximate_energy(&self) -> f32;
 }
-
 
 /// An infinite light source that cannot be bounded in space.  E.g.
 /// a sun light source.
@@ -78,14 +74,12 @@ pub trait WorldLightSource: Debug + Sync {
         time: f32,
     ) -> (SpectralSample, Vector, f32);
 
-
     /// Returns whether the light has a delta distribution.
     ///
     /// If a light has no chance of a ray hitting it through random process
     /// then it is a delta light source.  For example, point light sources,
     /// lights that only emit in a single direction, etc.
     fn is_delta(&self) -> bool;
-
 
     /// Returns an approximation of the total energy emitted by the light
     /// source.

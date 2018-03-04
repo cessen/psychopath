@@ -5,8 +5,7 @@ use std::cmp;
 use std::cmp::Ordering;
 
 use hash::hash_u64;
-use lerp::{Lerp, lerp_slice};
-
+use lerp::{lerp_slice, Lerp};
 
 /// Selects an item from a slice based on a weighting function and a
 /// number (n) between 0.0 and 1.0.  Returns the index of the selected
@@ -32,7 +31,6 @@ where
 
     unreachable!()
 }
-
 
 /// Partitions a slice in-place with the given unary predicate, returning
 /// the index of the first element for which the predicate evaluates
@@ -129,7 +127,6 @@ where
     }
 }
 
-
 /// Partitions two slices in-place in concert based on the given unary
 /// predicate, returning the index of the first element for which the
 /// predicate evaluates false.
@@ -167,8 +164,7 @@ where
                     ((a1 as usize) - start) / std::mem::size_of::<A>(),
                     &mut *a1,
                     &mut *a2,
-                )
-                {
+                ) {
                     break;
                 }
                 a1 = a1.offset(1);
@@ -185,8 +181,7 @@ where
                     ((b1 as usize) - start) / std::mem::size_of::<A>(),
                     &mut *b1,
                     &mut *b2,
-                )
-                {
+                ) {
                     break;
                 }
             }
@@ -214,11 +209,10 @@ where
         let i = left + (hash_u64(right as u64, seed) as usize % (right - left));
 
         slc.swap(i, right - 1);
-        let ii = left +
-            {
-                let (val, list) = (&mut slc[left..right]).split_last_mut().unwrap();
-                partition(list, |n| order(n, val) == Ordering::Less)
-            };
+        let ii = left + {
+            let (val, list) = (&mut slc[left..right]).split_last_mut().unwrap();
+            partition(list, |n| order(n, val) == Ordering::Less)
+        };
         slc.swap(ii, right - 1);
 
         if ii == n {
@@ -276,12 +270,10 @@ where
     if slice1.is_empty() || slice2.is_empty() {
         return;
     } else if slice1.len() == slice2.len() {
-        for (xfo, (xf1, xf2)) in
-            Iterator::zip(
-                slice_out.iter_mut(),
-                Iterator::zip(slice1.iter(), slice2.iter()),
-            )
-        {
+        for (xfo, (xf1, xf2)) in Iterator::zip(
+            slice_out.iter_mut(),
+            Iterator::zip(slice1.iter(), slice2.iter()),
+        ) {
             *xfo = merge(xf1, xf2);
         }
     } else if slice1.len() > slice2.len() {
@@ -305,12 +297,14 @@ mod tests {
     use super::*;
 
     fn quick_select_ints(list: &mut [i32], i: usize) {
-        quick_select(list, i, |a, b| if a < b {
-            Ordering::Less
-        } else if a == b {
-            Ordering::Equal
-        } else {
-            Ordering::Greater
+        quick_select(list, i, |a, b| {
+            if a < b {
+                Ordering::Less
+            } else if a == b {
+                Ordering::Equal
+            } else {
+                Ordering::Greater
+            }
         });
     }
 

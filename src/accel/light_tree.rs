@@ -3,17 +3,16 @@ use mem_arena::MemArena;
 use algorithm::merge_slices_append;
 use bbox::BBox;
 use lerp::lerp_slice;
-use math::{Vector, Point, Normal};
+use math::{Normal, Point, Vector};
 use shading::surface_closure::SurfaceClosure;
 
 use super::LightAccel;
 use super::objects_split::sah_split;
 
 const ARITY_LOG2: usize = 3; // Determines how much to collapse the binary tree,
-// implicitly defining the light tree's arity.  1 = no collapsing, leave as binary
-// tree.
+                             // implicitly defining the light tree's arity.  1 = no collapsing, leave as binary
+                             // tree.
 const ARITY: usize = 1 << ARITY_LOG2; // Arity of the final tree
-
 
 #[derive(Copy, Clone, Debug)]
 pub struct LightTree<'a> {
@@ -38,15 +37,13 @@ enum Node<'a> {
 impl<'a> Node<'a> {
     fn bounds(&self) -> &'a [BBox] {
         match *self {
-            Node::Inner { bounds, .. } |
-            Node::Leaf { bounds, .. } => bounds,
+            Node::Inner { bounds, .. } | Node::Leaf { bounds, .. } => bounds,
         }
     }
 
     fn energy(&self) -> f32 {
         match *self {
-            Node::Inner { energy, .. } |
-            Node::Leaf { energy, .. } => energy,
+            Node::Inner { energy, .. } | Node::Leaf { energy, .. } => energy,
         }
     }
 
@@ -126,7 +123,6 @@ impl<'a> LightTree<'a> {
         }
     }
 }
-
 
 impl<'a> LightAccel for LightTree<'a> {
     fn select(
@@ -209,7 +205,6 @@ impl<'a> LightAccel for LightTree<'a> {
         }
     }
 }
-
 
 struct LightTreeBuilder {
     nodes: Vec<BuilderNode>,

@@ -15,7 +15,6 @@ use super::bvh_base::{BVHBase, BVHBaseNode, BVH_MAX_DEPTH};
 use super::ACCEL_TRAV_TIME;
 use super::ACCEL_NODE_RAY_TESTS;
 
-
 #[derive(Copy, Clone, Debug)]
 pub struct BVH<'a> {
     root: Option<&'a BVHNode<'a>>,
@@ -175,10 +174,8 @@ impl<'a> BVH<'a> {
             } => {
                 let mut node = unsafe { arena.alloc_uninitialized_with_alignment::<BVHNode>(32) };
 
-                let bounds = arena.copy_slice_with_alignment(
-                    &base.bounds[bounds_range.0..bounds_range.1],
-                    32,
-                );
+                let bounds = arena
+                    .copy_slice_with_alignment(&base.bounds[bounds_range.0..bounds_range.1], 32);
                 let child1 = BVH::construct_from_base(arena, base, children_indices.0);
                 let child2 = BVH::construct_from_base(arena, base, children_indices.1);
 
@@ -219,20 +216,18 @@ impl<'a> Boundable for BVH<'a> {
     fn bounds(&self) -> &[BBox] {
         match self.root {
             None => &DEGENERATE_BOUNDS[..],
-            Some(root) => {
-                match *root {
-                    BVHNode::Internal {
-                        bounds_start,
-                        bounds_len,
-                        ..
-                    } |
-                    BVHNode::Leaf {
-                        bounds_start,
-                        bounds_len,
-                        ..
-                    } => unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) },
+            Some(root) => match *root {
+                BVHNode::Internal {
+                    bounds_start,
+                    bounds_len,
+                    ..
                 }
-            }
+                | BVHNode::Leaf {
+                    bounds_start,
+                    bounds_len,
+                    ..
+                } => unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) },
+            },
         }
     }
 }

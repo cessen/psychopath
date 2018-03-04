@@ -3,10 +3,9 @@
 use std::f32::consts::PI as PI_32;
 
 use color::SpectralSample;
-use math::{Vector, Normal, dot, clamp, zup_to_vec};
+use math::{clamp, dot, zup_to_vec, Normal, Vector};
 use sampling::cosine_sample_hemisphere;
 use lerp::lerp;
-
 
 const INV_PI: f32 = 1.0 / PI_32;
 const H_PI: f32 = PI_32 / 2.0;
@@ -90,7 +89,6 @@ pub trait SurfaceClosure {
     ) -> f32;
 }
 
-
 /// Utility function that calculates the fresnel reflection factor of a given
 /// incoming ray against a surface with the given ior outside/inside ratio.
 ///
@@ -114,7 +112,6 @@ fn dielectric_fresnel(ior_ratio: f32, c: f32) -> f32 {
     0.5 * f3 * f6
 }
 
-
 /// Schlick's approximation of the fresnel reflection factor.
 ///
 /// Same interface as `dielectric_fresnel()`, above.
@@ -127,7 +124,6 @@ fn schlick_fresnel(ior_ratio: f32, c: f32) -> f32 {
 
     f2 + ((1.0 - f2) * c1 * c2 * c2)
 }
-
 
 /// Utility function that calculates the fresnel reflection factor of a given
 /// incoming ray against a surface with the given normal-reflectance factor.
@@ -154,7 +150,6 @@ fn dielectric_fresnel_from_fac(fresnel_fac: f32, c: f32) -> f32 {
     dielectric_fresnel(ior_ratio, c)
 }
 
-
 /// Schlick's approximation version of `dielectric_fresnel_from_fac()` above.
 #[allow(dead_code)]
 fn schlick_fresnel_from_fac(frensel_fac: f32, c: f32) -> f32 {
@@ -162,7 +157,6 @@ fn schlick_fresnel_from_fac(frensel_fac: f32, c: f32) -> f32 {
     let c2 = c1 * c1;
     frensel_fac + ((1.0 - frensel_fac) * c1 * c2 * c2)
 }
-
 
 /// Emit closure.
 ///
@@ -227,7 +221,6 @@ impl SurfaceClosure for EmitClosure {
         unimplemented!()
     }
 }
-
 
 /// Lambertian surface closure
 #[derive(Debug, Copy, Clone)]
@@ -368,7 +361,6 @@ impl SurfaceClosure for LambertClosure {
     }
 }
 
-
 /// The GTR microfacet BRDF from the Disney Principled BRDF paper.
 #[derive(Debug, Copy, Clone)]
 pub struct GTRClosure {
@@ -438,8 +430,8 @@ impl GTRClosure {
         let roughness2 = self.roughness * self.roughness;
 
         // Calculate top half of equation
-        let top = 1.0 -
-            ((roughness2.powf(1.0 - self.tail_shape) * (1.0 - u)) + u)
+        let top = 1.0
+            - ((roughness2.powf(1.0 - self.tail_shape) * (1.0 - u)) + u)
                 .powf(1.0 / (1.0 - self.tail_shape));
 
         // Calculate bottom half of equation
@@ -469,7 +461,6 @@ impl SurfaceClosure for GTRClosure {
     fn is_delta(&self) -> bool {
         self.roughness == 0.0
     }
-
 
     fn sample(
         &self,
@@ -504,7 +495,6 @@ impl SurfaceClosure for GTRClosure {
             (out, SpectralSample::new(0.0), 0.0)
         }
     }
-
 
     fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> SpectralSample {
         // Calculate needed vectors, normalized
@@ -605,7 +595,6 @@ impl SurfaceClosure for GTRClosure {
         }
     }
 
-
     fn sample_pdf(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> f32 {
         // Calculate needed vectors, normalized
         let aa = -inc.normalized(); // Vector pointing to where "in" came from
@@ -629,7 +618,6 @@ impl SurfaceClosure for GTRClosure {
 
         self.dist(nh, self.roughness) * INV_PI
     }
-
 
     fn estimate_eval_over_sphere_light(
         &self,

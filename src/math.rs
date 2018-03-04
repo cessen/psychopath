@@ -2,8 +2,7 @@
 
 use std::f32;
 
-pub use math3d::{Matrix4x4, Normal, Point, Vector, DotProduct, dot, CrossProduct, cross};
-
+pub use math3d::{cross, dot, CrossProduct, DotProduct, Matrix4x4, Normal, Point, Vector};
 
 /// Clamps a value between a min and max.
 pub fn clamp<T: PartialOrd>(v: T, lower: T, upper: T) -> T {
@@ -18,12 +17,20 @@ pub fn clamp<T: PartialOrd>(v: T, lower: T, upper: T) -> T {
 
 // The stdlib min function is slower than a simple if statement for some reason.
 pub fn fast_minf32(a: f32, b: f32) -> f32 {
-    if a < b { a } else { b }
+    if a < b {
+        a
+    } else {
+        b
+    }
 }
 
 // The stdlib max function is slower than a simple if statement for some reason.
 pub fn fast_maxf32(a: f32, b: f32) -> f32 {
-    if a > b { a } else { b }
+    if a > b {
+        a
+    } else {
+        b
+    }
 }
 
 /// Rounds an integer up to the next power of two.
@@ -119,7 +126,6 @@ pub fn fast_logit(p: f32, width: f32) -> f32 {
     fast_ln(n / (1.0 - n)) * width * (0.6266 / 4.0)
 }
 
-
 //----------------------------------------------------------------
 // Adapted to Rust from https://code.google.com/archive/p/fastapprox/
 
@@ -139,9 +145,9 @@ pub fn fast_pow2(p: f32) -> f32 {
     let w: i32 = clipp as i32;
     let z: f32 = clipp - w as f32 + offset;
 
-    let i: u32 = ((1 << 23) as f32 *
-                      (clipp + 121.2740575 + 27.7280233 / (4.84252568 - z) - 1.49012907 * z)) as
-        u32;
+    let i: u32 = ((1 << 23) as f32
+        * (clipp + 121.2740575 + 27.7280233 / (4.84252568 - z) - 1.49012907 * z))
+        as u32;
 
     unsafe { transmute_copy::<u32, f32>(&i) }
 }
@@ -177,10 +183,8 @@ pub fn faster_exp(p: f32) -> f32 {
     faster_pow2(f32::consts::LOG2_E * p)
 }
 
-
 // End of adapted code
 //----------------------------------------------------------------
-
 
 #[cfg(test)]
 mod tests {

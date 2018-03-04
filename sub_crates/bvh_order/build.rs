@@ -34,10 +34,8 @@ fn main() {
                         perm.swap(0, 2);
                         perm.swap(1, 3);
                     }
-                    traversal_table[raydir].push(
-                        perm[0] + (perm[1] << 2) + (perm[2] << 4) +
-                            (perm[3] << 6),
-                    );
+                    traversal_table[raydir]
+                        .push(perm[0] + (perm[1] << 2) + (perm[2] << 4) + (perm[3] << 6));
                 }
             }
         }

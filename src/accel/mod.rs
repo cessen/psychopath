@@ -7,10 +7,10 @@ mod objects_split;
 
 use std::cell::Cell;
 
-use math::{Vector, Point, Normal};
+use math::{Normal, Point, Vector};
 use shading::surface_closure::SurfaceClosure;
 
-pub use self::bvh::{BVH, BVHNode};
+pub use self::bvh::{BVHNode, BVH};
 pub use self::bvh4::{BVH4, BVH4Node};
 pub use self::light_tree::LightTree;
 pub use self::light_array::LightArray;

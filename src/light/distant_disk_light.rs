@@ -2,9 +2,9 @@ use std::f64::consts::PI as PI_64;
 
 use mem_arena::MemArena;
 
-use color::{XYZ, SpectralSample, Color};
+use color::{Color, SpectralSample, XYZ};
 use lerp::lerp_slice;
-use math::{Vector, coordinate_system_from_vector};
+use math::{coordinate_system_from_vector, Vector};
 use sampling::{uniform_sample_cone, uniform_sample_cone_pdf};
 
 use super::WorldLightSource;
@@ -87,10 +87,10 @@ impl<'a> WorldLightSource for DistantDiskLight<'a> {
     }
 
     fn approximate_energy(&self) -> f32 {
-        let color: XYZ = self.colors.iter().fold(
-            XYZ::new(0.0, 0.0, 0.0),
-            |a, &b| a + b,
-        ) / self.colors.len() as f32;
+        let color: XYZ = self.colors
+            .iter()
+            .fold(XYZ::new(0.0, 0.0, 0.0), |a, &b| a + b)
+            / self.colors.len() as f32;
         color.y
     }
 }

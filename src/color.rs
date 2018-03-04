@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Mul, MulAssign, Div, DivAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
 
 use spectra_xyz::{spectrum_xyz_to_p, EQUAL_ENERGY_REFLECTANCE};
 
@@ -6,8 +6,7 @@ use float4::Float4;
 use lerp::Lerp;
 use math::fast_exp;
 
-pub use color_util::{xyz_to_rec709, xyz_to_rec709_e, rec709_to_xyz, rec709_e_to_xyz};
-
+pub use color_util::{rec709_e_to_xyz, rec709_to_xyz, xyz_to_rec709, xyz_to_rec709_e};
 
 // Minimum and maximum wavelength of light we care about, in nanometers
 const WL_MIN: f32 = 380.0;
@@ -38,7 +37,11 @@ pub trait Color {
 
 fn nth_wavelength(hero_wavelength: f32, n: usize) -> f32 {
     let wl = hero_wavelength + (WL_RANGE_Q * n as f32);
-    if wl > WL_MAX { wl - WL_RANGE } else { wl }
+    if wl > WL_MAX {
+        wl - WL_RANGE
+    } else {
+        wl
+    }
 }
 
 //----------------------------------------------------------------
@@ -78,7 +81,11 @@ impl SpectralSample {
     /// Returns the nth wavelength
     fn wl_n(&self, n: usize) -> f32 {
         let wl = self.hero_wavelength + (WL_RANGE_Q * n as f32);
-        if wl > WL_MAX { wl - WL_RANGE } else { wl }
+        if wl > WL_MAX {
+            wl - WL_RANGE
+        } else {
+            wl
+        }
     }
 }
 
@@ -278,8 +285,8 @@ pub fn x_1931(wavelength: f32) -> f32 {
     let t1 = (wavelength - 442.0) * (if wavelength < 442.0 { 0.0624 } else { 0.0374 });
     let t2 = (wavelength - 599.8) * (if wavelength < 599.8 { 0.0264 } else { 0.0323 });
     let t3 = (wavelength - 501.1) * (if wavelength < 501.1 { 0.0490 } else { 0.0382 });
-    (0.362 * fast_exp(-0.5 * t1 * t1)) + (1.056 * fast_exp(-0.5 * t2 * t2)) -
-        (0.065 * fast_exp(-0.5 * t3 * t3))
+    (0.362 * fast_exp(-0.5 * t1 * t1)) + (1.056 * fast_exp(-0.5 * t2 * t2))
+        - (0.065 * fast_exp(-0.5 * t3 * t3))
 }
 
 pub fn y_1931(wavelength: f32) -> f32 {

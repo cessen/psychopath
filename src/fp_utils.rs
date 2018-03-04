@@ -3,7 +3,7 @@
 //! This is based on the work in section 3.9 of "Physically Based Rendering:
 //! From Theory to Implementation" 3rd edition by Pharr et al.
 
-use math::{Point, Vector, Normal, dot};
+use math::{dot, Normal, Point, Vector};
 
 #[inline(always)]
 pub fn fp_gamma(n: u32) -> f32 {
@@ -11,7 +11,6 @@ pub fn fp_gamma(n: u32) -> f32 {
     let e = EPSILON * 0.5;
     (e * n as f32) / (1.0 - (e * n as f32))
 }
-
 
 pub fn increment_ulp(v: f32) -> f32 {
     // Handle special cases
@@ -29,7 +28,6 @@ pub fn increment_ulp(v: f32) -> f32 {
         bits_to_f32(f32_to_bits(v) - 1)
     }
 }
-
 
 pub fn decrement_ulp(v: f32) -> f32 {
     // Handle special cases
@@ -53,7 +51,11 @@ pub fn robust_ray_origin(pos: Point, pos_err: f32, nor: Normal, ray_dir: Vector)
     // direction as ray_dir.
     let nor = {
         let nor = nor.into_vector();
-        if dot(nor, ray_dir) >= 0.0 { nor } else { -nor }
+        if dot(nor, ray_dir) >= 0.0 {
+            nor
+        } else {
+            -nor
+        }
     };
 
     // Calculate offset point
@@ -83,7 +85,6 @@ pub fn robust_ray_origin(pos: Point, pos_err: f32, nor: Normal, ray_dir: Vector)
     Point::new(x, y, z)
 }
 
-
 #[inline(always)]
 fn f32_to_bits(v: f32) -> u32 {
     use std::mem::transmute_copy;
@@ -95,7 +96,6 @@ fn bits_to_f32(bits: u32) -> f32 {
     use std::mem::transmute_copy;
     unsafe { transmute_copy::<u32, f32>(&bits) }
 }
-
 
 #[cfg(test)]
 mod tests {

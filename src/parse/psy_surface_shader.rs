@@ -6,13 +6,12 @@ use nom::IResult;
 
 use mem_arena::MemArena;
 
-use color::{XYZ, rec709_e_to_xyz};
-use shading::{SurfaceShader, SimpleSurfaceShader};
+use color::{rec709_e_to_xyz, XYZ};
+use shading::{SimpleSurfaceShader, SurfaceShader};
 
 use super::basics::ws_f32;
 use super::DataTree;
 use super::psy::PsyParseError;
-
 
 // pub struct TriangleMesh {
 //    time_samples: usize,

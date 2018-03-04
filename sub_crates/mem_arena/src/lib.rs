@@ -1,6 +1,6 @@
 use std::slice;
 use std::cell::{Cell, RefCell};
-use std::mem::{size_of, align_of};
+use std::mem::{align_of, size_of};
 use std::cmp::max;
 
 const GROWTH_FRACTION: usize = 8; // 1/N  (smaller number leads to bigger allocations)
@@ -261,10 +261,8 @@ impl MemArena {
     unsafe fn alloc_raw(&self, size: usize, alignment: usize) -> *mut u8 {
         assert!(alignment > 0);
 
-        self.stat_space_allocated.set(
-            self.stat_space_allocated.get() +
-                size,
-        ); // Update stats
+        self.stat_space_allocated
+            .set(self.stat_space_allocated.get() + size); // Update stats
 
         let mut blocks = self.blocks.borrow_mut();
 
@@ -302,21 +300,22 @@ impl MemArena {
                 };
 
                 let waste_percentage = {
-                    let w1 = ((blocks[0].capacity() - blocks[0].len()) * 100) /
-                        blocks[0].capacity();
-                    let w2 = ((self.stat_space_occupied.get() - self.stat_space_allocated.get()) *
-                                  100) /
-                        self.stat_space_occupied.get();
-                    if w1 < w2 { w1 } else { w2 }
+                    let w1 =
+                        ((blocks[0].capacity() - blocks[0].len()) * 100) / blocks[0].capacity();
+                    let w2 = ((self.stat_space_occupied.get() - self.stat_space_allocated.get())
+                        * 100) / self.stat_space_occupied.get();
+                    if w1 < w2 {
+                        w1
+                    } else {
+                        w2
+                    }
                 };
 
                 // If it's a "large allocation", give it its own memory block.
                 if (size + alignment) > next_size || waste_percentage > self.max_waste_percentage {
                     // Update stats
-                    self.stat_space_occupied.set(
-                        self.stat_space_occupied.get() + size + alignment -
-                            1,
-                    );
+                    self.stat_space_occupied
+                        .set(self.stat_space_occupied.get() + size + alignment - 1);
 
                     blocks.push(Vec::with_capacity(size + alignment - 1));
                     blocks.last_mut().unwrap().set_len(size + alignment - 1);
@@ -330,10 +329,8 @@ impl MemArena {
                 // Otherwise create a new shared block.
                 else {
                     // Update stats
-                    self.stat_space_occupied.set(
-                        self.stat_space_occupied.get() +
-                            next_size,
-                    );
+                    self.stat_space_occupied
+                        .set(self.stat_space_occupied.get() + next_size);
 
                     blocks.push(Vec::with_capacity(next_size));
                     let block_count = blocks.len();

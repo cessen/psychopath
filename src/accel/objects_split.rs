@@ -8,13 +8,11 @@ use halton;
 use algorithm::{partition, quick_select};
 use bbox::BBox;
 use lerp::lerp_slice;
-use math::{Vector, dot};
+use math::{dot, Vector};
 use sampling::uniform_sample_hemisphere;
-
 
 const SAH_BIN_COUNT: usize = 13; // Prime numbers work best, for some reason
 const SPLIT_PLANE_COUNT: usize = 5;
-
 
 /// Takes a slice of boundable objects and partitions them based on the Surface
 /// Area Heuristic, but using arbitrarily oriented planes.
@@ -66,8 +64,8 @@ where
 
     // Build SAH bins
     let sah_bins = {
-        let mut sah_bins = [[(BBox::new(), BBox::new(), 0, 0); SAH_BIN_COUNT - 1];
-            SPLIT_PLANE_COUNT];
+        let mut sah_bins =
+            [[(BBox::new(), BBox::new(), 0, 0); SAH_BIN_COUNT - 1]; SPLIT_PLANE_COUNT];
         for obj in objects.iter() {
             let tb = lerp_slice(bounder(obj), 0.5);
             let centroid = tb.center().into_vector();
@@ -147,7 +145,6 @@ where
 
     (split_i, approx_axis)
 }
-
 
 /// Takes a slice of boundable objects and partitions them based on the Surface
 /// Area Heuristic.
@@ -288,7 +285,6 @@ where
     (split_i, split_axis)
 }
 
-
 /// Takes a slice of boundable objects and partitions them based on the median heuristic.
 ///
 /// Returns the index of the partition boundary and the axis that it split on
@@ -321,7 +317,11 @@ where
 
     let place = {
         let place = objects.len() / 2;
-        if place > 0 { place } else { 1 }
+        if place > 0 {
+            place
+        } else {
+            1
+        }
     };
     quick_select(objects, place, |a, b| {
         let tb_a = lerp_slice(bounder(a), 0.5);

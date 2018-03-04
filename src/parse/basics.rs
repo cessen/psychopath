@@ -3,9 +3,8 @@
 
 use std::str;
 
-use nom::{IResult, Needed, digit, multispace};
+use nom::{digit, multispace, IResult, Needed};
 use nom::IResult::*;
-
 
 // Parsers for numbers surrounded by whitespace
 named!(pub ws_u32<u32>, delimited!(opt!(multispace), u32_utf8, opt!(multispace)));
@@ -16,9 +15,6 @@ named!(pub ws_i64<i64>, delimited!(opt!(multispace), i64_utf8, opt!(multispace))
 named!(pub ws_isize<isize>, delimited!(opt!(multispace), isize_utf8, opt!(multispace)));
 named!(pub ws_f32<f32>, delimited!(opt!(multispace), f32_utf8, opt!(multispace)));
 named!(pub ws_f64<f64>, delimited!(opt!(multispace), f64_utf8, opt!(multispace)));
-
-
-
 
 // ========================================================
 
@@ -130,9 +126,6 @@ fn take_decimal_real(i: &[u8]) -> IResult<&[u8], &[u8]> {
         Incomplete(e) => Incomplete(e),
     }
 }
-
-
-
 
 // ========================================================
 

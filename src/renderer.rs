@@ -3,16 +3,16 @@ use std::cell::Cell;
 use std::cmp;
 use std::cmp::min;
 use std::io::{self, Write};
-use std::sync::{RwLock, Mutex};
+use std::sync::{Mutex, RwLock};
 
 use crossbeam::sync::MsQueue;
 use scoped_threadpool::Pool;
 
 use halton;
 
-use accel::{ACCEL_TRAV_TIME, ACCEL_NODE_RAY_TESTS};
+use accel::{ACCEL_NODE_RAY_TESTS, ACCEL_TRAV_TIME};
 use algorithm::partition_pair;
-use color::{Color, XYZ, SpectralSample, map_0_1_to_wavelength};
+use color::{Color, SpectralSample, map_0_1_to_wavelength, XYZ};
 use float4::Float4;
 use fp_utils::robust_ray_origin;
 use hash::hash_u32;
@@ -26,7 +26,6 @@ use surface;
 use timer::Timer;
 use tracer::Tracer;
 use transform_stack::TransformStack;
-
 
 #[derive(Debug)]
 pub struct Renderer<'a> {
@@ -184,9 +183,7 @@ impl<'a> Renderer<'a> {
         });
 
         // Clear percentage progress print
-        print!(
-            "\r                \r",
-        );
+        print!("\r                \r",);
 
         // Return the rendered image and stats
         return (image, *collective_stats.read().unwrap());
@@ -353,7 +350,6 @@ impl<'a> Renderer<'a> {
     }
 }
 
-
 #[derive(Debug)]
 enum LightPathEvent {
     CameraRay,
@@ -410,7 +406,6 @@ impl LightPath {
                 pending_color_addition: Float4::splat(0.0),
                 color: Float4::splat(0.0),
             },
-
             scene.camera.generate_ray(
                 image_plane_co.0,
                 image_plane_co.1,
@@ -438,8 +433,7 @@ impl LightPath {
         match self.event {
             //--------------------------------------------------------------------
             // Result of Camera or bounce ray, prepare next bounce and light rays
-            LightPathEvent::CameraRay |
-            LightPathEvent::BounceRay => {
+            LightPathEvent::CameraRay | LightPathEvent::BounceRay => {
                 if let surface::SurfaceIntersection::Hit {
                     intersection_data: ref idata,
                     ref closure,
@@ -482,8 +476,8 @@ impl LightPath {
                         self.time,
                         isect,
                     );
-                    let found_light = if light_info.is_none() || light_info.pdf() <= 0.0 ||
-                        light_info.selection_pdf() <= 0.0
+                    let found_light = if light_info.is_none() || light_info.pdf() <= 0.0
+                        || light_info.selection_pdf() <= 0.0
                     {
                         false
                     } else {
@@ -564,9 +558,9 @@ impl LightPath {
                             // Calculate and store the light that will be contributed
                             // to the film plane if the light is not in shadow.
                             let light_mis_pdf = power_heuristic(light_pdf, closure_pdf);
-                            self.pending_color_addition = light_info.color().e * attenuation.e *
-                                self.light_attenuation /
-                                (light_mis_pdf * light_sel_pdf);
+                            self.pending_color_addition = light_info.color().e * attenuation.e
+                                * self.light_attenuation
+                                / (light_mis_pdf * light_sel_pdf);
 
                             *ray = shadow_ray;
 
@@ -630,8 +624,8 @@ impl LightPath {
                         .world
                         .background_color
                         .to_spectral_sample(self.wavelength)
-                        .e * self.light_attenuation /
-                        self.closure_sample_pdf;
+                        .e * self.light_attenuation
+                        / self.closure_sample_pdf;
                     return false;
                 }
             }
@@ -671,7 +665,6 @@ fn get_sample(dimension: u32, i: u32) -> f32 {
         hash_u32_to_f32(dimension, i)
     }
 }
-
 
 #[derive(Debug)]
 struct BucketJob {

@@ -2,13 +2,12 @@ use std::iter;
 
 use algorithm::partition;
 use lerp::lerp_slice;
-use ray::{Ray, AccelRay};
-use scene::{Assembly, Object, InstanceType};
+use ray::{AccelRay, Ray};
+use scene::{Assembly, InstanceType, Object};
 use surface::SurfaceIntersection;
 use transform_stack::TransformStack;
-use shading::{SurfaceShader, SimpleSurfaceShader};
-use color::{XYZ, rec709_to_xyz};
-
+use shading::{SimpleSurfaceShader, SurfaceShader};
+use color::{rec709_to_xyz, XYZ};
 
 pub struct Tracer<'a> {
     rays: Vec<AccelRay>,
@@ -31,9 +30,11 @@ impl<'a> Tracer<'a> {
         self.rays.clear();
         self.rays.reserve(wrays.len());
         let mut ids = 0..(wrays.len() as u32);
-        self.rays.extend(wrays.iter().map(
-            |wr| AccelRay::new(wr, ids.next().unwrap()),
-        ));
+        self.rays.extend(
+            wrays
+                .iter()
+                .map(|wr| AccelRay::new(wr, ids.next().unwrap())),
+        );
 
         self.inner.trace(wrays, &mut self.rays[..])
     }
@@ -50,12 +51,8 @@ impl<'a> TracerInner<'a> {
         // Ready the isects
         self.isects.clear();
         self.isects.reserve(wrays.len());
-        self.isects.extend(
-            iter::repeat(SurfaceIntersection::Miss).take(
-                wrays
-                    .len(),
-            ),
-        );
+        self.isects
+            .extend(iter::repeat(SurfaceIntersection::Miss).take(wrays.len()));
 
         let mut ray_sets = split_rays_by_direction(&mut rays[..]);
         for ray_set in ray_sets.iter_mut().filter(|ray_set| !ray_set.is_empty()) {
@@ -71,10 +68,9 @@ impl<'a> TracerInner<'a> {
         wrays: &[Ray],
         accel_rays: &mut [AccelRay],
     ) {
-        assembly.object_accel.traverse(
-            &mut accel_rays[..],
-            &assembly.instances[..],
-            |inst, rs| {
+        assembly
+            .object_accel
+            .traverse(&mut accel_rays[..], &assembly.instances[..], |inst, rs| {
                 // Transform rays if needed
                 if let Some((xstart, xend)) = inst.transform_indices {
                     // Push transforms to stack
@@ -130,9 +126,8 @@ impl<'a> TracerInner<'a> {
                             InstanceType::Object => {
                                 self.trace_object(
                                     &assembly.objects[inst.data_index],
-                                    inst.surface_shader_index.map(
-                                        |i| assembly.surface_shaders[i],
-                                    ),
+                                    inst.surface_shader_index
+                                        .map(|i| assembly.surface_shaders[i]),
                                     wrays,
                                     ray_set,
                                 );
@@ -172,8 +167,7 @@ impl<'a> TracerInner<'a> {
                         }
                     }
                 }
-            },
-        );
+            });
     }
 
     fn trace_object<'b>(
@@ -216,7 +210,6 @@ impl<'a> TracerInner<'a> {
         }
     }
 }
-
 
 fn split_rays_by_direction(rays: &mut [AccelRay]) -> [&mut [AccelRay]; 8] {
     // |   |   |   |   |   |   |   |   |

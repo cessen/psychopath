@@ -27,7 +27,6 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-
 /// How many components to generate.
 const NUM_DIMENSIONS: usize = 128;
 
@@ -111,8 +110,7 @@ pub fn sample(dimension: u32, index: u32) -> f32 {{
             format!(
                 r#"
         {} => halton{}(index),"#,
-                i,
-                primes[i]
+                i, primes[i]
             ).as_bytes(),
         ).unwrap();
     }
@@ -126,7 +124,6 @@ pub fn sample(dimension: u32, index: u32) -> f32 {{
     "#
         ).as_bytes(),
     ).unwrap();
-
 
     // Write the special-cased first dimension
     f.write_all(
@@ -196,9 +193,7 @@ fn halton{}(index: u32) -> f32 {{
             format!(
                 r#"
     return (unsafe{{*PERM{}.get_unchecked((index % {}) as usize)}} as u32 * {} +"#,
-                base,
-                pow_base,
-                power
+                base, pow_base, power
             ).as_bytes(),
         ).unwrap();;
 
@@ -211,10 +206,7 @@ fn halton{}(index: u32) -> f32 {{
                 format!(
                     r#"
             unsafe{{*PERM{}.get_unchecked(((index / {}) % {}) as usize)}} as u32 * {} +"#,
-                    base,
-                    div,
-                    pow_base,
-                    power
+                    base, div, pow_base, power
                 ).as_bytes(),
             ).unwrap();;
         }
@@ -234,7 +226,6 @@ fn halton{}(index: u32) -> f32 {{
         ).unwrap();;
     }
 }
-
 
 /// Check primality. Not optimized, since it's not performance-critical.
 fn is_prime(p: usize) -> bool {
@@ -271,10 +262,12 @@ fn get_faure_permutation(faure: &Vec<Vec<usize>>, b: usize) -> Vec<usize> {
         let c = b / 2;
 
         return (0..b)
-            .map(|i| if i < c {
-                2 * faure[c][i]
-            } else {
-                2 * faure[c][i - c] + 1
+            .map(|i| {
+                if i < c {
+                    2 * faure[c][i]
+                } else {
+                    2 * faure[c][i - c] + 1
+                }
             })
             .collect();
     }

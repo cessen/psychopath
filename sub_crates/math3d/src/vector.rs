@@ -1,13 +1,12 @@
 #![allow(dead_code)]
 
 use std::cmp::PartialEq;
-use std::ops::{Add, Sub, Mul, Div, Neg};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use float4::Float4;
 
-use super::{DotProduct, CrossProduct};
-use super::{Matrix4x4, Point, Normal};
-
+use super::{CrossProduct, DotProduct};
+use super::{Matrix4x4, Normal, Point};
 
 /// A direction vector in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
@@ -18,7 +17,9 @@ pub struct Vector {
 impl Vector {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Vector {
-        Vector { co: Float4::new(x, y, z, 0.0) }
+        Vector {
+            co: Float4::new(x, y, z, 0.0),
+        }
     }
 
     #[inline(always)]
@@ -92,7 +93,6 @@ impl Vector {
     }
 }
 
-
 impl PartialEq for Vector {
     #[inline(always)]
     fn eq(&self, other: &Vector) -> bool {
@@ -100,36 +100,38 @@ impl PartialEq for Vector {
     }
 }
 
-
 impl Add for Vector {
     type Output = Vector;
 
     #[inline(always)]
     fn add(self, other: Vector) -> Vector {
-        Vector { co: self.co + other.co }
+        Vector {
+            co: self.co + other.co,
+        }
     }
 }
-
 
 impl Sub for Vector {
     type Output = Vector;
 
     #[inline(always)]
     fn sub(self, other: Vector) -> Vector {
-        Vector { co: self.co - other.co }
+        Vector {
+            co: self.co - other.co,
+        }
     }
 }
-
 
 impl Mul<f32> for Vector {
     type Output = Vector;
 
     #[inline(always)]
     fn mul(self, other: f32) -> Vector {
-        Vector { co: self.co * other }
+        Vector {
+            co: self.co * other,
+        }
     }
 }
-
 
 impl Mul<Matrix4x4> for Vector {
     type Output = Vector;
@@ -147,16 +149,16 @@ impl Mul<Matrix4x4> for Vector {
     }
 }
 
-
 impl Div<f32> for Vector {
     type Output = Vector;
 
     #[inline(always)]
     fn div(self, other: f32) -> Vector {
-        Vector { co: self.co / other }
+        Vector {
+            co: self.co / other,
+        }
     }
 }
-
 
 impl Neg for Vector {
     type Output = Vector;
@@ -167,14 +169,12 @@ impl Neg for Vector {
     }
 }
 
-
 impl DotProduct for Vector {
     #[inline(always)]
     fn dot(self, other: Vector) -> f32 {
         (self.co * other.co).h_sum()
     }
 }
-
 
 impl CrossProduct for Vector {
     #[inline]
@@ -190,11 +190,10 @@ impl CrossProduct for Vector {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::{Matrix4x4, CrossProduct, DotProduct};
+    use super::super::{CrossProduct, DotProduct, Matrix4x4};
 
     #[test]
     fn add() {

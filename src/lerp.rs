@@ -8,7 +8,6 @@ pub trait Lerp {
     fn lerp(self, other: Self, alpha: f32) -> Self;
 }
 
-
 /// Interpolates between two instances of a Lerp types.
 pub fn lerp<T: Lerp>(a: T, b: T, alpha: f32) -> T {
     debug_assert!(alpha >= 0.0);
@@ -16,7 +15,6 @@ pub fn lerp<T: Lerp>(a: T, b: T, alpha: f32) -> T {
 
     a.lerp(b, alpha)
 }
-
 
 /// Interpolates a slice of data as if each adjecent pair of elements
 /// represent a linear segment.
@@ -57,7 +55,6 @@ where
         f(s[i1], s[i2], alpha2)
     }
 }
-
 
 impl Lerp for f32 {
     fn lerp(self, other: f32, alpha: f32) -> f32 {
@@ -103,22 +100,21 @@ impl Lerp for Normal {
     }
 }
 
-
 impl Lerp for Point {
     fn lerp(self, other: Point, alpha: f32) -> Point {
         let s = self.norm();
         let o = other.norm();
-        Point { co: (s.co * (1.0 - alpha)) + (o.co * alpha) }
+        Point {
+            co: (s.co * (1.0 - alpha)) + (o.co * alpha),
+        }
     }
 }
-
 
 impl Lerp for Vector {
     fn lerp(self, other: Vector, alpha: f32) -> Vector {
         (self * (1.0 - alpha)) + (other * alpha)
     }
 }
-
 
 #[cfg(test)]
 mod tests {

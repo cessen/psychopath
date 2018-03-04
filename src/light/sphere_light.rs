@@ -4,12 +4,12 @@ use mem_arena::MemArena;
 
 use bbox::BBox;
 use boundable::Boundable;
-use color::{XYZ, SpectralSample, Color};
+use color::{Color, SpectralSample, XYZ};
 use lerp::lerp_slice;
-use math::{Vector, Normal, Point, Matrix4x4, dot, coordinate_system_from_vector};
-use ray::{Ray, AccelRay};
+use math::{coordinate_system_from_vector, dot, Matrix4x4, Normal, Point, Vector};
+use ray::{AccelRay, Ray};
 use sampling::{uniform_sample_cone, uniform_sample_cone_pdf, uniform_sample_sphere};
-use shading::surface_closure::{SurfaceClosureUnion, EmitClosure};
+use shading::surface_closure::{EmitClosure, SurfaceClosureUnion};
 use shading::SurfaceShader;
 use surface::{Surface, SurfaceIntersection, SurfaceIntersectionData};
 
@@ -32,11 +32,9 @@ impl<'a> SphereLight<'a> {
     pub fn new<'b>(arena: &'b MemArena, radii: Vec<f32>, colors: Vec<XYZ>) -> SphereLight<'b> {
         let bbs: Vec<_> = radii
             .iter()
-            .map(|r| {
-                BBox {
-                    min: Point::new(-*r, -*r, -*r),
-                    max: Point::new(*r, *r, *r),
-                }
+            .map(|r| BBox {
+                min: Point::new(-*r, -*r, -*r),
+                max: Point::new(*r, *r, *r),
             })
             .collect();
         SphereLight {
@@ -80,7 +78,6 @@ impl<'a> SphereLight<'a> {
         }
     }
 }
-
 
 impl<'a> SurfaceLight for SphereLight<'a> {
     fn sample_from_point(
@@ -197,14 +194,13 @@ impl<'a> SurfaceLight for SphereLight<'a> {
     }
 
     fn approximate_energy(&self) -> f32 {
-        let color: XYZ = self.colors.iter().fold(
-            XYZ::new(0.0, 0.0, 0.0),
-            |a, &b| a + b,
-        ) / self.colors.len() as f32;
+        let color: XYZ = self.colors
+            .iter()
+            .fold(XYZ::new(0.0, 0.0, 0.0), |a, &b| a + b)
+            / self.colors.len() as f32;
         color.y
     }
 }
-
 
 impl<'a> Surface for SphereLight<'a> {
     fn intersect_rays(
@@ -260,7 +256,8 @@ impl<'a> Surface for SphereLight<'a> {
 
             // Get our final parametric values
             let mut t0 = q / a;
-            let mut t1 = if q != 0.0 { c / q } else { r.max_t };
+            let mut t1 =
+                if q != 0.0 { c / q } else { r.max_t };
 
             // Swap them so they are ordered right
             if t0 > t1 {
@@ -323,11 +320,10 @@ impl<'a> Surface for SphereLight<'a> {
                 };
 
                 let closure = {
-                    let inv_surface_area = (1.0 / (4.0 * PI_64 * radius as f64 * radius as f64)) as
-                        f32;
-                    let color = lerp_slice(self.colors, r.time).to_spectral_sample(
-                        wr.wavelength,
-                    ) * inv_surface_area;
+                    let inv_surface_area =
+                        (1.0 / (4.0 * PI_64 * radius as f64 * radius as f64)) as f32;
+                    let color = lerp_slice(self.colors, r.time).to_spectral_sample(wr.wavelength)
+                        * inv_surface_area;
                     SurfaceClosureUnion::EmitClosure(EmitClosure::new(color))
                 };
 
@@ -343,7 +339,6 @@ impl<'a> Surface for SphereLight<'a> {
         }
     }
 }
-
 
 impl<'a> Boundable for SphereLight<'a> {
     fn bounds(&self) -> &[BBox] {

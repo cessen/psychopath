@@ -6,13 +6,12 @@ use nom::IResult;
 
 use mem_arena::MemArena;
 
-use math::{Point, Normal};
+use math::{Normal, Point};
 use surface::triangle_mesh::TriangleMesh;
 
 use super::basics::{ws_usize, ws_f32};
 use super::DataTree;
 use super::psy::PsyParseError;
-
 
 // pub struct TriangleMesh {
 //    time_samples: usize,
@@ -61,8 +60,7 @@ pub fn parse_mesh_surface<'a>(
 
         // Collect verts for this time sample
         let mut tnormals = Vec::new();
-        while let IResult::Done(remaining, nor) =
-            closure!(tuple!(ws_f32, ws_f32, ws_f32))(raw_text)
+        while let IResult::Done(remaining, nor) = closure!(tuple!(ws_f32, ws_f32, ws_f32))(raw_text)
         {
             raw_text = remaining;
 

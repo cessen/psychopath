@@ -5,7 +5,6 @@ use std::time::Duration;
 
 use time;
 
-
 #[derive(Copy, Clone)]
 pub struct Timer {
     last_time: u64,
@@ -13,7 +12,9 @@ pub struct Timer {
 
 impl Timer {
     pub fn new() -> Timer {
-        Timer { last_time: time::precise_time_ns() }
+        Timer {
+            last_time: time::precise_time_ns(),
+        }
     }
 
     /// Marks a new tick time and returns the time elapsed in seconds since

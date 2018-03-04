@@ -3,8 +3,7 @@
 use std;
 
 use float4::Float4;
-use math::{Vector, Point, Matrix4x4};
-
+use math::{Matrix4x4, Point, Vector};
 
 const OCCLUSION_FLAG: u32 = 1;
 const DONE_FLAG: u32 = 1 << 1;
@@ -52,7 +51,6 @@ impl Ray {
     }
 }
 
-
 #[derive(Debug, Copy, Clone)]
 pub struct AccelRay {
     pub orig: Point,
@@ -67,7 +65,9 @@ impl AccelRay {
     pub fn new(ray: &Ray, id: u32) -> AccelRay {
         AccelRay {
             orig: ray.orig,
-            dir_inv: Vector { co: Float4::new(1.0, 1.0, 1.0, 1.0) / ray.dir.co },
+            dir_inv: Vector {
+                co: Float4::new(1.0, 1.0, 1.0, 1.0) / ray.dir.co,
+            },
             max_t: ray.max_t,
             time: ray.time,
             flags: ray.flags,
@@ -77,12 +77,16 @@ impl AccelRay {
 
     pub fn update_from_world_ray(&mut self, wr: &Ray) {
         self.orig = wr.orig;
-        self.dir_inv = Vector { co: Float4::new(1.0, 1.0, 1.0, 1.0) / wr.dir.co };
+        self.dir_inv = Vector {
+            co: Float4::new(1.0, 1.0, 1.0, 1.0) / wr.dir.co,
+        };
     }
 
     pub fn update_from_xformed_world_ray(&mut self, wr: &Ray, mat: &Matrix4x4) {
         self.orig = wr.orig * *mat;
-        self.dir_inv = Vector { co: Float4::new(1.0, 1.0, 1.0, 1.0) / (wr.dir * *mat).co };
+        self.dir_inv = Vector {
+            co: Float4::new(1.0, 1.0, 1.0, 1.0) / (wr.dir * *mat).co,
+        };
     }
 
     pub fn is_occlusion(&self) -> bool {

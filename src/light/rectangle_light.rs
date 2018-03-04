@@ -2,21 +2,19 @@ use mem_arena::MemArena;
 
 use bbox::BBox;
 use boundable::Boundable;
-use color::{XYZ, SpectralSample, Color};
+use color::{Color, SpectralSample, XYZ};
 use lerp::lerp_slice;
-use math::{Vector, Normal, Point, Matrix4x4, cross, dot};
-use ray::{Ray, AccelRay};
-use sampling::{spherical_triangle_solid_angle, uniform_sample_spherical_triangle,
-               triangle_surface_area, uniform_sample_triangle};
-use shading::surface_closure::{SurfaceClosureUnion, EmitClosure};
+use math::{cross, dot, Matrix4x4, Normal, Point, Vector};
+use ray::{AccelRay, Ray};
+use sampling::{spherical_triangle_solid_angle, triangle_surface_area,
+               uniform_sample_spherical_triangle, uniform_sample_triangle};
+use shading::surface_closure::{EmitClosure, SurfaceClosureUnion};
 use shading::SurfaceShader;
-use surface::{Surface, SurfaceIntersection, SurfaceIntersectionData, triangle};
+use surface::{triangle, Surface, SurfaceIntersection, SurfaceIntersectionData};
 
 use super::SurfaceLight;
 
-
 const SIMPLE_SAMPLING_THRESHOLD: f32 = 0.01;
-
 
 #[derive(Copy, Clone, Debug)]
 pub struct RectangleLight<'a> {
@@ -33,11 +31,9 @@ impl<'a> RectangleLight<'a> {
     ) -> RectangleLight<'b> {
         let bbs: Vec<_> = dimensions
             .iter()
-            .map(|d| {
-                BBox {
-                    min: Point::new(d.0 * -0.5, d.1 * -0.5, 0.0),
-                    max: Point::new(d.0 * 0.5, d.1 * 0.5, 0.0),
-                }
+            .map(|d| BBox {
+                min: Point::new(d.0 * -0.5, d.1 * -0.5, 0.0),
+                max: Point::new(d.0 * 0.5, d.1 * 0.5, 0.0),
             })
             .collect();
         RectangleLight {
@@ -87,9 +83,9 @@ impl<'a> RectangleLight<'a> {
         // PDF
         if (area_1 + area_2) < SIMPLE_SAMPLING_THRESHOLD {
             let area = triangle_surface_area(p2, p1, p3) + triangle_surface_area(p4, p1, p3);
-            (hit_point - arr).length2() /
-                dot(sample_dir.normalized(), normal.into_vector().normalized()).abs() /
-                area
+            (hit_point - arr).length2()
+                / dot(sample_dir.normalized(), normal.into_vector().normalized()).abs()
+                / area
         } else {
             1.0 / (area_1 + area_2)
         }
@@ -188,9 +184,9 @@ impl<'a> SurfaceLight for RectangleLight<'a> {
             let shadow_vec = sample_point - arr;
             let spectral_sample =
                 (col * surface_area_inv as f32 * 0.5).to_spectral_sample(wavelength);
-            let pdf = (sample_point - arr).length2() /
-                dot(shadow_vec.normalized(), normal.into_vector().normalized()).abs() /
-                (surface_area_1 + surface_area_2);
+            let pdf = (sample_point - arr).length2()
+                / dot(shadow_vec.normalized(), normal.into_vector().normalized()).abs()
+                / (surface_area_1 + surface_area_2);
             let point_err = 0.0001; // TODO: this is a hack, do properly.
             (spectral_sample, (sample_point, normal, point_err), pdf)
         } else {
@@ -246,14 +242,13 @@ impl<'a> SurfaceLight for RectangleLight<'a> {
     }
 
     fn approximate_energy(&self) -> f32 {
-        let color: XYZ = self.colors.iter().fold(
-            XYZ::new(0.0, 0.0, 0.0),
-            |a, &b| a + b,
-        ) / self.colors.len() as f32;
+        let color: XYZ = self.colors
+            .iter()
+            .fold(XYZ::new(0.0, 0.0, 0.0), |a, &b| a + b)
+            / self.colors.len() as f32;
         color.y
     }
 }
-
 
 impl<'a> Surface for RectangleLight<'a> {
     fn intersect_rays(
@@ -313,9 +308,9 @@ impl<'a> Surface for RectangleLight<'a> {
 
                             let closure = {
                                 let inv_surface_area = (1.0 / (dim.0 as f64 * dim.1 as f64)) as f32;
-                                let color = lerp_slice(self.colors, r.time).to_spectral_sample(
-                                    wr.wavelength,
-                                ) * inv_surface_area;
+                                let color = lerp_slice(self.colors, r.time)
+                                    .to_spectral_sample(wr.wavelength)
+                                    * inv_surface_area;
                                 SurfaceClosureUnion::EmitClosure(EmitClosure::new(color))
                             };
 

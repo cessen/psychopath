@@ -4,8 +4,7 @@ use std::f32::consts::FRAC_PI_4 as QPI_32;
 use std::f32::consts::PI as PI_32;
 use std::f64::consts::PI as PI_64;
 
-use math::{Vector, Point, cross, dot};
-
+use math::{cross, dot, Point, Vector};
 
 /// Maps the unit square to the unit circle.
 /// NOTE: x and y should be distributed within [-1, 1],
@@ -194,8 +193,8 @@ pub fn uniform_sample_spherical_triangle(
     let q_bottom = ((v * s) + (u * t)) * sin_va;
     let q = q_top / q_bottom;
 
-    let vc_2 = (va * q as f32) +
-        ((vc - (va * dot(vc, va))).normalized() * (1.0 - (q * q)).sqrt() as f32);
+    let vc_2 =
+        (va * q as f32) + ((vc - (va * dot(vc, va))).normalized() * (1.0 - (q * q)).sqrt() as f32);
 
     let z = 1.0 - (j * (1.0 - dot(vc_2, vb)));
 

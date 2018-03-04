@@ -11,11 +11,10 @@ use lerp::lerp_slice;
 use ray::AccelRay;
 use timer::Timer;
 
-use bvh_order::{TRAVERSAL_TABLE, SplitAxes, calc_traversal_code};
+use bvh_order::{calc_traversal_code, SplitAxes, TRAVERSAL_TABLE};
 use super::bvh_base::{BVHBase, BVHBaseNode, BVH_MAX_DEPTH};
 use super::ACCEL_TRAV_TIME;
 use super::ACCEL_NODE_RAY_TESTS;
-
 
 #[derive(Copy, Clone, Debug)]
 pub struct BVH4<'a> {
@@ -88,8 +87,8 @@ impl<'a> BVH4<'a> {
                 rays[0].dir_inv.y() < 0.0,
                 rays[0].dir_inv.z() < 0.0,
             ];
-            let ray_code = ray_sign_is_neg[0] as usize + ((ray_sign_is_neg[1] as usize) << 1) +
-                ((ray_sign_is_neg[2] as usize) << 2);
+            let ray_code = ray_sign_is_neg[0] as usize + ((ray_sign_is_neg[1] as usize) << 1)
+                + ((ray_sign_is_neg[2] as usize) << 2);
             &TRAVERSAL_TABLE[ray_code]
         };
 
@@ -271,10 +270,8 @@ impl<'a> BVH4<'a> {
                 }
 
                 // Copy bounds
-                let bounds = arena.copy_slice_with_alignment(
-                    &base.bounds[bounds_range.0..bounds_range.1],
-                    32,
-                );
+                let bounds = arena
+                    .copy_slice_with_alignment(&base.bounds[bounds_range.0..bounds_range.1], 32);
 
                 // Build children
                 let mut children_mem = unsafe {
@@ -317,20 +314,18 @@ impl<'a> Boundable for BVH4<'a> {
     fn bounds(&self) -> &[BBox] {
         match self.root {
             None => &DEGENERATE_BOUNDS[..],
-            Some(root) => {
-                match *root {
-                    BVH4Node::Inner {
-                        bounds_start,
-                        bounds_len,
-                        ..
-                    } |
-                    BVH4Node::Leaf {
-                        bounds_start,
-                        bounds_len,
-                        ..
-                    } => unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) },
+            Some(root) => match *root {
+                BVH4Node::Inner {
+                    bounds_start,
+                    bounds_len,
+                    ..
                 }
-            }
+                | BVH4Node::Leaf {
+                    bounds_start,
+                    bounds_len,
+                    ..
+                } => unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) },
+            },
         }
     }
 }

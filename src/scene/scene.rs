@@ -2,13 +2,12 @@ use accel::LightAccel;
 use algorithm::weighted_choice;
 use camera::Camera;
 use color::SpectralSample;
-use math::{Vector, Normal, Point};
+use math::{Normal, Point, Vector};
 use surface::SurfaceIntersection;
 use transform_stack::TransformStack;
 
 use super::Assembly;
 use super::World;
-
 
 #[derive(Debug)]
 pub struct Scene<'a> {
@@ -35,9 +34,11 @@ impl<'a> Scene<'a> {
 
         // Calculate relative probabilities of traversing into world lights
         // or local lights.
-        let wl_energy = if self.world.lights.iter().fold(0.0, |energy, light| {
-            energy + light.approximate_energy()
-        }) <= 0.0
+        let wl_energy = if self.world
+            .lights
+            .iter()
+            .fold(0.0, |energy, light| energy + light.approximate_energy())
+            <= 0.0
         {
             0.0
         } else {
@@ -73,14 +74,8 @@ impl<'a> Scene<'a> {
                 let n = (n - wl_prob) / (1.0 - wl_prob);
 
                 if let Some((ss, sgeo, pdf, spdf)) =
-                    self.root.sample_lights(
-                        xform_stack,
-                        n,
-                        uvw,
-                        wavelength,
-                        time,
-                        intr,
-                    )
+                    self.root
+                        .sample_lights(xform_stack, n, uvw, wavelength, time, intr)
                 {
                     return SceneLightSample::Surface {
                         color: ss,
@@ -95,7 +90,6 @@ impl<'a> Scene<'a> {
         }
     }
 }
-
 
 #[derive(Debug, Copy, Clone)]
 pub enum SceneLightSample {
