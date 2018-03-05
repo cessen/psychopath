@@ -3,7 +3,6 @@
 use std::result::Result;
 use std::f32;
 
-use nom;
 use nom::IResult;
 
 use mem_arena::MemArena;
@@ -274,7 +273,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
                 } if type_name == "Resolution" =>
                 {
                     if let IResult::Done(_, (w, h)) =
-                        closure!(terminated!(tuple!(ws_u32, ws_u32), nom::eof))(contents.as_bytes())
+                        closure!(terminated!(tuple!(ws_u32, ws_u32), eof!()))(contents.as_bytes())
                     {
                         found_res = true;
                         res = (w, h);
@@ -583,7 +582,7 @@ pub fn parse_matrix(contents: &str) -> Result<Matrix4x4, PsyParseError> {
             ws_f32,
             ws_f32
         ),
-        nom::eof
+        eof!()
     ))(contents.as_bytes())
     {
         return Ok(Matrix4x4::new_from_values(

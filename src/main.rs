@@ -5,7 +5,6 @@
 #![cfg_attr(feature = "cargo-clippy", allow(needless_return))]
 #![cfg_attr(feature = "cargo-clippy", allow(or_fun_call))]
 #![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
-
 extern crate bvh_order;
 extern crate color as color_util;
 extern crate float4;

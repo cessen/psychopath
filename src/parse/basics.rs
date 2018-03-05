@@ -6,86 +6,103 @@ use std::str;
 use nom::{digit, multispace, IResult, Needed};
 use nom::IResult::*;
 
+// Consumes any whitespace, including zero whitespace
+named!(any_space<Option<&[u8]>>, opt!(complete!(multispace)));
+
 // Parsers for numbers surrounded by whitespace
-named!(pub ws_u32<u32>, delimited!(opt!(multispace), u32_utf8, opt!(multispace)));
-named!(pub ws_u64<u64>, delimited!(opt!(multispace), u64_utf8, opt!(multispace)));
-named!(pub ws_usize<usize>, delimited!(opt!(multispace), usize_utf8, opt!(multispace)));
-named!(pub ws_i32<i32>, delimited!(opt!(multispace), i32_utf8, opt!(multispace)));
-named!(pub ws_i64<i64>, delimited!(opt!(multispace), i64_utf8, opt!(multispace)));
-named!(pub ws_isize<isize>, delimited!(opt!(multispace), isize_utf8, opt!(multispace)));
-named!(pub ws_f32<f32>, delimited!(opt!(multispace), f32_utf8, opt!(multispace)));
-named!(pub ws_f64<f64>, delimited!(opt!(multispace), f64_utf8, opt!(multispace)));
+named!(pub ws_u32<u32>, delimited!(any_space, u32_utf8, any_space));
+named!(pub ws_u64<u64>, delimited!(any_space, u64_utf8, any_space));
+named!(pub ws_usize<usize>, delimited!(any_space, usize_utf8, any_space));
+named!(pub ws_i32<i32>, delimited!(any_space, i32_utf8, any_space));
+named!(pub ws_i64<i64>, delimited!(any_space, i64_utf8, any_space));
+named!(pub ws_isize<isize>, delimited!(any_space, isize_utf8, any_space));
+named!(pub ws_f32<f32>, delimited!(any_space, f32_utf8, any_space));
+named!(pub ws_f64<f64>, delimited!(any_space, f64_utf8, any_space));
 
 // ========================================================
 
-named!(pub u32_utf8<u32>, chain!(
-        bytes: digit,
-        || { str::from_utf8(bytes).unwrap().parse::<u32>().unwrap() }
-));
+named!(pub u32_utf8<u32>,
+    do_parse!(
+        bytes: digit >>
+        (str::from_utf8(bytes).unwrap().parse::<u32>().unwrap())
+    )
+);
 
-named!(pub i32_utf8<i32>, chain!(
-        sign: one_of!("-+")? ~
-        bytes: digit,
-        || {
+named!(pub i32_utf8<i32>,
+    do_parse!(
+        sign: opt!(one_of!("-+")) >>
+        bytes: digit >>
+        ({
             match sign {
                 Some(s) if s == '-' => -str::from_utf8(bytes).unwrap().parse::<i32>().unwrap(),
                 _ => str::from_utf8(bytes).unwrap().parse::<i32>().unwrap(),
             }
-        }
-));
+        })
+    )
+);
 
-named!(pub u64_utf8<u64>, chain!(
-        bytes: digit,
-        || { str::from_utf8(bytes).unwrap().parse::<u64>().unwrap() }
-));
+named!(pub u64_utf8<u64>,
+    do_parse!(
+        bytes: digit >>
+        (str::from_utf8(bytes).unwrap().parse::<u64>().unwrap())
+    )
+);
 
-named!(pub i64_utf8<i64>, chain!(
-        sign: one_of!("-+")? ~
-        bytes: digit,
-        || {
+named!(pub i64_utf8<i64>,
+    do_parse!(
+        sign: opt!(one_of!("-+")) >>
+        bytes: digit >>
+        ({
             match sign {
                 Some(s) if s == '-' => -str::from_utf8(bytes).unwrap().parse::<i64>().unwrap(),
                 _ => str::from_utf8(bytes).unwrap().parse::<i64>().unwrap(),
             }
-        }
-));
+        })
+    )
+);
 
-named!(pub usize_utf8<usize>, chain!(
-        bytes: digit,
-        || { str::from_utf8(bytes).unwrap().parse::<usize>().unwrap() }
-));
+named!(pub usize_utf8<usize>,
+    do_parse!(
+        bytes: digit >>
+        (str::from_utf8(bytes).unwrap().parse::<usize>().unwrap())
+    )
+);
 
-named!(pub isize_utf8<isize>, chain!(
-        sign: one_of!("-+")? ~
-        bytes: digit,
-        || {
+named!(pub isize_utf8<isize>,
+    do_parse!(
+        sign: opt!(one_of!("-+")) >>
+        bytes: digit >>
+        ({
             match sign {
                 Some(s) if s == '-' => -str::from_utf8(bytes).unwrap().parse::<isize>().unwrap(),
                 _ => str::from_utf8(bytes).unwrap().parse::<isize>().unwrap(),
             }
-        }
-));
+        })
+    )
+);
 
-named!(pub f32_utf8<f32>, chain!(
-        bytes: take_decimal_real,
-        || {
-            str::from_utf8(bytes).unwrap().parse::<f32>().unwrap()
-        }
-));
+named!(pub f32_utf8<f32>,
+    do_parse!(
+        bytes: take_decimal_real >>
+        (str::from_utf8(bytes).unwrap().parse::<f32>().unwrap())
+    )
+);
 
-named!(pub f64_utf8<f64>, chain!(
-        bytes: take_decimal_real,
-        || {
-            str::from_utf8(bytes).unwrap().parse::<f64>().unwrap()
-        }
-));
+named!(pub f64_utf8<f64>,
+    do_parse!(
+        bytes: take_decimal_real >>
+        (str::from_utf8(bytes).unwrap().parse::<f64>().unwrap())
+    )
+);
 
 fn take_decimal_integer(i: &[u8]) -> IResult<&[u8], &[u8]> {
-    named!(rr<&[u8], ()>, chain!(
-        one_of!("-+")? ~
-        digit,
-        ||{()}
-    ));
+    named!(rr<&[u8], ()>,
+        do_parse!(
+            opt!(one_of!("-+")) >>
+            digit >>
+            ()
+        )
+    );
 
     match rr(i) {
         Done(remaining, _) => {
@@ -104,12 +121,18 @@ fn take_decimal_integer(i: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 fn take_decimal_real(i: &[u8]) -> IResult<&[u8], &[u8]> {
-    named!(rr<&[u8], ()>, chain!(
-        one_of!("-+")? ~
-        digit ~
-        complete!(chain!(tag!(".") ~ digit, ||{()}))?,
-        ||{()}
-    ));
+    named!(rr<&[u8], ()>,
+        do_parse!(
+            opt!(one_of!("-+")) >>
+            digit >>
+            opt!(complete!(do_parse!(
+                tag!(".") >>
+                digit >>
+                ()
+            ))) >>
+            ()
+        )
+    );
 
     match rr(i) {
         Done(remaining, _) => {
