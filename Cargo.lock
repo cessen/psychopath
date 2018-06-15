@@ -37,6 +37,11 @@ version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "cc"
+version = "1.0.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "clap"
 version = "2.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -65,11 +70,6 @@ version = "0.1.0"
 dependencies = [
  "simd 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
-
-[[package]]
-name = "gcc"
-version = "0.3.54"
-source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "half"
@@ -116,20 +116,20 @@ dependencies = [
 
 [[package]]
 name = "openexr"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "half 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.38 (registry+https://github.com/rust-lang/crates.io-index)",
- "openexr-sys 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "openexr-sys 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "openexr-sys"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "gcc 0.3.54 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cc 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.38 (registry+https://github.com/rust-lang/crates.io-index)",
  "pkg-config 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -161,7 +161,7 @@ dependencies = [
  "mem_arena 0.1.0",
  "nom 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "openexr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "openexr 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "png_encode_mini 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "scoped_threadpool 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -279,16 +279,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum base64 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "229d032f1a99302697f10b27167ae6d03d49d032e6a8e2550e8d3fc13356d2b4"
 "checksum bitflags 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b3c30d3802dfb7281680d6285f2ccdaa8c2d8fee41f93805dba5c4cf50dc23cf"
 "checksum byteorder 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "652805b7e73fada9d85e9a6682a4abd490cb52d96aeecc12e33a0de34dfd0d23"
+"checksum cc 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)" = "49ec142f5768efb5b7622aebc3fdbdbb8950a4b9ba996393cb76ef7466e8747d"
 "checksum clap 2.30.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1c07b9257a00f3fc93b7f3c417fc15607ec7a56823bc2c37ec744e266387de5b"
 "checksum crossbeam 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "24ce9782d4d5c53674646a6a4c1863a21a8fc0cb649b3c94dfc16e45071dea19"
-"checksum gcc 0.3.54 (registry+https://github.com/rust-lang/crates.io-index)" = "5e33ec290da0d127825013597dbdfc28bee4964690c7ce1166cbc2a7bd08b1bb"
 "checksum half 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1aad9c31c71e74a1476316df059e235b67a3b625dd9e404bf94b1c19789f880b"
 "checksum lazy_static 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c8f31047daa365f19be14b47c29df4f7c3b581832407daabe6ae77397619237d"
 "checksum libc 0.2.38 (registry+https://github.com/rust-lang/crates.io-index)" = "84a7beecb6b131a81c7d6c7b90cdaa1155b8531b4808bd3bc23bf4b3c33f4d9e"
 "checksum nom 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cf51a729ecf40266a2368ad335a5fdde43471f545a967109cd62146ecf8b66ff"
 "checksum num_cpus 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c51a3322e4bca9d212ad9a158a02abc6934d005490c054a2778df73a70aa0a30"
-"checksum openexr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "849a5af32d6b0716cf44a8b18c1b611b8448aec44a9b1c59b6199bf9d22aba94"
-"checksum openexr-sys 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d597730c7049d9098ce64bb97c6eb4e6f96fa55d5ced7eba74a01c224fe0bcc4"
+"checksum openexr 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f9e3b9ae4f3eec70bc20117e11b24dd3acd629707a0a96d07f78b02910f0f480"
+"checksum openexr-sys 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "96a68b449953411a919eea06547a3b4a1ee6195b41ada68d432826caeedb75bd"
 "checksum pkg-config 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "3a8b4c6b8165cd1a1cd4b9b120978131389f64bdaf456435caa41e630edba903"
 "checksum png_encode_mini 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "116ae962ea1a679f99915c2c53dc470b45aaf6b42e607580d16fce8c6248f666"
 "checksum redox_syscall 0.1.37 (registry+https://github.com/rust-lang/crates.io-index)" = "0d92eecebad22b767915e4d529f89f28ee96dbbf5a4810d2b844373f136417fd"
