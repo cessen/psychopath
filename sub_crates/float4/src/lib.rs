@@ -31,7 +31,34 @@ mod x86_64_sse {
 
         #[inline]
         pub fn h_sum(&self) -> f32 {
-            (self.get_0() + self.get_1()) + (self.get_2() + self.get_3())
+            #[cfg(target_feature = "sse3")]
+            {
+                use std::arch::x86_64::{
+                    _mm_add_ps, _mm_add_ss, _mm_cvtss_f32, _mm_movehdup_ps, _mm_movehl_ps,
+                };
+                unsafe {
+                    let v = self.data;
+                    let shuf = _mm_movehdup_ps(v);
+                    let sums = _mm_add_ps(v, shuf);
+                    let shuf = _mm_movehl_ps(shuf, sums);
+                    let sums = _mm_add_ss(sums, shuf);
+                    _mm_cvtss_f32(sums)
+                }
+            }
+            #[cfg(not(target_feature = "sse3"))]
+            {
+                use std::arch::x86_64::{
+                    _mm_add_ps, _mm_add_ss, _mm_cvtss_f32, _mm_movehl_ps, _mm_shuffle_ps,
+                };
+                unsafe {
+                    let v = self.data;
+                    let shuf = _mm_shuffle_ps(v, v, (2 << 6) | (3 << 4) | (0 << 2) | (1 << 0));
+                    let sums = _mm_add_ps(v, shuf);
+                    let shuf = _mm_movehl_ps(shuf, sums);
+                    let sums = _mm_add_ss(sums, shuf);
+                    _mm_cvtss_f32(sums)
+                }
+            }
         }
 
         #[inline]
