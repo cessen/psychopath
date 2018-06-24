@@ -15,9 +15,6 @@ name = "psychopath"
 version = "0.1.0"
 authors = ["Nathan Vegdahl <cessen@cessen.com>"]
 
-[features]
-simd_perf = ["float4/simd_perf", "math3d/simd_perf"]
-
 [profile.release]
 debug = true
 

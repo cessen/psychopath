@@ -8,9 +8,6 @@ license = "MIT"
 name = "math3d"
 path = "src/lib.rs"
 
-[features]
-simd_perf = ["float4/simd_perf"]
-
 # Local crate dependencies
 [dependencies.float4]
 path = "../float4"
