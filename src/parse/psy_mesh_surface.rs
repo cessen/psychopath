@@ -9,9 +9,9 @@ use mem_arena::MemArena;
 use math::{Normal, Point};
 use surface::triangle_mesh::TriangleMesh;
 
-use super::basics::{ws_usize, ws_f32};
-use super::DataTree;
+use super::basics::{ws_f32, ws_usize};
 use super::psy::PsyParseError;
+use super::DataTree;
 
 // pub struct TriangleMesh {
 //    time_samples: usize,

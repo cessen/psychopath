@@ -6,8 +6,8 @@ use lerp::lerp_slice;
 use math::{Normal, Point, Vector};
 use shading::surface_closure::SurfaceClosure;
 
-use super::LightAccel;
 use super::objects_split::sah_split;
+use super::LightAccel;
 
 const ARITY_LOG2: usize = 3; // Determines how much to collapse the binary tree,
                              // implicitly defining the light tree's arity.  1 = no collapsing, leave as binary

@@ -2,8 +2,8 @@ pub mod surface_closure;
 
 use std::fmt::Debug;
 
-use color::{Color, XYZ};
 use self::surface_closure::{EmitClosure, GTRClosure, LambertClosure, SurfaceClosureUnion};
+use color::{Color, XYZ};
 use surface::SurfaceIntersectionData;
 
 /// Trait for surface shaders.

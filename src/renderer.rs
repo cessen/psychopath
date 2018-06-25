@@ -12,7 +12,7 @@ use halton;
 
 use accel::{ACCEL_NODE_RAY_TESTS, ACCEL_TRAV_TIME};
 use algorithm::partition_pair;
-use color::{Color, SpectralSample, map_0_1_to_wavelength, XYZ};
+use color::{map_0_1_to_wavelength, Color, SpectralSample, XYZ};
 use float4::Float4;
 use fp_utils::robust_ray_origin;
 use hash::hash_u32;
@@ -476,7 +476,8 @@ impl LightPath {
                         self.time,
                         isect,
                     );
-                    let found_light = if light_info.is_none() || light_info.pdf() <= 0.0
+                    let found_light = if light_info.is_none()
+                        || light_info.pdf() <= 0.0
                         || light_info.selection_pdf() <= 0.0
                     {
                         false
@@ -558,9 +559,9 @@ impl LightPath {
                             // Calculate and store the light that will be contributed
                             // to the film plane if the light is not in shadow.
                             let light_mis_pdf = power_heuristic(light_pdf, closure_pdf);
-                            self.pending_color_addition = light_info.color().e * attenuation.e
-                                * self.light_attenuation
-                                / (light_mis_pdf * light_sel_pdf);
+                            self.pending_color_addition =
+                                light_info.color().e * attenuation.e * self.light_attenuation
+                                    / (light_mis_pdf * light_sel_pdf);
 
                             *ray = shadow_ray;
 

@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use std::result::Result;
 use std::f32;
+use std::result::Result;
 
 use nom::IResult;
 
@@ -16,9 +16,9 @@ use scene::Scene;
 use scene::World;
 
 use super::basics::{ws_f32, ws_u32};
-use super::DataTree;
 use super::psy_assembly::parse_assembly;
 use super::psy_light::parse_distant_disk_light;
+use super::DataTree;
 
 #[derive(Debug)]
 pub enum PsyParseError {
@@ -565,43 +565,15 @@ fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>,
 pub fn parse_matrix(contents: &str) -> Result<Matrix4x4, PsyParseError> {
     if let IResult::Done(_, ns) = closure!(terminated!(
         tuple!(
-            ws_f32,
-            ws_f32,
-            ws_f32,
-            ws_f32,
-            ws_f32,
-            ws_f32,
-            ws_f32,
-            ws_f32,
-            ws_f32,
-            ws_f32,
-            ws_f32,
-            ws_f32,
-            ws_f32,
-            ws_f32,
-            ws_f32,
-            ws_f32
+            ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32,
+            ws_f32, ws_f32, ws_f32, ws_f32, ws_f32
         ),
         eof!()
     ))(contents.as_bytes())
     {
         return Ok(Matrix4x4::new_from_values(
-            ns.0,
-            ns.4,
-            ns.8,
-            ns.12,
-            ns.1,
-            ns.5,
-            ns.9,
-            ns.13,
-            ns.2,
-            ns.6,
-            ns.10,
-            ns.14,
-            ns.3,
-            ns.7,
-            ns.11,
-            ns.15,
+            ns.0, ns.4, ns.8, ns.12, ns.1, ns.5, ns.9, ns.13, ns.2, ns.6, ns.10, ns.14, ns.3, ns.7,
+            ns.11, ns.15,
         ));
     } else {
         return Err(PsyParseError::UnknownError(0));

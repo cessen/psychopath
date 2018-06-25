@@ -3,8 +3,8 @@
 
 use std::str;
 
-use nom::{digit, multispace, IResult, Needed};
 use nom::IResult::*;
+use nom::{digit, multispace, IResult, Needed};
 
 // Consumes any whitespace, including zero whitespace
 named!(any_space<Option<&[u8]>>, opt!(complete!(multispace)));
@@ -154,9 +154,9 @@ fn take_decimal_real(i: &[u8]) -> IResult<&[u8], &[u8]> {
 
 #[cfg(test)]
 mod test {
-    use nom::IResult::*;
     use super::take_decimal_real;
     use super::*;
+    use nom::IResult::*;
 
     #[test]
     fn ws_u32_1() {

@@ -1,6 +1,6 @@
-mod bvh_base;
 mod bvh;
 mod bvh4;
+mod bvh_base;
 mod light_array;
 mod light_tree;
 mod objects_split;
@@ -12,8 +12,8 @@ use shading::surface_closure::SurfaceClosure;
 
 pub use self::bvh::{BVHNode, BVH};
 pub use self::bvh4::{BVH4, BVH4Node};
-pub use self::light_tree::LightTree;
 pub use self::light_array::LightArray;
+pub use self::light_tree::LightTree;
 
 // Track BVH traversal time
 thread_local! {

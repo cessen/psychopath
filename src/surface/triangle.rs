@@ -132,11 +132,13 @@ pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32,
 ///
 /// Returns the point and the error magnitude of the point.
 pub fn surface_point(tri: (Point, Point, Point), bary: (f32, f32, f32)) -> (Point, f32) {
-    let pos = ((tri.0.into_vector() * bary.0) + (tri.1.into_vector() * bary.1)
+    let pos = ((tri.0.into_vector() * bary.0)
+        + (tri.1.into_vector() * bary.1)
         + (tri.2.into_vector() * bary.2))
         .into_point();
 
-    let pos_err = (((tri.0.into_vector().abs() * bary.0) + (tri.1.into_vector().abs() * bary.1)
+    let pos_err = (((tri.0.into_vector().abs() * bary.0)
+        + (tri.1.into_vector().abs() * bary.1)
         + (tri.2.into_vector().abs() * bary.2)) * fp_gamma(7))
         .co
         .h_max();

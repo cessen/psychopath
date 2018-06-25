@@ -3,9 +3,9 @@
 use std::f32::consts::PI as PI_32;
 
 use color::SpectralSample;
+use lerp::lerp;
 use math::{clamp, dot, zup_to_vec, Normal, Vector};
 use sampling::cosine_sample_hemisphere;
-use lerp::lerp;
 
 const INV_PI: f32 = 1.0 / PI_32;
 const H_PI: f32 = PI_32 / 2.0;
@@ -430,9 +430,8 @@ impl GTRClosure {
         let roughness2 = self.roughness * self.roughness;
 
         // Calculate top half of equation
-        let top = 1.0
-            - ((roughness2.powf(1.0 - self.tail_shape) * (1.0 - u)) + u)
-                .powf(1.0 / (1.0 - self.tail_shape));
+        let top = 1.0 - ((roughness2.powf(1.0 - self.tail_shape) * (1.0 - u)) + u)
+            .powf(1.0 / (1.0 - self.tail_shape));
 
         // Calculate bottom half of equation
         let bottom = 1.0 - roughness2;

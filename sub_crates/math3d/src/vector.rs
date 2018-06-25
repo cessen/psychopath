@@ -192,8 +192,8 @@ impl CrossProduct for Vector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::{CrossProduct, DotProduct, Matrix4x4};
+    use super::*;
 
     #[test]
     fn add() {
@@ -226,22 +226,7 @@ mod tests {
     fn mul_matrix_1() {
         let v = Vector::new(1.0, 2.5, 4.0);
         let m = Matrix4x4::new_from_values(
-            1.0,
-            2.0,
-            2.0,
-            1.5,
-            3.0,
-            6.0,
-            7.0,
-            8.0,
-            9.0,
-            2.0,
-            11.0,
-            12.0,
-            13.0,
-            7.0,
-            15.0,
-            3.0,
+            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 13.0, 7.0, 15.0, 3.0,
         );
         let mut vm = Vector::new(14.0, 46.0, 58.0);
         vm.co.set_3(90.5);
@@ -252,22 +237,7 @@ mod tests {
     fn mul_matrix_2() {
         let v = Vector::new(1.0, 2.5, 4.0);
         let m = Matrix4x4::new_from_values(
-            1.0,
-            2.0,
-            2.0,
-            1.5,
-            3.0,
-            6.0,
-            7.0,
-            8.0,
-            9.0,
-            2.0,
-            11.0,
-            12.0,
-            0.0,
-            0.0,
-            0.0,
-            1.0,
+            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 0.0, 0.0, 0.0, 1.0,
         );
         let vm = Vector::new(14.0, 46.0, 58.0);
         assert_eq!(v * m, vm);

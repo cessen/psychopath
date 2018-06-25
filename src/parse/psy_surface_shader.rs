@@ -10,8 +10,8 @@ use color::{rec709_e_to_xyz, XYZ};
 use shading::{SimpleSurfaceShader, SurfaceShader};
 
 use super::basics::ws_f32;
-use super::DataTree;
 use super::psy::PsyParseError;
+use super::DataTree;
 
 // pub struct TriangleMesh {
 //    time_samples: usize,

@@ -11,10 +11,10 @@ use lerp::lerp_slice;
 use ray::AccelRay;
 use timer::Timer;
 
-use bvh_order::{calc_traversal_code, SplitAxes, TRAVERSAL_TABLE};
 use super::bvh_base::{BVHBase, BVHBaseNode, BVH_MAX_DEPTH};
-use super::ACCEL_TRAV_TIME;
 use super::ACCEL_NODE_RAY_TESTS;
+use super::ACCEL_TRAV_TIME;
+use bvh_order::{calc_traversal_code, SplitAxes, TRAVERSAL_TABLE};
 
 #[derive(Copy, Clone, Debug)]
 pub struct BVH4<'a> {
@@ -87,7 +87,8 @@ impl<'a> BVH4<'a> {
                 rays[0].dir_inv.y() < 0.0,
                 rays[0].dir_inv.z() < 0.0,
             ];
-            let ray_code = ray_sign_is_neg[0] as usize + ((ray_sign_is_neg[1] as usize) << 1)
+            let ray_code = ray_sign_is_neg[0] as usize
+                + ((ray_sign_is_neg[1] as usize) << 1)
                 + ((ray_sign_is_neg[2] as usize) << 2);
             &TRAVERSAL_TABLE[ray_code]
         };

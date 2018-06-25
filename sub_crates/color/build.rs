@@ -195,7 +195,8 @@ fn rgb_to_xyz(chroma: Chromaticities, y: f64) -> [[f64; 3]; 3] {
     let z = (1.0 - chroma.w.0 - chroma.w.1) * y / chroma.w.1;
 
     // Scale factors for matrix rows
-    let d = chroma.r.0 * (chroma.b.1 - chroma.g.1) + chroma.b.0 * (chroma.g.1 - chroma.r.1)
+    let d = chroma.r.0 * (chroma.b.1 - chroma.g.1)
+        + chroma.b.0 * (chroma.g.1 - chroma.r.1)
         + chroma.g.0 * (chroma.r.1 - chroma.b.1);
 
     let sr = (x * (chroma.b.1 - chroma.g.1)

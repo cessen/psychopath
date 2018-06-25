@@ -66,12 +66,12 @@ use clap::{App, Arg};
 
 use mem_arena::MemArena;
 
+use accel::{BVH4Node, BVHNode};
+use bbox::BBox;
 use parse::{parse_scene, DataTree};
 use ray::{AccelRay, Ray};
-use surface::SurfaceIntersection;
 use renderer::LightPath;
-use bbox::BBox;
-use accel::{BVH4Node, BVHNode};
+use surface::SurfaceIntersection;
 use timer::Timer;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");

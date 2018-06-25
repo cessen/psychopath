@@ -10,8 +10,8 @@ use math::{cross, dot, Matrix4x4, Normal, Point};
 use ray::{AccelRay, Ray};
 use shading::SurfaceShader;
 
-use super::{Surface, SurfaceIntersection, SurfaceIntersectionData};
 use super::triangle;
+use super::{Surface, SurfaceIntersection, SurfaceIntersectionData};
 
 #[derive(Copy, Clone, Debug)]
 pub struct TriangleMesh<'a> {

@@ -11,8 +11,8 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use half::f16;
-use png_encode_mini;
 use openexr;
+use png_encode_mini;
 
 use color::{xyz_to_rec709_e, XYZ};
 
@@ -259,7 +259,9 @@ impl<'a> Drop for Bucket<'a> {
 
         // Find matching bucket and remove it
         let i = bucket_list.iter().position(|bucket| {
-            (bucket.0).0 == self.min.0 && (bucket.0).1 == self.min.1 && (bucket.1).0 == self.max.0
+            (bucket.0).0 == self.min.0
+                && (bucket.0).1 == self.min.1
+                && (bucket.1).0 == self.max.0
                 && (bucket.1).1 == self.max.1
         });
         bucket_list.swap_remove(i.unwrap());

@@ -293,8 +293,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::cmp::Ordering;
     use super::*;
+    use std::cmp::Ordering;
 
     fn quick_select_ints(list: &mut [i32], i: usize) {
         quick_select(list, i, |a, b| {

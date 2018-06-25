@@ -6,13 +6,13 @@ use nom::IResult;
 
 use mem_arena::MemArena;
 
-use math::Vector;
 use color::{rec709_e_to_xyz, XYZ};
 use light::{DistantDiskLight, RectangleLight, SphereLight};
+use math::Vector;
 
 use super::basics::ws_f32;
-use super::DataTree;
 use super::psy::PsyParseError;
+use super::DataTree;
 
 pub fn parse_distant_disk_light<'a>(
     arena: &'a MemArena,

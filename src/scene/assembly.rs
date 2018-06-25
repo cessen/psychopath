@@ -2,16 +2,16 @@ use std::collections::HashMap;
 
 use mem_arena::MemArena;
 
-use accel::{LightAccel, LightTree};
 use accel::BVH4;
+use accel::{LightAccel, LightTree};
 use bbox::{transform_bbox_slice_from, BBox};
 use boundable::Boundable;
 use color::SpectralSample;
 use lerp::lerp_slice;
 use light::SurfaceLight;
 use math::{Matrix4x4, Normal, Point};
-use surface::{Surface, SurfaceIntersection};
 use shading::SurfaceShader;
+use surface::{Surface, SurfaceIntersection};
 use transform_stack::TransformStack;
 
 #[derive(Copy, Clone, Debug)]
@@ -92,12 +92,7 @@ impl<'a> Assembly<'a> {
 
                                 // Sample the light
                                 let (color, sample_geo, pdf) = light.sample_from_point(
-                                    &xform,
-                                    idata.pos,
-                                    uvw.0,
-                                    uvw.1,
-                                    wavelength,
-                                    time,
+                                    &xform, idata.pos, uvw.0, uvw.1, wavelength, time,
                                 );
                                 return Some((color, sample_geo, pdf, sel_pdf));
                             }
