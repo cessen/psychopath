@@ -66,7 +66,7 @@ impl AccelRay {
         AccelRay {
             orig: ray.orig,
             dir_inv: Vector {
-                co: Float4::new(1.0, 1.0, 1.0, 1.0) / ray.dir.co,
+                co: Float4::splat(1.0) / ray.dir.co,
             },
             max_t: ray.max_t,
             time: ray.time,
@@ -78,14 +78,14 @@ impl AccelRay {
     pub fn update_from_world_ray(&mut self, wr: &Ray) {
         self.orig = wr.orig;
         self.dir_inv = Vector {
-            co: Float4::new(1.0, 1.0, 1.0, 1.0) / wr.dir.co,
+            co: Float4::splat(1.0) / wr.dir.co,
         };
     }
 
     pub fn update_from_xformed_world_ray(&mut self, wr: &Ray, mat: &Matrix4x4) {
         self.orig = wr.orig * *mat;
         self.dir_inv = Vector {
-            co: Float4::new(1.0, 1.0, 1.0, 1.0) / (wr.dir * *mat).co,
+            co: Float4::splat(1.0) / (wr.dir * *mat).co,
         };
     }
 
