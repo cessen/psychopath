@@ -227,18 +227,11 @@ pub fn spectrum_xyz_to_p_4(lambdas: Float4, xyz: (f32, f32, f32)) -> Float4 {
         sb.get_3() as i32,
     ];
     assert!(sb0[0].max(sb0[1]).max(sb0[2].max(sb0[3])) < SPECTRUM_NUM_SAMPLES);
-    let plus_one_clamped = |n| {
-        if (n + 1.0) < SPECTRUM_NUM_SAMPLES as f32 {
-            n as i32 + 1
-        } else {
-            SPECTRUM_NUM_SAMPLES - 1
-        }
-    };
     let sb1: [i32; 4] = [
-        plus_one_clamped(sb.get_0()),
-        plus_one_clamped(sb.get_1()),
-        plus_one_clamped(sb.get_2()),
-        plus_one_clamped(sb.get_3()),
+        (sb.get_0() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
+        (sb.get_1() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
+        (sb.get_2() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
+        (sb.get_3() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
     ];
     let sbf = sb - Float4::new(sb0[0] as f32, sb0[1] as f32, sb0[2] as f32, sb0[3] as f32);
     for i in 0..(num as usize) {
@@ -259,7 +252,7 @@ pub fn spectrum_xyz_to_p_4(lambdas: Float4, xyz: (f32, f32, f32)) -> Float4 {
         p[i] = p0 * (Float4::splat(1.0) - sbf) + p1 * sbf;
     }
 
-    // Linearly interpolated the spectral power of the cell vertices.
+    // Linearly interpolate the spectral power of the cell vertices.
     let mut interpolated_p = Float4::splat(0.0);
     if inside {
         // Fast path for normal inner quads:
@@ -271,10 +264,10 @@ pub fn spectrum_xyz_to_p_4(lambdas: Float4, xyz: (f32, f32, f32)) -> Float4 {
         // The layout of the vertices in the quad is:
         //  2  3
         //  0  1
-        interpolated_p = p[0] * (1.0 - uv2.0) * (1.0 - uv2.1)
-            + p[2] * (1.0 - uv2.0) * uv2.1
-            + p[3] * uv2.0 * uv2.1
-            + p[1] * uv2.0 * (1.0 - uv2.1);
+        interpolated_p = p[0] * ((1.0 - uv2.0) * (1.0 - uv2.1))
+            + p[2] * ((1.0 - uv2.0) * uv2.1)
+            + p[3] * (uv2.0 * uv2.1)
+            + p[1] * (uv2.0 * (1.0 - uv2.1));
     } else {
         // Need to go through triangulation :(
         // We get the indices in such an order that they form a triangle fan around idx[0].
