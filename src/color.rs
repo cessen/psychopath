@@ -1,6 +1,6 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
 
-use spectra_xyz::{spectrum_xyz_to_p, EQUAL_ENERGY_REFLECTANCE};
+use spectra_xyz::{spectrum_xyz_to_p_4, EQUAL_ENERGY_REFLECTANCE};
 
 use float4::Float4;
 use lerp::Lerp;
@@ -19,22 +19,10 @@ pub fn map_0_1_to_wavelength(n: f32) -> f32 {
 }
 
 pub trait Color {
-    fn sample_spectrum(&self, wavelength: f32) -> f32;
-
-    fn to_spectral_sample(&self, hero_wavelength: f32) -> SpectralSample {
-        SpectralSample {
-            e: Float4::new(
-                self.sample_spectrum(nth_wavelength(hero_wavelength, 0)),
-                self.sample_spectrum(nth_wavelength(hero_wavelength, 1)),
-                self.sample_spectrum(nth_wavelength(hero_wavelength, 2)),
-                self.sample_spectrum(nth_wavelength(hero_wavelength, 3)),
-            ),
-
-            hero_wavelength: hero_wavelength,
-        }
-    }
+    fn to_spectral_sample(&self, hero_wavelength: f32) -> SpectralSample;
 }
 
+#[inline(always)]
 fn nth_wavelength(hero_wavelength: f32, n: usize) -> f32 {
     let wl = hero_wavelength + (WL_RANGE_Q * n as f32);
     if wl > WL_MAX {
@@ -42,6 +30,17 @@ fn nth_wavelength(hero_wavelength: f32, n: usize) -> f32 {
     } else {
         wl
     }
+}
+
+/// Returns all wavelengths of a hero wavelength set as a Float4
+#[inline(always)]
+fn wavelengths(hero_wavelength: f32) -> Float4 {
+    Float4::new(
+        nth_wavelength(hero_wavelength, 0),
+        nth_wavelength(hero_wavelength, 1),
+        nth_wavelength(hero_wavelength, 2),
+        nth_wavelength(hero_wavelength, 3),
+    )
 }
 
 //----------------------------------------------------------------
@@ -201,8 +200,11 @@ impl XYZ {
 }
 
 impl Color for XYZ {
-    fn sample_spectrum(&self, wavelength: f32) -> f32 {
-        xyz_to_spectrum((self.x, self.y, self.z), wavelength)
+    fn to_spectral_sample(&self, hero_wavelength: f32) -> SpectralSample {
+        SpectralSample {
+            e: xyz_to_spectrum_4((self.x, self.y, self.z), wavelengths(hero_wavelength)),
+            hero_wavelength: hero_wavelength,
+        }
     }
 }
 
@@ -271,11 +273,12 @@ impl DivAssign<f32> for XYZ {
 
 //----------------------------------------------------------------
 
-/// Samples an CIE 1931 XYZ color at a particular wavelength, according to
+/// Samples an CIE 1931 XYZ color at a particular set of wavelengths, according to
 /// the method in the paper "Physically Meaningful Rendering using Tristimulus
 /// Colours" by Meng et al.
-fn xyz_to_spectrum(xyz: (f32, f32, f32), wavelength: f32) -> f32 {
-    spectrum_xyz_to_p(wavelength, xyz) * (1.0 / EQUAL_ENERGY_REFLECTANCE)
+#[inline(always)]
+fn xyz_to_spectrum_4(xyz: (f32, f32, f32), wavelengths: Float4) -> Float4 {
+    spectrum_xyz_to_p_4(wavelengths, xyz) * Float4::splat(1.0 / EQUAL_ENERGY_REFLECTANCE)
 }
 
 /// Close analytic approximations of the CIE 1931 XYZ color curves.

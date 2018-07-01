@@ -202,6 +202,9 @@ version = "0.1.0"
 [[package]]
 name = "spectra_xyz"
 version = "0.1.0"
+dependencies = [
+ "float4 0.1.0",
+]
 
 [[package]]
 name = "strsim"

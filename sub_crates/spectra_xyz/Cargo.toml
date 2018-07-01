@@ -7,3 +7,7 @@ license = "MIT"
 [lib]
 name = "spectra_xyz"
 path = "src/lib.rs"
+
+# Local crate dependencies
+[dependencies.float4]
+path = "../float4"

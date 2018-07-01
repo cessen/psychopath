@@ -1,3 +1,6 @@
+extern crate float4;
+
+use float4::Float4;
 use std::f32;
 
 mod spectra_tables;
@@ -80,7 +83,6 @@ pub fn spectrum_xyz_to_p(lambda: f32, xyz: (f32, f32, f32)) -> f32 {
         SPECTRUM_NUM_SAMPLES - 1
     };
     assert!(sb0 < SPECTRUM_NUM_SAMPLES);
-    assert!(sb1 < SPECTRUM_NUM_SAMPLES);
     let sbf: f32 = sb as f32 - sb0 as f32;
     for i in 0..(num as usize) {
         debug_assert!(idx[i] >= 0);
@@ -90,6 +92,175 @@ pub fn spectrum_xyz_to_p(lambda: f32, xyz: (f32, f32, f32)) -> f32 {
 
     // Linearly interpolated the spectral power of the cell vertices.
     let mut interpolated_p: f32 = 0.0;
+    if inside {
+        // Fast path for normal inner quads:
+        let uv2 = (uv.0 - uvi.0 as f32, uv.1 - uvi.1 as f32);
+
+        assert!(uv2.0 >= 0.0 && uv2.0 <= 1.0);
+        assert!(uv2.1 >= 0.0 && uv2.1 <= 1.0);
+
+        // The layout of the vertices in the quad is:
+        //  2  3
+        //  0  1
+        interpolated_p = p[0] * (1.0 - uv2.0) * (1.0 - uv2.1)
+            + p[2] * (1.0 - uv2.0) * uv2.1
+            + p[3] * uv2.0 * uv2.1
+            + p[1] * uv2.0 * (1.0 - uv2.1);
+    } else {
+        // Need to go through triangulation :(
+        // We get the indices in such an order that they form a triangle fan around idx[0].
+        // compute barycentric coordinates of our xy* point for all triangles in the fan:
+        let ex: f32 = uv.0 - SPECTRUM_DATA_POINTS[idx[0] as usize].uv.0;
+        let ey: f32 = uv.1 - SPECTRUM_DATA_POINTS[idx[0] as usize].uv.1;
+        let mut e0x: f32 =
+            SPECTRUM_DATA_POINTS[idx[1] as usize].uv.0 - SPECTRUM_DATA_POINTS[idx[0] as usize].uv.0;
+        let mut e0y: f32 =
+            SPECTRUM_DATA_POINTS[idx[1] as usize].uv.1 - SPECTRUM_DATA_POINTS[idx[0] as usize].uv.1;
+        let mut uu: f32 = e0x * ey - ex * e0y;
+
+        for i in 0..(num as usize - 1) {
+            let (e1x, e1y): (f32, f32) = if i as i32 == (num - 2) {
+                // Close the circle
+                (
+                    SPECTRUM_DATA_POINTS[idx[1] as usize].uv.0
+                        - SPECTRUM_DATA_POINTS[idx[0] as usize].uv.0,
+                    SPECTRUM_DATA_POINTS[idx[1] as usize].uv.1
+                        - SPECTRUM_DATA_POINTS[idx[0] as usize].uv.1,
+                )
+            } else {
+                (
+                    SPECTRUM_DATA_POINTS[idx[i + 2] as usize].uv.0
+                        - SPECTRUM_DATA_POINTS[idx[0] as usize].uv.0,
+                    SPECTRUM_DATA_POINTS[idx[i + 2] as usize].uv.1
+                        - SPECTRUM_DATA_POINTS[idx[0] as usize].uv.1,
+                )
+            };
+
+            let vv: f32 = ex * e1y - e1x * ey;
+            let area: f32 = e0x * e1y - e1x * e0y;
+
+            // Normalise
+            let u: f32 = uu / area;
+            let v: f32 = vv / area;
+            let w: f32 = 1.0 - u - v;
+            // Outside spectral locus (quantized version at least) or outside grid
+            if u < 0.0 || v < 0.0 || w < 0.0 {
+                uu = -vv;
+                e0x = e1x;
+                e0y = e1y;
+                continue;
+            }
+
+            // This seems to be the triangle we've been looking for.
+            interpolated_p =
+                p[0] * w + p[i + 1] * v + p[if i as i32 == (num - 2) { 1 } else { i + 2 }] * u;
+            break;
+        }
+    }
+
+    // Now we have a spectrum which corresponds to the xy chromaticities of
+    // the input. need to scale according to the input brightness X+Y+Z now:
+    return interpolated_p * inv_norm;
+}
+
+/// Evaluate the spectrum for xyz at the given wavelengths.
+///
+/// Works on 4 wavelengths at once via SIMD.
+#[inline]
+pub fn spectrum_xyz_to_p_4(lambdas: Float4, xyz: (f32, f32, f32)) -> Float4 {
+    assert!(lambdas.h_min() >= SPECTRUM_SAMPLE_MIN);
+    assert!(lambdas.h_max() <= SPECTRUM_SAMPLE_MAX);
+
+    let inv_norm = xyz.0 + xyz.1 + xyz.2;
+    let norm = {
+        let norm = 1.0 / inv_norm;
+        if norm < f32::MAX {
+            norm
+        } else {
+            return Float4::splat(0.0);
+        }
+    };
+
+    let xyy = (xyz.0 * norm, xyz.1 * norm, xyz.1);
+
+    // Rotate to align with grid
+    let uv = spectrum_xy_to_uv((xyy.0, xyy.1));
+    if uv.0 < 0.0
+        || uv.0 >= SPECTRUM_GRID_WIDTH as f32
+        || uv.1 < 0.0
+        || uv.1 >= SPECTRUM_GRID_HEIGHT as f32
+    {
+        return Float4::splat(0.0);
+    }
+
+    let uvi = (uv.0 as i32, uv.1 as i32);
+    debug_assert!(uvi.0 < SPECTRUM_GRID_WIDTH);
+    debug_assert!(uvi.1 < SPECTRUM_GRID_HEIGHT);
+
+    let cell_idx: i32 = uvi.0 + SPECTRUM_GRID_WIDTH * uvi.1;
+    debug_assert!(cell_idx >= 0);
+
+    let cell = &SPECTRUM_GRID[cell_idx as usize];
+    let inside: bool = cell.inside;
+    let idx = &cell.idx;
+    let num: i32 = cell.num_points;
+
+    // If the cell has no points, nothing we can do, so return 0.0
+    if num == 0 {
+        return Float4::splat(0.0);
+    }
+
+    // Normalize lambda to spectrum table index range.
+    let sb: Float4 = (lambdas - Float4::splat(SPECTRUM_SAMPLE_MIN))
+        / (SPECTRUM_SAMPLE_MAX - SPECTRUM_SAMPLE_MIN)
+        * (SPECTRUM_NUM_SAMPLES as f32 - 1.0);
+    debug_assert!(sb.h_min() >= 0.0);
+    debug_assert!(sb.h_max() <= SPECTRUM_NUM_SAMPLES as f32);
+
+    // Get the spectral values for the vertices of the grid cell.
+    // TODO: use integer SIMD intrinsics to make this part faster.
+    let mut p = [Float4::splat(0.0); 6];
+    let sb0: [i32; 4] = [
+        sb.get_0() as i32,
+        sb.get_1() as i32,
+        sb.get_2() as i32,
+        sb.get_3() as i32,
+    ];
+    assert!(sb0[0].max(sb0[1]).max(sb0[2].max(sb0[3])) < SPECTRUM_NUM_SAMPLES);
+    let plus_one_clamped = |n| {
+        if (n + 1.0) < SPECTRUM_NUM_SAMPLES as f32 {
+            n as i32 + 1
+        } else {
+            SPECTRUM_NUM_SAMPLES - 1
+        }
+    };
+    let sb1: [i32; 4] = [
+        plus_one_clamped(sb.get_0()),
+        plus_one_clamped(sb.get_1()),
+        plus_one_clamped(sb.get_2()),
+        plus_one_clamped(sb.get_3()),
+    ];
+    let sbf = sb - Float4::new(sb0[0] as f32, sb0[1] as f32, sb0[2] as f32, sb0[3] as f32);
+    for i in 0..(num as usize) {
+        debug_assert!(idx[i] >= 0);
+        let spectrum = &SPECTRUM_DATA_POINTS[idx[i] as usize].spectrum;
+        let p0 = Float4::new(
+            spectrum[sb0[0] as usize],
+            spectrum[sb0[1] as usize],
+            spectrum[sb0[2] as usize],
+            spectrum[sb0[3] as usize],
+        );
+        let p1 = Float4::new(
+            spectrum[sb1[0] as usize],
+            spectrum[sb1[1] as usize],
+            spectrum[sb1[2] as usize],
+            spectrum[sb1[3] as usize],
+        );
+        p[i] = p0 * (Float4::splat(1.0) - sbf) + p1 * sbf;
+    }
+
+    // Linearly interpolated the spectral power of the cell vertices.
+    let mut interpolated_p = Float4::splat(0.0);
     if inside {
         // Fast path for normal inner quads:
         let uv2 = (uv.0 - uvi.0 as f32, uv.1 - uvi.1 as f32);
