@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std;
+
 use mem_arena::MemArena;
 
 use accel::BVH4;
@@ -131,55 +133,84 @@ impl<'a> Surface for TriangleMesh<'a> {
 
         self.accel
             .traverse(&mut accel_rays[..], self.indices, |tri_indices, rs| {
+                // For static triangles with static transforms, cache them.
+                let is_cached = self.time_sample_count == 1 && space.len() <= 1;
+                let mut tri = if is_cached {
+                    let tri = (
+                        self.vertices[tri_indices.0 as usize],
+                        self.vertices[tri_indices.1 as usize],
+                        self.vertices[tri_indices.2 as usize],
+                    );
+                    if space.is_empty() {
+                        tri
+                    } else {
+                        (
+                            tri.0 * static_mat_space,
+                            tri.1 * static_mat_space,
+                            tri.2 * static_mat_space,
+                        )
+                    }
+                } else {
+                    unsafe { std::mem::uninitialized() }
+                };
+
+                // Test each ray against the current triangle.
                 for r in rs {
                     let wr = &wrays[r.id as usize];
 
-                    // Get triangle
-                    let tri = {
-                        let p0_slice = &self.vertices[(tri_indices.0 as usize
-                                                          * self.time_sample_count)
-                                                          ..((tri_indices.0 as usize + 1)
-                                                              * self.time_sample_count)];
-                        let p1_slice = &self.vertices[(tri_indices.1 as usize
-                                                          * self.time_sample_count)
-                                                          ..((tri_indices.1 as usize + 1)
-                                                              * self.time_sample_count)];
-                        let p2_slice = &self.vertices[(tri_indices.2 as usize
-                                                          * self.time_sample_count)
-                                                          ..((tri_indices.2 as usize + 1)
-                                                              * self.time_sample_count)];
+                    // Get triangle if necessary
+                    if !is_cached {
+                        tri = if self.time_sample_count == 1 {
+                            // No deformation motion blur, so fast-path it.
+                            (
+                                self.vertices[tri_indices.0 as usize],
+                                self.vertices[tri_indices.1 as usize],
+                                self.vertices[tri_indices.2 as usize],
+                            )
+                        } else {
+                            // Deformation motion blur, need to interpolate.
+                            let p0_slice = &self.vertices[(tri_indices.0 as usize
+                                                              * self.time_sample_count)
+                                                              ..((tri_indices.0 as usize + 1)
+                                                                  * self.time_sample_count)];
+                            let p1_slice = &self.vertices[(tri_indices.1 as usize
+                                                              * self.time_sample_count)
+                                                              ..((tri_indices.1 as usize + 1)
+                                                                  * self.time_sample_count)];
+                            let p2_slice = &self.vertices[(tri_indices.2 as usize
+                                                              * self.time_sample_count)
+                                                              ..((tri_indices.2 as usize + 1)
+                                                                  * self.time_sample_count)];
 
-                        let p0 = lerp_slice(p0_slice, wr.time);
-                        let p1 = lerp_slice(p1_slice, wr.time);
-                        let p2 = lerp_slice(p2_slice, wr.time);
+                            let p0 = lerp_slice(p0_slice, wr.time);
+                            let p1 = lerp_slice(p1_slice, wr.time);
+                            let p2 = lerp_slice(p2_slice, wr.time);
 
-                        (p0, p1, p2)
-                    };
+                            (p0, p1, p2)
+                        };
+                    }
 
-                    // Transform triangle as necessary, and get transform
-                    // space.
-                    let (mat_space, tri) = if !space.is_empty() {
+                    // Transform triangle if necessary, and get transform space.
+                    let mat_space = if !space.is_empty() {
                         if space.len() > 1 {
                             // Per-ray transform, for motion blur
                             let mat_space = lerp_slice(space, wr.time).inverse();
-                            (
-                                mat_space,
-                                (tri.0 * mat_space, tri.1 * mat_space, tri.2 * mat_space),
-                            )
+                            tri = (tri.0 * mat_space, tri.1 * mat_space, tri.2 * mat_space);
+                            mat_space
                         } else {
                             // Same transform for all rays
-                            (
-                                static_mat_space,
-                                (
+                            if !is_cached {
+                                tri = (
                                     tri.0 * static_mat_space,
                                     tri.1 * static_mat_space,
                                     tri.2 * static_mat_space,
-                                ),
-                            )
+                                );
+                            }
+                            static_mat_space
                         }
                     } else {
                         // No transforms
-                        (Matrix4x4::new(), tri)
+                        Matrix4x4::new()
                     };
 
                     // Test ray against triangle
