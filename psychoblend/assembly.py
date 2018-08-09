@@ -327,6 +327,12 @@ class Material:
             w.write("Roughness [%f]\n" % self.mat.psychopath.roughness)
             w.write("TailShape [%f]\n" % self.mat.psychopath.tail_shape)
             w.write("Fresnel [%f]\n" % self.mat.psychopath.fresnel)
+        elif self.mat.psychopath.surface_shader_type == 'GGX':
+            w.write("Type [GGX]\n")
+            color = self.mat.psychopath.color
+            w.write("Color [%f %f %f]\n" % (color[0], color[1], color[2]))
+            w.write("Roughness [%f]\n" % self.mat.psychopath.roughness)
+            w.write("Fresnel [%f]\n" % self.mat.psychopath.fresnel)
         else:
             raise "Unsupported surface shader type '%s'" % self.mat.psychopath.surface_shader_type
         w.unindent()

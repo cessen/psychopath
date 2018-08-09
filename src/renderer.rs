@@ -492,10 +492,8 @@ impl LightPath {
 
                             // Distant light
                             SceneLightSample::Distant { direction, .. } => {
-                                let attenuation =
+                                let (attenuation, closure_pdf) =
                                     material.evaluate(ray.dir, direction, idata.nor, idata.nor_g);
-                                let closure_pdf =
-                                    material.sample_pdf(ray.dir, direction, idata.nor, idata.nor_g);
                                 let mut shadow_ray = {
                                     // Calculate the shadow ray for testing if the light is
                                     // in shadow or not.
@@ -520,10 +518,8 @@ impl LightPath {
                             // Surface light
                             SceneLightSample::Surface { sample_geo, .. } => {
                                 let dir = sample_geo.0 - idata.pos;
-                                let attenuation =
+                                let (attenuation, closure_pdf) =
                                     material.evaluate(ray.dir, dir, idata.nor, idata.nor_g);
-                                let closure_pdf =
-                                    material.sample_pdf(ray.dir, dir, idata.nor, idata.nor_g);
                                 let shadow_ray = {
                                     // Calculate the shadow ray for testing if the light is
                                     // in shadow or not.

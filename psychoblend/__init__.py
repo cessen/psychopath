@@ -88,7 +88,7 @@ class PsychopathMesh(bpy.types.PropertyGroup):
 class PsychopathMaterial(bpy.types.PropertyGroup):
     surface_shader_type = EnumProperty(
         name="Surface Shader Type", description="",
-        items=[('Emit', 'Emit', ""), ('Lambert', 'Lambert', ""), ('GTR', 'GTR', "")],
+        items=[('Emit', 'Emit', ""), ('Lambert', 'Lambert', ""), ('GTR', 'GTR', ""), ('GGX', 'GGX', "")],
         default="Lambert"
         )
 

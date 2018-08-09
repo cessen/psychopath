@@ -2,7 +2,7 @@ pub mod surface_closure;
 
 use std::fmt::Debug;
 
-use self::surface_closure::{EmitClosure, GTRClosure, LambertClosure, SurfaceClosureUnion};
+use self::surface_closure::{EmitClosure, GGXClosure, GTRClosure, LambertClosure, SurfaceClosureUnion};
 use color::{Color, XYZ};
 use surface::SurfaceIntersectionData;
 
@@ -43,6 +43,11 @@ pub enum SimpleSurfaceShader {
         tail_shape: f32,
         fresnel: f32,
     },
+    GGX {
+        color: XYZ,
+        roughness: f32,
+        fresnel: f32,
+    },
 }
 
 impl SurfaceShader for SimpleSurfaceShader {
@@ -70,6 +75,15 @@ impl SurfaceShader for SimpleSurfaceShader {
                 color.to_spectral_sample(wavelength),
                 roughness,
                 tail_shape,
+                fresnel,
+            )),
+            SimpleSurfaceShader::GGX {
+                color,
+                roughness,
+                fresnel,
+            } => SurfaceClosureUnion::GGXClosure(GGXClosure::new(
+                color.to_spectral_sample(wavelength),
+                roughness,
                 fresnel,
             )),
         }

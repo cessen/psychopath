@@ -249,6 +249,10 @@ class MATERIAL_PT_psychopath_surface(PsychopathPanel, bpy.types.Panel):
             layout.prop(mat.psychopath, "tail_shape")
             layout.prop(mat.psychopath, "fresnel")
 
+        if mat.psychopath.surface_shader_type == 'GGX':
+            layout.prop(mat.psychopath, "roughness")
+            layout.prop(mat.psychopath, "fresnel")
+
 
 def register():
     bpy.utils.register_class(RENDER_PT_psychopath_render_settings)
