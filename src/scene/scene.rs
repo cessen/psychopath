@@ -34,7 +34,8 @@ impl<'a> Scene<'a> {
 
         // Calculate relative probabilities of traversing into world lights
         // or local lights.
-        let wl_energy = if self.world
+        let wl_energy = if self
+            .world
             .lights
             .iter()
             .fold(0.0, |energy, light| energy + light.approximate_energy())

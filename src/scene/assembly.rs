@@ -244,7 +244,8 @@ impl<'a> AssemblyBuilder<'a> {
                 instance_type: InstanceType::Object,
                 data_index: self.object_map[name],
                 surface_shader_index: surface_shader_name.map(|name| {
-                    *self.surface_shader_map
+                    *self
+                        .surface_shader_map
                         .get(name)
                         .expect(&format!("Unknown surface shader '{}'.", name))
                 }),
@@ -257,7 +258,8 @@ impl<'a> AssemblyBuilder<'a> {
                 instance_type: InstanceType::Assembly,
                 data_index: self.assembly_map[name],
                 surface_shader_index: surface_shader_name.map(|name| {
-                    *self.surface_shader_map
+                    *self
+                        .surface_shader_map
                         .get(name)
                         .expect(&format!("Unknown surface shader '{}'.", name))
                 }),
@@ -290,7 +292,8 @@ impl<'a> AssemblyBuilder<'a> {
 
         // Get list of instances that are for light sources or assemblies that contain light
         // sources.
-        let mut light_instances: Vec<_> = self.instances
+        let mut light_instances: Vec<_> = self
+            .instances
             .iter()
             .filter(|inst| match inst.instance_type {
                 InstanceType::Object => {

@@ -244,7 +244,8 @@ impl<'a> SurfaceLight for RectangleLight<'a> {
     }
 
     fn approximate_energy(&self) -> f32 {
-        let color: XYZ = self.colors
+        let color: XYZ = self
+            .colors
             .iter()
             .fold(XYZ::new(0.0, 0.0, 0.0), |a, &b| a + b)
             / self.colors.len() as f32;

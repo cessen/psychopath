@@ -119,10 +119,12 @@ impl BVHBase {
                 // We make sure that it's worth having multiple time samples, and if not
                 // we reduce to the union of the time samples.
                 self.acc_bounds(objects, bounder);
-                let union_bounds = self.bounds_cache
+                let union_bounds = self
+                    .bounds_cache
                     .iter()
                     .fold(BBox::new(), |b1, b2| (b1 | *b2));
-                let average_area = self.bounds_cache
+                let average_area = self
+                    .bounds_cache
                     .iter()
                     .fold(0.0, |area, bb| area + bb.surface_area())
                     / self.bounds_cache.len() as f32;

@@ -2,7 +2,9 @@ pub mod surface_closure;
 
 use std::fmt::Debug;
 
-use self::surface_closure::{EmitClosure, GGXClosure, GTRClosure, LambertClosure, SurfaceClosureUnion};
+use self::surface_closure::{
+    EmitClosure, GGXClosure, GTRClosure, LambertClosure, SurfaceClosureUnion,
+};
 use color::{Color, XYZ};
 use surface::SurfaceIntersectionData;
 

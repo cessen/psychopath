@@ -68,7 +68,13 @@ pub trait SurfaceClosure {
     ///
     /// Returns the resulting filter color and pdf of if this had been generated
     /// by `sample()`.
-    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> (SpectralSample, f32);
+    fn evaluate(
+        &self,
+        inc: Vector,
+        out: Vector,
+        nor: Normal,
+        nor_g: Normal,
+    ) -> (SpectralSample, f32);
 
     /// Returns an estimate of the sum total energy that evaluate() would return
     /// when integrated over a spherical light source with a center at relative
@@ -191,7 +197,13 @@ impl SurfaceClosure for EmitClosure {
         (Vector::new(0.0, 0.0, 0.0), self.col, 1.0)
     }
 
-    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> (SpectralSample, f32) {
+    fn evaluate(
+        &self,
+        inc: Vector,
+        out: Vector,
+        nor: Normal,
+        nor_g: Normal,
+    ) -> (SpectralSample, f32) {
         let _ = (inc, out, nor, nor_g); // Not using these, silence warning
 
         (self.col, 1.0)
@@ -257,7 +269,13 @@ impl SurfaceClosure for LambertClosure {
         }
     }
 
-    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> (SpectralSample, f32) {
+    fn evaluate(
+        &self,
+        inc: Vector,
+        out: Vector,
+        nor: Normal,
+        nor_g: Normal,
+    ) -> (SpectralSample, f32) {
         let (nn, flipped_nor_g) = if dot(nor_g.into_vector(), inc) <= 0.0 {
             (nor.normalized().into_vector(), nor_g.into_vector())
         } else {
@@ -481,7 +499,13 @@ impl SurfaceClosure for GTRClosure {
         }
     }
 
-    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> (SpectralSample, f32) {
+    fn evaluate(
+        &self,
+        inc: Vector,
+        out: Vector,
+        nor: Normal,
+        nor_g: Normal,
+    ) -> (SpectralSample, f32) {
         // Calculate needed vectors, normalized
         let aa = -inc.normalized(); // Vector pointing to where "in" came from
         let bb = out.normalized(); // Out
@@ -634,7 +658,6 @@ impl SurfaceClosure for GTRClosure {
     }
 }
 
-
 /// The GGX microfacet BRDF.
 #[derive(Debug, Copy, Clone)]
 pub struct GGXClosure {
@@ -740,7 +763,13 @@ impl SurfaceClosure for GGXClosure {
         }
     }
 
-    fn evaluate(&self, inc: Vector, out: Vector, nor: Normal, nor_g: Normal) -> (SpectralSample, f32) {
+    fn evaluate(
+        &self,
+        inc: Vector,
+        out: Vector,
+        nor: Normal,
+        nor_g: Normal,
+    ) -> (SpectralSample, f32) {
         // Calculate needed vectors, normalized
         let aa = -inc.normalized(); // Vector pointing to where "in" came from
         let bb = out.normalized(); // Out

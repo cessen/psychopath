@@ -55,7 +55,8 @@ impl<'a> Camera<'a> {
         }
 
         // Convert angle fov into linear fov.
-        let tfovs: Vec<f32> = fovs.iter()
+        let tfovs: Vec<f32> = fovs
+            .iter()
             .map(|n| (n / 2.0).sin() / (n / 2.0).cos())
             .collect();
 
