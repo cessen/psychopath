@@ -572,7 +572,7 @@ impl SurfaceClosure for GTRClosure {
             return (col_f, 0.0);
         } else {
             // Calculate D - Distribution
-            let dist = self.dist(nh, self.roughness);
+            let dist = self.dist(nh, self.roughness) / na;
 
             // Calculate G1 - Geometric microfacet shadowing
             let g1 = {
@@ -833,7 +833,7 @@ impl SurfaceClosure for GGXClosure {
             return (col_f, 0.0);
         } else {
             // Calculate D - Distribution
-            let dist = Self::ggx_d(nh, self.roughness);
+            let dist = Self::ggx_d(nh, self.roughness) / na;
 
             // Calculate G1 and G2- Geometric microfacet shadowing
             let g1 = Self::ggx_g(ha, na, self.roughness);
