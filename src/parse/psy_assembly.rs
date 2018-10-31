@@ -51,7 +51,8 @@ pub fn parse_assembly<'a>(
                     // Get surface shader binding, if any.
                     let surface_shader_name = if child
                         .iter_leaf_children_with_type("SurfaceShaderBind")
-                        .count() > 0
+                        .count()
+                        > 0
                     {
                         Some(
                             child

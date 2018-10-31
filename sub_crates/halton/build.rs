@@ -255,8 +255,7 @@ fn get_faure_permutation(faure: &Vec<Vec<usize>>, b: usize) -> Vec<usize> {
 
                 let f: usize = faure[b - 1][i - ((i > c) as usize)];
                 f + ((f >= c) as usize)
-            })
-            .collect();
+            }).collect();
     } else {
         // even
         let c = b / 2;
@@ -268,8 +267,7 @@ fn get_faure_permutation(faure: &Vec<Vec<usize>>, b: usize) -> Vec<usize> {
                 } else {
                     2 * faure[c][i - c] + 1
                 }
-            })
-            .collect();
+            }).collect();
     }
 }
 

@@ -35,8 +35,7 @@ impl<'a> SphereLight<'a> {
             .map(|r| BBox {
                 min: Point::new(-*r, -*r, -*r),
                 max: Point::new(*r, *r, *r),
-            })
-            .collect();
+            }).collect();
         SphereLight {
             radii: arena.copy_slice(&radii),
             colors: arena.copy_slice(&colors),
@@ -257,8 +256,7 @@ impl<'a> Surface for SphereLight<'a> {
 
             // Get our final parametric values
             let mut t0 = q / a;
-            let mut t1 =
-                if q != 0.0 { c / q } else { r.max_t };
+            let mut t1 = if q != 0.0 { c / q } else { r.max_t };
 
             // Swap them so they are ordered right
             if t0 > t1 {

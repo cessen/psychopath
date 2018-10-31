@@ -621,7 +621,8 @@ impl LightPath {
                         .world
                         .background_color
                         .to_spectral_sample(self.wavelength)
-                        .e * self.light_attenuation
+                        .e
+                        * self.light_attenuation
                         / self.closure_sample_pdf;
                     return false;
                 }

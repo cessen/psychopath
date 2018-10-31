@@ -435,8 +435,9 @@ impl GTRClosure {
         let roughness2 = self.roughness * self.roughness;
 
         // Calculate top half of equation
-        let top = 1.0 - ((roughness2.powf(1.0 - self.tail_shape) * (1.0 - u)) + u)
-            .powf(1.0 / (1.0 - self.tail_shape));
+        let top = 1.0
+            - ((roughness2.powf(1.0 - self.tail_shape) * (1.0 - u)) + u)
+                .powf(1.0 / (1.0 - self.tail_shape));
 
         // Calculate bottom half of equation
         let bottom = 1.0 - roughness2;

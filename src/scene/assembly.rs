@@ -307,10 +307,10 @@ impl<'a> AssemblyBuilder<'a> {
                 InstanceType::Assembly => {
                     self.assemblies[inst.data_index]
                         .light_accel
-                        .approximate_energy() > 0.0
+                        .approximate_energy()
+                        > 0.0
                 }
-            })
-            .cloned()
+            }).cloned()
             .collect();
 
         // Build light accel

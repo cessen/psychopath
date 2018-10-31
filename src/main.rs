@@ -91,8 +91,7 @@ fn main() {
                 .help("Input .psy file")
                 .takes_value(true)
                 .required_unless_one(&["dev", "use_stdin"]),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("spp")
                 .short("s")
                 .long("spp")
@@ -104,8 +103,7 @@ fn main() {
                         .and(Ok(()))
                         .or(Err("must be an integer".to_string()))
                 }),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("max_bucket_samples")
                 .short("b")
                 .long("spb")
@@ -117,24 +115,21 @@ fn main() {
                         .and(Ok(()))
                         .or(Err("must be an integer".to_string()))
                 }),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("crop")
                 .long("crop")
                 .value_name("X1 Y1 X2 Y2")
                 .help(
                     "Only render the image between pixel coordinates (X1, Y1) \
                      and (X2, Y2).  Coordinates are zero-indexed and inclusive.",
-                )
-                .takes_value(true)
+                ).takes_value(true)
                 .number_of_values(4)
                 .validator(|s| {
                     usize::from_str(&s)
                         .and(Ok(()))
                         .or(Err("must be four integers".to_string()))
                 }),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("threads")
                 .short("t")
                 .long("threads")
@@ -142,37 +137,31 @@ fn main() {
                 .help(
                     "Number of threads to render with.  Defaults to the number of logical \
                      cores on the system.",
-                )
-                .takes_value(true)
+                ).takes_value(true)
                 .validator(|s| {
                     usize::from_str(&s)
                         .and(Ok(()))
                         .or(Err("must be an integer".to_string()))
                 }),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("stats")
                 .long("stats")
                 .help("Print additional statistics about rendering"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("dev")
                 .long("dev")
                 .help("Show useful dev/debug info."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("serialized_output")
                 .long("serialized_output")
                 .help("Serialize and send render output to standard output.")
                 .hidden(true),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("use_stdin")
                 .long("use_stdin")
                 .help("Take scene file in from stdin instead of a file path.")
                 .hidden(true),
-        )
-        .get_matches();
+        ).get_matches();
 
     // Print some misc useful dev info.
     if args.is_present("dev") {

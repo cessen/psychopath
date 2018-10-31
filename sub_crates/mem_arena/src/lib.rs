@@ -303,7 +303,8 @@ impl MemArena {
                     let w1 =
                         ((blocks[0].capacity() - blocks[0].len()) * 100) / blocks[0].capacity();
                     let w2 = ((self.stat_space_occupied.get() - self.stat_space_allocated.get())
-                        * 100) / self.stat_space_occupied.get();
+                        * 100)
+                        / self.stat_space_occupied.get();
                     if w1 < w2 {
                         w1
                     } else {

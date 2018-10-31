@@ -201,15 +201,18 @@ fn rgb_to_xyz(chroma: Chromaticities, y: f64) -> [[f64; 3]; 3] {
 
     let sr = (x * (chroma.b.1 - chroma.g.1)
         - chroma.g.0 * (y * (chroma.b.1 - 1.0) + chroma.b.1 * (x + z))
-        + chroma.b.0 * (y * (chroma.g.1 - 1.0) + chroma.g.1 * (x + z))) / d;
+        + chroma.b.0 * (y * (chroma.g.1 - 1.0) + chroma.g.1 * (x + z)))
+        / d;
 
     let sg = (x * (chroma.r.1 - chroma.b.1)
         + chroma.r.0 * (y * (chroma.b.1 - 1.0) + chroma.b.1 * (x + z))
-        - chroma.b.0 * (y * (chroma.r.1 - 1.0) + chroma.r.1 * (x + z))) / d;
+        - chroma.b.0 * (y * (chroma.r.1 - 1.0) + chroma.r.1 * (x + z)))
+        / d;
 
     let sb = (x * (chroma.g.1 - chroma.r.1)
         - chroma.r.0 * (y * (chroma.g.1 - 1.0) + chroma.g.1 * (x + z))
-        + chroma.g.0 * (y * (chroma.r.1 - 1.0) + chroma.r.1 * (x + z))) / d;
+        + chroma.g.0 * (y * (chroma.r.1 - 1.0) + chroma.r.1 * (x + z)))
+        / d;
 
     // Assemble the matrix
     let mut mat = [[0.0; 3]; 3];

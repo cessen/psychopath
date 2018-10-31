@@ -36,8 +36,7 @@ impl<'a> RectangleLight<'a> {
             .map(|d| BBox {
                 min: Point::new(d.0 * -0.5, d.1 * -0.5, 0.0),
                 max: Point::new(d.0 * 0.5, d.1 * 0.5, 0.0),
-            })
-            .collect();
+            }).collect();
         RectangleLight {
             dimensions: arena.copy_slice(&dimensions),
             colors: arena.copy_slice(&colors),
