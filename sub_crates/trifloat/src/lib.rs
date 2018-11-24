@@ -54,13 +54,13 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
         } else {
             (largest_value.log2() as i32 + 1).max(-10).min(21)
         };
-        let mut inv_multiplier = 512.0 / (exponent as f32).exp2();
+        let mut inv_multiplier = fiddle_exp2(-exponent + 9);
 
         // Edge-case: make sure rounding pushes the largest value up
         // appropriately if needed.
         if (largest_value * inv_multiplier) + 0.5 >= 512.0 {
             exponent = (exponent + 1).max(-10).min(21);
-            inv_multiplier = 512.0 / (exponent as f32).exp2();
+            inv_multiplier = fiddle_exp2(-exponent + 9);
         }
 
         (exponent, inv_multiplier)
@@ -84,13 +84,23 @@ pub fn decode(trifloat: u32) -> (f32, f32, f32) {
     let z = (trifloat >> 5) & 0b111111111;
     let e = trifloat & 0b11111;
 
-    let multiplier = ((e as i32 - 10) as f32).exp2() * (1.0 / 512.0);
+    let multiplier = fiddle_exp2(e as i32 - 10 - 9);
 
     (
         x as f32 * multiplier,
         y as f32 * multiplier,
         z as f32 * multiplier,
     )
+}
+
+/// Calculates 2.0^exp using IEEE bit fiddling.
+///
+/// Only works for integer exponents in the range [-126, 127]
+/// due to IEEE 32-bit float limits.
+#[inline(always)]
+fn fiddle_exp2(exp: i32) -> f32 {
+    use std::f32;
+    f32::from_bits(((exp + 127) as u32) << 23)
 }
 
 #[cfg(test)]
