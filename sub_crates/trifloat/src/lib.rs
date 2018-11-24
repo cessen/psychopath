@@ -1,29 +1,36 @@
-//! Encoding/decoding for a shared-exponent representation of three
+//! Encoding/decoding for a 32-bit shared-exponent representation of three
 //! positive floating point numbers.
 //!
-//! This is useful for e.g. compactly storing HDR colors.  Encoding is
-//! relatively slow due to edge cases that need to be handled correctly,
-//! but decoding is quite efficient.
-//!
-//! The encoding uses 9 bits of mantissa per number, and 5 bits for
-//! the shared exponent.
+//! This is useful for e.g. compactly storing HDR colors.  The encoding
+//! uses 9 bits of mantissa per number, and 5 bits for the shared
+//! exponent.
 //!
 //! The largest representable number is 2^21 - 4096, and the smallest
-//! representable non-zero number is 2^-19.  Values larger than the max
-//! representable value saturate.
+//! representable non-zero number is 2^-19.
 //!
 //! Since the exponent is shared between the three values, the precision
-//! of all three values depends on the largest of the three.  Epsilon is
-//! 1/256.  Values are converted to trifloat by rounding, so the max error
-//! introduced by conversion is half of epsilon.
-//!
-//! Warning: negative values and NaN's are _not_ supported nor handled in
-//! any kind useful way.  There are debug-only assertions in place for
-//! catching such values in the input floats to `encode_trifloat()`.
+//! of all three values depends on the largest of the three.  All integers
+//! up to 512 can be represented exactly in the largest value.
 
+/// Largest representable number.
 pub const MAX: f32 = 2093056.0;
+
+/// Smallest representable non-zero number.
 pub const MIN: f32 = 0.0000019073486;
 
+/// Difference between 1.0 and the next largest representable number.
+pub const EPSILON: f32 = 1.0 / 256.0;
+
+/// Encodes three floating point values into the trifloat format.
+///
+/// Floats that are larger than the max representable value in trifloat
+/// will saturate.  Values are converted to trifloat by rounding, so the
+/// max error introduced by this function is epsilon / 2.
+///
+/// Warning: negative values and NaN's are _not_ supported by the trifloat
+/// format.  There are debug-only assertions in place to catch such
+/// values in the input floats.  Infinity is also not supported in the
+/// format, but will simply saturate to the largest representable value.
 #[inline]
 pub fn encode(floats: (f32, f32, f32)) -> u32 {
     debug_assert!(
@@ -33,7 +40,7 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
             && !floats.0.is_nan()
             && !floats.1.is_nan()
             && !floats.2.is_nan(),
-        "encode_trifloat(): encoding to tri-floats only works correctly for \
+        "trifloat::encode(): encoding to tri-floats only works correctly for \
          positive, non-NaN numbers, but the numbers passed were: ({}, \
          {}, {})",
         floats.0,
@@ -76,6 +83,9 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
     (x << (5 + 9 + 9)) | (y << (5 + 9)) | (z << 5) | e
 }
 
+/// Decodes a trifloat into three full floating point numbers.
+///
+/// This operation is lossless and cannot fail.
 #[inline]
 pub fn decode(trifloat: u32) -> (f32, f32, f32) {
     // Unpack values.
@@ -135,6 +145,14 @@ mod tests {
             let (x, _, _) = round_trip((n, 0.0, 0.0));
             assert_eq!(n, x);
             n += 1.0 / 256.0;
+        }
+    }
+
+    #[test]
+    fn integers() {
+        for n in 0..=512 {
+            let (x, _, _) = round_trip((n as f32, 0.0, 0.0));
+            assert_eq!(n as f32, x);
         }
     }
 
