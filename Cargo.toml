@@ -7,7 +7,8 @@ members = [
     "sub_crates/math3d",
     "sub_crates/mem_arena",
     "sub_crates/sobol",
-    "sub_crates/spectra_xyz"
+    "sub_crates/spectra_xyz",
+    "sub_crates/trifloat"
 ]
 
 [package]
@@ -57,3 +58,6 @@ path = "sub_crates/sobol"
 
 [dependencies.spectra_xyz]
 path = "sub_crates/spectra_xyz"
+
+[dependencies.trifloat]
+path = "sub_crates/trifloat"
