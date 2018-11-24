@@ -25,7 +25,7 @@ pub const MAX: f32 = 2093056.0;
 pub const MIN: f32 = 0.0000019073486;
 
 #[inline]
-pub fn encode_trifloat(floats: (f32, f32, f32)) -> u32 {
+pub fn encode(floats: (f32, f32, f32)) -> u32 {
     debug_assert!(
         floats.0 >= 0.0
             && floats.1 >= 0.0
@@ -77,7 +77,7 @@ pub fn encode_trifloat(floats: (f32, f32, f32)) -> u32 {
 }
 
 #[inline]
-pub fn decode_trifloat(trifloat: u32) -> (f32, f32, f32) {
+pub fn decode(trifloat: u32) -> (f32, f32, f32) {
     // Unpack values.
     let x = (trifloat >> (5 + 9 + 9)) & 0b111111111;
     let y = (trifloat >> (5 + 9)) & 0b111111111;
@@ -98,15 +98,15 @@ mod tests {
     use super::*;
 
     fn round_trip(floats: (f32, f32, f32)) -> (f32, f32, f32) {
-        decode_trifloat(encode_trifloat(floats))
+        decode(encode(floats))
     }
 
     #[test]
     fn all_zeros() {
         let fs = (0.0f32, 0.0f32, 0.0f32);
 
-        let tri = encode_trifloat(fs);
-        let fs2 = decode_trifloat(tri);
+        let tri = encode(fs);
+        let fs2 = decode(tri);
 
         assert_eq!(tri, 0u32);
         assert_eq!(fs, fs2);
@@ -146,7 +146,7 @@ mod tests {
         let fs = (9999999999.0, 9999999999.0, 9999999999.0);
 
         assert_eq!(round_trip(fs), (MAX, MAX, MAX));
-        assert_eq!(decode_trifloat(0xFFFFFFFF), (MAX, MAX, MAX),);
+        assert_eq!(decode(0xFFFFFFFF), (MAX, MAX, MAX),);
     }
 
     #[test]
@@ -155,7 +155,7 @@ mod tests {
         let fs = (INFINITY, 0.0, 0.0);
 
         assert_eq!(round_trip(fs), (MAX, 0.0, 0.0));
-        assert_eq!(encode_trifloat(fs), 0xFF80001F,);
+        assert_eq!(encode(fs), 0xFF80001F,);
     }
 
     #[test]
@@ -169,13 +169,13 @@ mod tests {
     fn smallest_value() {
         let fs = (MIN, MIN * 0.5, MIN * 0.49);
         assert_eq!(round_trip(fs), (MIN, MIN, 0.0));
-        assert_eq!(decode_trifloat(0x00_80_40_00), (MIN, MIN, 0.0));
+        assert_eq!(decode(0x00_80_40_00), (MIN, MIN, 0.0));
     }
 
     #[test]
     fn underflow() {
         let fs = (MIN * 0.49, 0.0, 0.0);
-        assert_eq!(encode_trifloat(fs), 0);
+        assert_eq!(encode(fs), 0);
         assert_eq!(round_trip(fs), (0.0, 0.0, 0.0));
     }
 }
