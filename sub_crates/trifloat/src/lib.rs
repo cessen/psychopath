@@ -3,7 +3,9 @@
 //!
 //! This is useful for e.g. compactly storing HDR colors.  The encoding
 //! uses 9 bits of mantissa per number, and 5 bits for the shared
-//! exponent.
+//! exponent.  The bit layout is [mantissa 1, mantissa 2, mantissa 3,
+//! exponent].  The exponent is stored as an unsigned integer with a
+//! bias of 10.
 //!
 //! The largest representable number is 2^21 - 4096, and the smallest
 //! representable non-zero number is 2^-19.
@@ -13,10 +15,10 @@
 //! up to 512 can be represented exactly in the largest value.
 
 /// Largest representable number.
-pub const MAX: f32 = 2093056.0;
+pub const MAX: f32 = 2_093_056.0;
 
 /// Smallest representable non-zero number.
-pub const MIN: f32 = 0.0000019073486;
+pub const MIN: f32 = 0.000_001_907_348_6;
 
 /// Difference between 1.0 and the next largest representable number.
 pub const EPSILON: f32 = 1.0 / 256.0;
@@ -55,29 +57,21 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
     }
 
     // Calculate the exponent and 1.0/multiplier for encoding the values.
-    let (exponent, inv_multiplier) = {
-        let mut exponent = if largest_value > MAX {
-            21
-        } else {
-            (largest_value.log2() as i32 + 1).max(-10).min(21)
-        };
-        let mut inv_multiplier = fiddle_exp2(-exponent + 9);
+    let mut exponent = (fiddle_log2(largest_value) + 1).max(-10).min(21);
+    let mut inv_multiplier = fiddle_exp2(-exponent + 9);
 
-        // Edge-case: make sure rounding pushes the largest value up
-        // appropriately if needed.
-        if (largest_value * inv_multiplier) + 0.5 >= 512.0 {
-            exponent = (exponent + 1).max(-10).min(21);
-            inv_multiplier = fiddle_exp2(-exponent + 9);
-        }
-
-        (exponent, inv_multiplier)
-    };
+    // Edge-case: make sure rounding pushes the largest value up
+    // appropriately if needed.
+    if (largest_value * inv_multiplier) + 0.5 >= 512.0 {
+        exponent = (exponent + 1).min(21);
+        inv_multiplier = fiddle_exp2(-exponent + 9);
+    }
 
     // Quantize and encode values.
-    let x = (floats.0 * inv_multiplier + 0.5).min(511.0) as u32 & 0b111111111;
-    let y = (floats.1 * inv_multiplier + 0.5).min(511.0) as u32 & 0b111111111;
-    let z = (floats.2 * inv_multiplier + 0.5).min(511.0) as u32 & 0b111111111;
-    let e = (exponent + 10) as u32 & 0b11111;
+    let x = (floats.0 * inv_multiplier + 0.5).min(511.0) as u32 & 0b1_1111_1111;
+    let y = (floats.1 * inv_multiplier + 0.5).min(511.0) as u32 & 0b1_1111_1111;
+    let z = (floats.2 * inv_multiplier + 0.5).min(511.0) as u32 & 0b1_1111_1111;
+    let e = (exponent + 10) as u32 & 0b1_1111;
 
     // Pack values into a u32.
     (x << (5 + 9 + 9)) | (y << (5 + 9)) | (z << 5) | e
@@ -89,10 +83,10 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
 #[inline]
 pub fn decode(trifloat: u32) -> (f32, f32, f32) {
     // Unpack values.
-    let x = (trifloat >> (5 + 9 + 9)) & 0b111111111;
-    let y = (trifloat >> (5 + 9)) & 0b111111111;
-    let z = (trifloat >> 5) & 0b111111111;
-    let e = trifloat & 0b11111;
+    let x = trifloat >> (5 + 9 + 9);
+    let y = (trifloat >> (5 + 9)) & 0b1_1111_1111;
+    let z = (trifloat >> 5) & 0b1_1111_1111;
+    let e = trifloat & 0b1_1111;
 
     let multiplier = fiddle_exp2(e as i32 - 10 - 9);
 
@@ -111,6 +105,19 @@ pub fn decode(trifloat: u32) -> (f32, f32, f32) {
 fn fiddle_exp2(exp: i32) -> f32 {
     use std::f32;
     f32::from_bits(((exp + 127) as u32) << 23)
+}
+
+/// Calculates a floor(log2(n)) using IEEE bit fiddling.
+///
+/// Because of IEEE floating point format, infinity and NaN
+/// floating point values return 128, and subnormal numbers always
+/// return -127.  These particular behaviors are not, of course,
+/// mathemetically correct, but are actually desireable for the
+/// calculations in this library.
+#[inline(always)]
+fn fiddle_log2(n: f32) -> i32 {
+    use std::f32;
+    ((f32::to_bits(n) >> 23) & 0b1111_1111) as i32 - 127
 }
 
 #[cfg(test)]
