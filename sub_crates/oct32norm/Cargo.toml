@@ -10,3 +10,9 @@ path = "src/lib.rs"
 
 [dev-dependencies]
 proptest = "0.8"
+bencher = "0.1.5"
+rand = "0.6"
+
+[[bench]]
+name = "bench"
+harness = false
