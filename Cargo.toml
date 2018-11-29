@@ -6,6 +6,7 @@ members = [
     "sub_crates/halton",
     "sub_crates/math3d",
     "sub_crates/mem_arena",
+    "sub_crates/oct32norm",
     "sub_crates/sobol",
     "sub_crates/spectra_xyz",
     "sub_crates/trifloat"
@@ -52,6 +53,9 @@ path = "sub_crates/math3d"
 
 [dependencies.mem_arena]
 path = "sub_crates/mem_arena"
+
+[dependencies.oct32norm]
+path = "sub_crates/oct32norm"
 
 [dependencies.sobol]
 path = "sub_crates/sobol"

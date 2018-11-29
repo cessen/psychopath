@@ -112,6 +112,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "oct32norm"
+version = "0.1.0"
+
+[[package]]
 name = "openexr"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -158,6 +162,7 @@ dependencies = [
  "mem_arena 0.1.0",
  "nom 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oct32norm 0.1.0",
  "openexr 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "png_encode_mini 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)",
