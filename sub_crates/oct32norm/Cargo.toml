@@ -7,3 +7,6 @@ license = "MIT"
 [lib]
 name = "oct32norm"
 path = "src/lib.rs"
+
+[dev-dependencies]
+proptest = "0.8"
