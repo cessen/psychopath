@@ -31,9 +31,7 @@ pub fn parse_distant_disk_light<'a>(
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "Radius" =>
-                {
+                } if type_name == "Radius" => {
                     if let IResult::Done(_, radius) = ws_f32(contents.as_bytes()) {
                         radii.push(radius);
                     } else {
@@ -47,9 +45,7 @@ pub fn parse_distant_disk_light<'a>(
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "Direction" =>
-                {
+                } if type_name == "Direction" => {
                     if let IResult::Done(_, direction) =
                         closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes())
                     {
@@ -65,9 +61,7 @@ pub fn parse_distant_disk_light<'a>(
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "Color" =>
-                {
+                } if type_name == "Color" => {
                     if let IResult::Done(_, color) =
                         closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes())
                     {
@@ -107,9 +101,7 @@ pub fn parse_sphere_light<'a>(
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "Radius" =>
-                {
+                } if type_name == "Radius" => {
                     if let IResult::Done(_, radius) = ws_f32(contents.as_bytes()) {
                         radii.push(radius);
                     } else {
@@ -123,9 +115,7 @@ pub fn parse_sphere_light<'a>(
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "Color" =>
-                {
+                } if type_name == "Color" => {
                     if let IResult::Done(_, color) =
                         closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes())
                     {
@@ -165,9 +155,7 @@ pub fn parse_rectangle_light<'a>(
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "Dimensions" =>
-                {
+                } if type_name == "Dimensions" => {
                     if let IResult::Done(_, radius) =
                         closure!(tuple!(ws_f32, ws_f32))(contents.as_bytes())
                     {
@@ -183,9 +171,7 @@ pub fn parse_rectangle_light<'a>(
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "Color" =>
-                {
+                } if type_name == "Color" => {
                     if let IResult::Done(_, color) =
                         closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes())
                     {

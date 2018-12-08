@@ -99,8 +99,10 @@ pub fn {}_to_xyz(rgb: (f32, f32, f32)) -> (f32, f32, f32) {{
             to_xyz[2][0],
             to_xyz[2][1],
             to_xyz[2][2]
-        ).as_bytes(),
-    ).unwrap();
+        )
+        .as_bytes(),
+    )
+    .unwrap();
 
     let inv = inverse(to_xyz);
     f.write_all(
@@ -125,8 +127,10 @@ pub fn xyz_to_{}(xyz: (f32, f32, f32)) -> (f32, f32, f32) {{
             inv[2][0],
             inv[2][1],
             inv[2][2]
-        ).as_bytes(),
-    ).unwrap();
+        )
+        .as_bytes(),
+    )
+    .unwrap();
 
     let e_to_xyz = adapt_to_e(to_xyz, 1.0);
     f.write_all(
@@ -151,8 +155,10 @@ pub fn {}_e_to_xyz(rgb: (f32, f32, f32)) -> (f32, f32, f32) {{
             e_to_xyz[2][0],
             e_to_xyz[2][1],
             e_to_xyz[2][2]
-        ).as_bytes(),
-    ).unwrap();
+        )
+        .as_bytes(),
+    )
+    .unwrap();
 
     let inv_e = inverse(e_to_xyz);
     f.write_all(
@@ -177,8 +183,10 @@ pub fn xyz_to_{}_e(xyz: (f32, f32, f32)) -> (f32, f32, f32) {{
             inv_e[2][0],
             inv_e[2][1],
             inv_e[2][2]
-        ).as_bytes(),
-    ).unwrap();
+        )
+        .as_bytes(),
+    )
+    .unwrap();
 }
 
 /// Port of the RGBtoXYZ function from the ACES CTL reference implementation.

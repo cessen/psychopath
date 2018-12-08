@@ -181,12 +181,14 @@ impl Image {
                 .add_channel("G", openexr::PixelType::HALF)
                 .add_channel("B", openexr::PixelType::HALF)
                 .set_compression(openexr::header::Compression::PIZ_COMPRESSION),
-        ).unwrap();
+        )
+        .unwrap();
 
         wr.write_pixels(
             openexr::FrameBuffer::new(self.res.0 as u32, self.res.1 as u32)
                 .insert_channels(&["R", "G", "B"], &image),
-        ).unwrap();
+        )
+        .unwrap();
     }
 }
 

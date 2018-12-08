@@ -170,17 +170,14 @@ impl<'a> Surface for TriangleMesh<'a> {
                         } else {
                             // Deformation motion blur, need to interpolate.
                             let p0_slice = &self.vertices[(tri_indices.0 as usize
-                                                              * self.time_sample_count)
-                                                              ..((tri_indices.0 as usize + 1)
-                                                                  * self.time_sample_count)];
+                                * self.time_sample_count)
+                                ..((tri_indices.0 as usize + 1) * self.time_sample_count)];
                             let p1_slice = &self.vertices[(tri_indices.1 as usize
-                                                              * self.time_sample_count)
-                                                              ..((tri_indices.1 as usize + 1)
-                                                                  * self.time_sample_count)];
+                                * self.time_sample_count)
+                                ..((tri_indices.1 as usize + 1) * self.time_sample_count)];
                             let p2_slice = &self.vertices[(tri_indices.2 as usize
-                                                              * self.time_sample_count)
-                                                              ..((tri_indices.2 as usize + 1)
-                                                                  * self.time_sample_count)];
+                                * self.time_sample_count)
+                                ..((tri_indices.2 as usize + 1) * self.time_sample_count)];
 
                             let p0 = lerp_slice(p0_slice, wr.time);
                             let p1 = lerp_slice(p1_slice, wr.time);
@@ -229,17 +226,14 @@ impl<'a> Surface for TriangleMesh<'a> {
                                 // Calculate interpolated surface normal, if any
                                 let shading_normal = if let Some(normals) = self.normals {
                                     let n0_slice = &normals[(tri_indices.0 as usize
-                                                                * self.time_sample_count)
-                                                                ..((tri_indices.0 as usize + 1)
-                                                                    * self.time_sample_count)];
+                                        * self.time_sample_count)
+                                        ..((tri_indices.0 as usize + 1) * self.time_sample_count)];
                                     let n1_slice = &normals[(tri_indices.1 as usize
-                                                                * self.time_sample_count)
-                                                                ..((tri_indices.1 as usize + 1)
-                                                                    * self.time_sample_count)];
+                                        * self.time_sample_count)
+                                        ..((tri_indices.1 as usize + 1) * self.time_sample_count)];
                                     let n2_slice = &normals[(tri_indices.2 as usize
-                                                                * self.time_sample_count)
-                                                                ..((tri_indices.2 as usize + 1)
-                                                                    * self.time_sample_count)];
+                                        * self.time_sample_count)
+                                        ..((tri_indices.2 as usize + 1) * self.time_sample_count)];
 
                                     let n0 = lerp_slice(n0_slice, wr.time).normalized();
                                     let n1 = lerp_slice(n1_slice, wr.time).normalized();

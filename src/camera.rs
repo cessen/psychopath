@@ -87,7 +87,8 @@ impl<'a> Camera<'a> {
             (x * tfov) - (orig.x() / focus_distance),
             (y * tfov) - (orig.y() / focus_distance),
             1.0,
-        ).normalized();
+        )
+        .normalized();
 
         Ray::new(orig * transform, dir * transform, time, wavelength, false)
     }

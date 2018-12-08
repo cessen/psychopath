@@ -207,9 +207,7 @@ fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "Path" =>
-                {
+                } if type_name == "Path" => {
                     // Trim and validate
                     let tc = contents.trim();
                     if tc.chars().count() < 2 {
@@ -271,9 +269,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "Resolution" =>
-                {
+                } if type_name == "Resolution" => {
                     if let IResult::Done(_, (w, h)) =
                         closure!(terminated!(tuple!(ws_u32, ws_u32), eof!()))(contents.as_bytes())
                     {
@@ -294,9 +290,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "SamplesPerPixel" =>
-                {
+                } if type_name == "SamplesPerPixel" => {
                     if let IResult::Done(_, n) = ws_u32(contents.as_bytes()) {
                         found_spp = true;
                         spp = n;
@@ -316,9 +310,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "Seed" =>
-                {
+                } if type_name == "Seed" => {
                     if let IResult::Done(_, n) = ws_u32(contents.as_bytes()) {
                         seed = n;
                     } else {
@@ -370,9 +362,7 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "Fov" =>
-                {
+                } if type_name == "Fov" => {
                     if let IResult::Done(_, fov) = ws_f32(contents.as_bytes()) {
                         fovs.push(fov * (f32::consts::PI / 180.0));
                     } else {
@@ -391,9 +381,7 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "FocalDistance" =>
-                {
+                } if type_name == "FocalDistance" => {
                     if let IResult::Done(_, fd) = ws_f32(contents.as_bytes()) {
                         focus_distances.push(fd);
                     } else {
@@ -412,9 +400,7 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "ApertureRadius" =>
-                {
+                } if type_name == "ApertureRadius" => {
                     if let IResult::Done(_, ar) = ws_f32(contents.as_bytes()) {
                         aperture_radii.push(ar);
                     } else {
@@ -433,9 +419,7 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
                     type_name,
                     contents,
                     byte_offset,
-                }
-                    if type_name == "Transform" =>
-                {
+                } if type_name == "Transform" => {
                     if let Ok(mat) = parse_matrix(contents) {
                         mats.push(mat);
                     } else {

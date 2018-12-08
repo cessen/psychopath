@@ -36,7 +36,8 @@ impl<'a> RectangleLight<'a> {
             .map(|d| BBox {
                 min: Point::new(d.0 * -0.5, d.1 * -0.5, 0.0),
                 max: Point::new(d.0 * 0.5, d.1 * 0.5, 0.0),
-            }).collect();
+            })
+            .collect();
         RectangleLight {
             dimensions: arena.copy_slice(&dimensions),
             colors: arena.copy_slice(&colors),
@@ -181,7 +182,8 @@ impl<'a> SurfaceLight for RectangleLight<'a> {
                         (u - threshhold) / (1.0 - threshhold),
                     )
                 }
-            }.into_point();
+            }
+            .into_point();
             let shadow_vec = sample_point - arr;
             let spectral_sample =
                 (col * surface_area_inv as f32 * 0.5).to_spectral_sample(wavelength);

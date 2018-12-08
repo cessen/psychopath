@@ -92,8 +92,10 @@ fn main() {
 pub const MAX_DIMENSION: u32 = {};
 "#,
             NUM_DIMENSIONS
-        ).as_bytes(),
-    ).unwrap();
+        )
+        .as_bytes(),
+    )
+    .unwrap();
 
     // Write the sampling function
     f.write_all(
@@ -102,8 +104,10 @@ pub const MAX_DIMENSION: u32 = {};
 #[inline]
 pub fn sample(dimension: u32, index: u32) -> f32 {{
     match dimension {{"#
-        ).as_bytes(),
-    ).unwrap();
+        )
+        .as_bytes(),
+    )
+    .unwrap();
 
     for i in 0..NUM_DIMENSIONS {
         f.write_all(
@@ -111,8 +115,10 @@ pub fn sample(dimension: u32, index: u32) -> f32 {{
                 r#"
         {} => halton{}(index),"#,
                 i, primes[i]
-            ).as_bytes(),
-        ).unwrap();
+            )
+            .as_bytes(),
+        )
+        .unwrap();
     }
 
     f.write_all(
@@ -122,8 +128,10 @@ pub fn sample(dimension: u32, index: u32) -> f32 {{
     }}
 }}
     "#
-        ).as_bytes(),
-    ).unwrap();
+        )
+        .as_bytes(),
+    )
+    .unwrap();
 
     // Write the special-cased first dimension
     f.write_all(
@@ -139,8 +147,10 @@ fn halton2(mut index: u32) -> f32 {{
     return (index as f32) * (1.0 / ((1u64 << 32) as f32));
 }}
     "#
-        ).as_bytes(),
-    ).unwrap();
+        )
+        .as_bytes(),
+    )
+    .unwrap();
 
     for i in 1..NUM_DIMENSIONS {
         // Skip base 2.
@@ -186,16 +196,20 @@ fn halton{}(index: u32) -> f32 {{
                 base,
                 perm.len(),
                 perm_string
-            ).as_bytes(),
-        ).unwrap();;
+            )
+            .as_bytes(),
+        )
+        .unwrap();;
 
         f.write_all(
             format!(
                 r#"
     return (unsafe{{*PERM{}.get_unchecked((index % {}) as usize)}} as u32 * {} +"#,
                 base, pow_base, power
-            ).as_bytes(),
-        ).unwrap();;
+            )
+            .as_bytes(),
+        )
+        .unwrap();;
 
         // Advance to next set of digits.
         let mut div = 1;
@@ -207,8 +221,10 @@ fn halton{}(index: u32) -> f32 {{
                     r#"
             unsafe{{*PERM{}.get_unchecked(((index / {}) % {}) as usize)}} as u32 * {} +"#,
                     base, div, pow_base, power
-                ).as_bytes(),
-            ).unwrap();;
+                )
+                .as_bytes(),
+            )
+            .unwrap();;
         }
 
         f.write_all(
@@ -222,8 +238,10 @@ fn halton{}(index: u32) -> f32 {{
                 div * pow_base,
                 pow_base,
                 max_power
-            ).as_bytes(),
-        ).unwrap();;
+            )
+            .as_bytes(),
+        )
+        .unwrap();;
     }
 }
 
@@ -255,7 +273,8 @@ fn get_faure_permutation(faure: &Vec<Vec<usize>>, b: usize) -> Vec<usize> {
 
                 let f: usize = faure[b - 1][i - ((i > c) as usize)];
                 f + ((f >= c) as usize)
-            }).collect();
+            })
+            .collect();
     } else {
         // even
         let c = b / 2;
@@ -267,7 +286,8 @@ fn get_faure_permutation(faure: &Vec<Vec<usize>>, b: usize) -> Vec<usize> {
                 } else {
                     2 * faure[c][i - c] + 1
                 }
-            }).collect();
+            })
+            .collect();
     }
 }
 

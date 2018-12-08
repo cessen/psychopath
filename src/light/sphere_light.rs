@@ -35,7 +35,8 @@ impl<'a> SphereLight<'a> {
             .map(|r| BBox {
                 min: Point::new(-*r, -*r, -*r),
                 max: Point::new(*r, *r, *r),
-            }).collect();
+            })
+            .collect();
         SphereLight {
             radii: arena.copy_slice(&radii),
             colors: arena.copy_slice(&colors),

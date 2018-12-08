@@ -346,7 +346,8 @@ impl SurfaceClosure for LambertClosure {
                 nor.normalized()
             } else {
                 -nor.normalized()
-            }.into_vector();
+            }
+            .into_vector();
 
             let cos_nv = dot(nn, v).max(-1.0).min(1.0);
 
@@ -626,7 +627,8 @@ impl SurfaceClosure for GTRClosure {
             nor.normalized()
         } else {
             -nor.normalized() // If back-facing, flip normal
-        }.into_vector();
+        }
+        .into_vector();
 
         let aa = -inc.normalized(); // Vector pointing to where "in" came from
         let bb = to_light_center.normalized(); // Out
@@ -871,7 +873,8 @@ impl SurfaceClosure for GGXClosure {
             nor.normalized()
         } else {
             -nor.normalized() // If back-facing, flip normal
-        }.into_vector();
+        }
+        .into_vector();
 
         let aa = -inc.normalized(); // Vector pointing to where "in" came from
         let bb = to_light_center.normalized(); // Out

@@ -140,7 +140,8 @@ pub fn surface_point(tri: (Point, Point, Point), bary: (f32, f32, f32)) -> (Poin
     let pos_err = (((tri.0.into_vector().abs() * bary.0)
         + (tri.1.into_vector().abs() * bary.1)
         + (tri.2.into_vector().abs() * bary.2))
-        * fp_gamma(7)).co
+        * fp_gamma(7))
+    .co
     .h_max();
 
     (pos, pos_err)

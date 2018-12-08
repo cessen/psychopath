@@ -310,7 +310,8 @@ impl<'a> AssemblyBuilder<'a> {
                         .approximate_energy()
                         > 0.0
                 }
-            }).cloned()
+            })
+            .cloned()
             .collect();
 
         // Build light accel

@@ -701,7 +701,8 @@ mod tests {
             A {}
             B {}
         "#,
-        ).unwrap();
+        )
+        .unwrap();
 
         let i = dt.iter_children_with_type("A");
         assert_eq!(i.count(), 3);
@@ -717,7 +718,8 @@ mod tests {
             A {}
             B {}
         "#,
-        ).unwrap();
+        )
+        .unwrap();
 
         let i = dt.iter_internal_children_with_type("A");
         assert_eq!(i.count(), 2);
@@ -733,7 +735,8 @@ mod tests {
             A []
             B {}
         "#,
-        ).unwrap();
+        )
+        .unwrap();
 
         let i = dt.iter_leaf_children_with_type("A");
         assert_eq!(i.count(), 2);
