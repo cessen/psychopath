@@ -45,7 +45,7 @@ pub fn sample_with_scramble(dimension: u32, mut index: u32, scramble: u32) -> f3
         i += 1;
     }
 
-    return result as f32 * (1.0 / (1u64 << 32) as f32);
+    result as f32 * (1.0 / (1u64 << 32) as f32)
 }
 
 #[inline]
