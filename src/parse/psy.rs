@@ -7,13 +7,13 @@ use nom::IResult;
 
 use mem_arena::MemArena;
 
-use camera::Camera;
-use color::{rec709_e_to_xyz, XYZ};
-use light::WorldLightSource;
-use math::Matrix4x4;
-use renderer::Renderer;
-use scene::Scene;
-use scene::World;
+use crate::camera::Camera;
+use crate::color::{rec709_e_to_xyz, XYZ};
+use crate::light::WorldLightSource;
+use crate::math::Matrix4x4;
+use crate::renderer::Renderer;
+use crate::scene::Scene;
+use crate::scene::World;
 
 use super::basics::{ws_f32, ws_u32};
 use super::psy_assembly::parse_assembly;

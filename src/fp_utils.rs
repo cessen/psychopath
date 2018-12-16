@@ -3,7 +3,7 @@
 //! This is based on the work in section 3.9 of "Physically Based Rendering:
 //! From Theory to Implementation" 3rd edition by Pharr et al.
 
-use math::{dot, Normal, Point, Vector};
+use crate::math::{dot, Normal, Point, Vector};
 
 #[inline(always)]
 pub fn fp_gamma(n: u32) -> f32 {

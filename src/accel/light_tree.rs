@@ -1,10 +1,10 @@
 use mem_arena::MemArena;
 
-use algorithm::merge_slices_append;
-use bbox::BBox;
-use lerp::lerp_slice;
-use math::{Normal, Point, Vector};
-use shading::surface_closure::SurfaceClosure;
+use crate::algorithm::merge_slices_append;
+use crate::bbox::BBox;
+use crate::lerp::lerp_slice;
+use crate::math::{Normal, Point, Vector};
+use crate::shading::surface_closure::SurfaceClosure;
 
 use super::objects_split::sah_split;
 use super::LightAccel;

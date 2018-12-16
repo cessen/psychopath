@@ -5,11 +5,11 @@ pub mod triangle_mesh;
 
 use std::fmt::Debug;
 
-use boundable::Boundable;
-use math::{Matrix4x4, Normal, Point, Vector};
-use ray::{AccelRay, Ray};
-use shading::surface_closure::SurfaceClosureUnion;
-use shading::SurfaceShader;
+use crate::boundable::Boundable;
+use crate::math::{Matrix4x4, Normal, Point, Vector};
+use crate::ray::{AccelRay, Ray};
+use crate::shading::surface_closure::SurfaceClosureUnion;
+use crate::shading::SurfaceShader;
 
 pub trait Surface: Boundable + Debug + Sync {
     fn intersect_rays(

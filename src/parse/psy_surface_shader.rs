@@ -6,8 +6,8 @@ use nom::IResult;
 
 use mem_arena::MemArena;
 
-use color::{rec709_e_to_xyz, XYZ};
-use shading::{SimpleSurfaceShader, SurfaceShader};
+use crate::color::{rec709_e_to_xyz, XYZ};
+use crate::shading::{SimpleSurfaceShader, SurfaceShader};
 
 use super::basics::ws_f32;
 use super::psy::PsyParseError;

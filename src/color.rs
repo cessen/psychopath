@@ -2,11 +2,11 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
 
 use spectra_xyz::{spectrum_xyz_to_p_4, EQUAL_ENERGY_REFLECTANCE};
 
+use crate::lerp::Lerp;
+use crate::math::fast_exp;
 use float4::Float4;
-use lerp::Lerp;
-use math::fast_exp;
 
-pub use color_util::{rec709_e_to_xyz, rec709_to_xyz, xyz_to_rec709, xyz_to_rec709_e};
+pub use crate::color_util::{rec709_e_to_xyz, rec709_to_xyz, xyz_to_rec709, xyz_to_rec709_e};
 
 // Minimum and maximum wavelength of light we care about, in nanometers
 const WL_MIN: f32 = 380.0;

@@ -1,8 +1,8 @@
 use mem_arena::MemArena;
 
-use bbox::BBox;
-use math::{Normal, Point, Vector};
-use shading::surface_closure::SurfaceClosure;
+use crate::bbox::BBox;
+use crate::math::{Normal, Point, Vector};
+use crate::shading::surface_closure::SurfaceClosure;
 
 use super::LightAccel;
 

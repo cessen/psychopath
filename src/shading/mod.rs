@@ -5,8 +5,8 @@ use std::fmt::Debug;
 use self::surface_closure::{
     EmitClosure, GGXClosure, GTRClosure, LambertClosure, SurfaceClosureUnion,
 };
-use color::{Color, XYZ};
-use surface::SurfaceIntersectionData;
+use crate::color::{Color, XYZ};
+use crate::surface::SurfaceIntersectionData;
 
 /// Trait for surface shaders.
 pub trait SurfaceShader: Debug + Sync {

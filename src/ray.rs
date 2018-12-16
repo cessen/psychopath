@@ -2,8 +2,8 @@
 
 use std;
 
+use crate::math::{Matrix4x4, Point, Vector};
 use float4::Float4;
-use math::{Matrix4x4, Point, Vector};
 
 const OCCLUSION_FLAG: u32 = 1;
 const DONE_FLAG: u32 = 1 << 1;

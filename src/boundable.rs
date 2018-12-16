@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use bbox::BBox;
+use crate::bbox::BBox;
 
 pub trait Boundable {
     fn bounds(&self) -> &[BBox];

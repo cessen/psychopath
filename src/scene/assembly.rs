@@ -2,17 +2,17 @@ use std::collections::HashMap;
 
 use mem_arena::MemArena;
 
-use accel::BVH4;
-use accel::{LightAccel, LightTree};
-use bbox::{transform_bbox_slice_from, BBox};
-use boundable::Boundable;
-use color::SpectralSample;
-use lerp::lerp_slice;
-use light::SurfaceLight;
-use math::{Matrix4x4, Normal, Point};
-use shading::SurfaceShader;
-use surface::{Surface, SurfaceIntersection};
-use transform_stack::TransformStack;
+use crate::accel::BVH4;
+use crate::accel::{LightAccel, LightTree};
+use crate::bbox::{transform_bbox_slice_from, BBox};
+use crate::boundable::Boundable;
+use crate::color::SpectralSample;
+use crate::lerp::lerp_slice;
+use crate::light::SurfaceLight;
+use crate::math::{Matrix4x4, Normal, Point};
+use crate::shading::SurfaceShader;
+use crate::surface::{Surface, SurfaceIntersection};
+use crate::transform_stack::TransformStack;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Assembly<'a> {

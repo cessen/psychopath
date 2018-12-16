@@ -6,9 +6,9 @@ use nom::IResult;
 
 use mem_arena::MemArena;
 
-use color::{rec709_e_to_xyz, XYZ};
-use light::{DistantDiskLight, RectangleLight, SphereLight};
-use math::Vector;
+use crate::color::{rec709_e_to_xyz, XYZ};
+use crate::light::{DistantDiskLight, RectangleLight, SphereLight};
+use crate::math::Vector;
 
 use super::basics::ws_f32;
 use super::psy::PsyParseError;

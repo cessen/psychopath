@@ -4,9 +4,9 @@ use std;
 use std::iter::Iterator;
 use std::ops::{BitOr, BitOrAssign};
 
-use lerp::{lerp, lerp_slice, Lerp};
-use math::{fast_minf32, Matrix4x4, Point};
-use ray::AccelRay;
+use crate::lerp::{lerp, lerp_slice, Lerp};
+use crate::math::{fast_minf32, Matrix4x4, Point};
+use crate::ray::AccelRay;
 
 const BBOX_MAXT_ADJUST: f32 = 1.000_000_24;
 

@@ -1204,7 +1204,7 @@ mod fallback {
 //===========================================================================
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse"))]
-pub use x86_64_sse::{invert, transpose, v_max, v_min, Bool4, Float4};
+pub use crate::x86_64_sse::{invert, transpose, v_max, v_min, Bool4, Float4};
 
 #[cfg(not(all(target_arch = "x86_64", target_feature = "sse")))]
 pub use fallback::{invert, transpose, v_max, v_min, Bool4, Float4};

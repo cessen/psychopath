@@ -4,7 +4,7 @@ use std::result::Result;
 
 use mem_arena::MemArena;
 
-use scene::{Assembly, AssemblyBuilder, Object};
+use crate::scene::{Assembly, AssemblyBuilder, Object};
 
 use super::psy::{parse_matrix, PsyParseError};
 use super::psy_light::{parse_rectangle_light, parse_sphere_light};

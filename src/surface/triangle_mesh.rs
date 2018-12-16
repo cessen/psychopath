@@ -4,13 +4,13 @@ use std;
 
 use mem_arena::MemArena;
 
-use accel::BVH4;
-use bbox::BBox;
-use boundable::Boundable;
-use lerp::lerp_slice;
-use math::{cross, dot, Matrix4x4, Normal, Point};
-use ray::{AccelRay, Ray};
-use shading::SurfaceShader;
+use crate::accel::BVH4;
+use crate::bbox::BBox;
+use crate::boundable::Boundable;
+use crate::lerp::lerp_slice;
+use crate::math::{cross, dot, Matrix4x4, Normal, Point};
+use crate::ray::{AccelRay, Ray};
+use crate::shading::SurfaceShader;
 
 use super::triangle;
 use super::{Surface, SurfaceIntersection, SurfaceIntersectionData};

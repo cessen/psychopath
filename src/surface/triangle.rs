@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
-use fp_utils::fp_gamma;
-use math::Point;
-use ray::Ray;
+use crate::fp_utils::fp_gamma;
+use crate::math::Point;
+use crate::ray::Ray;
 
 /// Intersects `ray` with `tri`, returning `Some((t, b0, b1, b2))`, or `None`
 /// if no intersection.

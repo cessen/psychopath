@@ -156,7 +156,6 @@ fn take_decimal_real(i: &[u8]) -> IResult<&[u8], &[u8]> {
 mod test {
     use super::take_decimal_real;
     use super::*;
-    use nom::IResult::*;
 
     #[test]
     fn ws_u32_1() {

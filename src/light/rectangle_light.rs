@@ -1,18 +1,18 @@
 use mem_arena::MemArena;
 
-use bbox::BBox;
-use boundable::Boundable;
-use color::{Color, SpectralSample, XYZ};
-use lerp::lerp_slice;
-use math::{cross, dot, Matrix4x4, Normal, Point, Vector};
-use ray::{AccelRay, Ray};
-use sampling::{
+use crate::bbox::BBox;
+use crate::boundable::Boundable;
+use crate::color::{Color, SpectralSample, XYZ};
+use crate::lerp::lerp_slice;
+use crate::math::{cross, dot, Matrix4x4, Normal, Point, Vector};
+use crate::ray::{AccelRay, Ray};
+use crate::sampling::{
     spherical_triangle_solid_angle, triangle_surface_area, uniform_sample_spherical_triangle,
     uniform_sample_triangle,
 };
-use shading::surface_closure::{EmitClosure, SurfaceClosureUnion};
-use shading::SurfaceShader;
-use surface::{triangle, Surface, SurfaceIntersection, SurfaceIntersectionData};
+use crate::shading::surface_closure::{EmitClosure, SurfaceClosureUnion};
+use crate::shading::SurfaceShader;
+use crate::surface::{triangle, Surface, SurfaceIntersection, SurfaceIntersectionData};
 
 use super::SurfaceLight;
 

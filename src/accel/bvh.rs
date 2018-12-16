@@ -4,12 +4,12 @@ use std;
 
 use mem_arena::MemArena;
 
-use algorithm::partition;
-use bbox::BBox;
-use boundable::Boundable;
-use lerp::lerp_slice;
-use ray::AccelRay;
-use timer::Timer;
+use crate::algorithm::partition;
+use crate::bbox::BBox;
+use crate::boundable::Boundable;
+use crate::lerp::lerp_slice;
+use crate::ray::AccelRay;
+use crate::timer::Timer;
 
 use super::bvh_base::{BVHBase, BVHBaseNode, BVH_MAX_DEPTH};
 use super::ACCEL_NODE_RAY_TESTS;

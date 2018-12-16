@@ -13,7 +13,7 @@ use half::f16;
 use openexr;
 use png_encode_mini;
 
-use color::{xyz_to_rec709_e, XYZ};
+use crate::color::{xyz_to_rec709_e, XYZ};
 
 #[derive(Debug)]
 #[allow(clippy::type_complexity)]
@@ -100,15 +100,15 @@ impl Image {
         let mut f = io::BufWriter::new(File::create(path)?);
 
         // Write header
-        try!(write!(f, "P3\n{} {}\n255\n", self.res.0, self.res.1));
+        r#try!(write!(f, "P3\n{} {}\n255\n", self.res.0, self.res.1));
 
         // Write pixels
         for y in 0..self.res.1 {
             for x in 0..self.res.0 {
                 let (r, g, b) = quantize_tri_255(xyz_to_srgbe(self.get(x, y).to_tuple()));
-                try!(write!(f, "{} {} {} ", r, g, b));
+                r#try!(write!(f, "{} {} {} ", r, g, b));
             }
-            try!(write!(f, "\n"));
+            r#try!(write!(f, "\n"));
         }
 
         // Done
@@ -120,14 +120,14 @@ impl Image {
         let mut f = io::BufWriter::new(File::create(path)?);
 
         // Write header
-        try!(write!(f, "P6\n{} {}\n255\n", self.res.0, self.res.1));
+        r#try!(write!(f, "P6\n{} {}\n255\n", self.res.0, self.res.1));
 
         // Write pixels
         for y in 0..self.res.1 {
             for x in 0..self.res.0 {
                 let (r, g, b) = quantize_tri_255(xyz_to_srgbe(self.get(x, y).to_tuple()));
                 let d = [r, g, b];
-                try!(f.write_all(&d));
+                r#try!(f.write_all(&d));
             }
         }
 

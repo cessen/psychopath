@@ -2,10 +2,10 @@ use std::f64::consts::PI as PI_64;
 
 use mem_arena::MemArena;
 
-use color::{Color, SpectralSample, XYZ};
-use lerp::lerp_slice;
-use math::{coordinate_system_from_vector, Vector};
-use sampling::{uniform_sample_cone, uniform_sample_cone_pdf};
+use crate::color::{Color, SpectralSample, XYZ};
+use crate::lerp::lerp_slice;
+use crate::math::{coordinate_system_from_vector, Vector};
+use crate::sampling::{uniform_sample_cone, uniform_sample_cone_pdf};
 
 use super::WorldLightSource;
 

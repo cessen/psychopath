@@ -11,9 +11,11 @@ use std::f32;
 
 mod spectra_tables;
 
-pub use spectra_tables::{EQUAL_ENERGY_REFLECTANCE, SPECTRUM_SAMPLE_MAX, SPECTRUM_SAMPLE_MIN};
+pub use crate::spectra_tables::{
+    EQUAL_ENERGY_REFLECTANCE, SPECTRUM_SAMPLE_MAX, SPECTRUM_SAMPLE_MIN,
+};
 
-use spectra_tables::{
+use crate::spectra_tables::{
     SPECTRUM_DATA_POINTS,
     // CMF_X,
     // CMF_Y,

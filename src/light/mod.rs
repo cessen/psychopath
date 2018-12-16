@@ -4,9 +4,9 @@ mod sphere_light;
 
 use std::fmt::Debug;
 
-use color::SpectralSample;
-use math::{Matrix4x4, Normal, Point, Vector};
-use surface::Surface;
+use crate::color::SpectralSample;
+use crate::math::{Matrix4x4, Normal, Point, Vector};
+use crate::surface::Surface;
 
 pub use self::distant_disk_light::DistantDiskLight;
 pub use self::rectangle_light::RectangleLight;

@@ -2,10 +2,10 @@
 
 use std::f32::consts::PI as PI_32;
 
-use color::SpectralSample;
-use lerp::lerp;
-use math::{clamp, dot, zup_to_vec, Normal, Vector};
-use sampling::cosine_sample_hemisphere;
+use crate::color::SpectralSample;
+use crate::lerp::lerp;
+use crate::math::{clamp, dot, zup_to_vec, Normal, Vector};
+use crate::sampling::cosine_sample_hemisphere;
 
 const INV_PI: f32 = 1.0 / PI_32;
 const H_PI: f32 = PI_32 / 2.0;

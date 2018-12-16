@@ -7,8 +7,8 @@ mod objects_split;
 
 use std::cell::Cell;
 
-use math::{Normal, Point, Vector};
-use shading::surface_closure::SurfaceClosure;
+use crate::math::{Normal, Point, Vector};
+use crate::shading::surface_closure::SurfaceClosure;
 
 pub use self::bvh::{BVHNode, BVH};
 pub use self::bvh4::{BVH4Node, BVH4};

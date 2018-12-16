@@ -6,8 +6,8 @@ use nom::IResult;
 
 use mem_arena::MemArena;
 
-use math::{Normal, Point};
-use surface::triangle_mesh::TriangleMesh;
+use crate::math::{Normal, Point};
+use crate::surface::triangle_mesh::TriangleMesh;
 
 use super::basics::{ws_f32, ws_usize};
 use super::psy::PsyParseError;

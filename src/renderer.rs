@@ -10,22 +10,22 @@ use scoped_threadpool::Pool;
 
 use halton;
 
-use accel::{ACCEL_NODE_RAY_TESTS, ACCEL_TRAV_TIME};
-use algorithm::partition_pair;
-use color::{map_0_1_to_wavelength, Color, SpectralSample, XYZ};
+use crate::accel::{ACCEL_NODE_RAY_TESTS, ACCEL_TRAV_TIME};
+use crate::algorithm::partition_pair;
+use crate::color::{map_0_1_to_wavelength, Color, SpectralSample, XYZ};
+use crate::fp_utils::robust_ray_origin;
+use crate::hash::hash_u32;
+use crate::hilbert;
+use crate::image::Image;
+use crate::math::{fast_logit, upper_power_of_two};
+use crate::mis::power_heuristic;
+use crate::ray::Ray;
+use crate::scene::{Scene, SceneLightSample};
+use crate::surface;
+use crate::timer::Timer;
+use crate::tracer::Tracer;
+use crate::transform_stack::TransformStack;
 use float4::Float4;
-use fp_utils::robust_ray_origin;
-use hash::hash_u32;
-use hilbert;
-use image::Image;
-use math::{fast_logit, upper_power_of_two};
-use mis::power_heuristic;
-use ray::Ray;
-use scene::{Scene, SceneLightSample};
-use surface;
-use timer::Timer;
-use tracer::Tracer;
-use transform_stack::TransformStack;
 
 #[derive(Debug)]
 pub struct Renderer<'a> {
@@ -299,7 +299,7 @@ impl<'a> Renderer<'a> {
 
                 // Pre-calculate base64 encoding if needed
                 let base64_enc = if do_blender_output {
-                    use color::xyz_to_rec709_e;
+                    use crate::color::xyz_to_rec709_e;
                     Some(img_bucket.rgba_base64(xyz_to_rec709_e))
                 } else {
                     None
@@ -445,7 +445,7 @@ impl LightPath {
                     // If it's an emission closure, handle specially:
                     // - Collect light from the emission.
                     // - Terminate the path.
-                    use shading::surface_closure::SurfaceClosureUnion;
+                    use crate::shading::surface_closure::SurfaceClosureUnion;
                     if let SurfaceClosureUnion::EmitClosure(ref clsr) = *closure {
                         if let LightPathEvent::CameraRay = self.event {
                             self.color += clsr.emitted_color().e;
@@ -657,7 +657,7 @@ impl LightPath {
 /// LDS samples aren't available.
 #[inline(always)]
 fn get_sample(dimension: u32, i: u32) -> f32 {
-    use hash::hash_u32_to_f32;
+    use crate::hash::hash_u32_to_f32;
     if dimension < halton::MAX_DIMENSION {
         halton::sample(dimension, i)
     } else {

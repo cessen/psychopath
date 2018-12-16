@@ -1,5 +1,5 @@
-use color::XYZ;
-use light::WorldLightSource;
+use crate::color::XYZ;
+use crate::light::WorldLightSource;
 
 #[derive(Debug)]
 pub struct World<'a> {

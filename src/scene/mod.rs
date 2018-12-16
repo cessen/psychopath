@@ -1,13 +1,13 @@
 mod assembly;
 mod world;
 
-use accel::LightAccel;
-use algorithm::weighted_choice;
-use camera::Camera;
-use color::SpectralSample;
-use math::{Normal, Point, Vector};
-use surface::SurfaceIntersection;
-use transform_stack::TransformStack;
+use crate::accel::LightAccel;
+use crate::algorithm::weighted_choice;
+use crate::camera::Camera;
+use crate::color::SpectralSample;
+use crate::math::{Normal, Point, Vector};
+use crate::surface::SurfaceIntersection;
+use crate::transform_stack::TransformStack;
 
 pub use self::assembly::{Assembly, AssemblyBuilder, InstanceType, Object};
 pub use self::world::World;

@@ -72,13 +72,13 @@ use clap::{App, Arg};
 
 use mem_arena::MemArena;
 
-use accel::{BVH4Node, BVHNode};
-use bbox::BBox;
-use parse::{parse_scene, DataTree};
-use ray::{AccelRay, Ray};
-use renderer::LightPath;
-use surface::SurfaceIntersection;
-use timer::Timer;
+use crate::accel::{BVH4Node, BVHNode};
+use crate::bbox::BBox;
+use crate::parse::{parse_scene, DataTree};
+use crate::ray::{AccelRay, Ray};
+use crate::renderer::LightPath;
+use crate::surface::SurfaceIntersection;
+use crate::timer::Timer;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
