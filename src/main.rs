@@ -10,6 +10,7 @@
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::needless_range_loop)]
 #![allow(clippy::excessive_precision)]
+
 extern crate bvh_order;
 extern crate color as color_util;
 extern crate float4;
@@ -81,6 +82,7 @@ use timer::Timer;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[allow(clippy::cyclomatic_complexity)]
 fn main() {
     let mut t = Timer::new();
 

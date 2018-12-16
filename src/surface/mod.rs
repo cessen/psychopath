@@ -23,6 +23,7 @@ pub trait Surface: Boundable + Debug + Sync {
 }
 
 #[derive(Debug, Copy, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum SurfaceIntersection {
     Miss,
     Occlude,

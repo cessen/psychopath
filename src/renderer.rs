@@ -377,6 +377,7 @@ pub struct LightPath {
     color: Float4,
 }
 
+#[allow(clippy::new_ret_no_self)]
 impl LightPath {
     fn new(
         scene: &Scene,

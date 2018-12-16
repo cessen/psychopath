@@ -6,7 +6,6 @@ use std::fs::File;
 use std::io;
 use std::io::Write;
 use std::marker::PhantomData;
-use std::mem;
 use std::path::Path;
 use std::sync::Mutex;
 
@@ -17,6 +16,7 @@ use png_encode_mini;
 use color::{xyz_to_rec709_e, XYZ};
 
 #[derive(Debug)]
+#[allow(clippy::type_complexity)]
 pub struct Image {
     data: UnsafeCell<Vec<XYZ>>,
     res: (usize, usize),
@@ -87,7 +87,10 @@ impl Image {
         Bucket {
             min: min,
             max: max,
-            img: unsafe { mem::transmute(self as *const Image) },
+            // This cast to `*mut` is okay, because we have already dynamically
+            // ensured earlier in this function that the same memory locations
+            // aren't aliased.
+            img: self as *const Image as *mut Image,
             _phantom: PhantomData,
         }
     }

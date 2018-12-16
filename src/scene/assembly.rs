@@ -37,6 +37,8 @@ pub struct Assembly<'a> {
     pub light_accel: LightTree<'a>,
 }
 
+// TODO: actually fix this clippy warning, rather than `allow`ing it.
+#[allow(clippy::type_complexity)]
 impl<'a> Assembly<'a> {
     // Returns (light_color, (sample_point, normal, point_err), pdf, selection_pdf)
     pub fn sample_lights(
@@ -247,7 +249,7 @@ impl<'a> AssemblyBuilder<'a> {
                     *self
                         .surface_shader_map
                         .get(name)
-                        .expect(&format!("Unknown surface shader '{}'.", name))
+                        .unwrap_or_else(|| panic!("Unknown surface shader '{}'.", name))
                 }),
                 id: self.instances.len(),
                 transform_indices: xforms
@@ -261,7 +263,7 @@ impl<'a> AssemblyBuilder<'a> {
                     *self
                         .surface_shader_map
                         .get(name)
-                        .expect(&format!("Unknown surface shader '{}'.", name))
+                        .unwrap_or_else(|| panic!("Unknown surface shader '{}'.", name))
                 }),
                 id: self.instances.len(),
                 transform_indices: xforms
