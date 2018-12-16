@@ -142,7 +142,7 @@ impl<'a> DataTree<'a> {
             type_name,
             ident,
             ref children,
-            byte_offset: _,
+            ..
         } = *self
         {
             (type_name, ident, children)
@@ -154,7 +154,7 @@ impl<'a> DataTree<'a> {
         if let DataTree::Leaf {
             type_name,
             contents,
-            byte_offset: _,
+            ..
         } = *self
         {
             (type_name, contents)

@@ -1,10 +1,15 @@
-#![cfg_attr(feature = "cargo-clippy", allow(float_cmp))]
-#![cfg_attr(feature = "cargo-clippy", allow(inline_always))]
-#![cfg_attr(feature = "cargo-clippy", allow(many_single_char_names))]
-#![cfg_attr(feature = "cargo-clippy", allow(needless_lifetimes))]
-#![cfg_attr(feature = "cargo-clippy", allow(needless_return))]
-#![cfg_attr(feature = "cargo-clippy", allow(or_fun_call))]
-#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
+#![allow(clippy::float_cmp)]
+#![allow(clippy::inline_always)]
+#![allow(clippy::many_single_char_names)]
+#![allow(clippy::needless_lifetimes)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::or_fun_call)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::redundant_field_names)]
+#![allow(clippy::enum_variant_names)]
+#![allow(clippy::cast_lossless)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::excessive_precision)]
 extern crate bvh_order;
 extern crate color as color_util;
 extern crate float4;
@@ -74,7 +79,7 @@ use renderer::LightPath;
 use surface::SurfaceIntersection;
 use timer::Timer;
 
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     let mut t = Timer::new();
@@ -349,8 +354,8 @@ fn main() {
                 // Print memory stats if stats are wanted.
                 if args.is_present("stats") {
                     let arena_stats = arena.stats();
-                    let mib_occupied = arena_stats.0 as f64 / 1048576.0;
-                    let mib_allocated = arena_stats.1 as f64 / 1048576.0;
+                    let mib_occupied = arena_stats.0 as f64 / 1_048_576.0;
+                    let mib_allocated = arena_stats.1 as f64 / 1_048_576.0;
 
                     println!("MemArena stats:");
 
@@ -373,5 +378,5 @@ fn main() {
     }
 
     // End with blank line
-    println!("");
+    println!();
 }

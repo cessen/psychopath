@@ -123,12 +123,12 @@ pub fn parse_mesh_surface<'a>(
 
     Ok(TriangleMesh::from_verts_and_indices(
         arena,
-        verts,
-        if normals.is_empty() {
+        &verts,
+        &if normals.is_empty() {
             None
         } else {
             Some(normals)
         },
-        tri_vert_indices,
+        &tri_vert_indices,
     ))
 }

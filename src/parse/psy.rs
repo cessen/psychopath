@@ -217,7 +217,7 @@ fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
                              incorrect.",
                         ));
                     }
-                    if tc.chars().nth(0).unwrap() != '"' || tc.chars().last().unwrap() != '"' {
+                    if tc.chars().nth(0).unwrap() != '"' || !tc.ends_with('"') {
                         return Err(PsyParseError::IncorrectLeafData(
                             byte_offset,
                             "File paths must be \
@@ -434,10 +434,10 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
 
         return Ok(Camera::new(
             arena,
-            mats,
-            fovs,
-            aperture_radii,
-            focus_distances,
+            &mats,
+            &fovs,
+            &aperture_radii,
+            &focus_distances,
         ));
     } else {
         return Err(PsyParseError::ExpectedInternalNode(

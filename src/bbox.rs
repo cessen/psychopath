@@ -8,7 +8,7 @@ use lerp::{lerp, lerp_slice, Lerp};
 use math::{fast_minf32, Matrix4x4, Point};
 use ray::AccelRay;
 
-const BBOX_MAXT_ADJUST: f32 = 1.00000024;
+const BBOX_MAXT_ADJUST: f32 = 1.000_000_24;
 
 /// A 3D axis-aligned bounding box.
 #[derive(Debug, Copy, Clone)]

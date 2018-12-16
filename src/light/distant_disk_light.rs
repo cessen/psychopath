@@ -21,9 +21,9 @@ pub struct DistantDiskLight<'a> {
 impl<'a> DistantDiskLight<'a> {
     pub fn new(
         arena: &'a MemArena,
-        radii: Vec<f32>,
-        directions: Vec<Vector>,
-        colors: Vec<XYZ>,
+        radii: &[f32],
+        directions: &[Vector],
+        colors: &[XYZ],
     ) -> DistantDiskLight<'a> {
         DistantDiskLight {
             radii: arena.copy_slice(&radii),

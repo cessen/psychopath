@@ -141,7 +141,7 @@ fn dielectric_fresnel_from_fac(fresnel_fac: f32, c: f32) -> f32 {
     let tmp1 = fresnel_fac.sqrt() - 1.0;
 
     // Protect against divide by zero.
-    if tmp1.abs() < 0.000001 {
+    if tmp1.abs() < 0.000_001 {
         return 1.0;
     }
 
@@ -410,7 +410,7 @@ impl GTRClosure {
         self.tail_shape = (0.0001f32).max(self.tail_shape);
 
         // When roughness is too small, but not zero, there are floating point accuracy issues
-        if self.roughness < 0.000244140625 {
+        if self.roughness < 0.000_244_140_625 {
             // (2^-12)
             self.roughness = 0.0;
         }

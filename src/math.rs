@@ -133,8 +133,8 @@ pub fn fast_ln(x: f32) -> f32 {
     use std::mem::transmute_copy;
 
     let mut y = unsafe { transmute_copy::<f32, u32>(&x) as f32 };
-    y *= 8.2629582881927490e-8;
-    y - 87.989971088
+    y *= 8.262_958_288_192_749_0e-8;
+    y - 87.989_971_088
 }
 
 pub fn fast_pow2(p: f32) -> f32 {
@@ -146,7 +146,7 @@ pub fn fast_pow2(p: f32) -> f32 {
     let z: f32 = clipp - w as f32 + offset;
 
     let i: u32 = ((1 << 23) as f32
-        * (clipp + 121.2740575 + 27.7280233 / (4.84252568 - z) - 1.49012907 * z))
+        * (clipp + 121.274_057_5 + 27.728_023_3 / (4.842_525_68 - z) - 1.490_129_07 * z))
         as u32;
 
     unsafe { transmute_copy::<u32, f32>(&i) }
@@ -156,10 +156,10 @@ pub fn fast_log2(x: f32) -> f32 {
     use std::mem::transmute_copy;
 
     let xi = unsafe { transmute_copy::<f32, u32>(&x) };
-    let y = xi as f32 * 1.1920928955078125e-7;
-    let mx = unsafe { transmute_copy::<u32, f32>(&((xi & 0x007FFFFF) | 0x3f000000)) };
+    let y = xi as f32 * 1.192_092_895_507_812_5e-7;
+    let mx = unsafe { transmute_copy::<u32, f32>(&((xi & 0x007F_FFFF) | 0x3f00_0000)) };
 
-    y - 124.22551499 - 1.498030302 * mx - 1.72587999 / (0.3520887068 + mx)
+    y - 124.225_514_99 - 1.498_030_302 * mx - 1.725_879_99 / (0.352_088_706_8 + mx)
 }
 
 pub fn fast_exp(p: f32) -> f32 {
@@ -174,7 +174,7 @@ pub fn faster_pow2(p: f32) -> f32 {
     use std::mem::transmute_copy;
 
     let clipp: f32 = if p < -126.0 { -126.0 } else { p };
-    let i: u32 = ((1 << 23) as f32 * (clipp + 126.94269504)) as u32;
+    let i: u32 = ((1 << 23) as f32 * (clipp + 126.942_695_04)) as u32;
 
     unsafe { transmute_copy::<u32, f32>(&i) }
 }

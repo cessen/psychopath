@@ -29,7 +29,7 @@ pub struct SphereLight<'a> {
 }
 
 impl<'a> SphereLight<'a> {
-    pub fn new<'b>(arena: &'b MemArena, radii: Vec<f32>, colors: Vec<XYZ>) -> SphereLight<'b> {
+    pub fn new<'b>(arena: &'b MemArena, radii: &[f32], colors: &[XYZ]) -> SphereLight<'b> {
         let bbs: Vec<_> = radii
             .iter()
             .map(|r| BBox {

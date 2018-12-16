@@ -445,7 +445,7 @@ impl LightPath {
                     // - Collect light from the emission.
                     // - Terminate the path.
                     use shading::surface_closure::SurfaceClosureUnion;
-                    if let &SurfaceClosureUnion::EmitClosure(ref clsr) = closure {
+                    if let SurfaceClosureUnion::EmitClosure(ref clsr) = *closure {
                         if let LightPathEvent::CameraRay = self.event {
                             self.color += clsr.emitted_color().e;
                         } else {

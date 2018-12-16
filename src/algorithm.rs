@@ -46,7 +46,7 @@ where
     // performance out of the code.
     unsafe {
         let mut a = slc.as_mut_ptr();
-        let mut b = a.offset(slc.len() as isize);
+        let mut b = a.add(slc.len());
         let start = a as usize;
 
         loop {
@@ -96,7 +96,7 @@ where
     // performance out of the code.
     unsafe {
         let mut a = slc.as_mut_ptr();
-        let mut b = a.offset(slc.len() as isize);
+        let mut b = a.add(slc.len());
         let start = a as usize;
 
         loop {
@@ -151,8 +151,8 @@ where
     unsafe {
         let mut a1 = slc1.as_mut_ptr();
         let mut a2 = slc2.as_mut_ptr();
-        let mut b1 = a1.offset(slc1.len() as isize);
-        let mut b2 = a2.offset(slc2.len() as isize);
+        let mut b1 = a1.add(slc1.len());
+        let mut b2 = a2.add(slc2.len());
         let start = a1 as usize;
 
         loop {

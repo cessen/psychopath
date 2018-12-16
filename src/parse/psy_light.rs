@@ -79,7 +79,7 @@ pub fn parse_distant_disk_light<'a>(
             }
         }
 
-        return Ok(DistantDiskLight::new(arena, radii, directions, colors));
+        return Ok(DistantDiskLight::new(arena, &radii, &directions, &colors));
     } else {
         return Err(PsyParseError::UnknownError(tree.byte_offset()));
     }
@@ -133,7 +133,7 @@ pub fn parse_sphere_light<'a>(
             }
         }
 
-        return Ok(SphereLight::new(arena, radii, colors));
+        return Ok(SphereLight::new(arena, &radii, &colors));
     } else {
         return Err(PsyParseError::UnknownError(tree.byte_offset()));
     }
@@ -189,7 +189,7 @@ pub fn parse_rectangle_light<'a>(
             }
         }
 
-        return Ok(RectangleLight::new(arena, dimensions, colors));
+        return Ok(RectangleLight::new(arena, &dimensions, &colors));
     } else {
         return Err(PsyParseError::UnknownError(tree.byte_offset()));
     }

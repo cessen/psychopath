@@ -14,13 +14,17 @@ pub fn encode(vec: (f32, f32, f32)) -> u32 {
 
     let (u, v) = if vec.2 < 0.0 {
         (
-            to_snorm_16((1.0 - (vec.1 * inv_l1_norm).abs()) * sign(vec.0)) as u32,
-            to_snorm_16((1.0 - (vec.0 * inv_l1_norm).abs()) * sign(vec.1)) as u32,
+            u32::from(to_snorm_16(
+                (1.0 - (vec.1 * inv_l1_norm).abs()) * sign(vec.0),
+            )),
+            u32::from(to_snorm_16(
+                (1.0 - (vec.0 * inv_l1_norm).abs()) * sign(vec.1),
+            )),
         )
     } else {
         (
-            to_snorm_16(vec.0 * inv_l1_norm) as u32,
-            to_snorm_16(vec.1 * inv_l1_norm) as u32,
+            u32::from(to_snorm_16(vec.0 * inv_l1_norm)),
+            u32::from(to_snorm_16(vec.1 * inv_l1_norm)),
         )
     };
 
@@ -53,7 +57,7 @@ fn to_snorm_16(n: f32) -> u16 {
 
 #[inline(always)]
 fn from_snorm_16(n: u16) -> f32 {
-    (n as i16 as f32)
+    f32::from(n as i16)
         * (1.0f32 / ((1u32 << (16 - 1)) - 1) as f32)
             .max(-1.0)
             .min(1.0)

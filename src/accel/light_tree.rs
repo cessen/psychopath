@@ -135,10 +135,6 @@ impl<'a> LightAccel for LightTree<'a> {
         time: f32,
         n: f32,
     ) -> Option<(usize, f32, f32)> {
-        if self.root.is_none() {
-            return None;
-        }
-
         // Calculates the selection probability for a node
         let node_prob = |node_ref: &Node| {
             let bbox = lerp_slice(node_ref.bounds(), time);
@@ -153,7 +149,7 @@ impl<'a> LightAccel for LightTree<'a> {
         };
 
         // Traverse down the tree, keeping track of the relative probabilities
-        let mut node = self.root.unwrap();
+        let mut node = self.root?;
         let mut tot_prob = 1.0;
         let mut n = n;
         while let Node::Inner { children, .. } = *node {

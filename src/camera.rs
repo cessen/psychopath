@@ -19,18 +19,18 @@ pub struct Camera<'a> {
 impl<'a> Camera<'a> {
     pub fn new(
         arena: &'a MemArena,
-        transforms: Vec<Matrix4x4>,
-        fovs: Vec<f32>,
-        mut aperture_radii: Vec<f32>,
-        mut focus_distances: Vec<f32>,
+        transforms: &[Matrix4x4],
+        fovs: &[f32],
+        mut aperture_radii: &[f32],
+        mut focus_distances: &[f32],
     ) -> Camera<'a> {
         assert!(!transforms.is_empty(), "Camera has no transform(s)!");
         assert!(!fovs.is_empty(), "Camera has no fov(s)!");
 
         // Aperture needs focus distance and vice-versa.
         if aperture_radii.is_empty() || focus_distances.is_empty() {
-            aperture_radii = vec![0.0];
-            focus_distances = vec![1.0];
+            aperture_radii = &[0.0];
+            focus_distances = &[1.0];
 
             if aperture_radii.is_empty() && !focus_distances.is_empty() {
                 println!(
@@ -50,8 +50,8 @@ impl<'a> Camera<'a> {
             if aperture_radii.iter().any(|a| *a > 0.0) {
                 println!("WARNING: camera focal distance is zero or less.  Disabling focal blur.");
             }
-            aperture_radii = vec![0.0];
-            focus_distances = vec![1.0];
+            aperture_radii = &[0.0];
+            focus_distances = &[1.0];
         }
 
         // Convert angle fov into linear fov.

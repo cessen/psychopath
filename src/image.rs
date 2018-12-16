@@ -271,7 +271,7 @@ impl<'a> Drop for Bucket<'a> {
 }
 
 fn srgb_gamma(n: f32) -> f32 {
-    if n < 0.0031308 {
+    if n < 0.003_130_8 {
         n * 12.92
     } else {
         (1.055 * n.powf(1.0 / 2.4)) - 0.055

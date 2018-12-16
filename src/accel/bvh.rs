@@ -160,7 +160,7 @@ impl<'a> BVH<'a> {
         });
     }
 
-    #[cfg_attr(feature = "cargo-clippy", allow(mut_from_ref))]
+    #[allow(clippy::mut_from_ref)]
     fn construct_from_base(
         arena: &'a MemArena,
         base: &BVHBase,

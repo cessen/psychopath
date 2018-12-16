@@ -28,8 +28,8 @@ pub struct RectangleLight<'a> {
 impl<'a> RectangleLight<'a> {
     pub fn new<'b>(
         arena: &'b MemArena,
-        dimensions: Vec<(f32, f32)>,
-        colors: Vec<XYZ>,
+        dimensions: &[(f32, f32)],
+        colors: &[XYZ],
     ) -> RectangleLight<'b> {
         let bbs: Vec<_> = dimensions
             .iter()

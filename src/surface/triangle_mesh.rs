@@ -27,9 +27,9 @@ pub struct TriangleMesh<'a> {
 impl<'a> TriangleMesh<'a> {
     pub fn from_verts_and_indices<'b>(
         arena: &'b MemArena,
-        verts: Vec<Vec<Point>>,
-        vert_normals: Option<Vec<Vec<Normal>>>,
-        tri_indices: Vec<(usize, usize, usize)>,
+        verts: &[Vec<Point>],
+        vert_normals: &Option<Vec<Vec<Normal>>>,
+        tri_indices: &[(usize, usize, usize)],
     ) -> TriangleMesh<'b> {
         let vert_count = verts[0].len();
         let time_sample_count = verts.len();
@@ -80,7 +80,7 @@ impl<'a> TriangleMesh<'a> {
         // Create bounds array for use during BVH construction
         let bounds = {
             let mut bounds = Vec::with_capacity(indices.len() * time_sample_count);
-            for tri in &tri_indices {
+            for tri in tri_indices {
                 for ti in 0..time_sample_count {
                     let p0 = verts[ti][tri.0];
                     let p1 = verts[ti][tri.1];
