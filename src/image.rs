@@ -1,17 +1,17 @@
 #![allow(dead_code)]
 
-use std::cell::{RefCell, UnsafeCell};
-use std::cmp;
-use std::fs::File;
-use std::io;
-use std::io::Write;
-use std::marker::PhantomData;
-use std::path::Path;
-use std::sync::Mutex;
+use std::{
+    cell::{RefCell, UnsafeCell},
+    cmp,
+    fs::File,
+    io,
+    io::Write,
+    marker::PhantomData,
+    path::Path,
+    sync::Mutex,
+};
 
 use half::f16;
-use openexr;
-use png_encode_mini;
 
 use crate::color::{xyz_to_rec709_e, XYZ};
 

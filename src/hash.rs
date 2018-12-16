@@ -1,5 +1,3 @@
-use std;
-
 pub fn hash_u32(n: u32, seed: u32) -> u32 {
     let mut hash = n;
     for _ in 0..3 {

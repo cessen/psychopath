@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use float4;
 use math3d::{Matrix4x4, Normal, Point, Vector};
 
 /// Trait for allowing a type to be linearly interpolated.

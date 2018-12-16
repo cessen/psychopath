@@ -1,7 +1,6 @@
 use std::cmp;
 
-use crate::algorithm::merge_slices_to;
-use crate::math::Matrix4x4;
+use crate::{algorithm::merge_slices_to, math::Matrix4x4};
 
 pub struct TransformStack {
     stack: Vec<Matrix4x4>,

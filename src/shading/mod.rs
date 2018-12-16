@@ -2,11 +2,14 @@ pub mod surface_closure;
 
 use std::fmt::Debug;
 
+use crate::{
+    color::{Color, XYZ},
+    surface::SurfaceIntersectionData,
+};
+
 use self::surface_closure::{
     EmitClosure, GGXClosure, GTRClosure, LambertClosure, SurfaceClosureUnion,
 };
-use crate::color::{Color, XYZ};
-use crate::surface::SurfaceIntersectionData;
 
 /// Trait for surface shaders.
 pub trait SurfaceShader: Debug + Sync {

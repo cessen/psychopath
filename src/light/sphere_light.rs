@@ -2,16 +2,18 @@ use std::f64::consts::PI as PI_64;
 
 use mem_arena::MemArena;
 
-use crate::bbox::BBox;
-use crate::boundable::Boundable;
-use crate::color::{Color, SpectralSample, XYZ};
-use crate::lerp::lerp_slice;
-use crate::math::{coordinate_system_from_vector, dot, Matrix4x4, Normal, Point, Vector};
-use crate::ray::{AccelRay, Ray};
-use crate::sampling::{uniform_sample_cone, uniform_sample_cone_pdf, uniform_sample_sphere};
-use crate::shading::surface_closure::{EmitClosure, SurfaceClosureUnion};
-use crate::shading::SurfaceShader;
-use crate::surface::{Surface, SurfaceIntersection, SurfaceIntersectionData};
+use crate::{
+    bbox::BBox,
+    boundable::Boundable,
+    color::{Color, SpectralSample, XYZ},
+    lerp::lerp_slice,
+    math::{coordinate_system_from_vector, dot, Matrix4x4, Normal, Point, Vector},
+    ray::{AccelRay, Ray},
+    sampling::{uniform_sample_cone, uniform_sample_cone_pdf, uniform_sample_sphere},
+    shading::surface_closure::{EmitClosure, SurfaceClosureUnion},
+    shading::SurfaceShader,
+    surface::{Surface, SurfaceIntersection, SurfaceIntersectionData},
+};
 
 use super::SurfaceLight;
 

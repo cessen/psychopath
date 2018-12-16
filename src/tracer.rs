@@ -1,13 +1,15 @@
 use std::iter;
 
-use crate::algorithm::partition;
-use crate::color::{rec709_to_xyz, XYZ};
-use crate::lerp::lerp_slice;
-use crate::ray::{AccelRay, Ray};
-use crate::scene::{Assembly, InstanceType, Object};
-use crate::shading::{SimpleSurfaceShader, SurfaceShader};
-use crate::surface::SurfaceIntersection;
-use crate::transform_stack::TransformStack;
+use crate::{
+    algorithm::partition,
+    color::{rec709_to_xyz, XYZ},
+    lerp::lerp_slice,
+    ray::{AccelRay, Ray},
+    scene::{Assembly, InstanceType, Object},
+    shading::{SimpleSurfaceShader, SurfaceShader},
+    surface::SurfaceIntersection,
+    transform_stack::TransformStack,
+};
 
 pub struct Tracer<'a> {
     rays: Vec<AccelRay>,

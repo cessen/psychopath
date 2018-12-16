@@ -1,31 +1,33 @@
-use std;
-use std::cell::Cell;
-use std::cmp;
-use std::cmp::min;
-use std::io::{self, Write};
-use std::sync::{Mutex, RwLock};
+use std::{
+    cell::Cell,
+    cmp,
+    cmp::min,
+    io::{self, Write},
+    sync::{Mutex, RwLock},
+};
 
 use crossbeam::sync::MsQueue;
 use scoped_threadpool::Pool;
 
-use halton;
-
-use crate::accel::{ACCEL_NODE_RAY_TESTS, ACCEL_TRAV_TIME};
-use crate::algorithm::partition_pair;
-use crate::color::{map_0_1_to_wavelength, Color, SpectralSample, XYZ};
-use crate::fp_utils::robust_ray_origin;
-use crate::hash::hash_u32;
-use crate::hilbert;
-use crate::image::Image;
-use crate::math::{fast_logit, upper_power_of_two};
-use crate::mis::power_heuristic;
-use crate::ray::Ray;
-use crate::scene::{Scene, SceneLightSample};
-use crate::surface;
-use crate::timer::Timer;
-use crate::tracer::Tracer;
-use crate::transform_stack::TransformStack;
 use float4::Float4;
+
+use crate::{
+    accel::{ACCEL_NODE_RAY_TESTS, ACCEL_TRAV_TIME},
+    algorithm::partition_pair,
+    color::{map_0_1_to_wavelength, Color, SpectralSample, XYZ},
+    fp_utils::robust_ray_origin,
+    hash::hash_u32,
+    hilbert,
+    image::Image,
+    math::{fast_logit, upper_power_of_two},
+    mis::power_heuristic,
+    ray::Ray,
+    scene::{Scene, SceneLightSample},
+    surface,
+    timer::Timer,
+    tracer::Tracer,
+    transform_stack::TransformStack,
+};
 
 #[derive(Debug)]
 pub struct Renderer<'a> {

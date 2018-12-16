@@ -2,16 +2,16 @@
 
 use std::result::Result;
 
-use nom::IResult;
+use nom::{call, closure, tuple, tuple_parser, IResult};
 
 use mem_arena::MemArena;
 
-use crate::color::{rec709_e_to_xyz, XYZ};
-use crate::shading::{SimpleSurfaceShader, SurfaceShader};
+use crate::{
+    color::{rec709_e_to_xyz, XYZ},
+    shading::{SimpleSurfaceShader, SurfaceShader},
+};
 
-use super::basics::ws_f32;
-use super::psy::PsyParseError;
-use super::DataTree;
+use super::{basics::ws_f32, psy::PsyParseError, DataTree};
 
 // pub struct TriangleMesh {
 //    time_samples: usize,

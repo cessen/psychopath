@@ -1,16 +1,20 @@
 mod assembly;
 mod world;
 
-use crate::accel::LightAccel;
-use crate::algorithm::weighted_choice;
-use crate::camera::Camera;
-use crate::color::SpectralSample;
-use crate::math::{Normal, Point, Vector};
-use crate::surface::SurfaceIntersection;
-use crate::transform_stack::TransformStack;
+use crate::{
+    accel::LightAccel,
+    algorithm::weighted_choice,
+    camera::Camera,
+    color::SpectralSample,
+    math::{Normal, Point, Vector},
+    surface::SurfaceIntersection,
+    transform_stack::TransformStack,
+};
 
-pub use self::assembly::{Assembly, AssemblyBuilder, InstanceType, Object};
-pub use self::world::World;
+pub use self::{
+    assembly::{Assembly, AssemblyBuilder, InstanceType, Object},
+    world::World,
+};
 
 #[derive(Debug)]
 pub struct Scene<'a> {

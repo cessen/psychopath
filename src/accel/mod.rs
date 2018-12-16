@@ -7,13 +7,17 @@ mod objects_split;
 
 use std::cell::Cell;
 
-use crate::math::{Normal, Point, Vector};
-use crate::shading::surface_closure::SurfaceClosure;
+use crate::{
+    math::{Normal, Point, Vector},
+    shading::surface_closure::SurfaceClosure,
+};
 
-pub use self::bvh::{BVHNode, BVH};
-pub use self::bvh4::{BVH4Node, BVH4};
-pub use self::light_array::LightArray;
-pub use self::light_tree::LightTree;
+pub use self::{
+    bvh::{BVHNode, BVH},
+    bvh4::{BVH4Node, BVH4},
+    light_array::LightArray,
+    light_tree::LightTree,
+};
 
 // Track BVH traversal time
 thread_local! {

@@ -6,11 +6,13 @@ use mem_arena::MemArena;
 
 use crate::scene::{Assembly, AssemblyBuilder, Object};
 
-use super::psy::{parse_matrix, PsyParseError};
-use super::psy_light::{parse_rectangle_light, parse_sphere_light};
-use super::psy_mesh_surface::parse_mesh_surface;
-use super::psy_surface_shader::parse_surface_shader;
-use super::DataTree;
+use super::{
+    psy::{parse_matrix, PsyParseError},
+    psy_light::{parse_rectangle_light, parse_sphere_light},
+    psy_mesh_surface::parse_mesh_surface,
+    psy_surface_shader::parse_surface_shader,
+    DataTree,
+};
 
 pub fn parse_assembly<'a>(
     arena: &'a MemArena,

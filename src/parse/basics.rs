@@ -3,8 +3,12 @@
 
 use std::str;
 
-use nom::IResult::*;
-use nom::{digit, multispace, IResult, Needed};
+use nom::{
+    call, complete, delimited, digit, do_parse, error_position, multispace, named, one_of, opt,
+    tag, tuple_parser,
+    IResult::{self, *},
+    Needed,
+};
 
 // Consumes any whitespace, including zero whitespace
 named!(any_space<Option<&[u8]>>, opt!(complete!(multispace)));

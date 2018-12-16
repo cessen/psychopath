@@ -1,19 +1,18 @@
 #![allow(dead_code)]
 
-use std;
-
 use mem_arena::MemArena;
 
-use crate::accel::BVH4;
-use crate::bbox::BBox;
-use crate::boundable::Boundable;
-use crate::lerp::lerp_slice;
-use crate::math::{cross, dot, Matrix4x4, Normal, Point};
-use crate::ray::{AccelRay, Ray};
-use crate::shading::SurfaceShader;
+use crate::{
+    accel::BVH4,
+    bbox::BBox,
+    boundable::Boundable,
+    lerp::lerp_slice,
+    math::{cross, dot, Matrix4x4, Normal, Point},
+    ray::{AccelRay, Ray},
+    shading::SurfaceShader,
+};
 
-use super::triangle;
-use super::{Surface, SurfaceIntersection, SurfaceIntersectionData};
+use super::{triangle, Surface, SurfaceIntersection, SurfaceIntersectionData};
 
 #[derive(Copy, Clone, Debug)]
 pub struct TriangleMesh<'a> {

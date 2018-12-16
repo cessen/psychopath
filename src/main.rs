@@ -11,28 +11,6 @@
 #![allow(clippy::needless_range_loop)]
 #![allow(clippy::excessive_precision)]
 
-extern crate bvh_order;
-extern crate color as color_util;
-extern crate float4;
-extern crate halton;
-extern crate math3d;
-extern crate mem_arena;
-extern crate spectra_xyz;
-
-extern crate base64;
-extern crate clap;
-extern crate crossbeam;
-extern crate half;
-extern crate num_cpus;
-extern crate openexr;
-extern crate png_encode_mini;
-extern crate rustc_serialize;
-extern crate scoped_threadpool;
-extern crate time;
-
-#[macro_use]
-extern crate nom;
-
 #[macro_use]
 extern crate lazy_static;
 
@@ -61,24 +39,22 @@ mod timer;
 mod tracer;
 mod transform_stack;
 
-use std::fs::File;
-use std::io;
-use std::io::Read;
-use std::mem;
-use std::path::Path;
-use std::str::FromStr;
+use std::{fs::File, io, io::Read, mem, path::Path, str::FromStr};
 
 use clap::{App, Arg};
+use nom::{error_position, take_until};
 
 use mem_arena::MemArena;
 
-use crate::accel::{BVH4Node, BVHNode};
-use crate::bbox::BBox;
-use crate::parse::{parse_scene, DataTree};
-use crate::ray::{AccelRay, Ray};
-use crate::renderer::LightPath;
-use crate::surface::SurfaceIntersection;
-use crate::timer::Timer;
+use crate::{
+    accel::{BVH4Node, BVHNode},
+    bbox::BBox,
+    parse::{parse_scene, DataTree},
+    ray::{AccelRay, Ray},
+    renderer::LightPath,
+    surface::SurfaceIntersection,
+    timer::Timer,
+};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 

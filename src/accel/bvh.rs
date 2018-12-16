@@ -1,19 +1,16 @@
 #![allow(dead_code)]
 
-use std;
-
 use mem_arena::MemArena;
 
-use crate::algorithm::partition;
-use crate::bbox::BBox;
-use crate::boundable::Boundable;
-use crate::lerp::lerp_slice;
-use crate::ray::AccelRay;
-use crate::timer::Timer;
+use crate::{
+    algorithm::partition, bbox::BBox, boundable::Boundable, lerp::lerp_slice, ray::AccelRay,
+    timer::Timer,
+};
 
-use super::bvh_base::{BVHBase, BVHBaseNode, BVH_MAX_DEPTH};
-use super::ACCEL_NODE_RAY_TESTS;
-use super::ACCEL_TRAV_TIME;
+use super::{
+    bvh_base::{BVHBase, BVHBaseNode, BVH_MAX_DEPTH},
+    ACCEL_NODE_RAY_TESTS, ACCEL_TRAV_TIME,
+};
 
 #[derive(Copy, Clone, Debug)]
 pub struct BVH<'a> {

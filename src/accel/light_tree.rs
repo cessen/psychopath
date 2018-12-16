@@ -1,13 +1,14 @@
 use mem_arena::MemArena;
 
-use crate::algorithm::merge_slices_append;
-use crate::bbox::BBox;
-use crate::lerp::lerp_slice;
-use crate::math::{Normal, Point, Vector};
-use crate::shading::surface_closure::SurfaceClosure;
+use crate::{
+    algorithm::merge_slices_append,
+    bbox::BBox,
+    lerp::lerp_slice,
+    math::{Normal, Point, Vector},
+    shading::surface_closure::SurfaceClosure,
+};
 
-use super::objects_split::sah_split;
-use super::LightAccel;
+use super::{objects_split::sah_split, LightAccel};
 
 const ARITY_LOG2: usize = 3; // Determines how much to collapse the binary tree,
                              // implicitly defining the light tree's arity.  1 = no collapsing, leave as binary

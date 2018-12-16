@@ -1,8 +1,10 @@
 use mem_arena::MemArena;
 
-use crate::bbox::BBox;
-use crate::math::{Normal, Point, Vector};
-use crate::shading::surface_closure::SurfaceClosure;
+use crate::{
+    bbox::BBox,
+    math::{Normal, Point, Vector},
+    shading::surface_closure::SurfaceClosure,
+};
 
 use super::LightAccel;
 

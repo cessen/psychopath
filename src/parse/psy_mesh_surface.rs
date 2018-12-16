@@ -2,16 +2,20 @@
 
 use std::result::Result;
 
-use nom::IResult;
+use nom::{call, closure, tuple, tuple_parser, IResult};
 
 use mem_arena::MemArena;
 
-use crate::math::{Normal, Point};
-use crate::surface::triangle_mesh::TriangleMesh;
+use crate::{
+    math::{Normal, Point},
+    surface::triangle_mesh::TriangleMesh,
+};
 
-use super::basics::{ws_f32, ws_usize};
-use super::psy::PsyParseError;
-use super::DataTree;
+use super::{
+    basics::{ws_f32, ws_usize},
+    psy::PsyParseError,
+    DataTree,
+};
 
 // pub struct TriangleMesh {
 //    time_samples: usize,

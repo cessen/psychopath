@@ -1,11 +1,11 @@
 #![allow(dead_code)]
 
-use std;
-use std::cmp;
-use std::cmp::Ordering;
+use std::cmp::{self, Ordering};
 
-use crate::hash::hash_u64;
-use crate::lerp::{lerp_slice, Lerp};
+use crate::{
+    hash::hash_u64,
+    lerp::{lerp_slice, Lerp},
+};
 
 /// Selects an item from a slice based on a weighting function and a
 /// number (n) between 0.0 and 1.0.  Returns the index of the selected

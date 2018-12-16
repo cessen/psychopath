@@ -2,10 +2,12 @@
 
 use mem_arena::MemArena;
 
-use crate::lerp::lerp_slice;
-use crate::math::{Matrix4x4, Point, Vector};
-use crate::ray::Ray;
-use crate::sampling::square_to_circle;
+use crate::{
+    lerp::lerp_slice,
+    math::{Matrix4x4, Point, Vector},
+    ray::Ray,
+    sampling::square_to_circle,
+};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Camera<'a> {

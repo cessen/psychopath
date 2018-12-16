@@ -6,5 +6,4 @@ mod psy_light;
 mod psy_mesh_surface;
 mod psy_surface_shader;
 
-pub use self::data_tree::DataTree;
-pub use self::psy::parse_scene;
+pub use self::{data_tree::DataTree, psy::parse_scene};

@@ -4,13 +4,16 @@ mod sphere_light;
 
 use std::fmt::Debug;
 
-use crate::color::SpectralSample;
-use crate::math::{Matrix4x4, Normal, Point, Vector};
-use crate::surface::Surface;
+use crate::{
+    color::SpectralSample,
+    math::{Matrix4x4, Normal, Point, Vector},
+    surface::Surface,
+};
 
-pub use self::distant_disk_light::DistantDiskLight;
-pub use self::rectangle_light::RectangleLight;
-pub use self::sphere_light::SphereLight;
+pub use self::{
+    distant_disk_light::DistantDiskLight, rectangle_light::RectangleLight,
+    sphere_light::SphereLight,
+};
 
 /// A finite light source that can be bounded in space.
 pub trait SurfaceLight: Surface {

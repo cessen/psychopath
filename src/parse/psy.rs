@@ -1,24 +1,27 @@
 #![allow(dead_code)]
 
-use std::f32;
-use std::result::Result;
+use std::{f32, result::Result};
 
-use nom::IResult;
+use nom::{call, closure, eof, error_position, terminated, tuple, tuple_parser, IResult};
 
 use mem_arena::MemArena;
 
-use crate::camera::Camera;
-use crate::color::{rec709_e_to_xyz, XYZ};
-use crate::light::WorldLightSource;
-use crate::math::Matrix4x4;
-use crate::renderer::Renderer;
-use crate::scene::Scene;
-use crate::scene::World;
+use crate::{
+    camera::Camera,
+    color::{rec709_e_to_xyz, XYZ},
+    light::WorldLightSource,
+    math::Matrix4x4,
+    renderer::Renderer,
+    scene::Scene,
+    scene::World,
+};
 
-use super::basics::{ws_f32, ws_u32};
-use super::psy_assembly::parse_assembly;
-use super::psy_light::parse_distant_disk_light;
-use super::DataTree;
+use super::{
+    basics::{ws_f32, ws_u32},
+    psy_assembly::parse_assembly,
+    psy_light::parse_distant_disk_light,
+    DataTree,
+};
 
 #[derive(Debug)]
 pub enum PsyParseError {

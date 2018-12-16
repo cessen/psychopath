@@ -2,17 +2,17 @@
 
 use std::result::Result;
 
-use nom::IResult;
+use nom::{call, closure, tuple, tuple_parser, IResult};
 
 use mem_arena::MemArena;
 
-use crate::color::{rec709_e_to_xyz, XYZ};
-use crate::light::{DistantDiskLight, RectangleLight, SphereLight};
-use crate::math::Vector;
+use crate::{
+    color::{rec709_e_to_xyz, XYZ},
+    light::{DistantDiskLight, RectangleLight, SphereLight},
+    math::Vector,
+};
 
-use super::basics::ws_f32;
-use super::psy::PsyParseError;
-use super::DataTree;
+use super::{basics::ws_f32, psy::PsyParseError, DataTree};
 
 pub fn parse_distant_disk_light<'a>(
     arena: &'a MemArena,

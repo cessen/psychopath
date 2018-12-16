@@ -1,9 +1,6 @@
 #![allow(dead_code)]
 
-use crate::algorithm::merge_slices_append;
-use crate::bbox::BBox;
-use crate::lerp::lerp_slice;
-use crate::math::log2_64;
+use crate::{algorithm::merge_slices_append, bbox::BBox, lerp::lerp_slice, math::log2_64};
 
 use super::objects_split::{median_split, sah_split};
 

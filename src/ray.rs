@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 
-use std;
+use float4::Float4;
 
 use crate::math::{Matrix4x4, Point, Vector};
-use float4::Float4;
 
 const OCCLUSION_FLAG: u32 = 1;
 const DONE_FLAG: u32 = 1 << 1;

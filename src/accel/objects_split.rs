@@ -1,15 +1,14 @@
 #![allow(dead_code)]
 
-use std;
 use std::cmp::Ordering;
 
-use halton;
-
-use crate::algorithm::{partition, quick_select};
-use crate::bbox::BBox;
-use crate::lerp::lerp_slice;
-use crate::math::{dot, Vector};
-use crate::sampling::uniform_sample_hemisphere;
+use crate::{
+    algorithm::{partition, quick_select},
+    bbox::BBox,
+    lerp::lerp_slice,
+    math::{dot, Vector},
+    sampling::uniform_sample_hemisphere,
+};
 
 const SAH_BIN_COUNT: usize = 13; // Prime numbers work best, for some reason
 const SPLIT_PLANE_COUNT: usize = 5;

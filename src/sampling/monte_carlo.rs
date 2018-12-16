@@ -1,8 +1,6 @@
 #![allow(dead_code)]
 
-use std::f32::consts::FRAC_PI_4 as QPI_32;
-use std::f32::consts::PI as PI_32;
-use std::f64::consts::PI as PI_64;
+use std::{f32::consts::FRAC_PI_4 as QPI_32, f32::consts::PI as PI_32, f64::consts::PI as PI_64};
 
 use crate::math::{cross, dot, Point, Vector};
 
