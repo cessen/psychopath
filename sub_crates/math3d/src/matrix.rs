@@ -33,6 +33,8 @@ impl Matrix4x4 {
     /// i j k l
     /// m n o p
     #[inline]
+    #[allow(clippy::many_single_char_names)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new_from_values(
         a: f32,
         b: f32,
@@ -103,7 +105,7 @@ impl Matrix4x4 {
             }
         }
 
-        return result;
+        result
     }
 
     /// Returns the transpose of the matrix
@@ -116,6 +118,7 @@ impl Matrix4x4 {
 
     /// Returns the inverse of the Matrix
     #[inline]
+    #[allow(clippy::float_cmp)]
     pub fn inverse(&self) -> Matrix4x4 {
         let mut m = *self;
         let det = invert(&mut m.values);
@@ -128,14 +131,14 @@ impl Index<usize> for Matrix4x4 {
     type Output = Float4;
 
     #[inline(always)]
-    fn index<'a>(&'a self, _index: usize) -> &'a Float4 {
+    fn index(&self, _index: usize) -> &Float4 {
         &self.values[_index]
     }
 }
 
 impl IndexMut<usize> for Matrix4x4 {
     #[inline(always)]
-    fn index_mut<'a>(&'a mut self, _index: usize) -> &'a mut Float4 {
+    fn index_mut(&mut self, _index: usize) -> &mut Float4 {
         &mut self.values[_index]
     }
 }
@@ -151,7 +154,13 @@ impl PartialEq for Matrix4x4 {
             }
         }
 
-        return result;
+        result
+    }
+}
+
+impl Default for Matrix4x4 {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

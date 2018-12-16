@@ -14,7 +14,6 @@ pub use self::vector::Vector;
 
 /// Trait for calculating dot products.
 pub trait DotProduct {
-    #[inline]
     fn dot(self, other: Self) -> f32;
 }
 
@@ -25,7 +24,6 @@ pub fn dot<T: DotProduct>(a: T, b: T) -> f32 {
 
 /// Trait for calculating cross products.
 pub trait CrossProduct {
-    #[inline]
     fn cross(self, other: Self) -> Self;
 }
 
