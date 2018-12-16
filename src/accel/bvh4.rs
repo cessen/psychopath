@@ -275,7 +275,7 @@ impl<'a> BVH4<'a> {
                     .copy_slice_with_alignment(&base.bounds[bounds_range.0..bounds_range.1], 32);
 
                 // Build children
-                let mut children_mem = unsafe {
+                let children_mem = unsafe {
                     arena.alloc_array_uninitialized_with_alignment::<BVH4Node>(child_count, 32)
                 };
                 for i in 0..child_count {

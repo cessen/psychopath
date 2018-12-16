@@ -172,7 +172,7 @@ impl<'a> BVH<'a> {
                 children_indices,
                 split_axis,
             } => {
-                let mut node = unsafe { arena.alloc_uninitialized_with_alignment::<BVHNode>(32) };
+                let node = unsafe { arena.alloc_uninitialized_with_alignment::<BVHNode>(32) };
 
                 let bounds = arena
                     .copy_slice_with_alignment(&base.bounds[bounds_range.0..bounds_range.1], 32);
@@ -193,7 +193,7 @@ impl<'a> BVH<'a> {
                 bounds_range,
                 object_range,
             } => {
-                let mut node = unsafe { arena.alloc_uninitialized::<BVHNode>() };
+                let node = unsafe { arena.alloc_uninitialized::<BVHNode>() };
                 let bounds = arena.copy_slice(&base.bounds[bounds_range.0..bounds_range.1]);
 
                 *node = BVHNode::Leaf {

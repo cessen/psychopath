@@ -37,7 +37,7 @@ impl<'a> TriangleMesh<'a> {
         // Copy verts over to a contiguous area of memory, reorganizing them
         // so that each vertices' time samples are contiguous in memory.
         let vertices = {
-            let mut vertices =
+            let vertices =
                 unsafe { arena.alloc_array_uninitialized(vert_count * time_sample_count) };
 
             for vi in 0..vert_count {
@@ -53,7 +53,7 @@ impl<'a> TriangleMesh<'a> {
         // above.
         let normals = match vert_normals {
             Some(ref vnors) => {
-                let mut normals =
+                let normals =
                     unsafe { arena.alloc_array_uninitialized(vert_count * time_sample_count) };
 
                 for vi in 0..vert_count {
@@ -70,7 +70,7 @@ impl<'a> TriangleMesh<'a> {
 
         // Copy triangle vertex indices over, appending the triangle index itself to the tuple
         let indices = {
-            let mut indices = unsafe { arena.alloc_array_uninitialized(tri_indices.len()) };
+            let indices = unsafe { arena.alloc_array_uninitialized(tri_indices.len()) };
             for (i, tri_i) in tri_indices.iter().enumerate() {
                 indices[i] = (tri_i.0 as u32, tri_i.2 as u32, tri_i.1 as u32, i as u32);
             }
