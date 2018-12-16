@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 #![cfg_attr(rustfmt, rustfmt_skip)]
 #![allow(clippy::unreadable_literal)]
+#![allow(clippy::excessive_precision)]
 
 /// This is 1 over the integral over either CMF.
 /// Spectra can be mapped so that xyz=(1,1,1) is converted to constant 1 by

@@ -781,6 +781,7 @@ def write_output(data_points, grid, grid_res, filename):
         f.write('#![allow(dead_code)]\n')
         f.write('#![cfg_attr(rustfmt, rustfmt_skip)]\n')
         f.write('#![allow(clippy::unreadable_literal)]\n')
+        f.write('#![allow(clippy::excessive_precision)]\n')
         f.write('\n')
         f.write('/// This is 1 over the integral over either CMF.\n')
         f.write('/// Spectra can be mapped so that xyz=(1,1,1) is converted to constant 1 by\n')
