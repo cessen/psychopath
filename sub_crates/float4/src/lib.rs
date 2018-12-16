@@ -52,7 +52,7 @@ mod x86_64_sse {
                 };
                 unsafe {
                     let v = self.data;
-                    let shuf = _mm_shuffle_ps(v, v, (2 << 6) | (3 << 4) | (0 << 2) | (1 << 0));
+                    let shuf = _mm_shuffle_ps(v, v, (2 << 6) | (3 << 4) | 1);
                     let sums = _mm_add_ps(v, shuf);
                     let shuf = _mm_movehl_ps(shuf, sums);
                     let sums = _mm_add_ss(sums, shuf);
@@ -155,13 +155,12 @@ mod x86_64_sse {
         /// Set the nth element to the given value.
         #[inline(always)]
         pub fn set_n(&mut self, n: usize, v: f32) {
-            use std::mem::transmute;
             assert!(
                 n <= 3,
                 "Attempted to set element of Float4 outside of bounds."
             );
 
-            unsafe { *transmute::<*mut __m128, *mut f32>(&mut self.data).offset(n as isize) = v }
+            unsafe { *(&mut self.data as *mut std::arch::x86_64::__m128 as *mut f32).add(n) = v }
         }
 
         /// Set the 0th element to the given value.
@@ -191,13 +190,12 @@ mod x86_64_sse {
         /// Returns the value of the nth element.
         #[inline(always)]
         pub fn get_n(&self, n: usize) -> f32 {
-            use std::mem::transmute;
             assert!(
                 n <= 3,
                 "Attempted to access element of Float4 outside of bounds."
             );
 
-            unsafe { *transmute::<*const __m128, *const f32>(&self.data).offset(n as isize) }
+            unsafe { *(&self.data as *const std::arch::x86_64::__m128 as *const f32).add(n) }
         }
 
         /// Returns the value of the 0th element.
@@ -556,13 +554,12 @@ mod x86_64_sse {
         /// Returns the value of the nth element.
         #[inline(always)]
         pub fn get_n(&self, n: usize) -> bool {
-            use std::mem::transmute;
             assert!(
                 n <= 3,
                 "Attempted to access element of Bool4 outside of bounds."
             );
 
-            0 != unsafe { *transmute::<*const __m128, *const u32>(&self.data).offset(n as isize) }
+            0 != unsafe { *(&self.data as *const std::arch::x86_64::__m128 as *const u32).add(n) }
         }
 
         /// Returns the value of the 0th element.
@@ -591,12 +588,11 @@ mod x86_64_sse {
 
         #[inline]
         pub fn to_bitmask(&self) -> u8 {
-            use std::mem::transmute;
-            let a = unsafe { *transmute::<*const __m128, *const u8>(&self.data).offset(0) };
-            let b = unsafe { *transmute::<*const __m128, *const u8>(&self.data).offset(4) };
-            let c = unsafe { *transmute::<*const __m128, *const u8>(&self.data).offset(8) };
-            let d = unsafe { *transmute::<*const __m128, *const u8>(&self.data).offset(12) };
-            (a & 0b00000001) | (b & 0b00000010) | (c & 0b00000100) | (d & 0b00001000)
+            let a = unsafe { *(&self.data as *const __m128 as *const u8).offset(0) };
+            let b = unsafe { *(&self.data as *const __m128 as *const u8).offset(4) };
+            let c = unsafe { *(&self.data as *const __m128 as *const u8).offset(8) };
+            let d = unsafe { *(&self.data as *const __m128 as *const u8).offset(12) };
+            (a & 0b0000_0001) | (b & 0b0000_0010) | (c & 0b0000_0100) | (d & 0b0000_1000)
         }
     }
 
@@ -1131,7 +1127,7 @@ mod fallback {
     impl Bool4 {
         /// Returns the value of the nth element.
         #[inline(always)]
-        pub fn get_n(&self, n: usize) -> bool {
+        pub fn get_n(self, n: usize) -> bool {
             assert!(
                 n <= 3,
                 "Attempted to access element of Bool4 outside of bounds."
@@ -1141,30 +1137,30 @@ mod fallback {
 
         /// Returns the value of the 0th element.
         #[inline(always)]
-        pub fn get_0(&self) -> bool {
+        pub fn get_0(self) -> bool {
             self.get_n(0)
         }
 
         /// Returns the value of the 1th element.
         #[inline(always)]
-        pub fn get_1(&self) -> bool {
+        pub fn get_1(self) -> bool {
             self.get_n(1)
         }
 
         /// Returns the value of the 2th element.
         #[inline(always)]
-        pub fn get_2(&self) -> bool {
+        pub fn get_2(self) -> bool {
             self.get_n(2)
         }
 
         /// Returns the value of the 3th element.
         #[inline(always)]
-        pub fn get_3(&self) -> bool {
+        pub fn get_3(self) -> bool {
             self.get_n(3)
         }
 
         #[inline]
-        pub fn to_bitmask(&self) -> u8 {
+        pub fn to_bitmask(self) -> u8 {
             (self.get_0() as u8)
                 | ((self.get_1() as u8) << 1)
                 | ((self.get_2() as u8) << 2)
