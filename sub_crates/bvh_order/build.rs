@@ -1,9 +1,6 @@
 // Generate table for traversal order of quad BVHs.
 
-use std::env;
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
+use std::{env, fs::File, io::Write, path::Path};
 
 fn main() {
     // Build the traversal table.

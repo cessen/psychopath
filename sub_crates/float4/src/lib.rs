@@ -3,9 +3,11 @@
 /// Implementation of Float4 for x86_64 platforms with SSE support.
 #[cfg(all(target_arch = "x86_64", target_feature = "sse"))]
 mod x86_64_sse {
-    use std::arch::x86_64::__m128;
-    use std::cmp::PartialEq;
-    use std::ops::{Add, AddAssign, BitAnd, BitOr, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+    use std::{
+        arch::x86_64::__m128,
+        cmp::PartialEq,
+        ops::{Add, AddAssign, BitAnd, BitOr, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
+    };
 
     #[derive(Debug, Copy, Clone)]
     pub struct Float4 {
@@ -626,8 +628,10 @@ mod x86_64_sse {
 /// Implementation fo Float4 for any platform, foregoing any
 /// platform-specific optimizations.
 mod fallback {
-    use std::cmp::PartialEq;
-    use std::ops::{Add, AddAssign, BitAnd, BitOr, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+    use std::{
+        cmp::PartialEq,
+        ops::{Add, AddAssign, BitAnd, BitOr, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
+    };
 
     #[derive(Debug, Copy, Clone)]
     pub struct Float4 {

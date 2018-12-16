@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use std;
 use std::ops::{Index, IndexMut, Mul};
 
 use float4::{invert, transpose, Float4};

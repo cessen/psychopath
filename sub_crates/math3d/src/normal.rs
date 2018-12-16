@@ -1,12 +1,13 @@
 #![allow(dead_code)]
 
-use std::cmp::PartialEq;
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::{
+    cmp::PartialEq,
+    ops::{Add, Div, Mul, Neg, Sub},
+};
 
 use float4::Float4;
 
-use super::{CrossProduct, DotProduct};
-use super::{Matrix4x4, Vector};
+use super::{CrossProduct, DotProduct, Matrix4x4, Vector};
 
 /// A surface normal in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]

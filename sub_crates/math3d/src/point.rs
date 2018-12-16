@@ -1,12 +1,13 @@
 #![allow(dead_code)]
 
-use std::cmp::PartialEq;
-use std::ops::{Add, Mul, Sub};
+use std::{
+    cmp::PartialEq,
+    ops::{Add, Mul, Sub},
+};
 
 use float4::Float4;
 
-use super::Matrix4x4;
-use super::Vector;
+use super::{Matrix4x4, Vector};
 
 /// A position in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]

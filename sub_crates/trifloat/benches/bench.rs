@@ -1,9 +1,4 @@
-#[macro_use]
-extern crate bencher;
-extern crate rand;
-extern crate trifloat;
-
-use bencher::{black_box, Bencher};
+use bencher::{benchmark_group, benchmark_main, black_box, Bencher};
 use rand::{rngs::SmallRng, FromEntropy, Rng};
 use trifloat::{decode, encode};
 

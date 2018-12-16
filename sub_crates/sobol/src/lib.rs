@@ -22,8 +22,7 @@
 
 mod matrices;
 
-pub use crate::matrices::NUM_DIMENSIONS;
-use crate::matrices::{MATRICES, SIZE};
+pub use crate::matrices::{MATRICES, NUM_DIMENSIONS, SIZE};
 
 /// Compute one component of the Sobol'-sequence, where the component
 /// corresponds to the dimension parameter, and the index specifies

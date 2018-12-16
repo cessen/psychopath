@@ -4,10 +4,9 @@
 #![allow(clippy::useless_let_if_seq)]
 #![allow(clippy::cyclomatic_complexity)]
 
-extern crate float4;
+use std::f32;
 
 use float4::Float4;
-use std::f32;
 
 mod spectra_tables;
 

@@ -1,16 +1,11 @@
 #![allow(dead_code)]
 
-extern crate float4;
-
 mod matrix;
 mod normal;
 mod point;
 mod vector;
 
-pub use self::matrix::Matrix4x4;
-pub use self::normal::Normal;
-pub use self::point::Point;
-pub use self::vector::Vector;
+pub use self::{matrix::Matrix4x4, normal::Normal, point::Point, vector::Vector};
 
 /// Trait for calculating dot products.
 pub trait DotProduct {

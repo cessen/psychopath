@@ -1,9 +1,4 @@
-#[macro_use]
-extern crate bencher;
-extern crate oct32norm;
-extern crate rand;
-
-use bencher::{black_box, Bencher};
+use bencher::{benchmark_group, benchmark_main, black_box, Bencher};
 use oct32norm::{decode, encode};
 use rand::{rngs::SmallRng, FromEntropy, Rng};
 

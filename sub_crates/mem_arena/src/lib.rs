@@ -2,10 +2,12 @@
 #![allow(clippy::needless_return)]
 #![allow(clippy::mut_from_ref)]
 
-use std::cell::{Cell, RefCell};
-use std::cmp::max;
-use std::mem::{align_of, size_of};
-use std::slice;
+use std::{
+    cell::{Cell, RefCell},
+    cmp::max,
+    mem::{align_of, size_of},
+    slice,
+};
 
 const GROWTH_FRACTION: usize = 8; // 1/N  (smaller number leads to bigger allocations)
 const DEFAULT_MIN_BLOCK_SIZE: usize = 1 << 10; // 1 KiB

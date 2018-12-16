@@ -22,10 +22,7 @@
 
 // Generate Rust code for evaluating Halton points with Faure-permutations for different bases.
 
-use std::env;
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
+use std::{env, fs::File, io::Write, path::Path};
 
 /// How many components to generate.
 const NUM_DIMENSIONS: usize = 128;
