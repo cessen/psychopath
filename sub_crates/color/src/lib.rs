@@ -1,3 +1,6 @@
+#![allow(clippy::excessive_precision)]
+#![allow(clippy::unreadable_literal)]
+
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone)]
 pub enum Space {
