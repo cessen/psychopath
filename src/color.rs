@@ -140,11 +140,27 @@ fn plancks_law(temperature: f32, wavelength: f32) -> f32 {
     const H: f32 = 6.62607015e-34; // Planck constant
     const KB: f32 = 1.38064852e-23; // Boltzmann constant
 
+    // At 400 kelvin and below, the spectrum is black anyway,
+    // but the equations become numerically unstable somewhere
+    // around 100 kelvin.  So just return zero energy below 200.
+    // (Technically there is still a tiny amount of energy that
+    // we're losing this way, but it's incredibly tiny, with tons
+    // of zeros after the decimal point--way less energy than would
+    // ever, ever, ever even have the slightest chance of showing
+    // impacting a render.)
+    if temperature < 200.0 {
+        return 0.0;
+    }
+
+    // Convert the wavelength from nanometers to meters for
+    // the equations below.
+    let wavelength = wavelength * 1.0e-9;
+
     // // As written at https://en.wikipedia.org/wiki/Planck's_law, here for
     // // reference and clarity:
     // let a = (2.0 * H * C * C) / (wavelength * wavelength * wavelength * wavelength * wavelength);
     // let b = 1.0 / (((H * C) / (wavelength * KB * temperature)).exp() - 1.0);
-    // a * b
+    // let energy = a * b;
 
     // Optimized version of the commented code above:
     const TMP1: f32 = (2.0f64 * H as f64 * C as f64 * C as f64) as f32;
@@ -154,7 +170,10 @@ fn plancks_law(temperature: f32, wavelength: f32) -> f32 {
         wl2 * wl2 * wavelength
     };
     let tmp3 = wl5 * (fast_exp(TMP2 / (wavelength * temperature)) - 1.0);
-    TMP1 / tmp3
+    let energy = TMP1 / tmp3;
+
+    // Convert energy to appropriate units and return.
+    (energy * 1.0e-6).max(0.0)
 }
 
 //----------------------------------------------------------------
