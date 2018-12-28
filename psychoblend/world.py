@@ -116,7 +116,7 @@ class BackgroundShader:
             w.write("BackgroundShader {\n")
             w.indent();
             w.write("Type [Color]\n")
-            w.write("Color [%f %f %f]\n" % self.color)
+            w.write("Color [rec709, %f %f %f]\n" % self.color)
             w.unindent()
             w.write("}\n")
 
@@ -132,7 +132,12 @@ class DistantDiskLamp:
     def take_sample(self, render_engine, scene, time):
         render_engine.update_stats("", "Psychopath: Collecting '{}' at time {}".format(self.ob.name, time))
         self.time_dir += [tuple(self.ob.matrix_world.to_3x3() * Vector((0, 0, -1)))]
-        self.time_col += [self.ob.data.color * self.ob.data.energy]
+
+        if self.ob.data.psychopath.color_type == 'Rec709':
+            self.time_col += [('Rec709', self.ob.data.color * self.ob.data.energy)]
+        elif self.ob.data.psychopath.color_type == 'Blackbody':
+            self.time_col += [('Blackbody', self.ob.data.psychopath.color_blackbody_temp, self.ob.data.energy)]
+
         self.time_rad += [self.ob.data.shadow_soft_size]
 
     def export(self, render_engine, w):
@@ -142,7 +147,10 @@ class DistantDiskLamp:
         for direc in self.time_dir:
             w.write("Direction [%f %f %f]\n" % (direc[0], direc[1], direc[2]))
         for col in self.time_col:
-            w.write("Color [%f %f %f]\n" % (col[0], col[1], col[2]))
+            if col[0] == 'Rec709':
+                w.write("Color [rec709, %f %f %f]\n" % (col[1][0], col[1][1], col[1][2]))
+            elif col[0] == 'Blackbody':
+                w.write("Color [blackbody, %f %f]\n" % (col[1], col[2]))
         for rad in self.time_rad:
             w.write("Radius [%f]\n" % rad)
 

@@ -499,12 +499,8 @@ fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>,
                     ..
                 }) = bgs.iter_children_with_type("Color").nth(0)
                 {
-                    if let IResult::Done(_, color) =
-                        closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.trim().as_bytes())
-                    {
-                        // TODO: proper color space management, not just assuming
-                        // rec.709.
-                        background_color = Color::new_xyz(rec709_e_to_xyz(color));
+                    if let Ok(color) = parse_color(contents) {
+                        background_color = color;
                     } else {
                         return Err(PsyParseError::IncorrectLeafData(
                             byte_offset,
@@ -581,4 +577,35 @@ pub fn make_transform_format_error(byte_offset: usize) -> PsyParseError {
         "Transform should be sixteen integers specified in \
          the form '[# # # # # # # # # # # # # # # #]'.",
     )
+}
+
+pub fn parse_color(contents: &str) -> Result<Color, PsyParseError> {
+    let items: Vec<_> = contents.split(",").map(|s| s.trim()).collect();
+    if items.len() != 2 {
+        return Err(PsyParseError::UnknownError(0));
+    }
+
+    match items[0] {
+        "rec709" => {
+            if let IResult::Done(_, color) =
+                closure!(tuple!(ws_f32, ws_f32, ws_f32))(items[1].as_bytes())
+            {
+                return Ok(Color::new_xyz(rec709_e_to_xyz(color)));
+            } else {
+                return Err(PsyParseError::UnknownError(0));
+            }
+        }
+
+        "blackbody" => {
+            if let IResult::Done(_, (temperature, factor)) =
+                closure!(tuple!(ws_f32, ws_f32))(items[1].as_bytes())
+            {
+                return Ok(Color::new_blackbody(temperature, factor));
+            } else {
+                return Err(PsyParseError::UnknownError(0));
+            }
+        }
+
+        _ => return Err(PsyParseError::UnknownError(0)),
+    }
 }

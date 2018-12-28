@@ -77,6 +77,19 @@ class PsychopathCamera(bpy.types.PropertyGroup):
         min=0.0, max=10000.0, soft_min=0.0, soft_max=2.0, default=0.0
         )
 
+# Psychopath material
+class PsychopathLight(bpy.types.PropertyGroup):
+    color_type = EnumProperty(
+        name="Color Type", description="",
+        items=[('Rec709', 'Rec709', ""), ('Blackbody', 'Blackbody', "")],
+        default="Rec709"
+        )
+
+    color_blackbody_temp = FloatProperty(
+        name="Temperature", description="Blackbody temperature in kelvin",
+        min=0.0, max=32000.0, soft_min=800.0, soft_max=6500.0, default=1200.0
+        )
+
 # Custom Mesh properties
 class PsychopathMesh(bpy.types.PropertyGroup):
     is_subdivision_surface = BoolProperty(
@@ -88,8 +101,14 @@ class PsychopathMesh(bpy.types.PropertyGroup):
 class PsychopathMaterial(bpy.types.PropertyGroup):
     surface_shader_type = EnumProperty(
         name="Surface Shader Type", description="",
-        items=[('Emit', 'Emit', ""), ('Lambert', 'Lambert', ""), ('GTR', 'GTR', ""), ('GGX', 'GGX', "")],
+        items=[('Emit', 'Emit', ""), ('Lambert', 'Lambert', ""), ('GGX', 'GGX', "")],
         default="Lambert"
+        )
+
+    color_type = EnumProperty(
+        name="Color Type", description="",
+        items=[('Rec709', 'Rec709', ""), ('Blackbody', 'Blackbody', "")],
+        default="Rec709"
         )
 
     color = FloatVectorProperty(
@@ -97,6 +116,11 @@ class PsychopathMaterial(bpy.types.PropertyGroup):
         subtype='COLOR',
         min=0.0, soft_min=0.0, soft_max = 1.0,
         default=[0.8,0.8,0.8]
+        )
+
+    color_blackbody_temp = FloatProperty(
+        name="Temperature", description="Blackbody temperature in kelvin",
+        min=0.0, max=32000.0, soft_min=800.0, soft_max=6500.0, default=1200.0
         )
 
     roughness = FloatProperty(
@@ -135,10 +159,12 @@ def register():
     bpy.utils.register_class(PsychopathPreferences)
     bpy.utils.register_class(RenderPsychopathSettingsScene)
     bpy.utils.register_class(PsychopathCamera)
+    bpy.utils.register_class(PsychopathLight)
     bpy.utils.register_class(PsychopathMesh)
     bpy.utils.register_class(PsychopathMaterial)
     bpy.types.Scene.psychopath = PointerProperty(type=RenderPsychopathSettingsScene)
     bpy.types.Camera.psychopath = PointerProperty(type=PsychopathCamera)
+    bpy.types.Lamp.psychopath = PointerProperty(type=PsychopathLight)
     bpy.types.Mesh.psychopath = PointerProperty(type=PsychopathMesh)
     bpy.types.Material.psychopath = PointerProperty(type=PsychopathMaterial)
     render.register()
@@ -149,10 +175,12 @@ def unregister():
     bpy.utils.unregister_class(PsychopathPreferences)
     bpy.utils.unregister_class(RenderPsychopathSettingsScene)
     bpy.utils.unregister_class(PsychopathCamera)
+    bpy.utils.unregister_class(PsychopathLight)
     bpy.utils.unregister_class(PsychopathMesh)
     bpy.utils.unregister_class(PsychopathMaterial)
     del bpy.types.Scene.psychopath
     del bpy.types.Camera.psychopath
+    del bpy.types.Lamp.psychopath
     del bpy.types.Mesh.psychopath
     del bpy.types.Material.psychopath
     render.unregister()

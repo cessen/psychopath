@@ -125,7 +125,14 @@ class DATA_PT_psychopath_lamp(PsychopathPanel, bpy.types.Panel):
 
         if ob.data.type != 'HEMI' and ob.data.type != 'AREA':
             col.prop(ob.data, "shadow_soft_size")
-        col.prop(ob.data, "color")
+
+        col.prop(ob.data.psychopath, "color_type")
+
+        if ob.data.psychopath.color_type == 'Rec709':
+            col.prop(ob.data, "color")
+        elif ob.data.psychopath.color_type == 'Blackbody':
+            col.prop(ob.data.psychopath, "color_blackbody_temp")
+
         col.prop(ob.data, "energy")
 
 
@@ -239,10 +246,16 @@ class MATERIAL_PT_psychopath_surface(PsychopathPanel, bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
+        col = layout.column()
 
         mat = context.material
-        layout.prop(mat.psychopath, "surface_shader_type")
-        layout.prop(mat.psychopath, "color")
+        col.prop(mat.psychopath, "surface_shader_type")
+
+        col.prop(mat.psychopath, "color_type")
+        if mat.psychopath.color_type == 'Rec709':
+            col.prop(mat.psychopath, "color")
+        elif mat.psychopath.color_type == 'Blackbody':
+            col.prop(mat.psychopath, "color_blackbody_temp")
 
         if mat.psychopath.surface_shader_type == 'GTR':
             layout.prop(mat.psychopath, "roughness")

@@ -12,7 +12,11 @@ use crate::{
     math::Vector,
 };
 
-use super::{basics::ws_f32, psy::PsyParseError, DataTree};
+use super::{
+    basics::ws_f32,
+    psy::{parse_color, PsyParseError},
+    DataTree,
+};
 
 pub fn parse_distant_disk_light<'a>(
     arena: &'a MemArena,
@@ -62,13 +66,8 @@ pub fn parse_distant_disk_light<'a>(
                     contents,
                     byte_offset,
                 } if type_name == "Color" => {
-                    if let IResult::Done(_, color) =
-                        closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes())
-                    {
-                        // TODO: handle color space conversions properly.
-                        // Probably will need a special color type with its
-                        // own parser...?
-                        colors.push(Color::new_xyz(rec709_e_to_xyz(color)));
+                    if let Ok(color) = parse_color(contents) {
+                        colors.push(color);
                     } else {
                         // Found color, but its contents is not in the right format
                         return Err(PsyParseError::UnknownError(byte_offset));
@@ -116,13 +115,8 @@ pub fn parse_sphere_light<'a>(
                     contents,
                     byte_offset,
                 } if type_name == "Color" => {
-                    if let IResult::Done(_, color) =
-                        closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes())
-                    {
-                        // TODO: handle color space conversions properly.
-                        // Probably will need a special color type with its
-                        // own parser...?
-                        colors.push(Color::new_xyz(rec709_e_to_xyz(color)));
+                    if let Ok(color) = parse_color(contents) {
+                        colors.push(color);
                     } else {
                         // Found color, but its contents is not in the right format
                         return Err(PsyParseError::UnknownError(byte_offset));
@@ -172,13 +166,8 @@ pub fn parse_rectangle_light<'a>(
                     contents,
                     byte_offset,
                 } if type_name == "Color" => {
-                    if let IResult::Done(_, color) =
-                        closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes())
-                    {
-                        // TODO: handle color space conversions properly.
-                        // Probably will need a special color type with its
-                        // own parser...?
-                        colors.push(Color::new_xyz(rec709_e_to_xyz(color)));
+                    if let Ok(color) = parse_color(contents) {
+                        colors.push(color);
                     } else {
                         // Found color, but its contents is not in the right format
                         return Err(PsyParseError::UnknownError(byte_offset));

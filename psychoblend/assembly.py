@@ -213,7 +213,12 @@ class SphereLamp:
 
     def take_sample(self, render_engine, scene, time):
         render_engine.update_stats("", "Psychopath: Collecting '{}' at time {}".format(self.ob.name, time))
-        self.time_col += [self.ob.data.color * self.ob.data.energy]
+
+        if self.ob.data.psychopath.color_type == 'Rec709':
+            self.time_col += [('Rec709', self.ob.data.color * self.ob.data.energy)]
+        elif self.ob.data.psychopath.color_type == 'Blackbody':
+            self.time_col += [('Blackbody', self.ob.data.psychopath.color_blackbody_temp, self.ob.data.energy)]
+
         self.time_rad += [self.ob.data.shadow_soft_size]
 
     def cleanup(self):
@@ -225,7 +230,10 @@ class SphereLamp:
         w.write("SphereLight $%s {\n" % self.name)
         w.indent()
         for col in self.time_col:
-            w.write("Color [%f %f %f]\n" % (col[0], col[1], col[2]))
+            if col[0] == 'Rec709':
+                w.write("Color [rec709, %f %f %f]\n" % (col[1][0], col[1][1], col[1][2]))
+            elif col[0] == 'Blackbody':
+                w.write("Color [blackbody, %f %f]\n" % (col[1], col[2]))
         for rad in self.time_rad:
             w.write("Radius [%f]\n" % rad)
 
@@ -244,7 +252,12 @@ class RectLamp:
 
     def take_sample(self, render_engine, scene, time):
         render_engine.update_stats("", "Psychopath: Collecting '{}' at time {}".format(self.ob.name, time))
-        self.time_col += [self.ob.data.color * self.ob.data.energy]
+
+        if self.ob.data.psychopath.color_type == 'Rec709':
+            self.time_col += [('Rec709', self.ob.data.color * self.ob.data.energy)]
+        elif self.ob.data.psychopath.color_type == 'Blackbody':
+            self.time_col += [('Blackbody', self.ob.data.psychopath.color_blackbody_temp, self.ob.data.energy)]
+
         if self.ob.data.shape == 'RECTANGLE':
             self.time_dim += [(self.ob.data.size, self.ob.data.size_y)]
         else:
@@ -259,7 +272,10 @@ class RectLamp:
         w.write("RectangleLight $%s {\n" % self.name)
         w.indent()
         for col in self.time_col:
-            w.write("Color [%f %f %f]\n" % (col[0], col[1], col[2]))
+            if col[0] == 'Rec709':
+                w.write("Color [rec709, %f %f %f]\n" % (col[1][0], col[1][1], col[1][2]))
+            elif col[0] == 'Blackbody':
+                w.write("Color [blackbody, %f %f]\n" % (col[1], col[2]))
         for dim in self.time_dim:
             w.write("Dimensions [%f %f]\n" % dim)
 
@@ -314,23 +330,40 @@ class Material:
         w.indent()
         if self.mat.psychopath.surface_shader_type == 'Emit':
             w.write("Type [Emit]\n")
-            color = self.mat.psychopath.color
-            w.write("Color [%f %f %f]\n" % (color[0], color[1], color[2]))
+            if self.mat.psychopath.color_type == 'Rec709':
+                col = self.mat.psychopath.color
+                w.write("Color [rec709, %f %f %f]\n" % (
+                    col[0], col[1], col[2],
+                ))
+            elif self.mat.psychopath.color_type == 'Blackbody':
+                w.write("Color [blackbody, %f %f]\n" % (
+                    self.mat.psychopath.color_blackbody_temp,
+                    1.0,
+                ))
         elif self.mat.psychopath.surface_shader_type == 'Lambert':
             w.write("Type [Lambert]\n")
-            color = self.mat.psychopath.color
-            w.write("Color [%f %f %f]\n" % (color[0], color[1], color[2]))
-        elif self.mat.psychopath.surface_shader_type == 'GTR':
-            w.write("Type [GTR]\n")
-            color = self.mat.psychopath.color
-            w.write("Color [%f %f %f]\n" % (color[0], color[1], color[2]))
-            w.write("Roughness [%f]\n" % self.mat.psychopath.roughness)
-            w.write("TailShape [%f]\n" % self.mat.psychopath.tail_shape)
-            w.write("Fresnel [%f]\n" % self.mat.psychopath.fresnel)
+            if self.mat.psychopath.color_type == 'Rec709':
+                col = self.mat.psychopath.color
+                w.write("Color [rec709, %f %f %f]\n" % (
+                    col[0], col[1], col[2],
+                ))
+            elif self.mat.psychopath.color_type == 'Blackbody':
+                w.write("Color [blackbody, %f %f]\n" % (
+                    self.mat.psychopath.color_blackbody_temp,
+                    1.0,
+                ))
         elif self.mat.psychopath.surface_shader_type == 'GGX':
             w.write("Type [GGX]\n")
-            color = self.mat.psychopath.color
-            w.write("Color [%f %f %f]\n" % (color[0], color[1], color[2]))
+            if self.mat.psychopath.color_type == 'Rec709':
+                col = self.mat.psychopath.color
+                w.write("Color [rec709, %f %f %f]\n" % (
+                    col[0], col[1], col[2],
+                ))
+            elif self.mat.psychopath.color_type == 'Blackbody':
+                w.write("Color [blackbody, %f %f]\n" % (
+                    self.mat.psychopath.color_blackbody_temp,
+                    1.0,
+                ))
             w.write("Roughness [%f]\n" % self.mat.psychopath.roughness)
             w.write("Fresnel [%f]\n" % self.mat.psychopath.fresnel)
         else:
