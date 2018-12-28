@@ -14,7 +14,7 @@ use float4::Float4;
 use crate::{
     accel::{ACCEL_NODE_RAY_TESTS, ACCEL_TRAV_TIME},
     algorithm::partition_pair,
-    color::{map_0_1_to_wavelength, Color, SpectralSample, XYZ},
+    color::{map_0_1_to_wavelength, SpectralSample, XYZ},
     fp_utils::robust_ray_origin,
     hash::hash_u32,
     hilbert,
@@ -447,14 +447,15 @@ impl LightPath {
                     // If it's an emission closure, handle specially:
                     // - Collect light from the emission.
                     // - Terminate the path.
-                    use crate::shading::surface_closure::SurfaceClosureUnion;
-                    if let SurfaceClosureUnion::EmitClosure(ref clsr) = *closure {
+                    use crate::shading::surface_closure::SurfaceClosure;
+                    if let SurfaceClosure::Emit(color) = *closure {
+                        let color = color.to_spectral_sample(self.wavelength).e;
                         if let LightPathEvent::CameraRay = self.event {
-                            self.color += clsr.emitted_color().e;
+                            self.color += color;
                         } else {
                             let mis_pdf =
                                 power_heuristic(self.closure_sample_pdf, idata.sample_pdf);
-                            self.color += clsr.emitted_color().e * self.light_attenuation / mis_pdf;
+                            self.color += color * self.light_attenuation / mis_pdf;
                         };
 
                         return false;
@@ -487,7 +488,6 @@ impl LightPath {
                     } else {
                         let light_pdf = light_info.pdf();
                         let light_sel_pdf = light_info.selection_pdf();
-                        let material = closure.as_surface_closure();
 
                         // Calculate the shadow ray and surface closure stuff
                         let (attenuation, closure_pdf, shadow_ray) = match light_info {
@@ -495,8 +495,13 @@ impl LightPath {
 
                             // Distant light
                             SceneLightSample::Distant { direction, .. } => {
-                                let (attenuation, closure_pdf) =
-                                    material.evaluate(ray.dir, direction, idata.nor, idata.nor_g);
+                                let (attenuation, closure_pdf) = closure.evaluate(
+                                    ray.dir,
+                                    direction,
+                                    idata.nor,
+                                    idata.nor_g,
+                                    self.wavelength,
+                                );
                                 let mut shadow_ray = {
                                     // Calculate the shadow ray for testing if the light is
                                     // in shadow or not.
@@ -521,8 +526,13 @@ impl LightPath {
                             // Surface light
                             SceneLightSample::Surface { sample_geo, .. } => {
                                 let dir = sample_geo.0 - idata.pos;
-                                let (attenuation, closure_pdf) =
-                                    material.evaluate(ray.dir, dir, idata.nor, idata.nor_g);
+                                let (attenuation, closure_pdf) = closure.evaluate(
+                                    ray.dir,
+                                    dir,
+                                    idata.nor,
+                                    idata.nor_g,
+                                    self.wavelength,
+                                );
                                 let shadow_ray = {
                                     // Calculate the shadow ray for testing if the light is
                                     // in shadow or not.
@@ -572,12 +582,17 @@ impl LightPath {
                     let do_bounce = if self.bounce_count < 2 {
                         self.bounce_count += 1;
 
-                        // Sample material
+                        // Sample closure
                         let (dir, filter, pdf) = {
-                            let material = closure.as_surface_closure();
                             let u = self.next_lds_samp();
                             let v = self.next_lds_samp();
-                            material.sample(idata.incoming, idata.nor, idata.nor_g, (u, v))
+                            closure.sample(
+                                idata.incoming,
+                                idata.nor,
+                                idata.nor_g,
+                                (u, v),
+                                self.wavelength,
+                            )
                         };
 
                         // Check if pdf is zero, to avoid NaN's.

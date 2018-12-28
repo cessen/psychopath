@@ -99,6 +99,29 @@ impl Color {
     }
 }
 
+impl Mul<f32> for Color {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self {
+        match self {
+            Color::XYZ(x, y, z) => Color::XYZ(x * rhs, y * rhs, z * rhs),
+            Color::Blackbody {
+                temperature,
+                factor,
+            } => Color::Blackbody {
+                temperature: temperature,
+                factor: factor * rhs,
+            },
+        }
+    }
+}
+
+impl MulAssign<f32> for Color {
+    fn mul_assign(&mut self, rhs: f32) {
+        *self = *self * rhs;
+    }
+}
+
 impl Lerp for Color {
     /// Note that this isn't a proper lerp in spectral space.  However,
     /// for our purposes that should be fine: all we care about is that

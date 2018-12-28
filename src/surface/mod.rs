@@ -9,7 +9,7 @@ use crate::{
     boundable::Boundable,
     math::{Matrix4x4, Normal, Point, Vector},
     ray::{AccelRay, Ray},
-    shading::surface_closure::SurfaceClosureUnion,
+    shading::surface_closure::SurfaceClosure,
     shading::SurfaceShader,
 };
 
@@ -31,7 +31,7 @@ pub enum SurfaceIntersection {
     Occlude,
     Hit {
         intersection_data: SurfaceIntersectionData,
-        closure: SurfaceClosureUnion,
+        closure: SurfaceClosure,
     },
 }
 

@@ -11,7 +11,7 @@ use crate::{
         spherical_triangle_solid_angle, triangle_surface_area, uniform_sample_spherical_triangle,
         uniform_sample_triangle,
     },
-    shading::surface_closure::{EmitClosure, SurfaceClosureUnion},
+    shading::surface_closure::SurfaceClosure,
     shading::SurfaceShader,
     surface::{triangle, Surface, SurfaceIntersection, SurfaceIntersectionData},
 };
@@ -312,10 +312,8 @@ impl<'a> Surface for RectangleLight<'a> {
 
                             let closure = {
                                 let inv_surface_area = (1.0 / (dim.0 as f64 * dim.1 as f64)) as f32;
-                                let color = lerp_slice(self.colors, r.time)
-                                    .to_spectral_sample(wr.wavelength)
-                                    * inv_surface_area;
-                                SurfaceClosureUnion::EmitClosure(EmitClosure::new(color))
+                                let color = lerp_slice(self.colors, r.time) * inv_surface_area;
+                                SurfaceClosure::Emit(color)
                             };
 
                             // Fill in intersection

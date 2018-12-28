@@ -10,7 +10,7 @@ use crate::{
     math::{coordinate_system_from_vector, dot, Matrix4x4, Normal, Point, Vector},
     ray::{AccelRay, Ray},
     sampling::{uniform_sample_cone, uniform_sample_cone_pdf, uniform_sample_sphere},
-    shading::surface_closure::{EmitClosure, SurfaceClosureUnion},
+    shading::surface_closure::SurfaceClosure,
     shading::SurfaceShader,
     surface::{Surface, SurfaceIntersection, SurfaceIntersectionData},
 };
@@ -322,9 +322,8 @@ impl<'a> Surface for SphereLight<'a> {
                 let closure = {
                     let inv_surface_area =
                         (1.0 / (4.0 * PI_64 * radius as f64 * radius as f64)) as f32;
-                    let color = lerp_slice(self.colors, r.time).to_spectral_sample(wr.wavelength)
-                        * inv_surface_area;
-                    SurfaceClosureUnion::EmitClosure(EmitClosure::new(color))
+                    let color = lerp_slice(self.colors, r.time) * inv_surface_area;
+                    SurfaceClosure::Emit(color)
                 };
 
                 // Fill in intersection

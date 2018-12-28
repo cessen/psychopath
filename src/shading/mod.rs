@@ -4,20 +4,13 @@ use std::fmt::Debug;
 
 use crate::{color::Color, surface::SurfaceIntersectionData};
 
-use self::surface_closure::{
-    EmitClosure, GGXClosure, GTRClosure, LambertClosure, SurfaceClosureUnion,
-};
+use self::surface_closure::SurfaceClosure;
 
 /// Trait for surface shaders.
 pub trait SurfaceShader: Debug + Sync {
     /// Takes the result of a surface intersection and returns the surface
     /// closure to be evaluated at that intersection point.
-    fn shade(
-        &self,
-        data: &SurfaceIntersectionData,
-        time: f32,
-        wavelength: f32,
-    ) -> SurfaceClosureUnion;
+    fn shade(&self, data: &SurfaceIntersectionData, time: f32, wavelength: f32) -> SurfaceClosure;
 }
 
 /// Clearly we must eat this brownie before the world ends, lest it
@@ -39,12 +32,6 @@ pub enum SimpleSurfaceShader {
     Lambert {
         color: Color,
     },
-    GTR {
-        color: Color,
-        roughness: f32,
-        tail_shape: f32,
-        fresnel: f32,
-    },
     GGX {
         color: Color,
         roughness: f32,
@@ -53,41 +40,23 @@ pub enum SimpleSurfaceShader {
 }
 
 impl SurfaceShader for SimpleSurfaceShader {
-    fn shade(
-        &self,
-        data: &SurfaceIntersectionData,
-        time: f32,
-        wavelength: f32,
-    ) -> SurfaceClosureUnion {
+    fn shade(&self, data: &SurfaceIntersectionData, time: f32, wavelength: f32) -> SurfaceClosure {
         let _ = (data, time); // Silence "unused" compiler warning
 
         match *self {
-            SimpleSurfaceShader::Emit { color } => SurfaceClosureUnion::EmitClosure(
-                EmitClosure::new(color.to_spectral_sample(wavelength)),
-            ),
-            SimpleSurfaceShader::Lambert { color } => SurfaceClosureUnion::LambertClosure(
-                LambertClosure::new(color.to_spectral_sample(wavelength)),
-            ),
-            SimpleSurfaceShader::GTR {
-                color,
-                roughness,
-                tail_shape,
-                fresnel,
-            } => SurfaceClosureUnion::GTRClosure(GTRClosure::new(
-                color.to_spectral_sample(wavelength),
-                roughness,
-                tail_shape,
-                fresnel,
-            )),
+            SimpleSurfaceShader::Emit { color } => SurfaceClosure::Emit(color),
+
+            SimpleSurfaceShader::Lambert { color } => SurfaceClosure::Lambert(color),
+
             SimpleSurfaceShader::GGX {
                 color,
                 roughness,
                 fresnel,
-            } => SurfaceClosureUnion::GGXClosure(GGXClosure::new(
-                color.to_spectral_sample(wavelength),
-                roughness,
-                fresnel,
-            )),
+            } => SurfaceClosure::GGX {
+                color: color,
+                roughness: roughness,
+                fresnel: fresnel,
+            },
         }
     }
 }

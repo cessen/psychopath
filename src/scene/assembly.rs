@@ -67,7 +67,7 @@ impl<'a> Assembly<'a> {
                 idata.pos * sel_xform,
                 idata.nor * sel_xform,
                 idata.nor_g * sel_xform,
-                closure.as_surface_closure(),
+                &closure,
                 time,
                 n,
             ) {
