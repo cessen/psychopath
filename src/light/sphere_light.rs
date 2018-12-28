@@ -306,7 +306,6 @@ impl<'a> Surface for SphereLight<'a> {
                     pos_err: pos_err,
                     nor: normal,
                     nor_g: normal,
-                    uv: (0.0, 0.0), // TODO
                     local_space: xform,
                     sample_pdf: self.sample_pdf(
                         &xform,

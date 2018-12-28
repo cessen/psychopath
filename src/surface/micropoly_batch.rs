@@ -9,81 +9,53 @@ use crate::{
     lerp::lerp_slice,
     math::{cross, dot, Matrix4x4, Normal, Point},
     ray::{AccelRay, Ray},
-    shading::SurfaceShader,
+    shading::{surface_closure::SurfaceClosure, SurfaceShader},
 };
 
 use super::{triangle, Surface, SurfaceIntersection, SurfaceIntersectionData};
 
+/// This is the core surface primitive for rendering: all surfaces are
+/// ultimately processed into pre-shaded micropolygon batches for rendering.
+///
+/// It is essentially a triangle soup that shares the same surface shader.
+/// The parameters of that shader can vary over the triangles, but its
+/// structure cannot.
 #[derive(Copy, Clone, Debug)]
-pub struct TriangleMesh<'a> {
+pub struct MicropolyBatch<'a> {
+    // Vertices and associated normals.  Time samples for the same vertex are
+    // laid out next to each other in a contiguous slice.
     time_sample_count: usize,
-    vertices: &'a [Point], // Vertices, with the time samples for each vertex stored contiguously
-    normals: Option<&'a [Normal]>, // Vertex normals, organized the same as `vertices`
-    indices: &'a [(u32, u32, u32, u32)], // (v0_idx, v1_idx, v2_idx, original_tri_idx)
+    vertices: &'a [Point],
+    normals: &'a [Normal],
+
+    // Per-vertex shading data.
+    vertex_closures: &'a [SurfaceClosure],
+
+    // Micro-triangle indices.  Each element of the tuple specifies the index
+    // of a vertex, which indexes into all of the arrays above.
+    indices: &'a [(u32, u32, u32)],
+
+    // Acceleration structure for fast ray intersection testing.
     accel: BVH4<'a>,
 }
 
-impl<'a> TriangleMesh<'a> {
+impl<'a> MicropolyBatch<'a> {
     pub fn from_verts_and_indices<'b>(
         arena: &'b MemArena,
-        verts: &[Vec<Point>],
-        vert_normals: &Option<Vec<Vec<Normal>>>,
-        tri_indices: &[(usize, usize, usize)],
-    ) -> TriangleMesh<'b> {
-        let vert_count = verts[0].len();
-        let time_sample_count = verts.len();
-
-        // Copy verts over to a contiguous area of memory, reorganizing them
-        // so that each vertices' time samples are contiguous in memory.
-        let vertices = {
-            let vertices =
-                unsafe { arena.alloc_array_uninitialized(vert_count * time_sample_count) };
-
-            for vi in 0..vert_count {
-                for ti in 0..time_sample_count {
-                    vertices[(vi * time_sample_count) + ti] = verts[ti][vi];
-                }
-            }
-
-            vertices
-        };
-
-        // Copy vertex normals, if any, organizing them the same as vertices
-        // above.
-        let normals = match vert_normals {
-            Some(ref vnors) => {
-                let normals =
-                    unsafe { arena.alloc_array_uninitialized(vert_count * time_sample_count) };
-
-                for vi in 0..vert_count {
-                    for ti in 0..time_sample_count {
-                        normals[(vi * time_sample_count) + ti] = vnors[ti][vi];
-                    }
-                }
-
-                Some(&normals[..])
-            }
-
-            None => None,
-        };
-
-        // Copy triangle vertex indices over, appending the triangle index itself to the tuple
-        let indices = {
-            let indices = unsafe { arena.alloc_array_uninitialized(tri_indices.len()) };
-            for (i, tri_i) in tri_indices.iter().enumerate() {
-                indices[i] = (tri_i.0 as u32, tri_i.2 as u32, tri_i.1 as u32, i as u32);
-            }
-            indices
-        };
-
+        geo_time_sample_count: usize,
+        verts: &[Point],
+        vert_normals: &[Normal],
+        vert_closures: &[SurfaceClosure],
+        triangles: &[(u32, u32, u32)],
+    ) -> MicropolyBatch<'b> {
         // Create bounds array for use during BVH construction
         let bounds = {
-            let mut bounds = Vec::with_capacity(indices.len() * time_sample_count);
-            for tri in tri_indices {
-                for ti in 0..time_sample_count {
-                    let p0 = verts[ti][tri.0];
-                    let p1 = verts[ti][tri.1];
-                    let p2 = verts[ti][tri.2];
+            let mut bounds = Vec::with_capacity(triangles.len() * geo_time_sample_count);
+            for tri in triangles {
+                for ti in 0..geo_time_sample_count {
+                    let p0 = verts[(tri.0 as usize * geo_time_sample_count) + ti];
+                    let p1 = verts[(tri.1 as usize * geo_time_sample_count) + ti];
+                    let p2 = verts[(tri.2 as usize * geo_time_sample_count) + ti];
                     let minimum = p0.min(p1.min(p2));
                     let maximum = p0.max(p1.max(p2));
                     bounds.push(BBox::from_points(minimum, maximum));
@@ -92,40 +64,56 @@ impl<'a> TriangleMesh<'a> {
             bounds
         };
 
+        // Create an array of triangle indices for use during the BVH build.
+        let mut tmp_indices: Vec<_> = (0u32..(triangles.len() as u32)).collect();
+
         // Build BVH
-        let accel = BVH4::from_objects(arena, &mut indices[..], 3, |tri| {
-            &bounds
-                [(tri.3 as usize * time_sample_count)..((tri.3 as usize + 1) * time_sample_count)]
+        let accel = BVH4::from_objects(arena, &mut tmp_indices[..], 3, |index| {
+            &bounds[(*index as usize * geo_time_sample_count)
+                ..((*index as usize + 1) * geo_time_sample_count)]
         });
 
-        TriangleMesh {
-            time_sample_count: time_sample_count,
-            vertices: vertices,
-            normals: normals,
+        // Copy triangle vertex indices over in the post-bvh-build order.
+        let indices = {
+            let indices = unsafe { arena.alloc_array_uninitialized(triangles.len()) };
+            for (i, tmp_i) in tmp_indices.iter().enumerate() {
+                indices[i] = triangles[*tmp_i as usize];
+            }
+            indices
+        };
+
+        MicropolyBatch {
+            time_sample_count: geo_time_sample_count,
+            vertices: arena.copy_slice(verts),
+            normals: arena.copy_slice(vert_normals),
+
+            vertex_closures: arena.copy_slice(vert_closures),
+
             indices: indices,
+
             accel: accel,
         }
     }
 }
 
-impl<'a> Boundable for TriangleMesh<'a> {
+impl<'a> Boundable for MicropolyBatch<'a> {
     fn bounds(&self) -> &[BBox] {
         self.accel.bounds()
     }
 }
 
-impl<'a> Surface for TriangleMesh<'a> {
+impl<'a> Surface for MicropolyBatch<'a> {
     fn intersect_rays(
         &self,
         accel_rays: &mut [AccelRay],
         wrays: &[Ray],
         isects: &mut [SurfaceIntersection],
-        shader: &SurfaceShader,
+        _shader: &SurfaceShader,
         space: &[Matrix4x4],
     ) {
         // Precalculate transform for non-motion blur cases
         let static_mat_space = if space.len() == 1 {
-            lerp_slice(space, 0.0).inverse()
+            space[0].inverse()
         } else {
             Matrix4x4::new()
         };
@@ -222,15 +210,15 @@ impl<'a> Surface for TriangleMesh<'a> {
                                 // Calculate geometric surface normal
                                 let geo_normal = cross(tri.0 - tri.1, tri.0 - tri.2).into_normal();
 
-                                // Calculate interpolated surface normal, if any
-                                let shading_normal = if let Some(normals) = self.normals {
-                                    let n0_slice = &normals[(tri_indices.0 as usize
+                                // Calculate interpolated surface normal
+                                let shading_normal = {
+                                    let n0_slice = &self.normals[(tri_indices.0 as usize
                                         * self.time_sample_count)
                                         ..((tri_indices.0 as usize + 1) * self.time_sample_count)];
-                                    let n1_slice = &normals[(tri_indices.1 as usize
+                                    let n1_slice = &self.normals[(tri_indices.1 as usize
                                         * self.time_sample_count)
                                         ..((tri_indices.1 as usize + 1) * self.time_sample_count)];
-                                    let n2_slice = &normals[(tri_indices.2 as usize
+                                    let n2_slice = &self.normals[(tri_indices.2 as usize
                                         * self.time_sample_count)
                                         ..((tri_indices.2 as usize + 1) * self.time_sample_count)];
 
@@ -244,25 +232,25 @@ impl<'a> Surface for TriangleMesh<'a> {
                                     } else {
                                         -s_nor
                                     }
-                                } else {
-                                    geo_normal
                                 };
 
-                                let intersection_data = SurfaceIntersectionData {
-                                    incoming: wr.dir,
-                                    t: t,
-                                    pos: pos,
-                                    pos_err: pos_err,
-                                    nor: shading_normal,
-                                    nor_g: geo_normal,
-                                    local_space: mat_space,
-                                    sample_pdf: 0.0,
-                                };
+                                // Calculate surface closure
+                                // TODO: use interpolation between the vertices
+                                let surface_closure = self.vertex_closures[tri_indices.0 as usize];
 
                                 // Fill in intersection data
                                 isects[r.id as usize] = SurfaceIntersection::Hit {
-                                    intersection_data: intersection_data,
-                                    closure: shader.shade(&intersection_data, wr.time),
+                                    intersection_data: SurfaceIntersectionData {
+                                        incoming: wr.dir,
+                                        t: t,
+                                        pos: pos,
+                                        pos_err: pos_err,
+                                        nor: shading_normal,
+                                        nor_g: geo_normal,
+                                        local_space: mat_space,
+                                        sample_pdf: 0.0,
+                                    },
+                                    closure: surface_closure,
                                 };
                                 r.max_t = t;
                             }
