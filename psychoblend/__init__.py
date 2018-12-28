@@ -81,13 +81,17 @@ class PsychopathCamera(bpy.types.PropertyGroup):
 class PsychopathLight(bpy.types.PropertyGroup):
     color_type = EnumProperty(
         name="Color Type", description="",
-        items=[('Rec709', 'Rec709', ""), ('Blackbody', 'Blackbody', "")],
+        items=[
+            ('Rec709', 'Rec709', ""),
+            ('Blackbody', 'Blackbody', ""),
+            ('ColorTemperature', 'ColorTemperature', "Same as Blackbody, except with brightness kept more even."),
+        ],
         default="Rec709"
         )
 
     color_blackbody_temp = FloatProperty(
         name="Temperature", description="Blackbody temperature in kelvin",
-        min=0.0, max=32000.0, soft_min=800.0, soft_max=6500.0, default=1200.0
+        min=0.0, soft_min=800.0, soft_max=6500.0, default=1200.0
         )
 
 # Custom Mesh properties
@@ -107,7 +111,11 @@ class PsychopathMaterial(bpy.types.PropertyGroup):
 
     color_type = EnumProperty(
         name="Color Type", description="",
-        items=[('Rec709', 'Rec709', ""), ('Blackbody', 'Blackbody', "")],
+        items=[
+            ('Rec709', 'Rec709', ""),
+            ('Blackbody', 'Blackbody', ""),
+            ('ColorTemperature', 'ColorTemperature', "Same as Blackbody, except with brightness kept more even."),
+        ],
         default="Rec709"
         )
 
@@ -120,7 +128,7 @@ class PsychopathMaterial(bpy.types.PropertyGroup):
 
     color_blackbody_temp = FloatProperty(
         name="Temperature", description="Blackbody temperature in kelvin",
-        min=0.0, max=32000.0, soft_min=800.0, soft_max=6500.0, default=1200.0
+        min=0.0, soft_min=800.0, soft_max=6500.0, default=1200.0
         )
 
     roughness = FloatProperty(

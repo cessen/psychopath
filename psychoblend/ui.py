@@ -130,7 +130,7 @@ class DATA_PT_psychopath_lamp(PsychopathPanel, bpy.types.Panel):
 
         if ob.data.psychopath.color_type == 'Rec709':
             col.prop(ob.data, "color")
-        elif ob.data.psychopath.color_type == 'Blackbody':
+        elif ob.data.psychopath.color_type == 'Blackbody' or ob.data.psychopath.color_type == 'ColorTemperature':
             col.prop(ob.data.psychopath, "color_blackbody_temp")
 
         col.prop(ob.data, "energy")
@@ -254,7 +254,7 @@ class MATERIAL_PT_psychopath_surface(PsychopathPanel, bpy.types.Panel):
         col.prop(mat.psychopath, "color_type")
         if mat.psychopath.color_type == 'Rec709':
             col.prop(mat.psychopath, "color")
-        elif mat.psychopath.color_type == 'Blackbody':
+        elif mat.psychopath.color_type == 'Blackbody' or mat.psychopath.color_type == 'ColorTemperature':
             col.prop(mat.psychopath, "color_blackbody_temp")
 
         if mat.psychopath.surface_shader_type == 'GTR':

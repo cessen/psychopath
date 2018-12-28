@@ -218,6 +218,8 @@ class SphereLamp:
             self.time_col += [('Rec709', self.ob.data.color * self.ob.data.energy)]
         elif self.ob.data.psychopath.color_type == 'Blackbody':
             self.time_col += [('Blackbody', self.ob.data.psychopath.color_blackbody_temp, self.ob.data.energy)]
+        elif self.ob.data.psychopath.color_type == 'ColorTemperature':
+            self.time_col += [('ColorTemperature', self.ob.data.psychopath.color_blackbody_temp, self.ob.data.energy)]
 
         self.time_rad += [self.ob.data.shadow_soft_size]
 
@@ -234,6 +236,8 @@ class SphereLamp:
                 w.write("Color [rec709, %f %f %f]\n" % (col[1][0], col[1][1], col[1][2]))
             elif col[0] == 'Blackbody':
                 w.write("Color [blackbody, %f %f]\n" % (col[1], col[2]))
+            elif col[0] == 'ColorTemperature':
+                w.write("Color [color_temperature, %f %f]\n" % (col[1], col[2]))
         for rad in self.time_rad:
             w.write("Radius [%f]\n" % rad)
 
@@ -257,6 +261,8 @@ class RectLamp:
             self.time_col += [('Rec709', self.ob.data.color * self.ob.data.energy)]
         elif self.ob.data.psychopath.color_type == 'Blackbody':
             self.time_col += [('Blackbody', self.ob.data.psychopath.color_blackbody_temp, self.ob.data.energy)]
+        elif self.ob.data.psychopath.color_type == 'ColorTemperature':
+            self.time_col += [('ColorTemperature', self.ob.data.psychopath.color_blackbody_temp, self.ob.data.energy)]
 
         if self.ob.data.shape == 'RECTANGLE':
             self.time_dim += [(self.ob.data.size, self.ob.data.size_y)]
@@ -276,6 +282,8 @@ class RectLamp:
                 w.write("Color [rec709, %f %f %f]\n" % (col[1][0], col[1][1], col[1][2]))
             elif col[0] == 'Blackbody':
                 w.write("Color [blackbody, %f %f]\n" % (col[1], col[2]))
+            elif col[0] == 'ColorTemperature':
+                w.write("Color [color_temperature, %f %f]\n" % (col[1], col[2]))
         for dim in self.time_dim:
             w.write("Dimensions [%f %f]\n" % dim)
 
@@ -340,6 +348,11 @@ class Material:
                     self.mat.psychopath.color_blackbody_temp,
                     1.0,
                 ))
+            elif self.mat.psychopath.color_type == 'ColorTemperature':
+                w.write("Color [color_temperature, %f %f]\n" % (
+                    self.mat.psychopath.color_blackbody_temp,
+                    1.0,
+                ))
         elif self.mat.psychopath.surface_shader_type == 'Lambert':
             w.write("Type [Lambert]\n")
             if self.mat.psychopath.color_type == 'Rec709':
@@ -352,6 +365,11 @@ class Material:
                     self.mat.psychopath.color_blackbody_temp,
                     1.0,
                 ))
+            elif self.mat.psychopath.color_type == 'ColorTemperature':
+                w.write("Color [color_temperature, %f %f]\n" % (
+                    self.mat.psychopath.color_blackbody_temp,
+                    1.0,
+                ))
         elif self.mat.psychopath.surface_shader_type == 'GGX':
             w.write("Type [GGX]\n")
             if self.mat.psychopath.color_type == 'Rec709':
@@ -361,6 +379,11 @@ class Material:
                 ))
             elif self.mat.psychopath.color_type == 'Blackbody':
                 w.write("Color [blackbody, %f %f]\n" % (
+                    self.mat.psychopath.color_blackbody_temp,
+                    1.0,
+                ))
+            elif self.mat.psychopath.color_type == 'ColorTemperature':
+                w.write("Color [color_temperature, %f %f]\n" % (
                     self.mat.psychopath.color_blackbody_temp,
                     1.0,
                 ))

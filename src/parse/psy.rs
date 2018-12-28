@@ -606,6 +606,16 @@ pub fn parse_color(contents: &str) -> Result<Color, PsyParseError> {
             }
         }
 
+        "color_temperature" => {
+            if let IResult::Done(_, (temperature, factor)) =
+                closure!(tuple!(ws_f32, ws_f32))(items[1].as_bytes())
+            {
+                return Ok(Color::new_temperature(temperature, factor));
+            } else {
+                return Err(PsyParseError::UnknownError(0));
+            }
+        }
+
         _ => return Err(PsyParseError::UnknownError(0)),
     }
 }

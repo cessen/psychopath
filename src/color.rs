@@ -46,6 +46,12 @@ pub enum Color {
         temperature: f32, // In kelvin
         factor: f32,      // Brightness multiplier
     },
+    // Same as Blackbody except with the spectrum's energy roughly
+    // normalized.
+    Temperature {
+        temperature: f32, // In kelvin
+        factor: f32,      // Brightness multiplier
+    },
 }
 
 impl Color {
@@ -57,6 +63,14 @@ impl Color {
     #[inline(always)]
     pub fn new_blackbody(temp: f32, fac: f32) -> Self {
         Color::Blackbody {
+            temperature: temp,
+            factor: fac,
+        }
+    }
+
+    #[inline(always)]
+    pub fn new_temperature(temp: f32, fac: f32) -> Self {
+        Color::Temperature {
             temperature: temp,
             factor: fac,
         }
@@ -84,6 +98,21 @@ impl Color {
                     hero_wavelength,
                 )
             }
+            Color::Temperature {
+                temperature,
+                factor,
+            } => {
+                SpectralSample::from_parts(
+                    // TODO: make this SIMD
+                    Float4::new(
+                        plancks_law_normalized(temperature, wls.get_0()) * factor,
+                        plancks_law_normalized(temperature, wls.get_1()) * factor,
+                        plancks_law_normalized(temperature, wls.get_2()) * factor,
+                        plancks_law_normalized(temperature, wls.get_3()) * factor,
+                    ),
+                    hero_wavelength,
+                )
+            }
         }
     }
 
@@ -91,10 +120,19 @@ impl Color {
     ///
     /// Note: this really is very _approximate_.
     pub fn approximate_energy(self) -> f32 {
-        // TODO: better approximation for Blackbody.
+        // TODO: better approximation for Blackbody and Temperature.
         match self {
             Color::XYZ(_, y, _) => y,
-            Color::Blackbody { factor, .. } => factor,
+
+            Color::Blackbody {
+                temperature,
+                factor,
+            } => {
+                let t2 = temperature * temperature;
+                t2 * t2 * factor
+            }
+
+            Color::Temperature { factor, .. } => factor,
         }
     }
 }
@@ -105,10 +143,19 @@ impl Mul<f32> for Color {
     fn mul(self, rhs: f32) -> Self {
         match self {
             Color::XYZ(x, y, z) => Color::XYZ(x * rhs, y * rhs, z * rhs),
+
             Color::Blackbody {
                 temperature,
                 factor,
             } => Color::Blackbody {
+                temperature: temperature,
+                factor: factor * rhs,
+            },
+
+            Color::Temperature {
+                temperature,
+                factor,
+            } => Color::Temperature {
                 temperature: temperature,
                 factor: factor * rhs,
             },
@@ -140,6 +187,7 @@ impl Lerp for Color {
                 (y1 * inv_alpha) + (y2 * alpha),
                 (z1 * inv_alpha) + (z2 * alpha),
             ),
+
             (
                 Color::Blackbody {
                     temperature: tmp1,
@@ -153,6 +201,21 @@ impl Lerp for Color {
                 temperature: (tmp1 * inv_alpha) + (tmp2 * alpha),
                 factor: (fac1 * inv_alpha) + (fac2 * alpha),
             },
+
+            (
+                Color::Temperature {
+                    temperature: tmp1,
+                    factor: fac1,
+                },
+                Color::Temperature {
+                    temperature: tmp2,
+                    factor: fac2,
+                },
+            ) => Color::Temperature {
+                temperature: (tmp1 * inv_alpha) + (tmp2 * alpha),
+                factor: (fac1 * inv_alpha) + (fac2 * alpha),
+            },
+
             _ => panic!("Cannot lerp colors with different representations."),
         }
     }
@@ -197,6 +260,14 @@ fn plancks_law(temperature: f32, wavelength: f32) -> f32 {
 
     // Convert energy to appropriate units and return.
     (energy * 1.0e-6).max(0.0)
+}
+
+/// Same as above, except normalized to keep roughly equal spectral
+/// energy across temperatures.  This makes it easier to use for
+/// choosing colors without making brightness explode.
+fn plancks_law_normalized(temperature: f32, wavelength: f32) -> f32 {
+    let t2 = temperature * temperature;
+    plancks_law(temperature, wavelength) * 4.0e7 / (t2 * t2)
 }
 
 //----------------------------------------------------------------
