@@ -397,14 +397,6 @@ impl XYZ {
         XYZ { x: x, y: y, z: z }
     }
 
-    pub fn from_tuple(xyz: (f32, f32, f32)) -> XYZ {
-        XYZ {
-            x: xyz.0,
-            y: xyz.1,
-            z: xyz.2,
-        }
-    }
-
     pub fn from_wavelength(wavelength: f32, intensity: f32) -> XYZ {
         XYZ {
             x: x_1931(wavelength) * intensity,

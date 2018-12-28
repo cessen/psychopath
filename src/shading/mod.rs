@@ -10,7 +10,7 @@ use self::surface_closure::SurfaceClosure;
 pub trait SurfaceShader: Debug + Sync {
     /// Takes the result of a surface intersection and returns the surface
     /// closure to be evaluated at that intersection point.
-    fn shade(&self, data: &SurfaceIntersectionData, time: f32, wavelength: f32) -> SurfaceClosure;
+    fn shade(&self, data: &SurfaceIntersectionData, time: f32) -> SurfaceClosure;
 }
 
 /// Clearly we must eat this brownie before the world ends, lest it
@@ -40,7 +40,7 @@ pub enum SimpleSurfaceShader {
 }
 
 impl SurfaceShader for SimpleSurfaceShader {
-    fn shade(&self, data: &SurfaceIntersectionData, time: f32, wavelength: f32) -> SurfaceClosure {
+    fn shade(&self, data: &SurfaceIntersectionData, time: f32) -> SurfaceClosure {
         let _ = (data, time); // Silence "unused" compiler warning
 
         match *self {

@@ -2,14 +2,11 @@
 
 use std::result::Result;
 
-use nom::{call, closure, tuple, tuple_parser, IResult};
+use nom::IResult;
 
 use mem_arena::MemArena;
 
-use crate::{
-    color::{rec709_e_to_xyz, Color},
-    shading::{SimpleSurfaceShader, SurfaceShader},
-};
+use crate::shading::{SimpleSurfaceShader, SurfaceShader};
 
 use super::{
     basics::ws_f32,

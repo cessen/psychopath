@@ -7,7 +7,6 @@ use nom::{call, closure, tuple, tuple_parser, IResult};
 use mem_arena::MemArena;
 
 use crate::{
-    color::{rec709_e_to_xyz, Color},
     light::{DistantDiskLight, RectangleLight, SphereLight},
     math::Vector,
 };

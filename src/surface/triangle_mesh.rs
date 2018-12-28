@@ -263,11 +263,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                                 // Fill in intersection data
                                 isects[r.id as usize] = SurfaceIntersection::Hit {
                                     intersection_data: intersection_data,
-                                    closure: shader.shade(
-                                        &intersection_data,
-                                        wr.time,
-                                        wr.wavelength,
-                                    ),
+                                    closure: shader.shade(&intersection_data, wr.time),
                                 };
                                 r.max_t = t;
                             }

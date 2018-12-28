@@ -210,7 +210,7 @@ mod lambert_closure {
     }
 
     pub fn estimate_eval_over_sphere_light(
-        color: Color,
+        _color: Color,
         inc: Vector,
         to_light_center: Vector,
         light_radius_squared: f32,
@@ -411,9 +411,9 @@ mod ggx_closure {
     }
 
     pub fn estimate_eval_over_sphere_light(
-        col: Color,
+        _col: Color,
         roughness: f32,
-        fresnel: f32,
+        _fresnel: f32,
         inc: Vector,
         to_light_center: Vector,
         light_radius_squared: f32,
@@ -548,16 +548,13 @@ mod emit_closure {
     }
 
     pub fn estimate_eval_over_sphere_light(
-        color: Color,
-        inc: Vector,
-        to_light_center: Vector,
-        light_radius_squared: f32,
-        nor: Normal,
-        nor_g: Normal,
+        _color: Color,
+        _inc: Vector,
+        _to_light_center: Vector,
+        _light_radius_squared: f32,
+        _nor: Normal,
+        _nor_g: Normal,
     ) -> f32 {
-        // Not using these, silence warning
-        let _ = (inc, to_light_center, light_radius_squared, nor, nor_g);
-
         // TODO: what to do here?
         unimplemented!()
     }
