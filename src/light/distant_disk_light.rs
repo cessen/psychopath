@@ -3,7 +3,7 @@ use std::f64::consts::PI as PI_64;
 use mem_arena::MemArena;
 
 use crate::{
-    color::{Color, SpectralSample, XYZ},
+    color::{Color, SpectralSample},
     lerp::lerp_slice,
     math::{coordinate_system_from_vector, Vector},
     sampling::{uniform_sample_cone, uniform_sample_cone_pdf},
@@ -17,7 +17,7 @@ use super::WorldLightSource;
 pub struct DistantDiskLight<'a> {
     radii: &'a [f32],
     directions: &'a [Vector],
-    colors: &'a [XYZ],
+    colors: &'a [Color],
 }
 
 impl<'a> DistantDiskLight<'a> {
@@ -25,7 +25,7 @@ impl<'a> DistantDiskLight<'a> {
         arena: &'a MemArena,
         radii: &[f32],
         directions: &[Vector],
-        colors: &[XYZ],
+        colors: &[Color],
     ) -> DistantDiskLight<'a> {
         DistantDiskLight {
             radii: arena.copy_slice(&radii),
@@ -78,7 +78,7 @@ impl<'a> WorldLightSource for DistantDiskLight<'a> {
         let sample = uniform_sample_cone(u, v, cos_theta_max).normalized();
 
         // Calculate the final values and return everything.
-        let spectral_sample = (col * solid_angle_inv as f32).to_spectral_sample(wavelength);
+        let spectral_sample = col.to_spectral_sample(wavelength) * solid_angle_inv as f32;
         let shadow_vec = (x * sample.x()) + (y * sample.y()) + (z * sample.z());
         let pdf = uniform_sample_cone_pdf(cos_theta_max);
         (spectral_sample, shadow_vec, pdf as f32)
@@ -89,11 +89,9 @@ impl<'a> WorldLightSource for DistantDiskLight<'a> {
     }
 
     fn approximate_energy(&self) -> f32 {
-        let color: XYZ = self
-            .colors
+        self.colors
             .iter()
-            .fold(XYZ::new(0.0, 0.0, 0.0), |a, &b| a + b)
-            / self.colors.len() as f32;
-        color.y
+            .fold(0.0, |a, &b| a + b.approximate_energy())
+            / self.colors.len() as f32
     }
 }

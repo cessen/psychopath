@@ -7,7 +7,7 @@ use nom::{call, closure, tuple, tuple_parser, IResult};
 use mem_arena::MemArena;
 
 use crate::{
-    color::{rec709_e_to_xyz, XYZ},
+    color::{rec709_e_to_xyz, Color},
     light::{DistantDiskLight, RectangleLight, SphereLight},
     math::Vector,
 };
@@ -68,7 +68,7 @@ pub fn parse_distant_disk_light<'a>(
                         // TODO: handle color space conversions properly.
                         // Probably will need a special color type with its
                         // own parser...?
-                        colors.push(XYZ::from_tuple(rec709_e_to_xyz(color)));
+                        colors.push(Color::new_xyz(rec709_e_to_xyz(color)));
                     } else {
                         // Found color, but its contents is not in the right format
                         return Err(PsyParseError::UnknownError(byte_offset));
@@ -122,7 +122,7 @@ pub fn parse_sphere_light<'a>(
                         // TODO: handle color space conversions properly.
                         // Probably will need a special color type with its
                         // own parser...?
-                        colors.push(XYZ::from_tuple(rec709_e_to_xyz(color)));
+                        colors.push(Color::new_xyz(rec709_e_to_xyz(color)));
                     } else {
                         // Found color, but its contents is not in the right format
                         return Err(PsyParseError::UnknownError(byte_offset));
@@ -178,7 +178,7 @@ pub fn parse_rectangle_light<'a>(
                         // TODO: handle color space conversions properly.
                         // Probably will need a special color type with its
                         // own parser...?
-                        colors.push(XYZ::from_tuple(rec709_e_to_xyz(color)));
+                        colors.push(Color::new_xyz(rec709_e_to_xyz(color)));
                     } else {
                         // Found color, but its contents is not in the right format
                         return Err(PsyParseError::UnknownError(byte_offset));

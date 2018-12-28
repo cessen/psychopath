@@ -2,7 +2,7 @@ use std::iter;
 
 use crate::{
     algorithm::partition,
-    color::{rec709_to_xyz, XYZ},
+    color::{rec709_to_xyz, Color},
     lerp::lerp_slice,
     ray::{AccelRay, Ray},
     scene::{Assembly, InstanceType, Object},
@@ -182,7 +182,7 @@ impl<'a> TracerInner<'a> {
         match *obj {
             Object::Surface(surface) => {
                 let unassigned_shader = SimpleSurfaceShader::Emit {
-                    color: XYZ::from_tuple(rec709_to_xyz((1.0, 0.0, 1.0))),
+                    color: Color::new_xyz(rec709_to_xyz((1.0, 0.0, 1.0))),
                 };
                 let shader = surface_shader.unwrap_or(&unassigned_shader);
 
@@ -198,7 +198,7 @@ impl<'a> TracerInner<'a> {
             Object::SurfaceLight(surface) => {
                 // Lights don't use shaders
                 let bogus_shader = SimpleSurfaceShader::Emit {
-                    color: XYZ::from_tuple(rec709_to_xyz((1.0, 0.0, 1.0))),
+                    color: Color::new_xyz(rec709_to_xyz((1.0, 0.0, 1.0))),
                 };
 
                 surface.intersect_rays(

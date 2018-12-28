@@ -5,7 +5,7 @@ use mem_arena::MemArena;
 use crate::{
     bbox::BBox,
     boundable::Boundable,
-    color::{Color, SpectralSample, XYZ},
+    color::{Color, SpectralSample},
     lerp::lerp_slice,
     math::{coordinate_system_from_vector, dot, Matrix4x4, Normal, Point, Vector},
     ray::{AccelRay, Ray},
@@ -26,12 +26,12 @@ const SAMPLE_POINT_FUDGE: f32 = 0.001;
 #[derive(Copy, Clone, Debug)]
 pub struct SphereLight<'a> {
     radii: &'a [f32],
-    colors: &'a [XYZ],
+    colors: &'a [Color],
     bounds_: &'a [BBox],
 }
 
 impl<'a> SphereLight<'a> {
-    pub fn new<'b>(arena: &'b MemArena, radii: &[f32], colors: &[XYZ]) -> SphereLight<'b> {
+    pub fn new<'b>(arena: &'b MemArena, radii: &[f32], colors: &[Color]) -> SphereLight<'b> {
         let bbs: Vec<_> = radii
             .iter()
             .map(|r| BBox {
@@ -164,7 +164,7 @@ impl<'a> SurfaceLight for SphereLight<'a> {
                 )
             };
             let pdf = uniform_sample_cone_pdf(cos_theta_max);
-            let spectral_sample = (col * surface_area_inv as f32).to_spectral_sample(wavelength);
+            let spectral_sample = col.to_spectral_sample(wavelength) * surface_area_inv as f32;
             return (
                 spectral_sample,
                 (sample_point, normal, sample_point_err),
@@ -182,7 +182,7 @@ impl<'a> SurfaceLight for SphereLight<'a> {
                 )
             };
             let pdf = 1.0 / (4.0 * PI_64);
-            let spectral_sample = (col * surface_area_inv as f32).to_spectral_sample(wavelength);
+            let spectral_sample = col.to_spectral_sample(wavelength) * surface_area_inv as f32;
             return (
                 spectral_sample,
                 (sample_point, normal, sample_point_err),
@@ -196,12 +196,10 @@ impl<'a> SurfaceLight for SphereLight<'a> {
     }
 
     fn approximate_energy(&self) -> f32 {
-        let color: XYZ = self
-            .colors
+        self.colors
             .iter()
-            .fold(XYZ::new(0.0, 0.0, 0.0), |a, &b| a + b)
-            / self.colors.len() as f32;
-        color.y
+            .fold(0.0, |a, &b| a + b.approximate_energy())
+            / self.colors.len() as f32
     }
 }
 

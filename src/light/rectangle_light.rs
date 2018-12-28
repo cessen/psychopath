@@ -3,7 +3,7 @@ use mem_arena::MemArena;
 use crate::{
     bbox::BBox,
     boundable::Boundable,
-    color::{Color, SpectralSample, XYZ},
+    color::{Color, SpectralSample},
     lerp::lerp_slice,
     math::{cross, dot, Matrix4x4, Normal, Point, Vector},
     ray::{AccelRay, Ray},
@@ -23,7 +23,7 @@ const SIMPLE_SAMPLING_THRESHOLD: f32 = 0.01;
 #[derive(Copy, Clone, Debug)]
 pub struct RectangleLight<'a> {
     dimensions: &'a [(f32, f32)],
-    colors: &'a [XYZ],
+    colors: &'a [Color],
     bounds_: &'a [BBox],
 }
 
@@ -31,7 +31,7 @@ impl<'a> RectangleLight<'a> {
     pub fn new<'b>(
         arena: &'b MemArena,
         dimensions: &[(f32, f32)],
-        colors: &[XYZ],
+        colors: &[Color],
     ) -> RectangleLight<'b> {
         let bbs: Vec<_> = dimensions
             .iter()
@@ -188,7 +188,7 @@ impl<'a> SurfaceLight for RectangleLight<'a> {
             .into_point();
             let shadow_vec = sample_point - arr;
             let spectral_sample =
-                (col * surface_area_inv as f32 * 0.5).to_spectral_sample(wavelength);
+                (col).to_spectral_sample(wavelength) * surface_area_inv as f32 * 0.5;
             let pdf = (sample_point - arr).length2()
                 / dot(shadow_vec.normalized(), normal.into_vector().normalized()).abs()
                 / (surface_area_1 + surface_area_2);
@@ -232,7 +232,7 @@ impl<'a> SurfaceLight for RectangleLight<'a> {
             // Calculate pdf and light energy
             let pdf = 1.0 / (area_1 + area_2); // PDF of the ray direction being sampled
             let spectral_sample =
-                (col * surface_area_inv as f32 * 0.5).to_spectral_sample(wavelength);
+                col.to_spectral_sample(wavelength) * surface_area_inv as f32 * 0.5;
 
             (
                 spectral_sample,
@@ -247,12 +247,10 @@ impl<'a> SurfaceLight for RectangleLight<'a> {
     }
 
     fn approximate_energy(&self) -> f32 {
-        let color: XYZ = self
-            .colors
+        self.colors
             .iter()
-            .fold(XYZ::new(0.0, 0.0, 0.0), |a, &b| a + b)
-            / self.colors.len() as f32;
-        color.y
+            .fold(0.0, |a, &b| a + b.approximate_energy())
+            / self.colors.len() as f32
     }
 }
 

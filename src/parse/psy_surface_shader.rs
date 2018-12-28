@@ -7,7 +7,7 @@ use nom::{call, closure, tuple, tuple_parser, IResult};
 use mem_arena::MemArena;
 
 use crate::{
-    color::{rec709_e_to_xyz, XYZ},
+    color::{rec709_e_to_xyz, Color},
     shading::{SimpleSurfaceShader, SurfaceShader},
 };
 
@@ -44,7 +44,7 @@ pub fn parse_surface_shader<'a>(
                     // TODO: handle color space conversions properly.
                     // Probably will need a special color type with its
                     // own parser...?
-                    XYZ::from_tuple(rec709_e_to_xyz(color))
+                    Color::new_xyz(rec709_e_to_xyz(color))
                 } else {
                     // Found color, but its contents is not in the right format
                     return Err(PsyParseError::UnknownError(byte_offset));
@@ -68,7 +68,7 @@ pub fn parse_surface_shader<'a>(
                     // TODO: handle color space conversions properly.
                     // Probably will need a special color type with its
                     // own parser...?
-                    XYZ::from_tuple(rec709_e_to_xyz(color))
+                    Color::new_xyz(rec709_e_to_xyz(color))
                 } else {
                     // Found color, but its contents is not in the right format
                     return Err(PsyParseError::UnknownError(byte_offset));
@@ -93,7 +93,7 @@ pub fn parse_surface_shader<'a>(
                     // TODO: handle color space conversions properly.
                     // Probably will need a special color type with its
                     // own parser...?
-                    XYZ::from_tuple(rec709_e_to_xyz(color))
+                    Color::new_xyz(rec709_e_to_xyz(color))
                 } else {
                     // Found color, but its contents is not in the right format
                     return Err(PsyParseError::UnknownError(byte_offset));
@@ -172,7 +172,7 @@ pub fn parse_surface_shader<'a>(
                     // TODO: handle color space conversions properly.
                     // Probably will need a special color type with its
                     // own parser...?
-                    XYZ::from_tuple(rec709_e_to_xyz(color))
+                    Color::new_xyz(rec709_e_to_xyz(color))
                 } else {
                     // Found color, but its contents is not in the right format
                     return Err(PsyParseError::UnknownError(byte_offset));

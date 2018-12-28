@@ -8,7 +8,7 @@ use mem_arena::MemArena;
 
 use crate::{
     camera::Camera,
-    color::{rec709_e_to_xyz, XYZ},
+    color::{rec709_e_to_xyz, Color},
     light::WorldLightSource,
     math::Matrix4x4,
     renderer::Renderer,
@@ -504,7 +504,7 @@ fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>,
                     {
                         // TODO: proper color space management, not just assuming
                         // rec.709.
-                        background_color = XYZ::from_tuple(rec709_e_to_xyz(color));
+                        background_color = Color::new_xyz(rec709_e_to_xyz(color));
                     } else {
                         return Err(PsyParseError::IncorrectLeafData(
                             byte_offset,

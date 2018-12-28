@@ -2,10 +2,7 @@ pub mod surface_closure;
 
 use std::fmt::Debug;
 
-use crate::{
-    color::{Color, XYZ},
-    surface::SurfaceIntersectionData,
-};
+use crate::{color::Color, surface::SurfaceIntersectionData};
 
 use self::surface_closure::{
     EmitClosure, GGXClosure, GTRClosure, LambertClosure, SurfaceClosureUnion,
@@ -37,19 +34,19 @@ pub trait SurfaceShader: Debug + Sync {
 #[derive(Debug, Copy, Clone)]
 pub enum SimpleSurfaceShader {
     Emit {
-        color: XYZ,
+        color: Color,
     },
     Lambert {
-        color: XYZ,
+        color: Color,
     },
     GTR {
-        color: XYZ,
+        color: Color,
         roughness: f32,
         tail_shape: f32,
         fresnel: f32,
     },
     GGX {
-        color: XYZ,
+        color: Color,
         roughness: f32,
         fresnel: f32,
     },

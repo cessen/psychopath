@@ -16,10 +16,6 @@ pub fn map_0_1_to_wavelength(n: f32) -> f32 {
     n * WL_RANGE + WL_MIN
 }
 
-pub trait Color {
-    fn to_spectral_sample(&self, hero_wavelength: f32) -> SpectralSample;
-}
-
 #[inline(always)]
 fn nth_wavelength(hero_wavelength: f32, n: usize) -> f32 {
     let wl = hero_wavelength + (WL_RANGE_Q * n as f32);
@@ -39,6 +35,126 @@ fn wavelengths(hero_wavelength: f32) -> Float4 {
         nth_wavelength(hero_wavelength, 2),
         nth_wavelength(hero_wavelength, 3),
     )
+}
+
+//----------------------------------------------------------------
+
+#[derive(Debug, Copy, Clone)]
+pub enum Color {
+    XYZ(f32, f32, f32),
+    Blackbody {
+        temperature: f32, // In kelvin
+        factor: f32,      // Brightness multiplier
+    },
+}
+
+impl Color {
+    #[inline(always)]
+    pub fn new_xyz(xyz: (f32, f32, f32)) -> Self {
+        Color::XYZ(xyz.0, xyz.1, xyz.2)
+    }
+
+    #[inline(always)]
+    pub fn new_blackbody(temp: f32, fac: f32) -> Self {
+        Color::Blackbody {
+            temperature: temp,
+            factor: fac,
+        }
+    }
+
+    pub fn to_spectral_sample(self, hero_wavelength: f32) -> SpectralSample {
+        let wls = wavelengths(hero_wavelength);
+        match self {
+            Color::XYZ(x, y, z) => SpectralSample {
+                e: xyz_to_spectrum_4((x, y, z), wls),
+                hero_wavelength: hero_wavelength,
+            },
+            Color::Blackbody {
+                temperature,
+                factor,
+            } => {
+                SpectralSample::from_parts(
+                    // TODO: make this SIMD
+                    Float4::new(
+                        plancks_law(temperature, wls.get_0()) * factor,
+                        plancks_law(temperature, wls.get_1()) * factor,
+                        plancks_law(temperature, wls.get_2()) * factor,
+                        plancks_law(temperature, wls.get_3()) * factor,
+                    ),
+                    hero_wavelength,
+                )
+            }
+        }
+    }
+
+    /// Calculates an approximate total spectral energy of the color.
+    ///
+    /// Note: this really is very _approximate_.
+    pub fn approximate_energy(self) -> f32 {
+        // TODO: better approximation for Blackbody.
+        match self {
+            Color::XYZ(_, y, _) => y,
+            Color::Blackbody { factor, .. } => factor,
+        }
+    }
+}
+
+impl Lerp for Color {
+    /// Note that this isn't a proper lerp in spectral space.  However,
+    /// for our purposes that should be fine: all we care about is that
+    /// the interpolation is smooth and "reasonable".
+    ///
+    /// If at some point it turns out this causes artifacts, then we
+    /// also have bigger problems: texture filtering in the shading
+    /// pipeline will have the same issues, which will be even harder
+    /// to address.  However, I strongly suspect this will not be an issue.
+    /// (Famous last words!)
+    fn lerp(self, other: Self, alpha: f32) -> Self {
+        let inv_alpha = 1.0 - alpha;
+        match (self, other) {
+            (Color::XYZ(x1, y1, z1), Color::XYZ(x2, y2, z2)) => Color::XYZ(
+                (x1 * inv_alpha) + (x2 * alpha),
+                (y1 * inv_alpha) + (y2 * alpha),
+                (z1 * inv_alpha) + (z2 * alpha),
+            ),
+            (
+                Color::Blackbody {
+                    temperature: tmp1,
+                    factor: fac1,
+                },
+                Color::Blackbody {
+                    temperature: tmp2,
+                    factor: fac2,
+                },
+            ) => Color::Blackbody {
+                temperature: (tmp1 * inv_alpha) + (tmp2 * alpha),
+                factor: (fac1 * inv_alpha) + (fac2 * alpha),
+            },
+            _ => panic!("Cannot lerp colors with different representations."),
+        }
+    }
+}
+
+fn plancks_law(temperature: f32, wavelength: f32) -> f32 {
+    const C: f32 = 299_792_458.0; // Speed of light
+    const H: f32 = 6.62607015e-34; // Planck constant
+    const KB: f32 = 1.38064852e-23; // Boltzmann constant
+
+    // // As written at https://en.wikipedia.org/wiki/Planck's_law, here for
+    // // reference and clarity:
+    // let a = (2.0 * H * C * C) / (wavelength * wavelength * wavelength * wavelength * wavelength);
+    // let b = 1.0 / (((H * C) / (wavelength * KB * temperature)).exp() - 1.0);
+    // a * b
+
+    // Optimized version of the commented code above:
+    const TMP1: f32 = (2.0f64 * H as f64 * C as f64 * C as f64) as f32;
+    const TMP2: f32 = (H as f64 * C as f64 / KB as f64) as f32;
+    let wl5 = {
+        let wl2 = wavelength * wavelength;
+        wl2 * wl2 * wavelength
+    };
+    let tmp3 = wl5 * (fast_exp(TMP2 / (wavelength * temperature)) - 1.0);
+    TMP1 / tmp3
 }
 
 //----------------------------------------------------------------
@@ -194,15 +310,6 @@ impl XYZ {
 
     pub fn to_tuple(&self) -> (f32, f32, f32) {
         (self.x, self.y, self.z)
-    }
-}
-
-impl Color for XYZ {
-    fn to_spectral_sample(&self, hero_wavelength: f32) -> SpectralSample {
-        SpectralSample {
-            e: xyz_to_spectrum_4((self.x, self.y, self.z), wavelengths(hero_wavelength)),
-            hero_wavelength: hero_wavelength,
-        }
     }
 }
 
