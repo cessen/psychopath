@@ -9,10 +9,10 @@ use crate::{
     lerp::lerp_slice,
     math::{cross, dot, Matrix4x4, Normal, Point},
     ray::{AccelRay, Ray},
-    shading::{surface_closure::SurfaceClosure, SurfaceShader},
+    shading::surface_closure::SurfaceClosure,
 };
 
-use super::{triangle, Surface, SurfaceIntersection, SurfaceIntersectionData};
+use super::{triangle, SurfaceIntersection, SurfaceIntersectionData};
 
 /// This is the core surface primitive for rendering: all surfaces are
 /// ultimately processed into pre-shaded micropolygon batches for rendering.
@@ -96,19 +96,12 @@ impl<'a> MicropolyBatch<'a> {
     }
 }
 
-impl<'a> Boundable for MicropolyBatch<'a> {
-    fn bounds(&self) -> &[BBox] {
-        self.accel.bounds()
-    }
-}
-
-impl<'a> Surface for MicropolyBatch<'a> {
+impl<'a> MicropolyBatch<'a> {
     fn intersect_rays(
         &self,
         accel_rays: &mut [AccelRay],
         wrays: &[Ray],
         isects: &mut [SurfaceIntersection],
-        _shader: &SurfaceShader,
         space: &[Matrix4x4],
     ) {
         // Precalculate transform for non-motion blur cases
@@ -258,5 +251,11 @@ impl<'a> Surface for MicropolyBatch<'a> {
                     }
                 }
             });
+    }
+}
+
+impl<'a> Boundable for MicropolyBatch<'a> {
+    fn bounds(&self) -> &[BBox] {
+        self.accel.bounds()
     }
 }
