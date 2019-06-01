@@ -8,7 +8,7 @@ members = [
     "sub_crates/mem_arena",
     "sub_crates/oct32norm",
     "sub_crates/sobol",
-    "sub_crates/spectra_xyz",
+    "sub_crates/spectral_upsampling",
     "sub_crates/trifloat"
 ]
 
@@ -61,8 +61,8 @@ path = "sub_crates/oct32norm"
 [dependencies.sobol]
 path = "sub_crates/sobol"
 
-[dependencies.spectra_xyz]
-path = "sub_crates/spectra_xyz"
+[dependencies.spectral_upsampling]
+path = "sub_crates/spectral_upsampling"
 
 [dependencies.trifloat]
 path = "sub_crates/trifloat"

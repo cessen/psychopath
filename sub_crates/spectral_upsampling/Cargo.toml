@@ -1,12 +1,12 @@
 [package]
-name = "spectra_xyz"
+name = "spectral_upsampling"
 version = "0.1.0"
 authors = ["Nathan Vegdahl <cessen@cessen.com>"]
 edition = "2018"
 license = "MIT"
 
 [lib]
-name = "spectra_xyz"
+name = "spectral_upsampling"
 path = "src/lib.rs"
 
 # Local crate dependencies

@@ -254,7 +254,7 @@ dependencies = [
  "rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "scoped_threadpool 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "sobol 0.1.0",
- "spectra_xyz 0.1.0",
+ "spectral_upsampling 0.1.0",
  "time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "trifloat 0.1.0",
 ]
@@ -440,7 +440,7 @@ name = "sobol"
 version = "0.1.0"
 
 [[package]]
-name = "spectra_xyz"
+name = "spectral_upsampling"
 version = "0.1.0"
 dependencies = [
  "float4 0.1.0",
