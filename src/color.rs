@@ -2,7 +2,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
 
 pub use color::{rec709_e_to_xyz, rec709_to_xyz, xyz_to_rec709, xyz_to_rec709_e};
 use float4::Float4;
-use spectral_upsampling::{spectrum_xyz_to_p_4, EQUAL_ENERGY_REFLECTANCE};
+use spectral_upsampling::meng::{spectrum_xyz_to_p_4, EQUAL_ENERGY_REFLECTANCE};
 
 use crate::{lerp::Lerp, math::fast_exp};
 

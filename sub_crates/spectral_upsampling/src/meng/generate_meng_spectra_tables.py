@@ -1067,7 +1067,7 @@ if __name__ == "__main__":
         compute_spectra(data_points)
         write_output(data_points, grid, grid_res, 
             #'spectra_{}_{}.rs'.format(os.path.splitext(args.cmf)[0], args.scale))
-            'spectra_tables.rs')
+            'meng_spectra_tables.rs')
 
         # Finally, plot all spectra.
         if args.plot:
