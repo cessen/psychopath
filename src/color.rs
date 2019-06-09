@@ -1,8 +1,11 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
 
-pub use color::{rec709_e_to_xyz, rec709_to_xyz, xyz_to_rec709, xyz_to_rec709_e};
+pub use color::{xyz_to_aces_ap0, xyz_to_aces_ap0_e, rec709_e_to_xyz, rec709_to_xyz, xyz_to_rec709, xyz_to_rec709_e};
 use float4::Float4;
-use spectral_upsampling::meng::{spectrum_xyz_to_p_4, EQUAL_ENERGY_REFLECTANCE};
+use spectral_upsampling::{
+    meng::{spectrum_xyz_to_p_4, EQUAL_ENERGY_REFLECTANCE},
+    jakob::{spectrum_acesrgb_to_p4, small_spectrum_acesrgb_to_p4},
+};
 
 use crate::{lerp::Lerp, math::fast_exp};
 
@@ -489,6 +492,7 @@ impl DivAssign<f32> for XYZ {
 #[inline(always)]
 fn xyz_to_spectrum_4(xyz: (f32, f32, f32), wavelengths: Float4) -> Float4 {
     spectrum_xyz_to_p_4(wavelengths, xyz) * Float4::splat(1.0 / EQUAL_ENERGY_REFLECTANCE)
+    // small_spectrum_acesrgb_to_p4(wavelengths, xyz_to_aces_ap0_e(xyz))
 }
 
 /// Close analytic approximations of the CIE 1931 XYZ color curves.

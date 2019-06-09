@@ -223,6 +223,15 @@ mod x86_64_sse {
         pub fn get_3(&self) -> f32 {
             self.get_n(3)
         }
+
+        /// Returns the square roots of all elements.
+        #[inline(always)]
+        pub fn sqrt(&self) -> Float4 {
+            use std::arch::x86_64::_mm_sqrt_ps;
+            Float4 {
+                data: unsafe { _mm_sqrt_ps(self.data) },
+            }
+        }
     }
 
     impl PartialEq for Float4 {
@@ -865,6 +874,17 @@ mod fallback {
         #[inline(always)]
         pub fn get_3(&self) -> f32 {
             self.get_n(3)
+        }
+
+        /// Returns the square roots of all elements.
+        #[inline(always)]
+        pub fn sqrt(&self) -> Float4 {
+            Float4::new(
+                self.get_0().sqrt(),
+                self.get_1().sqrt(),
+                self.get_2().sqrt(),
+                self.get_3().sqrt(),
+            )
         }
     }
 

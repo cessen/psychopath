@@ -236,7 +236,6 @@ impl<'a> Bucket<'a> {
     where
         F: Fn((f32, f32, f32)) -> (f32, f32, f32),
     {
-        use base64;
         use std::slice;
         let mut data = Vec::with_capacity(
             (4 * (self.max.0 - self.min.0) * (self.max.1 - self.min.1)) as usize,
