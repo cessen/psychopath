@@ -232,6 +232,24 @@ mod x86_64_sse {
                 data: unsafe { _mm_sqrt_ps(self.data) },
             }
         }
+
+        /// Performs a fused multiply add.
+        ///
+        /// i.e. self * b + c
+        #[inline(always)]
+        pub fn fmadd(&self, b: Float4, c: Float4) -> Float4 {
+            #[cfg(target_feature = "fma")]
+            {
+                use std::arch::x86_64::_mm_fmadd_ps;
+                Float4 {
+                    data: unsafe { _mm_fmadd_ps(self.data, b.data, c.data) },
+                }
+            }
+            #[cfg(not(target_feature = "fma"))]
+            {
+                (*self * b) + c
+            }
+        }
     }
 
     impl PartialEq for Float4 {
@@ -885,6 +903,14 @@ mod fallback {
                 self.get_2().sqrt(),
                 self.get_3().sqrt(),
             )
+        }
+
+        /// Performs a fused multiply add.
+        ///
+        /// i.e. self * b + c
+        #[inline(always)]
+        pub fn fmadd(&self, b: Float4, c: Float4) -> Float4 {
+            (*self * b) + c
         }
     }
 
