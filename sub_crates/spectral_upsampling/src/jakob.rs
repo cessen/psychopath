@@ -11,7 +11,7 @@ const RGB2SPEC_N_COEFFS: usize = 3;
 const TABLE_RES: usize = 64;
 
 // For the small table, what is the middle value used?
-const MID_VALUE: f32 = 0.434;
+const MID_VALUE: f32 = 0.5;
 
 lazy_static! {
     static ref ACES_TABLE: RGB2Spec = rgb2spec_load("");
@@ -257,12 +257,14 @@ pub struct RGB2Spec {
 //============================================================
 // Coefficient -> eval functions
 
+#[inline(always)]
 fn rgb2spec_fma(a: f32, b: f32, c: f32) -> f32 {
     a * b + c
 }
 
+#[inline(always)]
 fn rgb2spec_fma_4(a: Float4, b: Float4, c: Float4) -> Float4 {
-    a * b + c
+    a.fmadd(b, c)
 }
 
 fn rgb2spec_eval(coeff: [f32; RGB2SPEC_N_COEFFS], lambda: f32) -> f32 {
