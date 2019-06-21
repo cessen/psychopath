@@ -98,6 +98,30 @@ impl RayBatch {
     }
 }
 
+/// A structure used for tracking traversal of a ray batch through a scene.
+#[derive(Debug)]
+pub struct RayStack {
+    lanes: Vec<Vec<u16>>,
+    tasks: Vec<RayTask>,
+}
+
+/// A task within a RayStack.
+#[derive(Debug)]
+pub enum RayTask {
+    // A barrier represents a division when traversing into a new system.
+    // For example, when traversing from the top-level BVH into an object's
+    // local BVH.  It helps with keeping track of where we're at and aids in
+    // debugging.
+    Barrier,
+
+    // A task for handling a set of rays.
+    //
+    // Specifies the lane that the relevant ray pointers are in, and the
+    // starting index within that lane.  The relevant pointers are always
+    // `&[start_idx..]` within the given lane.
+    Rays { lane: usize, start_idx: usize },
+}
+
 #[derive(Debug, Copy, Clone)]
 pub struct Ray {
     pub orig: Point,
