@@ -9,9 +9,6 @@ license = "MIT"
 name = "spectral_upsampling"
 path = "src/lib.rs"
 
-[dependencies]
-lazy_static = "1.0"
-
 # Local crate dependencies
 [dependencies.float4]
 path = "../float4"
