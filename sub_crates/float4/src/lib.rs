@@ -224,6 +224,46 @@ mod x86_64_sse {
             self.get_n(3)
         }
 
+        /// Returns a Float4 with all elements set to the value
+        /// of element 0.
+        #[inline(always)]
+        pub fn all_0(&self) -> Float4 {
+            use std::arch::x86_64::_mm_shuffle_ps;
+            Float4 {
+                data: unsafe { _mm_shuffle_ps(self.data, self.data, 0b00_00_00_00) },
+            }
+        }
+
+        /// Returns a Float4 with all elements set to the value
+        /// of element 1.
+        #[inline(always)]
+        pub fn all_1(&self) -> Float4 {
+            use std::arch::x86_64::_mm_shuffle_ps;
+            Float4 {
+                data: unsafe { _mm_shuffle_ps(self.data, self.data, 0b01_01_01_01) },
+            }
+        }
+
+        /// Returns a Float4 with all elements set to the value
+        /// of element 2.
+        #[inline(always)]
+        pub fn all_2(&self) -> Float4 {
+            use std::arch::x86_64::_mm_shuffle_ps;
+            Float4 {
+                data: unsafe { _mm_shuffle_ps(self.data, self.data, 0b10_10_10_10) },
+            }
+        }
+
+        /// Returns a Float4 with all elements set to the value
+        /// of element 3.
+        #[inline(always)]
+        pub fn all_3(&self) -> Float4 {
+            use std::arch::x86_64::_mm_shuffle_ps;
+            Float4 {
+                data: unsafe { _mm_shuffle_ps(self.data, self.data, 0b11_11_11_11) },
+            }
+        }
+
         /// Returns the square roots of all elements.
         #[inline(always)]
         pub fn sqrt(&self) -> Float4 {
@@ -894,6 +934,42 @@ mod fallback {
             self.get_n(3)
         }
 
+        /// Returns a Float4 with all elements set to the value
+        /// of element 0.
+        #[inline(always)]
+        pub fn all_0(&self) -> Float4 {
+            Float4 {
+                data: [self.data[0], self.data[0], self.data[0], self.data[0]],
+            }
+        }
+
+        /// Returns a Float4 with all elements set to the value
+        /// of element 1.
+        #[inline(always)]
+        pub fn all_1(&self) -> Float4 {
+            Float4 {
+                data: [self.data[1], self.data[1], self.data[1], self.data[1]],
+            }
+        }
+
+        /// Returns a Float4 with all elements set to the value
+        /// of element 2.
+        #[inline(always)]
+        pub fn all_2(&self) -> Float4 {
+            Float4 {
+                data: [self.data[2], self.data[2], self.data[2], self.data[2]],
+            }
+        }
+
+        /// Returns a Float4 with all elements set to the value
+        /// of element 3.
+        #[inline(always)]
+        pub fn all_3(&self) -> Float4 {
+            Float4 {
+                data: [self.data[3], self.data[3], self.data[3], self.data[3]],
+            }
+        }
+
         /// Returns the square roots of all elements.
         #[inline(always)]
         pub fn sqrt(&self) -> Float4 {
@@ -1311,6 +1387,16 @@ mod tests {
         assert_eq!(f.get_1(), 6.0);
         assert_eq!(f.get_2(), 7.0);
         assert_eq!(f.get_3(), 8.0);
+    }
+
+    #[test]
+    fn all() {
+        let f = Float4::new(1.0, 2.0, 3.0, 4.0);
+
+        assert_eq!(f.all_0(), Float4::splat(1.0));
+        assert_eq!(f.all_1(), Float4::splat(2.0));
+        assert_eq!(f.all_2(), Float4::splat(3.0));
+        assert_eq!(f.all_3(), Float4::splat(4.0));
     }
 
     #[test]
