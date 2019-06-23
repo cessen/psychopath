@@ -1,10 +1,14 @@
 #![allow(dead_code)]
 
 use bvh_order::{calc_traversal_code, SplitAxes, TRAVERSAL_TABLE};
+use math3d::Vector;
 use mem_arena::MemArena;
 
 use crate::{
-    algorithm::partition, bbox::BBox, boundable::Boundable, lerp::lerp_slice, ray::AccelRay,
+    bbox::BBox,
+    boundable::Boundable,
+    lerp::lerp_slice,
+    ray::{RayBatch, RayStack},
     timer::Timer,
 };
 
@@ -12,6 +16,13 @@ use super::{
     bvh_base::{BVHBase, BVHBaseNode, BVH_MAX_DEPTH},
     ACCEL_NODE_RAY_TESTS, ACCEL_TRAV_TIME,
 };
+
+pub fn ray_code(dir: Vector) -> usize {
+    let ray_sign_is_neg = [dir.x() < 0.0, dir.y() < 0.0, dir.z() < 0.0];
+    ray_sign_is_neg[0] as usize
+        + ((ray_sign_is_neg[1] as usize) << 1)
+        + ((ray_sign_is_neg[2] as usize) << 2)
+}
 
 #[derive(Copy, Clone, Debug)]
 pub struct BVH4<'a> {
@@ -66,9 +77,14 @@ impl<'a> BVH4<'a> {
         self.depth
     }
 
-    pub fn traverse<T, F>(&self, rays: &mut [AccelRay], objects: &[T], mut obj_ray_test: F)
-    where
-        F: FnMut(&T, &mut [AccelRay]),
+    pub fn traverse<T, F>(
+        &self,
+        rays: &mut RayBatch,
+        ray_stack: &mut RayStack,
+        objects: &[T],
+        mut obj_ray_test: F,
+    ) where
+        F: FnMut(&T, &mut RayBatch, &mut RayStack),
     {
         if self.root.is_none() {
             return;
@@ -78,25 +94,15 @@ impl<'a> BVH4<'a> {
         let mut trav_time: f64 = 0.0;
         let mut node_tests: u64 = 0;
 
-        let traversal_table = {
-            let ray_sign_is_neg = [
-                rays[0].dir_inv.x() < 0.0,
-                rays[0].dir_inv.y() < 0.0,
-                rays[0].dir_inv.z() < 0.0,
-            ];
-            let ray_code = ray_sign_is_neg[0] as usize
-                + ((ray_sign_is_neg[1] as usize) << 1)
-                + ((ray_sign_is_neg[2] as usize) << 2);
-            &TRAVERSAL_TABLE[ray_code]
-        };
+        let traversal_table =
+            &TRAVERSAL_TABLE[ray_code(rays.dir_inv_accel[ray_stack.next_task_ray_idx(0)])];
 
         // +2 of max depth for root and last child
         let mut node_stack = [self.root.unwrap(); (BVH_MAX_DEPTH * 3) + 2];
-        let mut ray_i_stack = [rays.len(); (BVH_MAX_DEPTH * 3) + 2];
         let mut stack_ptr = 1;
 
         while stack_ptr > 0 {
-            node_tests += ray_i_stack[stack_ptr] as u64;
+            node_tests += ray_stack.ray_count_in_next_task() as u64;
             match *node_stack[stack_ptr] {
                 BVH4Node::Inner {
                     traversal_code,
@@ -104,12 +110,29 @@ impl<'a> BVH4<'a> {
                     bounds_len,
                     children,
                 } => {
+                    // Test rays against bbox.
                     let bounds =
                         unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) };
-                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
-                        (!r.is_done()) && lerp_slice(bounds, r.time).intersect_accel_ray(r)
+
+                    let mut hit_count = 0;
+                    ray_stack.pop_do_next_task(children.len(), |ray_idx| {
+                        let hit = (!rays.is_done(ray_idx))
+                            && lerp_slice(bounds, rays.time[ray_idx]).intersect_ray(
+                                rays.orig_accel[ray_idx],
+                                rays.dir_inv_accel[ray_idx],
+                                rays.max_t[ray_idx],
+                            );
+
+                        if hit {
+                            hit_count += 1;
+                            ([0, 1, 2, 3, 4, 5, 6, 7], children.len())
+                        } else {
+                            ([0, 1, 2, 3, 4, 5, 6, 7], 0)
+                        }
                     });
-                    if part > 0 {
+
+                    // If there were any intersections, create tasks.
+                    if hit_count > 0 {
                         let order_code = traversal_table[traversal_code as usize];
                         match children.len() {
                             4 => {
@@ -118,10 +141,7 @@ impl<'a> BVH4<'a> {
                                 let i2 = ((order_code >> 2) & 0b11) as usize;
                                 let i1 = (order_code & 0b11) as usize;
 
-                                ray_i_stack[stack_ptr] = part;
-                                ray_i_stack[stack_ptr + 1] = part;
-                                ray_i_stack[stack_ptr + 2] = part;
-                                ray_i_stack[stack_ptr + 3] = part;
+                                ray_stack.push_lanes_to_tasks(&[i4, i3, i2, i1]);
 
                                 node_stack[stack_ptr] = &children[i4];
                                 node_stack[stack_ptr + 1] = &children[i3];
@@ -135,9 +155,7 @@ impl<'a> BVH4<'a> {
                                 let i2 = ((order_code >> 2) & 0b11) as usize;
                                 let i1 = (order_code & 0b11) as usize;
 
-                                ray_i_stack[stack_ptr] = part;
-                                ray_i_stack[stack_ptr + 1] = part;
-                                ray_i_stack[stack_ptr + 2] = part;
+                                ray_stack.push_lanes_to_tasks(&[i3, i2, i1]);
 
                                 node_stack[stack_ptr] = &children[i3];
                                 node_stack[stack_ptr + 1] = &children[i2];
@@ -149,8 +167,7 @@ impl<'a> BVH4<'a> {
                                 let i2 = ((order_code >> 2) & 0b11) as usize;
                                 let i1 = (order_code & 0b11) as usize;
 
-                                ray_i_stack[stack_ptr] = part;
-                                ray_i_stack[stack_ptr + 1] = part;
+                                ray_stack.push_lanes_to_tasks(&[i2, i1]);
 
                                 node_stack[stack_ptr] = &children[i2];
                                 node_stack[stack_ptr + 1] = &children[i1];
@@ -169,17 +186,33 @@ impl<'a> BVH4<'a> {
                     bounds_start,
                     bounds_len,
                 } => {
+                    // Test rays against bounds.
                     let bounds =
                         unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) };
-                    let part = partition(&mut rays[..ray_i_stack[stack_ptr]], |r| {
-                        (!r.is_done()) && lerp_slice(bounds, r.time).intersect_accel_ray(r)
-                    });
+                    let object_count = object_range.1 - object_range.0;
+                    let mut hit_count = 0;
 
+                    ray_stack.pop_do_next_task(object_count, |ray_idx| {
+                        let hit = (!rays.is_done(ray_idx))
+                            && lerp_slice(bounds, rays.time[ray_idx]).intersect_ray(
+                                rays.orig_accel[ray_idx],
+                                rays.dir_inv_accel[ray_idx],
+                                rays.max_t[ray_idx],
+                            );
+                        if hit {
+                            hit_count += 1;
+                            ([0, 1, 2, 3, 4, 5, 6, 7], object_count)
+                        } else {
+                            ([0, 1, 2, 3, 4, 5, 6, 7], 0)
+                        }
+                    });
+                    
                     trav_time += timer.tick() as f64;
 
-                    if part > 0 {
+                    if hit_count > 0 {
+                        ray_stack.push_lanes_to_tasks(&[0, 1, 2, 3, 4, 5, 6, 7][..object_count]);
                         for obj in &objects[object_range.0..object_range.1] {
-                            obj_ray_test(obj, &mut rays[..part]);
+                            obj_ray_test(obj, rays, ray_stack);
                         }
                     }
 

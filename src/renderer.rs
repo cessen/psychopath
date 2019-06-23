@@ -13,7 +13,6 @@ use float4::Float4;
 
 use crate::{
     accel::{ACCEL_NODE_RAY_TESTS, ACCEL_TRAV_TIME},
-    algorithm::partition_pair,
     color::{map_0_1_to_wavelength, SpectralSample, XYZ},
     fp_utils::robust_ray_origin,
     hash::hash_u32,
@@ -21,7 +20,7 @@ use crate::{
     image::Image,
     math::{fast_logit, upper_power_of_two},
     mis::power_heuristic,
-    ray::Ray,
+    ray::{Ray, RayBatch},
     scene::{Scene, SceneLightSample},
     surface,
     timer::Timer,
@@ -207,7 +206,7 @@ impl<'a> Renderer<'a> {
         let mut total_timer = Timer::new();
 
         let mut paths = Vec::new();
-        let mut rays = Vec::new();
+        let mut rays = RayBatch::new();
         let mut tracer = Tracer::from_assembly(&self.scene.root);
         let mut xform_stack = TransformStack::new();
 
@@ -266,7 +265,7 @@ impl<'a> Renderer<'a> {
                             offset + si as u32,
                         );
                         paths.push(path);
-                        rays.push(ray);
+                        rays.push(ray, false);
                     }
                 }
             }
@@ -276,13 +275,20 @@ impl<'a> Renderer<'a> {
             let mut pi = paths.len();
             while pi > 0 {
                 // Test rays against scene
-                let isects = tracer.trace(&rays);
+                let isects = tracer.trace(&mut rays);
                 stats.trace_time += timer.tick() as f64;
 
                 // Determine next rays to shoot based on result
-                pi = partition_pair(&mut paths[..pi], &mut rays[..pi], |i, path, ray| {
-                    path.next(&mut xform_stack, &self.scene, &isects[i], &mut *ray)
-                });
+                let mut new_end = 0;
+                for i in 0..pi {
+                    if paths[i].next(&mut xform_stack, &self.scene, &isects[i], &mut rays, i) {
+                        paths.swap(new_end, i);
+                        rays.swap(new_end, i);
+                        new_end += 1;
+                    }
+                }
+                rays.truncate(new_end);
+                pi = new_end;
                 stats.ray_generation_time += timer.tick() as f64;
             }
 
@@ -431,7 +437,8 @@ impl LightPath {
         xform_stack: &mut TransformStack,
         scene: &Scene,
         isect: &surface::SurfaceIntersection,
-        ray: &mut Ray,
+        rays: &mut RayBatch,
+        ray_idx: usize,
     ) -> bool {
         match self.event {
             //--------------------------------------------------------------------
@@ -496,13 +503,13 @@ impl LightPath {
                             // Distant light
                             SceneLightSample::Distant { direction, .. } => {
                                 let (attenuation, closure_pdf) = closure.evaluate(
-                                    ray.dir,
+                                    rays.dir_world[ray_idx],
                                     direction,
                                     idata.nor,
                                     idata.nor_g,
                                     self.wavelength,
                                 );
-                                let mut shadow_ray = {
+                                let shadow_ray = {
                                     // Calculate the shadow ray for testing if the light is
                                     // in shadow or not.
                                     let offset_pos = robust_ray_origin(
@@ -511,15 +518,14 @@ impl LightPath {
                                         idata.nor_g.normalized(),
                                         direction,
                                     );
-                                    Ray::new(
-                                        offset_pos,
-                                        direction,
-                                        self.time,
-                                        self.wavelength,
-                                        true,
-                                    )
+                                    Ray {
+                                        orig: offset_pos,
+                                        dir: direction,
+                                        time: self.time,
+                                        wavelength: self.wavelength,
+                                        max_t: std::f32::INFINITY,
+                                    }
                                 };
-                                shadow_ray.max_t = std::f32::INFINITY;
                                 (attenuation, closure_pdf, shadow_ray)
                             }
 
@@ -527,7 +533,7 @@ impl LightPath {
                             SceneLightSample::Surface { sample_geo, .. } => {
                                 let dir = sample_geo.0 - idata.pos;
                                 let (attenuation, closure_pdf) = closure.evaluate(
-                                    ray.dir,
+                                    rays.dir_world[ray_idx],
                                     dir,
                                     idata.nor,
                                     idata.nor_g,
@@ -548,13 +554,13 @@ impl LightPath {
                                         sample_geo.1.normalized(),
                                         -dir,
                                     );
-                                    Ray::new(
-                                        offset_pos,
-                                        offset_end - offset_pos,
-                                        self.time,
-                                        self.wavelength,
-                                        true,
-                                    )
+                                    Ray {
+                                        orig: offset_pos,
+                                        dir: offset_end - offset_pos,
+                                        time: self.time,
+                                        wavelength: self.wavelength,
+                                        max_t: 1.0,
+                                    }
                                 };
                                 (attenuation, closure_pdf, shadow_ray)
                             }
@@ -572,7 +578,7 @@ impl LightPath {
                                 light_info.color().e * attenuation.e * self.light_attenuation
                                     / (light_mis_pdf * light_sel_pdf);
 
-                            *ray = shadow_ray;
+                            rays.set_from_ray(&shadow_ray, true, ray_idx);
 
                             true
                         }
@@ -609,8 +615,13 @@ impl LightPath {
                                 idata.nor_g.normalized(),
                                 dir,
                             );
-                            self.next_bounce_ray =
-                                Some(Ray::new(offset_pos, dir, self.time, self.wavelength, false));
+                            self.next_bounce_ray = Some(Ray {
+                                orig: offset_pos,
+                                dir: dir,
+                                time: self.time,
+                                wavelength: self.wavelength,
+                                max_t: std::f32::INFINITY,
+                            });
 
                             true
                         } else {
@@ -626,7 +637,7 @@ impl LightPath {
                         self.event = LightPathEvent::ShadowRay;
                         return true;
                     } else if do_bounce {
-                        *ray = self.next_bounce_ray.unwrap();
+                        rays.set_from_ray(&self.next_bounce_ray.unwrap(), false, ray_idx);
                         self.event = LightPathEvent::BounceRay;
                         self.light_attenuation *= self.next_attenuation_fac;
                         return true;
@@ -657,7 +668,7 @@ impl LightPath {
 
                 // Set up for the next bounce, if any
                 if let Some(ref nbr) = self.next_bounce_ray {
-                    *ray = *nbr;
+                    rays.set_from_ray(nbr, false, ray_idx);
                     self.light_attenuation *= self.next_attenuation_fac;
                     self.event = LightPathEvent::BounceRay;
                     return true;

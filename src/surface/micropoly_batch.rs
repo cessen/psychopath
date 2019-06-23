@@ -8,7 +8,7 @@ use crate::{
     boundable::Boundable,
     lerp::lerp_slice,
     math::{cross, dot, Matrix4x4, Normal, Point},
-    ray::{AccelRay, Ray},
+    ray::{RayBatch, RayStack, RayTask}
     shading::surface_closure::SurfaceClosure,
 };
 
@@ -99,8 +99,8 @@ impl<'a> MicropolyBatch<'a> {
 impl<'a> MicropolyBatch<'a> {
     fn intersect_rays(
         &self,
-        accel_rays: &mut [AccelRay],
-        wrays: &[Ray],
+        rays: &mut RayBatch,
+        ray_stack: &mut RayStack,
         isects: &mut [SurfaceIntersection],
         space: &[Matrix4x4],
     ) {
@@ -112,7 +112,7 @@ impl<'a> MicropolyBatch<'a> {
         };
 
         self.accel
-            .traverse(&mut accel_rays[..], self.indices, |tri_indices, rs| {
+            .traverse(rays, ray_stack, self.indices, |tri_indices, rs| {
                 // For static triangles with static transforms, cache them.
                 let is_cached = self.time_sample_count == 1 && space.len() <= 1;
                 let mut tri = if is_cached {

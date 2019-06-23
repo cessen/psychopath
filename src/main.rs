@@ -47,10 +47,9 @@ use nom::{error_position, take_until};
 use mem_arena::MemArena;
 
 use crate::{
-    accel::{BVH4Node, BVHNode},
+    accel::BVH4Node,
     bbox::BBox,
     parse::{parse_scene, DataTree},
-    ray::{AccelRay, Ray},
     renderer::LightPath,
     surface::SurfaceIntersection,
     timer::Timer,
@@ -159,15 +158,13 @@ fn main() {
 
     // Print some misc useful dev info.
     if args.is_present("dev") {
-        println!("Ray size:       {} bytes", mem::size_of::<Ray>());
-        println!("AccelRay size:  {} bytes", mem::size_of::<AccelRay>());
         println!(
             "SurfaceIntersection size:  {} bytes",
             mem::size_of::<SurfaceIntersection>()
         );
         println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
         println!("BBox size: {} bytes", mem::size_of::<BBox>());
-        println!("BVHNode size: {} bytes", mem::size_of::<BVHNode>());
+        // println!("BVHNode size: {} bytes", mem::size_of::<BVHNode>());
         println!("BVH4Node size: {} bytes", mem::size_of::<BVH4Node>());
         return;
     }

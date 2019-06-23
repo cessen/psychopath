@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use crate::{fp_utils::fp_gamma, math::Point, ray::Ray};
+use crate::{
+    fp_utils::fp_gamma,
+    math::{Point, Vector},
+};
 
 /// Intersects `ray` with `tri`, returning `Some((t, b0, b1, b2))`, or `None`
 /// if no intersection.
@@ -13,12 +16,17 @@ use crate::{fp_utils::fp_gamma, math::Point, ray::Ray};
 ///
 /// Uses the ray-triangle test from the paper "Watertight Ray/Triangle
 /// Intersection" by Woop et al.
-pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32, f32, f32)> {
+pub fn intersect_ray(
+    ray_orig: Point,
+    ray_dir: Vector,
+    ray_max_t: f32,
+    tri: (Point, Point, Point),
+) -> Option<(f32, f32, f32, f32)> {
     // Calculate the permuted dimension indices for the new ray space.
     let (xi, yi, zi) = {
-        let xabs = ray.dir.x().abs();
-        let yabs = ray.dir.y().abs();
-        let zabs = ray.dir.z().abs();
+        let xabs = ray_dir.x().abs();
+        let yabs = ray_dir.y().abs();
+        let zabs = ray_dir.z().abs();
 
         if xabs > yabs && xabs > zabs {
             (1, 2, 0)
@@ -29,9 +37,9 @@ pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32,
         }
     };
 
-    let dir_x = ray.dir.get_n(xi);
-    let dir_y = ray.dir.get_n(yi);
-    let dir_z = ray.dir.get_n(zi);
+    let dir_x = ray_dir.get_n(xi);
+    let dir_y = ray_dir.get_n(yi);
+    let dir_z = ray_dir.get_n(zi);
 
     // Calculate shear constants.
     let sx = dir_x / dir_z;
@@ -39,9 +47,9 @@ pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32,
     let sz = 1.0 / dir_z;
 
     // Calculate vertices in ray space.
-    let p0 = tri.0 - ray.orig;
-    let p1 = tri.1 - ray.orig;
-    let p2 = tri.2 - ray.orig;
+    let p0 = tri.0 - ray_orig;
+    let p1 = tri.1 - ray_orig;
+    let p2 = tri.2 - ray_orig;
 
     let p0x = p0.get_n(xi) - (sx * p0.get_n(zi));
     let p0y = p0.get_n(yi) - (sy * p0.get_n(zi));
@@ -80,8 +88,8 @@ pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32,
     let t_scaled = (e0 * p0z) + (e1 * p1z) + (e2 * p2z);
 
     // Check if the hitpoint t is within ray min/max t.
-    if (det > 0.0 && (t_scaled <= 0.0 || t_scaled > (ray.max_t * det)))
-        || (det < 0.0 && (t_scaled >= 0.0 || t_scaled < (ray.max_t * det)))
+    if (det > 0.0 && (t_scaled <= 0.0 || t_scaled > (ray_max_t * det)))
+        || (det < 0.0 && (t_scaled >= 0.0 || t_scaled < (ray_max_t * det)))
     {
         return None;
     }
