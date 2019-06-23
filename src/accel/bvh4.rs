@@ -206,7 +206,7 @@ impl<'a> BVH4<'a> {
                             ([0, 1, 2, 3, 4, 5, 6, 7], 0)
                         }
                     });
-                    
+
                     trav_time += timer.tick() as f64;
 
                     if hit_count > 0 {

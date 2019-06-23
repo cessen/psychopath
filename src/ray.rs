@@ -4,6 +4,7 @@ use float4::Float4;
 
 use crate::math::{Matrix4x4, Point, Vector};
 
+type RayIndexType = u16;
 type FlagType = u8;
 const OCCLUSION_FLAG: FlagType = 1;
 const DONE_FLAG: FlagType = 1 << 1;
@@ -229,7 +230,7 @@ impl RayStack {
     /// Pushes the given ray index onto the end of the specified lane.
     pub fn push_ray_index(&mut self, ray_idx: usize, lane: usize) {
         assert!(self.lanes.len() > lane);
-        self.lanes[lane].idxs.push(ray_idx as u16);
+        self.lanes[lane].idxs.push(ray_idx as RayIndexType);
     }
 
     /// Takes the given list of lane indices, and pushes any excess indices on
@@ -282,7 +283,7 @@ impl RayStack {
 /// A lane within a RayStack.
 #[derive(Debug)]
 struct Lane {
-    idxs: Vec<u16>,
+    idxs: Vec<RayIndexType>,
     end_len: usize,
 }
 
