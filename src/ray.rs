@@ -20,31 +20,37 @@ pub struct Ray {
     pub max_t: f32,
 }
 
-/// A batch of rays, stored in SoA layout.
+/// The hot (frequently accessed) parts of ray data.
+#[derive(Debug, Copy, Clone)]
+struct RayHot {
+    orig_local: Point,     // Local-space ray origin
+    dir_inv_local: Vector, // Local-space 1.0/ray direction
+    max_t: f32,
+    time: f32,
+    flags: FlagType,
+}
+
+/// The cold (infrequently accessed) parts of ray data.
+#[derive(Debug, Copy, Clone)]
+struct RayCold {
+    orig: Point, // World-space ray origin
+    dir: Vector, // World-space ray direction
+    wavelength: f32,
+}
+
+/// A batch of rays, separated into hot and cold parts.
 #[derive(Debug)]
 pub struct RayBatch {
-    orig_world: Vec<Point>,
-    dir_world: Vec<Vector>,
-    orig_accel: Vec<Point>,
-    dir_inv_accel: Vec<Vector>,
-    max_t: Vec<f32>,
-    time: Vec<f32>,
-    wavelength: Vec<f32>,
-    flags: Vec<FlagType>,
+    hot: Vec<RayHot>,
+    cold: Vec<RayCold>,
 }
 
 impl RayBatch {
     /// Creates a new empty ray batch.
     pub fn new() -> RayBatch {
         RayBatch {
-            orig_world: Vec::new(),
-            dir_world: Vec::new(),
-            orig_accel: Vec::new(),
-            dir_inv_accel: Vec::new(),
-            max_t: Vec::new(),
-            time: Vec::new(),
-            wavelength: Vec::new(),
-            flags: Vec::new(),
+            hot: Vec::new(),
+            cold: Vec::new(),
         }
     }
 
@@ -52,87 +58,60 @@ impl RayBatch {
     /// `n` rays.
     pub fn with_capacity(n: usize) -> RayBatch {
         RayBatch {
-            orig_world: Vec::with_capacity(n),
-            dir_world: Vec::with_capacity(n),
-            orig_accel: Vec::with_capacity(n),
-            dir_inv_accel: Vec::with_capacity(n),
-            max_t: Vec::with_capacity(n),
-            time: Vec::with_capacity(n),
-            wavelength: Vec::with_capacity(n),
-            flags: Vec::with_capacity(n),
+            hot: Vec::with_capacity(n),
+            cold: Vec::with_capacity(n),
         }
     }
 
     pub fn push(&mut self, ray: Ray, is_occlusion: bool) {
-        self.orig_world.push(ray.orig);
-        self.dir_world.push(ray.dir);
-        self.orig_accel.push(ray.orig); // Bogus, to place-hold.
-        self.dir_inv_accel.push(ray.dir); // Bogus, to place-hold.
-        self.time.push(ray.time);
-        self.wavelength.push(ray.wavelength);
-        if is_occlusion {
-            self.max_t.push(1.0);
-            self.flags.push(OCCLUSION_FLAG);
-        } else {
-            self.max_t.push(std::f32::INFINITY);
-            self.flags.push(0);
-        }
+        self.hot.push(RayHot {
+            orig_local: ray.orig,   // Bogus, to place-hold.
+            dir_inv_local: ray.dir, // Bogus, to place-hold.
+            max_t: ray.max_t,
+            time: ray.time,
+            flags: if is_occlusion { OCCLUSION_FLAG } else { 0 },
+        });
+        self.cold.push(RayCold {
+            orig: ray.orig,
+            dir: ray.dir,
+            wavelength: ray.wavelength,
+        });
     }
 
     pub fn swap(&mut self, a: usize, b: usize) {
-        if a != b {
-            self.orig_world.swap(a, b);
-            self.dir_world.swap(a, b);
-            self.orig_accel.swap(a, b);
-            self.dir_inv_accel.swap(a, b);
-            self.max_t.swap(a, b);
-            self.time.swap(a, b);
-            self.wavelength.swap(a, b);
-            self.flags.swap(a, b);
-        }
+        self.hot.swap(a, b);
+        self.cold.swap(a, b);
     }
 
-    pub fn set_from_ray(&mut self, ray: &Ray, is_shadow: bool, idx: usize) {
-        self.orig_world[idx] = ray.orig;
-        self.dir_world[idx] = ray.dir;
-        self.orig_accel[idx] = ray.orig;
-        self.dir_inv_accel[idx] = Vector {
+    pub fn set_from_ray(&mut self, ray: &Ray, is_occlusion: bool, idx: usize) {
+        self.hot[idx].orig_local = ray.orig;
+        self.hot[idx].dir_inv_local = Vector {
             co: Float4::splat(1.0) / ray.dir.co,
         };
-        self.max_t[idx] = ray.max_t;
-        self.time[idx] = ray.time;
-        self.wavelength[idx] = ray.wavelength;
-        self.time[idx] = ray.time;
-        self.flags[idx] = if is_shadow { OCCLUSION_FLAG } else { 0 };
+        self.hot[idx].max_t = ray.max_t;
+        self.hot[idx].time = ray.time;
+        self.hot[idx].flags = if is_occlusion { OCCLUSION_FLAG } else { 0 };
+
+        self.cold[idx].orig = ray.orig;
+        self.cold[idx].dir = ray.dir;
+        self.cold[idx].wavelength = ray.wavelength;
     }
 
     pub fn truncate(&mut self, len: usize) {
-        self.orig_world.truncate(len);
-        self.dir_world.truncate(len);
-        self.orig_accel.truncate(len);
-        self.dir_inv_accel.truncate(len);
-        self.max_t.truncate(len);
-        self.time.truncate(len);
-        self.wavelength.truncate(len);
-        self.flags.truncate(len);
+        self.hot.truncate(len);
+        self.cold.truncate(len);
     }
 
     /// Clear all rays, settings the size of the batch back to zero.
     ///
     /// Capacity is maintained.
     pub fn clear(&mut self) {
-        self.orig_world.clear();
-        self.dir_world.clear();
-        self.orig_accel.clear();
-        self.dir_inv_accel.clear();
-        self.max_t.clear();
-        self.time.clear();
-        self.wavelength.clear();
-        self.flags.clear();
+        self.hot.clear();
+        self.cold.clear();
     }
 
     pub fn len(&self) -> usize {
-        self.orig_world.len()
+        self.hot.len()
     }
 
     /// Updates the accel data of the given ray (at index `idx`) with the
@@ -141,9 +120,9 @@ impl RayBatch {
     /// This should be called when entering (and exiting) traversal of a
     /// new transform space.
     pub fn update_local(&mut self, idx: usize, xform: &Matrix4x4) {
-        self.orig_accel[idx] = self.orig_world[idx] * *xform;
-        self.dir_inv_accel[idx] = Vector {
-            co: Float4::splat(1.0) / (self.dir_world[idx] * *xform).co,
+        self.hot[idx].orig_local = self.cold[idx].orig * *xform;
+        self.hot[idx].dir_inv_local = Vector {
+            co: Float4::splat(1.0) / (self.cold[idx].dir * *xform).co,
         };
     }
 
@@ -152,66 +131,66 @@ impl RayBatch {
 
     #[inline(always)]
     pub fn orig(&self, idx: usize) -> Point {
-        self.orig_world[idx]
+        self.cold[idx].orig
     }
 
     #[inline(always)]
     pub fn dir(&self, idx: usize) -> Vector {
-        self.dir_world[idx]
+        self.cold[idx].dir
     }
 
     #[inline(always)]
     pub fn orig_local(&self, idx: usize) -> Point {
-        self.orig_accel[idx]
+        self.hot[idx].orig_local
     }
 
     #[inline(always)]
     pub fn dir_inv_local(&self, idx: usize) -> Vector {
-        self.dir_inv_accel[idx]
+        self.hot[idx].dir_inv_local
     }
 
     #[inline(always)]
     pub fn time(&self, idx: usize) -> f32 {
-        self.time[idx]
+        self.hot[idx].time
     }
 
     #[inline(always)]
     pub fn max_t(&self, idx: usize) -> f32 {
-        self.max_t[idx]
+        self.hot[idx].max_t
     }
 
     #[inline(always)]
     pub fn set_max_t(&mut self, idx: usize, new_max_t: f32) {
-        self.max_t[idx] = new_max_t;
+        self.hot[idx].max_t = new_max_t;
     }
 
     #[inline(always)]
     pub fn wavelength(&self, idx: usize) -> f32 {
-        self.wavelength[idx]
+        self.cold[idx].wavelength
     }
 
     /// Returns whether the given ray (at index `idx`) is an occlusion ray.
     #[inline(always)]
     pub fn is_occlusion(&self, idx: usize) -> bool {
-        (self.flags[idx] & OCCLUSION_FLAG) != 0
+        (self.hot[idx].flags & OCCLUSION_FLAG) != 0
     }
 
     /// Returns whether the given ray (at index `idx`) has finished traversal.
     #[inline(always)]
     pub fn is_done(&self, idx: usize) -> bool {
-        (self.flags[idx] & DONE_FLAG) != 0
+        (self.hot[idx].flags & DONE_FLAG) != 0
     }
 
     /// Marks the given ray (at index `idx`) as an occlusion ray.
     #[inline(always)]
     pub fn mark_occlusion(&mut self, idx: usize) {
-        self.flags[idx] |= OCCLUSION_FLAG
+        self.hot[idx].flags |= OCCLUSION_FLAG
     }
 
     /// Marks the given ray (at index `idx`) as having finished traversal.
     #[inline(always)]
     pub fn mark_done(&mut self, idx: usize) {
-        self.flags[idx] |= DONE_FLAG
+        self.hot[idx].flags |= DONE_FLAG
     }
 }
 
