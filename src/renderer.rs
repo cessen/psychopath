@@ -503,7 +503,7 @@ impl LightPath {
                             // Distant light
                             SceneLightSample::Distant { direction, .. } => {
                                 let (attenuation, closure_pdf) = closure.evaluate(
-                                    rays.dir_world[ray_idx],
+                                    rays.dir(ray_idx),
                                     direction,
                                     idata.nor,
                                     idata.nor_g,
@@ -533,7 +533,7 @@ impl LightPath {
                             SceneLightSample::Surface { sample_geo, .. } => {
                                 let dir = sample_geo.0 - idata.pos;
                                 let (attenuation, closure_pdf) = closure.evaluate(
-                                    rays.dir_world[ray_idx],
+                                    rays.dir(ray_idx),
                                     dir,
                                     idata.nor,
                                     idata.nor_g,

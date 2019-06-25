@@ -58,14 +58,14 @@ impl<'a> TracerInner<'a> {
         {
             let ident = Matrix4x4::new();
             for i in 0..rays.len() {
-                rays.update_accel(i, &ident);
+                rays.update_local(i, &ident);
             }
         }
 
         // Divide the rays into 8 different lanes by direction.
         ray_stack.ensure_lane_count(8);
         for i in 0..rays.len() {
-            ray_stack.push_ray_index(i, ray_code(rays.dir_world[i]));
+            ray_stack.push_ray_index(i, ray_code(rays.dir(i)));
         }
         ray_stack.push_lanes_to_tasks(&[0, 1, 2, 3, 4, 5, 6, 7]);
 
@@ -97,8 +97,8 @@ impl<'a> TracerInner<'a> {
                     // TODO: re-divide rays based on direction (maybe?).
                     let xforms = self.xform_stack.top();
                     ray_stack.pop_do_next_task(2, |ray_idx| {
-                        let t = rays.time[ray_idx];
-                        rays.update_accel(ray_idx, &lerp_slice(xforms, t));
+                        let t = rays.time(ray_idx);
+                        rays.update_local(ray_idx, &lerp_slice(xforms, t));
                         ([0, 1, 2, 3, 4, 5, 6, 7], 2)
                     });
                     ray_stack.push_lanes_to_tasks(&[0, 1]);
@@ -130,14 +130,14 @@ impl<'a> TracerInner<'a> {
                     let xforms = self.xform_stack.top();
                     if !xforms.is_empty() {
                         ray_stack.pop_do_next_task(0, |ray_idx| {
-                            let t = rays.time[ray_idx];
-                            rays.update_accel(ray_idx, &lerp_slice(xforms, t));
+                            let t = rays.time(ray_idx);
+                            rays.update_local(ray_idx, &lerp_slice(xforms, t));
                             ([0, 1, 2, 3, 4, 5, 6, 7], 0)
                         });
                     } else {
                         let ident = Matrix4x4::new();
                         ray_stack.pop_do_next_task(0, |ray_idx| {
-                            rays.update_accel(ray_idx, &ident);
+                            rays.update_local(ray_idx, &ident);
                             ([0, 1, 2, 3, 4, 5, 6, 7], 0)
                         });
                     }

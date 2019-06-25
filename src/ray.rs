@@ -23,14 +23,14 @@ pub struct Ray {
 /// A batch of rays, stored in SoA layout.
 #[derive(Debug)]
 pub struct RayBatch {
-    pub orig_world: Vec<Point>,
-    pub dir_world: Vec<Vector>,
-    pub orig_accel: Vec<Point>,
-    pub dir_inv_accel: Vec<Vector>,
-    pub max_t: Vec<f32>,
-    pub time: Vec<f32>,
-    pub wavelength: Vec<f32>,
-    pub flags: Vec<FlagType>,
+    orig_world: Vec<Point>,
+    dir_world: Vec<Vector>,
+    orig_accel: Vec<Point>,
+    dir_inv_accel: Vec<Vector>,
+    max_t: Vec<f32>,
+    time: Vec<f32>,
+    wavelength: Vec<f32>,
+    flags: Vec<FlagType>,
 }
 
 impl RayBatch {
@@ -135,36 +135,83 @@ impl RayBatch {
         self.orig_world.len()
     }
 
-    /// Returns whether the given ray (at index `idx`) is an occlusion ray.
-    pub fn is_occlusion(&self, idx: usize) -> bool {
-        (self.flags[idx] & OCCLUSION_FLAG) != 0
-    }
-
-    /// Returns whether the given ray (at index `idx`) has finished traversal.
-    pub fn is_done(&self, idx: usize) -> bool {
-        (self.flags[idx] & DONE_FLAG) != 0
-    }
-
-    /// Marks the given ray (at index `idx`) as an occlusion ray.
-    pub fn mark_occlusion(&mut self, idx: usize) {
-        self.flags[idx] |= OCCLUSION_FLAG
-    }
-
-    /// Marks the given ray (at index `idx`) as having finished traversal.
-    pub fn mark_done(&mut self, idx: usize) {
-        self.flags[idx] |= DONE_FLAG
-    }
-
     /// Updates the accel data of the given ray (at index `idx`) with the
     /// given world-to-local-space transform matrix.
     ///
     /// This should be called when entering (and exiting) traversal of a
     /// new transform space.
-    pub fn update_accel(&mut self, idx: usize, xform: &Matrix4x4) {
+    pub fn update_local(&mut self, idx: usize, xform: &Matrix4x4) {
         self.orig_accel[idx] = self.orig_world[idx] * *xform;
         self.dir_inv_accel[idx] = Vector {
             co: Float4::splat(1.0) / (self.dir_world[idx] * *xform).co,
         };
+    }
+
+    //==========================================================
+    // Data access
+
+    #[inline(always)]
+    pub fn orig(&self, idx: usize) -> Point {
+        self.orig_world[idx]
+    }
+
+    #[inline(always)]
+    pub fn dir(&self, idx: usize) -> Vector {
+        self.dir_world[idx]
+    }
+
+    #[inline(always)]
+    pub fn orig_local(&self, idx: usize) -> Point {
+        self.orig_accel[idx]
+    }
+
+    #[inline(always)]
+    pub fn dir_inv_local(&self, idx: usize) -> Vector {
+        self.dir_inv_accel[idx]
+    }
+
+    #[inline(always)]
+    pub fn time(&self, idx: usize) -> f32 {
+        self.time[idx]
+    }
+
+    #[inline(always)]
+    pub fn max_t(&self, idx: usize) -> f32 {
+        self.max_t[idx]
+    }
+
+    #[inline(always)]
+    pub fn set_max_t(&mut self, idx: usize, new_max_t: f32) {
+        self.max_t[idx] = new_max_t;
+    }
+
+    #[inline(always)]
+    pub fn wavelength(&self, idx: usize) -> f32 {
+        self.wavelength[idx]
+    }
+
+    /// Returns whether the given ray (at index `idx`) is an occlusion ray.
+    #[inline(always)]
+    pub fn is_occlusion(&self, idx: usize) -> bool {
+        (self.flags[idx] & OCCLUSION_FLAG) != 0
+    }
+
+    /// Returns whether the given ray (at index `idx`) has finished traversal.
+    #[inline(always)]
+    pub fn is_done(&self, idx: usize) -> bool {
+        (self.flags[idx] & DONE_FLAG) != 0
+    }
+
+    /// Marks the given ray (at index `idx`) as an occlusion ray.
+    #[inline(always)]
+    pub fn mark_occlusion(&mut self, idx: usize) {
+        self.flags[idx] |= OCCLUSION_FLAG
+    }
+
+    /// Marks the given ray (at index `idx`) as having finished traversal.
+    #[inline(always)]
+    pub fn mark_done(&mut self, idx: usize) {
+        self.flags[idx] |= DONE_FLAG
     }
 }
 

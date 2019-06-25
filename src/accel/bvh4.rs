@@ -95,7 +95,7 @@ impl<'a> BVH4<'a> {
         let mut node_tests: u64 = 0;
 
         let traversal_table =
-            &TRAVERSAL_TABLE[ray_code(rays.dir_inv_accel[ray_stack.next_task_ray_idx(0)])];
+            &TRAVERSAL_TABLE[ray_code(rays.dir_inv_local(ray_stack.next_task_ray_idx(0)))];
 
         // +2 of max depth for root and last child
         let mut node_stack = [self.root.unwrap(); (BVH_MAX_DEPTH * 3) + 2];
@@ -117,10 +117,10 @@ impl<'a> BVH4<'a> {
                     let mut hit_count = 0;
                     ray_stack.pop_do_next_task(children.len(), |ray_idx| {
                         let hit = (!rays.is_done(ray_idx))
-                            && lerp_slice(bounds, rays.time[ray_idx]).intersect_ray(
-                                rays.orig_accel[ray_idx],
-                                rays.dir_inv_accel[ray_idx],
-                                rays.max_t[ray_idx],
+                            && lerp_slice(bounds, rays.time(ray_idx)).intersect_ray(
+                                rays.orig_local(ray_idx),
+                                rays.dir_inv_local(ray_idx),
+                                rays.max_t(ray_idx),
                             );
 
                         if hit {
@@ -194,10 +194,10 @@ impl<'a> BVH4<'a> {
 
                     ray_stack.pop_do_next_task(object_count, |ray_idx| {
                         let hit = (!rays.is_done(ray_idx))
-                            && lerp_slice(bounds, rays.time[ray_idx]).intersect_ray(
-                                rays.orig_accel[ray_idx],
-                                rays.dir_inv_accel[ray_idx],
-                                rays.max_t[ray_idx],
+                            && lerp_slice(bounds, rays.time(ray_idx)).intersect_ray(
+                                rays.orig_local(ray_idx),
+                                rays.dir_inv_local(ray_idx),
+                                rays.max_t(ray_idx),
                             );
                         if hit {
                             hit_count += 1;

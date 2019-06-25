@@ -266,10 +266,10 @@ impl<'a> Surface for RectangleLight<'a> {
         let _ = shader; // Silence 'unused' warning
 
         ray_stack.pop_do_next_task(0, |ray_idx| {
-            let time = rays.time[ray_idx];
-            let orig = rays.orig_world[ray_idx];
-            let dir = rays.dir_world[ray_idx];
-            let max_t = rays.max_t[ray_idx];
+            let time = rays.time(ray_idx);
+            let orig = rays.orig(ray_idx);
+            let dir = rays.dir(ray_idx);
+            let max_t = rays.max_t(ray_idx);
 
             // Calculate time interpolated values
             let dim = lerp_slice(self.dimensions, time);
@@ -307,7 +307,7 @@ impl<'a> Surface for RectangleLight<'a> {
                                     orig,
                                     dir,
                                     pos,
-                                    rays.wavelength[ray_idx],
+                                    rays.wavelength(ray_idx),
                                     time,
                                 ),
                             };
@@ -325,7 +325,7 @@ impl<'a> Surface for RectangleLight<'a> {
                             };
 
                             // Set ray's max t
-                            rays.max_t[ray_idx] = t;
+                            rays.set_max_t(ray_idx, t);
                         }
 
                         break;

@@ -159,7 +159,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                 // Test each ray against the current triangle.
                 ray_stack.pop_do_next_task(0, |ray_idx| {
                     let ray_idx = ray_idx as usize;
-                    let ray_time = rays.time[ray_idx];
+                    let ray_time = rays.time(ray_idx);
 
                     // Get triangle if necessary
                     if !is_cached {
@@ -215,9 +215,9 @@ impl<'a> Surface for TriangleMesh<'a> {
 
                     // Test ray against triangle
                     if let Some((t, b0, b1, b2)) = triangle::intersect_ray(
-                        rays.orig_world[ray_idx],
-                        rays.dir_world[ray_idx],
-                        rays.max_t[ray_idx],
+                        rays.orig(ray_idx),
+                        rays.dir(ray_idx),
+                        rays.max_t(ray_idx),
                         tri,
                     ) {
                         if rays.is_occlusion(ray_idx) {
@@ -257,7 +257,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                             };
 
                             let intersection_data = SurfaceIntersectionData {
-                                incoming: rays.dir_world[ray_idx],
+                                incoming: rays.dir(ray_idx),
                                 t: t,
                                 pos: pos,
                                 pos_err: pos_err,
@@ -272,7 +272,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                                 intersection_data: intersection_data,
                                 closure: shader.shade(&intersection_data, ray_time),
                             };
-                            rays.max_t[ray_idx] = t;
+                            rays.set_max_t(ray_idx, t);
                         }
                     }
 

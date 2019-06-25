@@ -215,7 +215,7 @@ impl<'a> Surface for SphereLight<'a> {
         let _ = shader; // Silence 'unused' warning
 
         ray_stack.pop_do_next_task(0, |ray_idx| {
-            let time = rays.time[ray_idx];
+            let time = rays.time(ray_idx);
 
             // Get the transform space
             let xform = lerp_slice(space, time);
@@ -224,8 +224,8 @@ impl<'a> Surface for SphereLight<'a> {
             let radius = lerp_slice(self.radii, time); // Radius of the sphere
 
             // Get the ray origin and direction in local space
-            let orig = rays.orig_accel[ray_idx].into_vector();
-            let dir = rays.dir_world[ray_idx] * xform;
+            let orig = rays.orig(ray_idx).into_vector();
+            let dir = rays.dir(ray_idx) * xform;
 
             // Code adapted to Rust from https://github.com/Tecla/Rayito
             // Ray-sphere intersection can result in either zero, one or two points
@@ -257,7 +257,7 @@ impl<'a> Surface for SphereLight<'a> {
 
             // Get our final parametric values
             let mut t0 = q / a;
-            let mut t1 = if q != 0.0 { c / q } else { rays.max_t[ray_idx] };
+            let mut t1 = if q != 0.0 { c / q } else { rays.max_t(ray_idx) };
 
             // Swap them so they are ordered right
             if t0 > t1 {
@@ -266,14 +266,14 @@ impl<'a> Surface for SphereLight<'a> {
             }
 
             // Check our intersection for validity against this ray's extents
-            if t0 > rays.max_t[ray_idx] || t1 <= 0.0 {
+            if t0 > rays.max_t(ray_idx) || t1 <= 0.0 {
                 // Didn't hit because sphere is entirely outside of ray's extents
                 return ([0, 0, 0, 0, 0, 0, 0, 0], 0);
             }
 
             let t = if t0 > 0.0 {
                 t0
-            } else if t1 <= rays.max_t[ray_idx] {
+            } else if t1 <= rays.max_t(ray_idx) {
                 t1
             } else {
                 // Didn't hit because ray is entirely within the sphere, and
@@ -300,7 +300,7 @@ impl<'a> Surface for SphereLight<'a> {
                 let normal = unit_pos.into_normal() * inv_xform;
 
                 let intersection_data = SurfaceIntersectionData {
-                    incoming: rays.dir_world[ray_idx],
+                    incoming: rays.dir(ray_idx),
                     t: t,
                     pos: pos,
                     pos_err: pos_err,
@@ -309,11 +309,11 @@ impl<'a> Surface for SphereLight<'a> {
                     local_space: xform,
                     sample_pdf: self.sample_pdf(
                         &xform,
-                        rays.orig_world[ray_idx],
-                        rays.dir_world[ray_idx],
+                        rays.orig(ray_idx),
+                        rays.dir(ray_idx),
                         0.0,
                         0.0,
-                        rays.wavelength[ray_idx],
+                        rays.wavelength(ray_idx),
                         time,
                     ),
                 };
@@ -332,7 +332,7 @@ impl<'a> Surface for SphereLight<'a> {
                 };
 
                 // Set ray's max t
-                rays.max_t[ray_idx] = t;
+                rays.set_max_t(ray_idx, t);
             }
 
             ([0, 0, 0, 0, 0, 0, 0, 0], 0)
