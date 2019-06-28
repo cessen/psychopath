@@ -130,153 +130,154 @@ impl<'a> Surface for TriangleMesh<'a> {
             Matrix4x4::new()
         };
 
-        self.accel.traverse(
-            rays,
-            ray_stack,
-            self.indices,
-            |tri_indices, rays, ray_stack| {
-                // For static triangles with static transforms, cache them.
-                let is_cached = self.time_sample_count == 1 && space.len() <= 1;
-                let mut tri = if is_cached {
-                    let tri = (
-                        self.vertices[tri_indices.0 as usize],
-                        self.vertices[tri_indices.1 as usize],
-                        self.vertices[tri_indices.2 as usize],
-                    );
-                    if space.is_empty() {
-                        tri
-                    } else {
-                        (
-                            tri.0 * static_mat_space,
-                            tri.1 * static_mat_space,
-                            tri.2 * static_mat_space,
-                        )
-                    }
-                } else {
-                    unsafe { std::mem::uninitialized() }
-                };
+        self.accel
+            .traverse(rays, ray_stack, |idx_range, rays, ray_stack| {
+                for tri_idx in idx_range {
+                    let tri_indices = self.indices[tri_idx];
 
-                // Test each ray against the current triangle.
-                ray_stack.pop_do_next_task(|ray_idx| {
-                    let ray_idx = ray_idx as usize;
-                    let ray_time = rays.time(ray_idx);
-
-                    // Get triangle if necessary
-                    if !is_cached {
-                        tri = if self.time_sample_count == 1 {
-                            // No deformation motion blur, so fast-path it.
+                    // For static triangles with static transforms, cache them.
+                    let is_cached = self.time_sample_count == 1 && space.len() <= 1;
+                    let mut tri = if is_cached {
+                        let tri = (
+                            self.vertices[tri_indices.0 as usize],
+                            self.vertices[tri_indices.1 as usize],
+                            self.vertices[tri_indices.2 as usize],
+                        );
+                        if space.is_empty() {
+                            tri
+                        } else {
                             (
-                                self.vertices[tri_indices.0 as usize],
-                                self.vertices[tri_indices.1 as usize],
-                                self.vertices[tri_indices.2 as usize],
+                                tri.0 * static_mat_space,
+                                tri.1 * static_mat_space,
+                                tri.2 * static_mat_space,
                             )
-                        } else {
-                            // Deformation motion blur, need to interpolate.
-                            let p0_slice = &self.vertices[(tri_indices.0 as usize
-                                * self.time_sample_count)
-                                ..((tri_indices.0 as usize + 1) * self.time_sample_count)];
-                            let p1_slice = &self.vertices[(tri_indices.1 as usize
-                                * self.time_sample_count)
-                                ..((tri_indices.1 as usize + 1) * self.time_sample_count)];
-                            let p2_slice = &self.vertices[(tri_indices.2 as usize
-                                * self.time_sample_count)
-                                ..((tri_indices.2 as usize + 1) * self.time_sample_count)];
-
-                            let p0 = lerp_slice(p0_slice, ray_time);
-                            let p1 = lerp_slice(p1_slice, ray_time);
-                            let p2 = lerp_slice(p2_slice, ray_time);
-
-                            (p0, p1, p2)
-                        };
-                    }
-
-                    // Transform triangle if necessary, and get transform space.
-                    let mat_space = if !space.is_empty() {
-                        if space.len() > 1 {
-                            // Per-ray transform, for motion blur
-                            let mat_space = lerp_slice(space, ray_time).inverse();
-                            tri = (tri.0 * mat_space, tri.1 * mat_space, tri.2 * mat_space);
-                            mat_space
-                        } else {
-                            // Same transform for all rays
-                            if !is_cached {
-                                tri = (
-                                    tri.0 * static_mat_space,
-                                    tri.1 * static_mat_space,
-                                    tri.2 * static_mat_space,
-                                );
-                            }
-                            static_mat_space
                         }
                     } else {
-                        // No transforms
-                        Matrix4x4::new()
+                        unsafe { std::mem::uninitialized() }
                     };
 
-                    // Test ray against triangle
-                    if let Some((t, b0, b1, b2)) = triangle::intersect_ray(
-                        rays.orig(ray_idx),
-                        rays.dir(ray_idx),
-                        rays.max_t(ray_idx),
-                        tri,
-                    ) {
-                        if rays.is_occlusion(ray_idx) {
-                            isects[ray_idx] = SurfaceIntersection::Occlude;
-                            rays.mark_done(ray_idx);
-                        } else {
-                            // Calculate intersection point and error magnitudes
-                            let (pos, pos_err) = triangle::surface_point(tri, (b0, b1, b2));
+                    // Test each ray against the current triangle.
+                    ray_stack.do_next_task(|ray_idx| {
+                        let ray_idx = ray_idx as usize;
+                        let ray_time = rays.time(ray_idx);
 
-                            // Calculate geometric surface normal
-                            let geo_normal = cross(tri.0 - tri.1, tri.0 - tri.2).into_normal();
-
-                            // Calculate interpolated surface normal, if any
-                            let shading_normal = if let Some(normals) = self.normals {
-                                let n0_slice = &normals[(tri_indices.0 as usize
+                        // Get triangle if necessary
+                        if !is_cached {
+                            tri = if self.time_sample_count == 1 {
+                                // No deformation motion blur, so fast-path it.
+                                (
+                                    self.vertices[tri_indices.0 as usize],
+                                    self.vertices[tri_indices.1 as usize],
+                                    self.vertices[tri_indices.2 as usize],
+                                )
+                            } else {
+                                // Deformation motion blur, need to interpolate.
+                                let p0_slice = &self.vertices[(tri_indices.0 as usize
                                     * self.time_sample_count)
                                     ..((tri_indices.0 as usize + 1) * self.time_sample_count)];
-                                let n1_slice = &normals[(tri_indices.1 as usize
+                                let p1_slice = &self.vertices[(tri_indices.1 as usize
                                     * self.time_sample_count)
                                     ..((tri_indices.1 as usize + 1) * self.time_sample_count)];
-                                let n2_slice = &normals[(tri_indices.2 as usize
+                                let p2_slice = &self.vertices[(tri_indices.2 as usize
                                     * self.time_sample_count)
                                     ..((tri_indices.2 as usize + 1) * self.time_sample_count)];
 
-                                let n0 = lerp_slice(n0_slice, ray_time).normalized();
-                                let n1 = lerp_slice(n1_slice, ray_time).normalized();
-                                let n2 = lerp_slice(n2_slice, ray_time).normalized();
+                                let p0 = lerp_slice(p0_slice, ray_time);
+                                let p1 = lerp_slice(p1_slice, ray_time);
+                                let p2 = lerp_slice(p2_slice, ray_time);
 
-                                let s_nor = ((n0 * b0) + (n1 * b1) + (n2 * b2)) * mat_space;
-                                if dot(s_nor, geo_normal) >= 0.0 {
-                                    s_nor
-                                } else {
-                                    -s_nor
-                                }
-                            } else {
-                                geo_normal
+                                (p0, p1, p2)
                             };
-
-                            let intersection_data = SurfaceIntersectionData {
-                                incoming: rays.dir(ray_idx),
-                                t: t,
-                                pos: pos,
-                                pos_err: pos_err,
-                                nor: shading_normal,
-                                nor_g: geo_normal,
-                                local_space: mat_space,
-                                sample_pdf: 0.0,
-                            };
-
-                            // Fill in intersection data
-                            isects[ray_idx] = SurfaceIntersection::Hit {
-                                intersection_data: intersection_data,
-                                closure: shader.shade(&intersection_data, ray_time),
-                            };
-                            rays.set_max_t(ray_idx, t);
                         }
-                    }
-                });
-            },
-        );
+
+                        // Transform triangle if necessary, and get transform space.
+                        let mat_space = if !space.is_empty() {
+                            if space.len() > 1 {
+                                // Per-ray transform, for motion blur
+                                let mat_space = lerp_slice(space, ray_time).inverse();
+                                tri = (tri.0 * mat_space, tri.1 * mat_space, tri.2 * mat_space);
+                                mat_space
+                            } else {
+                                // Same transform for all rays
+                                if !is_cached {
+                                    tri = (
+                                        tri.0 * static_mat_space,
+                                        tri.1 * static_mat_space,
+                                        tri.2 * static_mat_space,
+                                    );
+                                }
+                                static_mat_space
+                            }
+                        } else {
+                            // No transforms
+                            Matrix4x4::new()
+                        };
+
+                        // Test ray against triangle
+                        if let Some((t, b0, b1, b2)) = triangle::intersect_ray(
+                            rays.orig(ray_idx),
+                            rays.dir(ray_idx),
+                            rays.max_t(ray_idx),
+                            tri,
+                        ) {
+                            if rays.is_occlusion(ray_idx) {
+                                isects[ray_idx] = SurfaceIntersection::Occlude;
+                                rays.mark_done(ray_idx);
+                            } else {
+                                // Calculate intersection point and error magnitudes
+                                let (pos, pos_err) = triangle::surface_point(tri, (b0, b1, b2));
+
+                                // Calculate geometric surface normal
+                                let geo_normal = cross(tri.0 - tri.1, tri.0 - tri.2).into_normal();
+
+                                // Calculate interpolated surface normal, if any
+                                let shading_normal = if let Some(normals) = self.normals {
+                                    let n0_slice = &normals[(tri_indices.0 as usize
+                                        * self.time_sample_count)
+                                        ..((tri_indices.0 as usize + 1) * self.time_sample_count)];
+                                    let n1_slice = &normals[(tri_indices.1 as usize
+                                        * self.time_sample_count)
+                                        ..((tri_indices.1 as usize + 1) * self.time_sample_count)];
+                                    let n2_slice = &normals[(tri_indices.2 as usize
+                                        * self.time_sample_count)
+                                        ..((tri_indices.2 as usize + 1) * self.time_sample_count)];
+
+                                    let n0 = lerp_slice(n0_slice, ray_time).normalized();
+                                    let n1 = lerp_slice(n1_slice, ray_time).normalized();
+                                    let n2 = lerp_slice(n2_slice, ray_time).normalized();
+
+                                    let s_nor = ((n0 * b0) + (n1 * b1) + (n2 * b2)) * mat_space;
+                                    if dot(s_nor, geo_normal) >= 0.0 {
+                                        s_nor
+                                    } else {
+                                        -s_nor
+                                    }
+                                } else {
+                                    geo_normal
+                                };
+
+                                let intersection_data = SurfaceIntersectionData {
+                                    incoming: rays.dir(ray_idx),
+                                    t: t,
+                                    pos: pos,
+                                    pos_err: pos_err,
+                                    nor: shading_normal,
+                                    nor_g: geo_normal,
+                                    local_space: mat_space,
+                                    sample_pdf: 0.0,
+                                };
+
+                                // Fill in intersection data
+                                isects[ray_idx] = SurfaceIntersection::Hit {
+                                    intersection_data: intersection_data,
+                                    closure: shader.shade(&intersection_data, ray_time),
+                                };
+                                rays.set_max_t(ray_idx, t);
+                            }
+                        }
+                    });
+                }
+                ray_stack.pop_task();
+            });
     }
 }

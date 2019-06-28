@@ -292,24 +292,37 @@ impl RayStack {
         self.lanes[l].end_len = self.lanes[l].idxs.len();
     }
 
-    /// Pops the next task off the stack, and executes the provided closure for
-    /// each ray index in the task.
-    pub fn pop_do_next_task<F>(&mut self, mut handle_ray: F)
+    // Pops the next task off the stack.
+    pub fn pop_task(&mut self) {
+        let task = self.tasks.pop().unwrap();
+        self.lanes[task.lane].end_len = task.start_idx;
+        self.lanes[task.lane].idxs.truncate(task.start_idx);
+    }
+
+    // Executes a task without popping it from the task stack.
+    pub fn do_next_task<F>(&mut self, mut handle_ray: F)
     where
         F: FnMut(usize),
     {
-        // Pop the task and do necessary bookkeeping.
-        let task = self.tasks.pop().unwrap();
+        let task = self.tasks.last().unwrap();
         let task_range = (task.start_idx, self.lanes[task.lane].end_len);
-        self.lanes[task.lane].end_len = task.start_idx;
 
         // Execute task.
         for i in task_range.0..task_range.1 {
             let ray_idx = self.lanes[task.lane].idxs[i];
             handle_ray(ray_idx as usize);
         }
+    }
 
-        self.lanes[task.lane].idxs.truncate(task_range.0);
+    /// Pops the next task off the stack, and executes the provided closure for
+    /// each ray index in the task.
+    #[inline(always)]
+    pub fn pop_do_next_task<F>(&mut self, handle_ray: F)
+    where
+        F: FnMut(usize),
+    {
+        self.do_next_task(handle_ray);
+        self.pop_task();
     }
 
     /// Pops the next task off the stack, executes the provided closure for

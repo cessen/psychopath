@@ -96,14 +96,9 @@ impl<'a> BVH4<'a> {
         self.depth
     }
 
-    pub fn traverse<T, F>(
-        &self,
-        rays: &mut RayBatch,
-        ray_stack: &mut RayStack,
-        objects: &[T],
-        mut obj_ray_test: F,
-    ) where
-        F: FnMut(&T, &mut RayBatch, &mut RayStack),
+    pub fn traverse<F>(&self, rays: &mut RayBatch, ray_stack: &mut RayStack, mut obj_ray_test: F)
+    where
+        F: FnMut(std::ops::Range<usize>, &mut RayBatch, &mut RayStack),
     {
         if self.root.is_none() {
             return;
@@ -170,16 +165,8 @@ impl<'a> BVH4<'a> {
                 &BVH4Node::Leaf { object_range } => {
                     trav_time += timer.tick() as f64;
 
-                    // Set up the tasks for each object.
-                    let obj_count = object_range.1 - object_range.0;
-                    for _ in 0..(obj_count - 1) {
-                        ray_stack.duplicate_next_task();
-                    }
-
                     // Do the ray tests.
-                    for obj in &objects[object_range.0..object_range.1] {
-                        obj_ray_test(obj, rays, ray_stack);
-                    }
+                    obj_ray_test(object_range.0..object_range.1, rays, ray_stack);
 
                     timer.tick();
 

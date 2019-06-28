@@ -85,11 +85,11 @@ impl<'a> TracerInner<'a> {
         rays: &mut RayBatch,
         ray_stack: &mut RayStack,
     ) {
-        assembly.object_accel.traverse(
-            rays,
-            ray_stack,
-            &assembly.instances[..],
-            |inst, rays, ray_stack| {
+        assembly
+            .object_accel
+            .traverse(rays, ray_stack, |idx_range, rays, ray_stack| {
+                let inst = &assembly.instances[idx_range.start];
+
                 // Transform rays if needed
                 if let Some((xstart, xend)) = inst.transform_indices {
                     // Push transforms to stack
@@ -98,12 +98,11 @@ impl<'a> TracerInner<'a> {
                     // Do transforms
                     // TODO: re-divide rays based on direction (maybe?).
                     let xforms = self.xform_stack.top();
-                    ray_stack.pop_do_next_task_and_push_rays(2, |ray_idx| {
+                    ray_stack.do_next_task(|ray_idx| {
                         let t = rays.time(ray_idx);
                         rays.update_local(ray_idx, &lerp_slice(xforms, t));
-                        (Bool4::new(true, true, false, false), 2)
                     });
-                    ray_stack.push_lanes_to_tasks(&[0, 1]);
+                    ray_stack.duplicate_next_task();
                 }
 
                 // Trace rays
@@ -142,8 +141,7 @@ impl<'a> TracerInner<'a> {
                         });
                     }
                 }
-            },
-        );
+            });
     }
 
     fn trace_object<'b>(
