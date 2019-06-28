@@ -12,8 +12,6 @@ use crate::{
     transform_stack::TransformStack,
 };
 
-use float4::Bool4;
-
 pub struct Tracer<'a> {
     ray_stack: RayStack,
     inner: TracerInner<'a>,

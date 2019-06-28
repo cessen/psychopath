@@ -11,7 +11,6 @@
 #![allow(clippy::needless_range_loop)]
 #![allow(clippy::excessive_precision)]
 
-#[macro_use]
 extern crate lazy_static;
 
 mod accel;
