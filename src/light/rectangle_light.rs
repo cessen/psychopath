@@ -265,7 +265,7 @@ impl<'a> Surface for RectangleLight<'a> {
     ) {
         let _ = shader; // Silence 'unused' warning
 
-        ray_stack.pop_do_next_task(0, |ray_idx| {
+        ray_stack.pop_do_next_task(|ray_idx| {
             let time = rays.time(ray_idx);
             let orig = rays.orig(ray_idx);
             let dir = rays.dir(ray_idx);
@@ -332,8 +332,6 @@ impl<'a> Surface for RectangleLight<'a> {
                     }
                 }
             }
-
-            ([0; 4], 0)
         });
     }
 }

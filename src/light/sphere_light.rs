@@ -214,7 +214,7 @@ impl<'a> Surface for SphereLight<'a> {
     ) {
         let _ = shader; // Silence 'unused' warning
 
-        ray_stack.pop_do_next_task(0, |ray_idx| {
+        ray_stack.pop_do_next_task(|ray_idx| {
             let time = rays.time(ray_idx);
 
             // Get the transform space
@@ -242,7 +242,7 @@ impl<'a> Surface for SphereLight<'a> {
             let discriminant = (b * b) - (4.0 * a * c);
             if discriminant < 0.0 {
                 // Discriminant less than zero?  No solution => no intersection.
-                return ([0; 4], 0);
+                return;
             }
             let discriminant = discriminant.sqrt();
 
@@ -268,7 +268,7 @@ impl<'a> Surface for SphereLight<'a> {
             // Check our intersection for validity against this ray's extents
             if t0 > rays.max_t(ray_idx) || t1 <= 0.0 {
                 // Didn't hit because sphere is entirely outside of ray's extents
-                return ([0; 4], 0);
+                return;
             }
 
             let t = if t0 > 0.0 {
@@ -278,7 +278,7 @@ impl<'a> Surface for SphereLight<'a> {
             } else {
                 // Didn't hit because ray is entirely within the sphere, and
                 // therefore doesn't hit its surface.
-                return ([0; 4], 0);
+                return;
             };
 
             // We hit the sphere, so calculate intersection info.
@@ -334,8 +334,6 @@ impl<'a> Surface for SphereLight<'a> {
                 // Set ray's max t
                 rays.set_max_t(ray_idx, t);
             }
-
-            ([0; 4], 0)
         });
     }
 }

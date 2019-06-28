@@ -157,7 +157,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                 };
 
                 // Test each ray against the current triangle.
-                ray_stack.pop_do_next_task(0, |ray_idx| {
+                ray_stack.pop_do_next_task(|ray_idx| {
                     let ray_idx = ray_idx as usize;
                     let ray_time = rays.time(ray_idx);
 
@@ -275,8 +275,6 @@ impl<'a> Surface for TriangleMesh<'a> {
                             rays.set_max_t(ray_idx, t);
                         }
                     }
-
-                    ([0; 4], 0)
                 });
             },
         );

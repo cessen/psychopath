@@ -12,6 +12,8 @@ use crate::{
     transform_stack::TransformStack,
 };
 
+use float4::Bool4;
+
 pub struct Tracer<'a> {
     ray_stack: RayStack,
     inner: TracerInner<'a>,
@@ -96,10 +98,10 @@ impl<'a> TracerInner<'a> {
                     // Do transforms
                     // TODO: re-divide rays based on direction (maybe?).
                     let xforms = self.xform_stack.top();
-                    ray_stack.pop_do_next_task(2, |ray_idx| {
+                    ray_stack.pop_do_next_task_and_push_rays(2, |ray_idx| {
                         let t = rays.time(ray_idx);
                         rays.update_local(ray_idx, &lerp_slice(xforms, t));
-                        ([0, 1, 0, 0], 2)
+                        (Bool4::new(true, true, false, false), 2)
                     });
                     ray_stack.push_lanes_to_tasks(&[0, 1]);
                 }
@@ -129,16 +131,14 @@ impl<'a> TracerInner<'a> {
                     // Undo transforms
                     let xforms = self.xform_stack.top();
                     if !xforms.is_empty() {
-                        ray_stack.pop_do_next_task(0, |ray_idx| {
+                        ray_stack.pop_do_next_task(|ray_idx| {
                             let t = rays.time(ray_idx);
                             rays.update_local(ray_idx, &lerp_slice(xforms, t));
-                            ([0; 4], 0)
                         });
                     } else {
                         let ident = Matrix4x4::new();
-                        ray_stack.pop_do_next_task(0, |ray_idx| {
+                        ray_stack.pop_do_next_task(|ray_idx| {
                             rays.update_local(ray_idx, &ident);
-                            ([0; 4], 0)
                         });
                     }
                 }

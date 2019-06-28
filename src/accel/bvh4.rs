@@ -1,13 +1,17 @@
+//! This BVH4 implementation is based on the ideas from the paper
+//! "Efficient Ray Tracing Kernels for Modern CPU Architectures"
+//! by Fuetterling et al.
+
 #![allow(dead_code)]
 
-use bvh_order::{calc_traversal_code, SplitAxes, TRAVERSAL_TABLE};
-use math3d::Vector;
 use mem_arena::MemArena;
 
 use crate::{
     bbox::BBox,
+    bbox4::BBox4,
     boundable::Boundable,
     lerp::lerp_slice,
+    math::Vector,
     ray::{RayBatch, RayStack},
     timer::Timer,
 };
@@ -16,6 +20,9 @@ use super::{
     bvh_base::{BVHBase, BVHBaseNode, BVH_MAX_DEPTH},
     ACCEL_NODE_RAY_TESTS, ACCEL_TRAV_TIME,
 };
+
+use bvh_order::{calc_traversal_code, SplitAxes, TRAVERSAL_TABLE};
+use float4::Bool4;
 
 pub fn ray_code(dir: Vector) -> usize {
     let ray_sign_is_neg = [dir.x() < 0.0, dir.y() < 0.0, dir.z() < 0.0];
@@ -28,20 +35,19 @@ pub fn ray_code(dir: Vector) -> usize {
 pub struct BVH4<'a> {
     root: Option<&'a BVH4Node<'a>>,
     depth: usize,
+    node_count: usize,
+    _bounds: Option<&'a [BBox]>,
 }
 
 #[derive(Copy, Clone, Debug)]
 pub enum BVH4Node<'a> {
-    Inner {
-        traversal_code: u8,
-        bounds_start: &'a BBox,
-        bounds_len: u16,
+    Internal {
+        bounds: &'a [BBox4],
         children: &'a [BVH4Node<'a>],
+        traversal_code: u8,
     },
 
     Leaf {
-        bounds_start: &'a BBox,
-        bounds_len: u16,
         object_range: (usize, usize),
     },
 }
@@ -56,19 +62,32 @@ impl<'a> BVH4<'a> {
     where
         F: 'b + Fn(&T) -> &'b [BBox],
     {
-        if objects.is_empty() {
+        if objects.len() == 0 {
             BVH4 {
                 root: None,
                 depth: 0,
+                node_count: 0,
+                _bounds: None,
             }
         } else {
             let base = BVHBase::from_objects(objects, objects_per_leaf, bounder);
 
-            let root = unsafe { arena.alloc_uninitialized::<BVH4Node>() };
-            BVH4::construct_from_base(arena, &base, base.root_node_index(), root);
+            let fill_node = unsafe { arena.alloc_uninitialized_with_alignment::<BVH4Node>(32) };
+            let node_count = BVH4::construct_from_base(
+                arena,
+                &base,
+                &base.nodes[base.root_node_index()],
+                fill_node,
+            );
+
             BVH4 {
-                root: Some(root),
-                depth: base.depth,
+                root: Some(fill_node),
+                depth: (base.depth / 2) + 1,
+                node_count: node_count,
+                _bounds: {
+                    let range = base.nodes[base.root_node_index()].bounds_range();
+                    Some(arena.copy_slice(&base.bounds[range.0..range.1]))
+                },
             }
         }
     }
@@ -103,117 +122,63 @@ impl<'a> BVH4<'a> {
 
         while stack_ptr > 0 {
             node_tests += ray_stack.ray_count_in_next_task() as u64;
-            match *node_stack[stack_ptr] {
-                BVH4Node::Inner {
-                    traversal_code,
-                    bounds_start,
-                    bounds_len,
+            match node_stack[stack_ptr] {
+                &BVH4Node::Internal {
+                    bounds,
                     children,
+                    traversal_code,
                 } => {
-                    // Test rays against bbox.
-                    let bounds =
-                        unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) };
+                    let mut all_hits = Bool4::new_false();
 
-                    let mut hit_count = 0;
-                    ray_stack.pop_do_next_task(children.len(), |ray_idx| {
-                        let hit = (!rays.is_done(ray_idx))
-                            && lerp_slice(bounds, rays.time(ray_idx)).intersect_ray(
+                    // Ray testing
+                    ray_stack.pop_do_next_task_and_push_rays(children.len(), |ray_idx| {
+                        if rays.is_done(ray_idx) {
+                            (Bool4::new_false(), 0)
+                        } else {
+                            let hits = lerp_slice(bounds, rays.time(ray_idx)).intersect_ray(
                                 rays.orig_local(ray_idx),
                                 rays.dir_inv_local(ray_idx),
                                 rays.max_t(ray_idx),
                             );
-
-                        if hit {
-                            hit_count += 1;
-                            ([0, 1, 2, 3], children.len())
-                        } else {
-                            ([0; 4], 0)
+                            all_hits = all_hits | hits;
+                            (hits, children.len())
                         }
                     });
 
                     // If there were any intersections, create tasks.
-                    if hit_count > 0 {
+                    if !all_hits.is_all_false() {
                         let order_code = traversal_table[traversal_code as usize];
-                        match children.len() {
-                            4 => {
-                                let i4 = ((order_code >> 6) & 0b11) as usize;
-                                let i3 = ((order_code >> 4) & 0b11) as usize;
-                                let i2 = ((order_code >> 2) & 0b11) as usize;
-                                let i1 = (order_code & 0b11) as usize;
-
-                                ray_stack.push_lanes_to_tasks(&[i4, i3, i2, i1]);
-
-                                node_stack[stack_ptr] = &children[i4];
-                                node_stack[stack_ptr + 1] = &children[i3];
-                                node_stack[stack_ptr + 2] = &children[i2];
-                                node_stack[stack_ptr + 3] = &children[i1];
-
-                                stack_ptr += 3;
+                        let mut lanes = [0usize; 4];
+                        let mut lane_count = 0;
+                        for i in 0..children.len() {
+                            let inv_i = (children.len() - 1) - i;
+                            let child_i = ((order_code >> (inv_i * 2)) & 3) as usize;
+                            if all_hits.get_n(child_i) {
+                                node_stack[stack_ptr + lane_count] = &children[child_i];
+                                lanes[lane_count] = child_i;
+                                lane_count += 1;
                             }
-                            3 => {
-                                let i3 = ((order_code >> 4) & 0b11) as usize;
-                                let i2 = ((order_code >> 2) & 0b11) as usize;
-                                let i1 = (order_code & 0b11) as usize;
-
-                                ray_stack.push_lanes_to_tasks(&[i3, i2, i1]);
-
-                                node_stack[stack_ptr] = &children[i3];
-                                node_stack[stack_ptr + 1] = &children[i2];
-                                node_stack[stack_ptr + 2] = &children[i1];
-
-                                stack_ptr += 2;
-                            }
-                            2 => {
-                                let i2 = ((order_code >> 2) & 0b11) as usize;
-                                let i1 = (order_code & 0b11) as usize;
-
-                                ray_stack.push_lanes_to_tasks(&[i2, i1]);
-
-                                node_stack[stack_ptr] = &children[i2];
-                                node_stack[stack_ptr + 1] = &children[i1];
-
-                                stack_ptr += 1;
-                            }
-                            _ => unreachable!(),
                         }
+
+                        ray_stack.push_lanes_to_tasks(&lanes[..lane_count]);
+                        stack_ptr += lane_count - 1;
                     } else {
                         stack_ptr -= 1;
                     }
                 }
 
-                BVH4Node::Leaf {
-                    object_range,
-                    bounds_start,
-                    bounds_len,
-                } => {
-                    // Test rays against bounds.
-                    let bounds =
-                        unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) };
-                    let object_count = object_range.1 - object_range.0;
-                    let mut hit_count = 0;
-
-                    ray_stack.pop_do_next_task(object_count, |ray_idx| {
-                        let hit = (!rays.is_done(ray_idx))
-                            && lerp_slice(bounds, rays.time(ray_idx)).intersect_ray(
-                                rays.orig_local(ray_idx),
-                                rays.dir_inv_local(ray_idx),
-                                rays.max_t(ray_idx),
-                            );
-                        if hit {
-                            hit_count += 1;
-                            ([0, 1, 2, 3], object_count)
-                        } else {
-                            ([0; 4], 0)
-                        }
-                    });
-
+                &BVH4Node::Leaf { object_range } => {
                     trav_time += timer.tick() as f64;
 
-                    if hit_count > 0 {
-                        ray_stack.push_lanes_to_tasks(&[0, 1, 2, 3, 4, 5, 6, 7][..object_count]);
-                        for obj in &objects[object_range.0..object_range.1] {
-                            obj_ray_test(obj, rays, ray_stack);
-                        }
+                    // Set up the tasks for each object.
+                    let obj_count = object_range.1 - object_range.0;
+                    for _ in 0..(obj_count - 1) {
+                        ray_stack.duplicate_next_task();
+                    }
+
+                    // Do the ray tests.
+                    for obj in &objects[object_range.0..object_range.1] {
+                        obj_ray_test(obj, rays, ray_stack);
                     }
 
                     timer.tick();
@@ -237,12 +202,15 @@ impl<'a> BVH4<'a> {
     fn construct_from_base(
         arena: &'a MemArena,
         base: &BVHBase,
-        node_index: usize,
-        node_mem: &mut BVH4Node<'a>,
-    ) {
-        match base.nodes[node_index] {
-            BVHBaseNode::Internal {
-                bounds_range,
+        node: &BVHBaseNode,
+        fill_node: &mut BVH4Node<'a>,
+    ) -> usize {
+        let mut node_count = 0;
+
+        match node {
+            // Create internal node
+            &BVHBaseNode::Internal {
+                bounds_range: _,
                 children_indices,
                 split_axis,
             } => {
@@ -251,7 +219,7 @@ impl<'a> BVH4<'a> {
 
                 // Prepare convenient access to the stuff we need.
                 let child_count: usize;
-                let child_indices: [usize; 4];
+                let children; // [Optional, Optional, Optional, Optional]
                 let split_info: SplitAxes;
                 match *child_l {
                     BVHBaseNode::Internal {
@@ -267,13 +235,23 @@ impl<'a> BVH4<'a> {
                             } => {
                                 // Four nodes
                                 child_count = 4;
-                                child_indices = [i_l.0, i_l.1, i_r.0, i_r.1];
+                                children = [
+                                    Some(&base.nodes[i_l.0]),
+                                    Some(&base.nodes[i_l.1]),
+                                    Some(&base.nodes[i_r.0]),
+                                    Some(&base.nodes[i_r.1]),
+                                ];
                                 split_info = SplitAxes::Full((split_axis, s_l, s_r));
                             }
                             BVHBaseNode::Leaf { .. } => {
                                 // Three nodes with left split
                                 child_count = 3;
-                                child_indices = [i_l.0, i_l.1, children_indices.1, 0];
+                                children = [
+                                    Some(&base.nodes[i_l.0]),
+                                    Some(&base.nodes[i_l.1]),
+                                    Some(child_r),
+                                    None,
+                                ];
                                 split_info = SplitAxes::Left((split_axis, s_l));
                             }
                         }
@@ -287,76 +265,112 @@ impl<'a> BVH4<'a> {
                             } => {
                                 // Three nodes with right split
                                 child_count = 3;
-                                child_indices = [children_indices.0, i_r.0, i_r.1, 0];
+                                children = [
+                                    Some(child_l),
+                                    Some(&base.nodes[i_r.0]),
+                                    Some(&base.nodes[i_r.1]),
+                                    None,
+                                ];
                                 split_info = SplitAxes::Right((split_axis, s_r));
                             }
                             BVHBaseNode::Leaf { .. } => {
                                 // Two nodes
                                 child_count = 2;
-                                child_indices = [children_indices.0, children_indices.1, 0, 0];
+                                children = [Some(child_l), Some(child_r), None, None];
                                 split_info = SplitAxes::TopOnly(split_axis);
                             }
                         }
                     }
                 }
 
-                // Copy bounds
-                let bounds = arena
-                    .copy_slice_with_alignment(&base.bounds[bounds_range.0..bounds_range.1], 32);
+                node_count += child_count;
 
-                // Build children
-                let children_mem = unsafe {
+                // Construct bounds
+                let bounds = {
+                    let bounds_len = children
+                        .iter()
+                        .map(|c| {
+                            if let &Some(n) = c {
+                                let len = n.bounds_range().1 - n.bounds_range().0;
+                                debug_assert!(len >= 1);
+                                len
+                            } else {
+                                0
+                            }
+                        })
+                        .max()
+                        .unwrap();
+                    debug_assert!(bounds_len >= 1);
+                    let bounds =
+                        unsafe { arena.alloc_array_uninitialized_with_alignment(bounds_len, 32) };
+                    if bounds_len < 2 {
+                        let b1 =
+                            children[0].map_or(BBox::new(), |c| base.bounds[c.bounds_range().0]);
+                        let b2 =
+                            children[1].map_or(BBox::new(), |c| base.bounds[c.bounds_range().0]);
+                        let b3 =
+                            children[2].map_or(BBox::new(), |c| base.bounds[c.bounds_range().0]);
+                        let b4 =
+                            children[3].map_or(BBox::new(), |c| base.bounds[c.bounds_range().0]);
+                        bounds[0] = BBox4::from_bboxes(b1, b2, b3, b4);
+                    } else {
+                        for (i, b) in bounds.iter_mut().enumerate() {
+                            let time = i as f32 / (bounds_len - 1) as f32;
+
+                            let b1 = children[0].map_or(BBox::new(), |c| {
+                                let (x, y) = c.bounds_range();
+                                lerp_slice(&base.bounds[x..y], time)
+                            });
+                            let b2 = children[1].map_or(BBox::new(), |c| {
+                                let (x, y) = c.bounds_range();
+                                lerp_slice(&base.bounds[x..y], time)
+                            });
+                            let b3 = children[2].map_or(BBox::new(), |c| {
+                                let (x, y) = c.bounds_range();
+                                lerp_slice(&base.bounds[x..y], time)
+                            });
+                            let b4 = children[3].map_or(BBox::new(), |c| {
+                                let (x, y) = c.bounds_range();
+                                lerp_slice(&base.bounds[x..y], time)
+                            });
+                            *b = BBox4::from_bboxes(b1, b2, b3, b4);
+                        }
+                    }
+                    bounds
+                };
+
+                // Construct child nodes
+                let child_nodes = unsafe {
                     arena.alloc_array_uninitialized_with_alignment::<BVH4Node>(child_count, 32)
                 };
-                for i in 0..child_count {
-                    BVH4::construct_from_base(arena, base, child_indices[i], &mut children_mem[i]);
+                for (i, c) in children[0..child_count].iter().enumerate() {
+                    node_count +=
+                        BVH4::construct_from_base(arena, base, c.unwrap(), &mut child_nodes[i]);
                 }
 
-                // Fill in node
-                *node_mem = BVH4Node::Inner {
+                // Build this node
+                *fill_node = BVH4Node::Internal {
+                    bounds: bounds,
+                    children: child_nodes,
                     traversal_code: calc_traversal_code(split_info),
-                    bounds_start: &bounds[0],
-                    bounds_len: bounds.len() as u16,
-                    children: children_mem,
                 };
             }
 
-            BVHBaseNode::Leaf {
-                bounds_range,
-                object_range,
-            } => {
-                let bounds = arena.copy_slice(&base.bounds[bounds_range.0..bounds_range.1]);
-
-                *node_mem = BVH4Node::Leaf {
-                    bounds_start: &bounds[0],
-                    bounds_len: bounds.len() as u16,
+            // Create internal node
+            &BVHBaseNode::Leaf { object_range, .. } => {
+                *fill_node = BVH4Node::Leaf {
                     object_range: object_range,
                 };
+                node_count += 1;
             }
         }
+
+        return node_count;
     }
 }
 
-lazy_static! {
-    static ref DEGENERATE_BOUNDS: [BBox; 1] = [BBox::new()];
-}
-
 impl<'a> Boundable for BVH4<'a> {
-    fn bounds(&self) -> &[BBox] {
-        match self.root {
-            None => &DEGENERATE_BOUNDS[..],
-            Some(root) => match *root {
-                BVH4Node::Inner {
-                    bounds_start,
-                    bounds_len,
-                    ..
-                }
-                | BVH4Node::Leaf {
-                    bounds_start,
-                    bounds_len,
-                    ..
-                } => unsafe { std::slice::from_raw_parts(bounds_start, bounds_len as usize) },
-            },
-        }
+    fn bounds<'b>(&'b self) -> &'b [BBox] {
+        self._bounds.unwrap_or(&[])
     }
 }

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use float4::Float4;
+use float4::{Bool4, Float4};
 
 use crate::math::{Matrix4x4, Point, Vector};
 
@@ -293,11 +293,31 @@ impl RayStack {
     }
 
     /// Pops the next task off the stack, and executes the provided closure for
-    /// each ray index in the task.  The return value of the closure is the list
-    /// of lanes (by index) to add the given ray index back into.
-    pub fn pop_do_next_task<F>(&mut self, needed_lanes: usize, mut handle_ray: F)
+    /// each ray index in the task.
+    pub fn pop_do_next_task<F>(&mut self, mut handle_ray: F)
     where
-        F: FnMut(usize) -> ([u8; 4], usize),
+        F: FnMut(usize),
+    {
+        // Pop the task and do necessary bookkeeping.
+        let task = self.tasks.pop().unwrap();
+        let task_range = (task.start_idx, self.lanes[task.lane].end_len);
+        self.lanes[task.lane].end_len = task.start_idx;
+
+        // Execute task.
+        for i in task_range.0..task_range.1 {
+            let ray_idx = self.lanes[task.lane].idxs[i];
+            handle_ray(ray_idx as usize);
+        }
+
+        self.lanes[task.lane].idxs.truncate(task_range.0);
+    }
+
+    /// Pops the next task off the stack, executes the provided closure for
+    /// each ray index in the task, and pushes the ray indices back onto the
+    /// indicated lanes.
+    pub fn pop_do_next_task_and_push_rays<F>(&mut self, needed_lanes: usize, mut handle_ray: F)
+    where
+        F: FnMut(usize) -> (Bool4, usize),
     {
         // Prepare lanes.
         self.ensure_lane_count(needed_lanes);
@@ -311,13 +331,15 @@ impl RayStack {
         let mut source_lane_cap = task_range.0;
         for i in task_range.0..task_range.1 {
             let ray_idx = self.lanes[task.lane].idxs[i];
-            let (add_list, list_len) = handle_ray(ray_idx as usize);
-            for &l in &add_list[..list_len] {
-                if l == task.lane as u8 {
-                    self.lanes[l as usize].idxs[source_lane_cap] = ray_idx;
-                    source_lane_cap += 1;
-                } else {
-                    self.lanes[l as usize].idxs.push(ray_idx);
+            let (push_mask, c) = handle_ray(ray_idx as usize);
+            for l in 0..c {
+                if push_mask.get_n(l) {
+                    if l == task.lane {
+                        self.lanes[l as usize].idxs[source_lane_cap] = ray_idx;
+                        source_lane_cap += 1;
+                    } else {
+                        self.lanes[l as usize].idxs.push(ray_idx);
+                    }
                 }
             }
         }

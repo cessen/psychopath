@@ -621,7 +621,22 @@ mod x86_64_sse {
 
     impl Bool4 {
         #[inline(always)]
-        pub fn new() -> Bool4 {
+        pub fn new(a: bool, b: bool, c: bool, d: bool) -> Bool4 {
+            use std::arch::x86_64::_mm_set_ps;
+            Bool4 {
+                data: unsafe {
+                    _mm_set_ps(
+                        if d { 1.0 } else { 0.0 },
+                        if c { 1.0 } else { 0.0 },
+                        if b { 1.0 } else { 0.0 },
+                        if a { 1.0 } else { 0.0 },
+                    )
+                },
+            }
+        }
+
+        #[inline(always)]
+        pub fn new_false() -> Bool4 {
             use std::arch::x86_64::_mm_set1_ps;
             Bool4 {
                 data: unsafe { _mm_set1_ps(0.0) },
@@ -667,7 +682,8 @@ mod x86_64_sse {
         ///
         /// This is the `OR` operation on all the contained bools.  If even
         /// one bool is true, this returns true.
-        pub fn all_false(&self) -> bool {
+        #[inline(always)]
+        pub fn is_all_false(&self) -> bool {
             let a = unsafe { *(&self.data as *const __m128 as *const u128) };
             a == 0
         }
