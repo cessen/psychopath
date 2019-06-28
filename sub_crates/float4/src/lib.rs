@@ -620,6 +620,14 @@ mod x86_64_sse {
     }
 
     impl Bool4 {
+        #[inline(always)]
+        pub fn new() -> Bool4 {
+            use std::arch::x86_64::_mm_set1_ps;
+            Bool4 {
+                data: unsafe { _mm_set1_ps(0.0) },
+            }
+        }
+
         /// Returns the value of the nth element.
         #[inline(always)]
         pub fn get_n(&self, n: usize) -> bool {
@@ -637,22 +645,31 @@ mod x86_64_sse {
             self.get_n(0)
         }
 
-        /// Returns the value of the 1th element.
+        /// Returns the value of the 1st element.
         #[inline(always)]
         pub fn get_1(&self) -> bool {
             self.get_n(1)
         }
 
-        /// Returns the value of the 2th element.
+        /// Returns the value of the 2nd element.
         #[inline(always)]
         pub fn get_2(&self) -> bool {
             self.get_n(2)
         }
 
-        /// Returns the value of the 3th element.
+        /// Returns the value of the 3rd element.
         #[inline(always)]
         pub fn get_3(&self) -> bool {
             self.get_n(3)
+        }
+
+        /// Returns whether all four bools are false.
+        ///
+        /// This is the `OR` operation on all the contained bools.  If even
+        /// one bool is true, this returns true.
+        pub fn all_false(&self) -> bool {
+            let a = unsafe { *(&self.data as *const __m128 as *const u128) };
+            a == 0
         }
 
         #[inline]
