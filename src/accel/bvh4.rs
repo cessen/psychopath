@@ -125,9 +125,9 @@ impl<'a> BVH4<'a> {
 
                         if hit {
                             hit_count += 1;
-                            ([0, 1, 2, 3, 4, 5, 6, 7], children.len())
+                            ([0, 1, 2, 3], children.len())
                         } else {
-                            ([0, 1, 2, 3, 4, 5, 6, 7], 0)
+                            ([0; 4], 0)
                         }
                     });
 
@@ -201,9 +201,9 @@ impl<'a> BVH4<'a> {
                             );
                         if hit {
                             hit_count += 1;
-                            ([0, 1, 2, 3, 4, 5, 6, 7], object_count)
+                            ([0, 1, 2, 3], object_count)
                         } else {
-                            ([0, 1, 2, 3, 4, 5, 6, 7], 0)
+                            ([0; 4], 0)
                         }
                     });
 

@@ -242,7 +242,7 @@ impl<'a> Surface for SphereLight<'a> {
             let discriminant = (b * b) - (4.0 * a * c);
             if discriminant < 0.0 {
                 // Discriminant less than zero?  No solution => no intersection.
-                return ([0, 0, 0, 0, 0, 0, 0, 0], 0);
+                return ([0; 4], 0);
             }
             let discriminant = discriminant.sqrt();
 
@@ -268,7 +268,7 @@ impl<'a> Surface for SphereLight<'a> {
             // Check our intersection for validity against this ray's extents
             if t0 > rays.max_t(ray_idx) || t1 <= 0.0 {
                 // Didn't hit because sphere is entirely outside of ray's extents
-                return ([0, 0, 0, 0, 0, 0, 0, 0], 0);
+                return ([0; 4], 0);
             }
 
             let t = if t0 > 0.0 {
@@ -278,7 +278,7 @@ impl<'a> Surface for SphereLight<'a> {
             } else {
                 // Didn't hit because ray is entirely within the sphere, and
                 // therefore doesn't hit its surface.
-                return ([0, 0, 0, 0, 0, 0, 0, 0], 0);
+                return ([0; 4], 0);
             };
 
             // We hit the sphere, so calculate intersection info.
@@ -335,7 +335,7 @@ impl<'a> Surface for SphereLight<'a> {
                 rays.set_max_t(ray_idx, t);
             }
 
-            ([0, 0, 0, 0, 0, 0, 0, 0], 0)
+            ([0; 4], 0)
         });
     }
 }

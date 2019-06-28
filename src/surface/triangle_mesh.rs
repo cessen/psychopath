@@ -276,7 +276,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                         }
                     }
 
-                    ([0, 0, 0, 0, 0, 0, 0, 0], 0)
+                    ([0; 4], 0)
                 });
             },
         );

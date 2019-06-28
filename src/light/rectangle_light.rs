@@ -333,7 +333,7 @@ impl<'a> Surface for RectangleLight<'a> {
                 }
             }
 
-            ([0, 0, 0, 0, 0, 0, 0, 0], 0)
+            ([0; 4], 0)
         });
     }
 }

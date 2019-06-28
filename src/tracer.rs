@@ -99,7 +99,7 @@ impl<'a> TracerInner<'a> {
                     ray_stack.pop_do_next_task(2, |ray_idx| {
                         let t = rays.time(ray_idx);
                         rays.update_local(ray_idx, &lerp_slice(xforms, t));
-                        ([0, 1, 2, 3, 4, 5, 6, 7], 2)
+                        ([0, 1, 0, 0], 2)
                     });
                     ray_stack.push_lanes_to_tasks(&[0, 1]);
                 }
@@ -132,13 +132,13 @@ impl<'a> TracerInner<'a> {
                         ray_stack.pop_do_next_task(0, |ray_idx| {
                             let t = rays.time(ray_idx);
                             rays.update_local(ray_idx, &lerp_slice(xforms, t));
-                            ([0, 1, 2, 3, 4, 5, 6, 7], 0)
+                            ([0; 4], 0)
                         });
                     } else {
                         let ident = Matrix4x4::new();
                         ray_stack.pop_do_next_task(0, |ray_idx| {
                             rays.update_local(ray_idx, &ident);
-                            ([0, 1, 2, 3, 4, 5, 6, 7], 0)
+                            ([0; 4], 0)
                         });
                     }
                 }

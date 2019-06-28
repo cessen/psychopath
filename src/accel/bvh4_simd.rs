@@ -133,7 +133,7 @@ impl<'a> BVH4<'a> {
                     // Ray testing
                     ray_stack.pop_do_next_task(children.len(), |ray_idx| {
                         if rays.is_done(ray_idx) {
-                            ([0, 1, 2, 3, 4, 5, 6, 7], 0)
+                            ([0; 4], 0)
                         } else {
                             let hits = lerp_slice(bounds, rays.time(ray_idx))
                                 .intersect_ray(
@@ -145,7 +145,7 @@ impl<'a> BVH4<'a> {
 
                             if hits != 0 {
                                 all_hits |= hits;
-                                let mut lanes = [0u8; 8];
+                                let mut lanes = [0u8; 4];
                                 let mut lane_count = 0;
                                 for i in 0..children.len() {
                                     if (hits >> i) & 1 != 0 {
@@ -155,7 +155,7 @@ impl<'a> BVH4<'a> {
                                 }
                                 (lanes, lane_count)
                             } else {
-                                ([0, 1, 2, 3, 4, 5, 6, 7], 0)
+                                ([0; 4], 0)
                             }
                         }
                     });

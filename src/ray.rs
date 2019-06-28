@@ -297,7 +297,7 @@ impl RayStack {
     /// of lanes (by index) to add the given ray index back into.
     pub fn pop_do_next_task<F>(&mut self, needed_lanes: usize, mut handle_ray: F)
     where
-        F: FnMut(usize) -> ([u8; 8], usize),
+        F: FnMut(usize) -> ([u8; 4], usize),
     {
         // Prepare lanes.
         self.ensure_lane_count(needed_lanes);
