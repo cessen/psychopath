@@ -17,6 +17,7 @@ extern crate lazy_static;
 mod accel;
 mod algorithm;
 mod bbox;
+mod bbox4;
 mod boundable;
 mod camera;
 mod color;

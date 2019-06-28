@@ -1,5 +1,6 @@
 // mod bvh;
 mod bvh4;
+mod bvh4_simd;
 mod bvh_base;
 mod light_array;
 mod light_tree;
@@ -14,7 +15,7 @@ use crate::{
 
 pub use self::{
     // bvh::{BVHNode, BVH},
-    bvh4::{ray_code, BVH4Node, BVH4},
+    bvh4_simd::{ray_code, BVH4Node, BVH4},
     light_array::LightArray,
     light_tree::LightTree,
 };

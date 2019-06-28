@@ -273,6 +273,25 @@ impl RayStack {
         }
     }
 
+    pub fn duplicate_next_task(&mut self) {
+        let task = self.tasks.last().unwrap();
+        let l = task.lane;
+        let start = task.start_idx;
+        let end = self.lanes[l].end_len;
+
+        for i in start..end {
+            let idx = self.lanes[l].idxs[i];
+            self.lanes[l].idxs.push(idx);
+        }
+
+        self.tasks.push(RayTask {
+            lane: l,
+            start_idx: end,
+        });
+
+        self.lanes[l].end_len = self.lanes[l].idxs.len();
+    }
+
     /// Pops the next task off the stack, and executes the provided closure for
     /// each ray index in the task.  The return value of the closure is the list
     /// of lanes (by index) to add the given ray index back into.
