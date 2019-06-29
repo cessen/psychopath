@@ -21,7 +21,6 @@ pub use self::{
 
 // Track BVH traversal time
 thread_local! {
-    pub static ACCEL_TRAV_TIME: Cell<f64> = Cell::new(0.0);
     pub static ACCEL_NODE_RAY_TESTS: Cell<u64> = Cell::new(0);
 }
 

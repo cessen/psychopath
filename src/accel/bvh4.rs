@@ -13,12 +13,11 @@ use crate::{
     lerp::lerp_slice,
     math::Vector,
     ray::{RayBatch, RayStack},
-    timer::Timer,
 };
 
 use super::{
     bvh_base::{BVHBase, BVHBaseNode, BVH_MAX_DEPTH},
-    ACCEL_NODE_RAY_TESTS, ACCEL_TRAV_TIME,
+    ACCEL_NODE_RAY_TESTS,
 };
 
 use bvh_order::{calc_traversal_code, SplitAxes, TRAVERSAL_TABLE};
