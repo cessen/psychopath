@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub struct Tracer<'a> {
+    ray_trace_count: u64,
     ray_stack: RayStack,
     inner: TracerInner<'a>,
 }
@@ -20,6 +21,7 @@ pub struct Tracer<'a> {
 impl<'a> Tracer<'a> {
     pub fn from_assembly(assembly: &'a Assembly) -> Tracer<'a> {
         Tracer {
+            ray_trace_count: 0,
             ray_stack: RayStack::new(),
             inner: TracerInner {
                 root: assembly,
@@ -30,7 +32,12 @@ impl<'a> Tracer<'a> {
     }
 
     pub fn trace<'b>(&'b mut self, rays: &mut RayBatch) -> &'b [SurfaceIntersection] {
+        self.ray_trace_count += rays.len() as u64;
         self.inner.trace(rays, &mut self.ray_stack)
+    }
+
+    pub fn rays_traced(&self) -> u64 {
+        self.ray_trace_count
     }
 }
 

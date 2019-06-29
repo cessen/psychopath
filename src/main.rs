@@ -292,6 +292,11 @@ fn main() {
                         "\t\tTrace:                  {:.3}s",
                         ntime * rstats.trace_time
                     );
+                    println!("\t\t\tRays traced:          {}", rstats.ray_count);
+                    println!(
+                        "\t\t\tRays/sec:             {}",
+                        (rstats.ray_count as f64 / (ntime * rstats.trace_time) as f64) as u64
+                    );
                     println!(
                         "\t\t\tTraversal:            {:.3}s",
                         ntime * rstats.accel_traversal_time
