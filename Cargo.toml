@@ -25,6 +25,7 @@ debug = true
 # Crates.io dependencies
 base64 = "0.9"
 clap = "2.30"
+copy_in_place = "0.2.0"
 crossbeam = "0.3"
 half = "1.0"
 lazy_static = "1.0"

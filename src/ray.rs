@@ -279,11 +279,18 @@ impl RayStack {
         let start = task.start_idx;
         let end = self.lanes[l].end_len;
 
-        for i in start..end {
-            let idx = self.lanes[l].idxs[i];
-            self.lanes[l].idxs.push(idx);
+        // Extend the indices vector
+        self.lanes[l].idxs.reserve(end - start);
+        let old_len = self.lanes[l].idxs.len();
+        let new_len = old_len + end - start;
+        unsafe {
+            self.lanes[l].idxs.set_len(new_len);
         }
 
+        // Copy elements
+        copy_in_place::copy_in_place(&mut self.lanes[l].idxs, start..end, end);
+
+        // Push the new task onto the stack
         self.tasks.push(RayTask {
             lane: l,
             start_idx: end,
