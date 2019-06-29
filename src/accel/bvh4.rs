@@ -104,8 +104,6 @@ impl<'a> BVH4<'a> {
             return;
         }
 
-        let mut timer = Timer::new();
-        let mut trav_time: f64 = 0.0;
         let mut node_tests: u64 = 0;
 
         let traversal_table =
@@ -116,13 +114,13 @@ impl<'a> BVH4<'a> {
         let mut stack_ptr = 1;
 
         while stack_ptr > 0 {
-            node_tests += ray_stack.ray_count_in_next_task() as u64;
             match node_stack[stack_ptr] {
                 &BVH4Node::Internal {
                     bounds,
                     children,
                     traversal_code,
                 } => {
+                    node_tests += ray_stack.ray_count_in_next_task() as u64;
                     let mut all_hits = Bool4::new_false();
 
                     // Ray testing
@@ -163,23 +161,14 @@ impl<'a> BVH4<'a> {
                 }
 
                 &BVH4Node::Leaf { object_range } => {
-                    trav_time += timer.tick() as f64;
-
                     // Do the ray tests.
                     obj_ray_test(object_range.0..object_range.1, rays, ray_stack);
-
-                    timer.tick();
 
                     stack_ptr -= 1;
                 }
             }
         }
 
-        trav_time += timer.tick() as f64;
-        ACCEL_TRAV_TIME.with(|att| {
-            let v = att.get();
-            att.set(v + trav_time);
-        });
         ACCEL_NODE_RAY_TESTS.with(|anv| {
             let v = anv.get();
             anv.set(v + node_tests);

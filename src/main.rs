@@ -297,10 +297,6 @@ fn main() {
                         "\t\t\tRays/sec:             {}",
                         (rstats.ray_count as f64 / (ntime * rstats.trace_time) as f64) as u64
                     );
-                    println!(
-                        "\t\t\tTraversal:            {:.3}s",
-                        ntime * rstats.accel_traversal_time
-                    );
                     println!("\t\t\tRay/node tests:       {}", rstats.accel_node_visits);
                     println!(
                         "\t\tInitial ray generation: {:.3}s",
