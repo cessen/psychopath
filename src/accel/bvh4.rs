@@ -125,34 +125,40 @@ impl<'a> BVH4<'a> {
                     // Ray testing
                     ray_stack.pop_do_next_task_and_push_rays(children.len(), |ray_idx| {
                         if rays.is_done(ray_idx) {
-                            (Bool4::new_false(), 0)
+                            Bool4::new_false()
                         } else {
-                            let hits = lerp_slice(bounds, rays.time(ray_idx)).intersect_ray(
-                                rays.orig_local(ray_idx),
-                                rays.dir_inv_local(ray_idx),
-                                rays.max_t(ray_idx),
-                            );
+                            let hits = if bounds.len() == 1 {
+                                bounds[0].intersect_ray(
+                                    rays.orig_local(ray_idx),
+                                    rays.dir_inv_local(ray_idx),
+                                    rays.max_t(ray_idx),
+                                )
+                            } else {
+                                lerp_slice(bounds, rays.time(ray_idx)).intersect_ray(
+                                    rays.orig_local(ray_idx),
+                                    rays.dir_inv_local(ray_idx),
+                                    rays.max_t(ray_idx),
+                                )
+                            };
                             all_hits = all_hits | hits;
-                            (hits, children.len())
+                            hits
                         }
                     });
 
                     // If there were any intersections, create tasks.
                     if !all_hits.is_all_false() {
                         let order_code = traversal_table[traversal_code as usize];
-                        let mut lanes = [0usize; 4];
                         let mut lane_count = 0;
-                        for i in 0..children.len() {
-                            let inv_i = (children.len() - 1) - i;
-                            let child_i = ((order_code >> (inv_i * 2)) & 3) as usize;
-                            if all_hits.get_n(child_i) {
+                        let mut i = children.len() as u8;
+                        while i > 0 {
+                            i -= 1;
+                            let child_i = ((order_code >> (i * 2)) & 3) as usize;
+                            if ray_stack.push_lane_to_task(child_i) {
                                 node_stack[stack_ptr + lane_count] = &children[child_i];
-                                lanes[lane_count] = child_i;
                                 lane_count += 1;
                             }
                         }
 
-                        ray_stack.push_lanes_to_tasks(&lanes[..lane_count]);
                         stack_ptr += lane_count - 1;
                     } else {
                         stack_ptr -= 1;

@@ -259,17 +259,29 @@ impl RayStack {
         self.lanes[lane].idxs.push(ray_idx as RayIndexType);
     }
 
+    /// Pushes any excess indices on the given lane to a new task on the
+    /// task stack.
+    ///
+    /// Returns whether a task was pushed or not.  No task will be pushed
+    /// if there are no excess indices on the end of the lane.
+    pub fn push_lane_to_task(&mut self, lane_idx: usize) -> bool {
+        if self.lanes[lane_idx].end_len < self.lanes[lane_idx].idxs.len() {
+            self.tasks.push(RayTask {
+                lane: lane_idx,
+                start_idx: self.lanes[lane_idx].end_len,
+            });
+            self.lanes[lane_idx].end_len = self.lanes[lane_idx].idxs.len();
+            true
+        } else {
+            false
+        }
+    }
+
     /// Takes the given list of lane indices, and pushes any excess indices on
     /// the end of each into a new task, in the order provided.
     pub fn push_lanes_to_tasks(&mut self, lane_idxs: &[usize]) {
         for &l in lane_idxs {
-            if self.lanes[l].end_len < self.lanes[l].idxs.len() {
-                self.tasks.push(RayTask {
-                    lane: l,
-                    start_idx: self.lanes[l].end_len,
-                });
-                self.lanes[l].end_len = self.lanes[l].idxs.len();
-            }
+            self.push_lane_to_task(l);
         }
     }
 
@@ -335,35 +347,38 @@ impl RayStack {
     /// Pops the next task off the stack, executes the provided closure for
     /// each ray index in the task, and pushes the ray indices back onto the
     /// indicated lanes.
-    pub fn pop_do_next_task_and_push_rays<F>(&mut self, needed_lanes: usize, mut handle_ray: F)
+    pub fn pop_do_next_task_and_push_rays<F>(&mut self, output_lane_count: usize, mut handle_ray: F)
     where
-        F: FnMut(usize) -> (Bool4, usize),
+        F: FnMut(usize) -> Bool4,
     {
-        // Prepare lanes.
-        self.ensure_lane_count(needed_lanes);
-
         // Pop the task and do necessary bookkeeping.
         let task = self.tasks.pop().unwrap();
         let task_range = (task.start_idx, self.lanes[task.lane].end_len);
         self.lanes[task.lane].end_len = task.start_idx;
 
+        // SAFETY: this is probably evil, and depends on behavior of Vec that
+        // are not actually promised.  But we're essentially truncating the lane
+        // to the start of our task range, but will continue to access it's
+        // elements beyond that range via `get_unchecked()` below.  Because the
+        // memory is not freed nor altered, this is safe.  However, again, the
+        // Vec apis don't promise this behavior.  So:
+        //
+        // TODO: build a slightly different lane abstraction to get this same
+        // efficiency without depending on implicit Vec behavior.
+        unsafe {
+            self.lanes[task.lane].idxs.set_len(task.start_idx);
+        }
+
         // Execute task.
-        let mut source_lane_cap = task_range.0;
         for i in task_range.0..task_range.1 {
-            let ray_idx = self.lanes[task.lane].idxs[i];
-            let (push_mask, c) = handle_ray(ray_idx as usize);
-            for l in 0..c {
+            let ray_idx = *unsafe { self.lanes[task.lane].idxs.get_unchecked(i) };
+            let push_mask = handle_ray(ray_idx as usize);
+            for l in 0..output_lane_count {
                 if push_mask.get_n(l) {
-                    if l == task.lane {
-                        self.lanes[l as usize].idxs[source_lane_cap] = ray_idx;
-                        source_lane_cap += 1;
-                    } else {
-                        self.lanes[l as usize].idxs.push(ray_idx);
-                    }
+                    self.lanes[l as usize].idxs.push(ray_idx);
                 }
             }
         }
-        self.lanes[task.lane].idxs.truncate(source_lane_cap);
     }
 }
 
