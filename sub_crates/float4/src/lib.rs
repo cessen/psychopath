@@ -620,6 +620,29 @@ mod x86_64_sse {
     }
 
     impl Bool4 {
+        #[inline(always)]
+        pub fn new(a: bool, b: bool, c: bool, d: bool) -> Bool4 {
+            use std::arch::x86_64::_mm_set_ps;
+            Bool4 {
+                data: unsafe {
+                    _mm_set_ps(
+                        if d { 1.0 } else { 0.0 },
+                        if c { 1.0 } else { 0.0 },
+                        if b { 1.0 } else { 0.0 },
+                        if a { 1.0 } else { 0.0 },
+                    )
+                },
+            }
+        }
+
+        #[inline(always)]
+        pub fn new_false() -> Bool4 {
+            use std::arch::x86_64::_mm_set1_ps;
+            Bool4 {
+                data: unsafe { _mm_set1_ps(0.0) },
+            }
+        }
+
         /// Returns the value of the nth element.
         #[inline(always)]
         pub fn get_n(&self, n: usize) -> bool {
@@ -637,22 +660,32 @@ mod x86_64_sse {
             self.get_n(0)
         }
 
-        /// Returns the value of the 1th element.
+        /// Returns the value of the 1st element.
         #[inline(always)]
         pub fn get_1(&self) -> bool {
             self.get_n(1)
         }
 
-        /// Returns the value of the 2th element.
+        /// Returns the value of the 2nd element.
         #[inline(always)]
         pub fn get_2(&self) -> bool {
             self.get_n(2)
         }
 
-        /// Returns the value of the 3th element.
+        /// Returns the value of the 3rd element.
         #[inline(always)]
         pub fn get_3(&self) -> bool {
             self.get_n(3)
+        }
+
+        /// Returns whether all four bools are false.
+        ///
+        /// This is the `NOT` operation on the result of `OR`ing all the
+        /// contained bools.  If even one bool is true, this returns false.
+        #[inline(always)]
+        pub fn is_all_false(&self) -> bool {
+            let a = unsafe { *(&self.data as *const __m128 as *const u128) };
+            a == 0
         }
 
         #[inline]
@@ -1236,21 +1269,25 @@ mod fallback {
         det
     }
 
-    /// Essentially a tuple of four bools, which will use SIMD operations
-    /// where possible on a platform.
-    #[cfg(feature = "simd_perf")]
-    #[derive(Debug, Copy, Clone)]
-    pub struct Bool4 {
-        data: bool32fx4,
-    }
-
-    #[cfg(not(feature = "simd_perf"))]
+    /// Essentially a tuple of four bools.
     #[derive(Debug, Copy, Clone)]
     pub struct Bool4 {
         data: [bool; 4],
     }
 
     impl Bool4 {
+        #[inline(always)]
+        pub fn new(a: bool, b: bool, c: bool, d: bool) -> Bool4 {
+            Bool4 { data: [a, b, c, d] }
+        }
+
+        #[inline(always)]
+        pub fn new_false() -> Bool4 {
+            Bool4 {
+                data: [false, false, false, false],
+            }
+        }
+
         /// Returns the value of the nth element.
         #[inline(always)]
         pub fn get_n(self, n: usize) -> bool {
@@ -1283,6 +1320,15 @@ mod fallback {
         #[inline(always)]
         pub fn get_3(self) -> bool {
             self.get_n(3)
+        }
+
+        /// Returns whether all four bools are false.
+        ///
+        /// This is the `NOT` operation on the result of `OR`ing all the
+        /// contained bools.  If even one bool is true, this returns false.
+        #[inline(always)]
+        pub fn is_all_false(&self) -> bool {
+            !(self.data[0] | self.data[1] | self.data[2] | self.data[3])
         }
 
         #[inline]
@@ -1564,5 +1610,11 @@ mod tests {
         let r = f1.lt(f2).to_bitmask();
 
         assert_eq!(r, 0b00001010);
+    }
+
+    #[test]
+    fn bool4_is_all_false() {
+        assert_eq!(true, Bool4::new(false, false, false, false).is_all_false());
+        assert_eq!(false, Bool4::new(false, false, true, false).is_all_false());
     }
 }

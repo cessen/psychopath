@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-pub mod micropoly_batch;
+// pub mod micropoly_batch;
 pub mod triangle;
 pub mod triangle_mesh;
 
@@ -9,7 +9,7 @@ use std::fmt::Debug;
 use crate::{
     boundable::Boundable,
     math::{Matrix4x4, Normal, Point, Vector},
-    ray::{AccelRay, Ray},
+    ray::{RayBatch, RayStack},
     shading::surface_closure::SurfaceClosure,
     shading::SurfaceShader,
 };
@@ -17,8 +17,8 @@ use crate::{
 pub trait Surface: Boundable + Debug + Sync {
     fn intersect_rays(
         &self,
-        accel_rays: &mut [AccelRay],
-        wrays: &[Ray],
+        rays: &mut RayBatch,
+        ray_stack: &mut RayStack,
         isects: &mut [SurfaceIntersection],
         shader: &SurfaceShader,
         space: &[Matrix4x4],

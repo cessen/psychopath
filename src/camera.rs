@@ -92,6 +92,12 @@ impl<'a> Camera<'a> {
         )
         .normalized();
 
-        Ray::new(orig * transform, dir * transform, time, wavelength, false)
+        Ray {
+            orig: orig * transform,
+            dir: dir * transform,
+            time: time,
+            wavelength: wavelength,
+            max_t: std::f32::INFINITY,
+        }
     }
 }

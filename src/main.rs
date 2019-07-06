@@ -11,12 +11,12 @@
 #![allow(clippy::needless_range_loop)]
 #![allow(clippy::excessive_precision)]
 
-#[macro_use]
 extern crate lazy_static;
 
 mod accel;
 mod algorithm;
 mod bbox;
+mod bbox4;
 mod boundable;
 mod camera;
 mod color;
@@ -47,10 +47,9 @@ use nom::{error_position, take_until};
 use mem_arena::MemArena;
 
 use crate::{
-    accel::{BVH4Node, BVHNode},
+    accel::BVH4Node,
     bbox::BBox,
     parse::{parse_scene, DataTree},
-    ray::{AccelRay, Ray},
     renderer::LightPath,
     surface::SurfaceIntersection,
     timer::Timer,
@@ -159,15 +158,13 @@ fn main() {
 
     // Print some misc useful dev info.
     if args.is_present("dev") {
-        println!("Ray size:       {} bytes", mem::size_of::<Ray>());
-        println!("AccelRay size:  {} bytes", mem::size_of::<AccelRay>());
         println!(
             "SurfaceIntersection size:  {} bytes",
             mem::size_of::<SurfaceIntersection>()
         );
         println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
         println!("BBox size: {} bytes", mem::size_of::<BBox>());
-        println!("BVHNode size: {} bytes", mem::size_of::<BVHNode>());
+        // println!("BVHNode size: {} bytes", mem::size_of::<BVHNode>());
         println!("BVH4Node size: {} bytes", mem::size_of::<BVH4Node>());
         return;
     }
@@ -295,9 +292,10 @@ fn main() {
                         "\t\tTrace:                  {:.3}s",
                         ntime * rstats.trace_time
                     );
+                    println!("\t\t\tRays traced:          {}", rstats.ray_count);
                     println!(
-                        "\t\t\tTraversal:            {:.3}s",
-                        ntime * rstats.accel_traversal_time
+                        "\t\t\tRays/sec:             {}",
+                        (rstats.ray_count as f64 / (ntime * rstats.trace_time) as f64) as u64
                     );
                     println!("\t\t\tRay/node tests:       {}", rstats.accel_node_visits);
                     println!(

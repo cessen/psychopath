@@ -7,8 +7,7 @@ use std::{
 
 use crate::{
     lerp::{lerp, lerp_slice, Lerp},
-    math::{fast_minf32, Matrix4x4, Point},
-    ray::AccelRay,
+    math::{fast_minf32, Matrix4x4, Point, Vector},
 };
 
 const BBOX_MAXT_ADJUST: f32 = 1.000_000_24;
@@ -40,17 +39,17 @@ impl BBox {
     }
 
     // Returns whether the given ray intersects with the bbox.
-    pub fn intersect_accel_ray(&self, ray: &AccelRay) -> bool {
+    pub fn intersect_ray(&self, orig: Point, dir_inv: Vector, max_t: f32) -> bool {
         // Calculate slab intersections
-        let t1 = (self.min.co - ray.orig.co) * ray.dir_inv.co;
-        let t2 = (self.max.co - ray.orig.co) * ray.dir_inv.co;
+        let t1 = (self.min.co - orig.co) * dir_inv.co;
+        let t2 = (self.max.co - orig.co) * dir_inv.co;
 
         // Find the far and near intersection
         let mut far_t = t1.v_max(t2);
         let mut near_t = t1.v_min(t2);
         far_t.set_3(std::f32::INFINITY);
         near_t.set_3(0.0);
-        let far_hit_t = fast_minf32(far_t.h_min() * BBOX_MAXT_ADJUST, ray.max_t);
+        let far_hit_t = fast_minf32(far_t.h_min() * BBOX_MAXT_ADJUST, max_t);
         let near_hit_t = near_t.h_max();
 
         // Did we hit?

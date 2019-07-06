@@ -1,4 +1,4 @@
-mod bvh;
+// mod bvh;
 mod bvh4;
 mod bvh_base;
 mod light_array;
@@ -13,15 +13,14 @@ use crate::{
 };
 
 pub use self::{
-    bvh::{BVHNode, BVH},
-    bvh4::{BVH4Node, BVH4},
+    // bvh::{BVHNode, BVH},
+    bvh4::{ray_code, BVH4Node, BVH4},
     light_array::LightArray,
     light_tree::LightTree,
 };
 
 // Track BVH traversal time
 thread_local! {
-    pub static ACCEL_TRAV_TIME: Cell<f64> = Cell::new(0.0);
     pub static ACCEL_NODE_RAY_TESTS: Cell<u64> = Cell::new(0);
 }
 

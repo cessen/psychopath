@@ -1,6 +1,48 @@
 #![allow(dead_code)]
 
-use crate::{fp_utils::fp_gamma, math::Point, ray::Ray};
+use crate::{
+    fp_utils::fp_gamma,
+    math::{Point, Vector},
+};
+
+#[derive(Debug, Copy, Clone)]
+pub struct RayTriPrecompute {
+    i: (usize, usize, usize),
+    s: (f32, f32, f32),
+}
+
+impl RayTriPrecompute {
+    pub fn new(ray_dir: Vector) -> RayTriPrecompute {
+        // Calculate the permuted dimension indices for the new ray space.
+        let (xi, yi, zi) = {
+            let xabs = ray_dir.x().abs();
+            let yabs = ray_dir.y().abs();
+            let zabs = ray_dir.z().abs();
+
+            if xabs > yabs && xabs > zabs {
+                (1, 2, 0)
+            } else if yabs > zabs {
+                (2, 0, 1)
+            } else {
+                (0, 1, 2)
+            }
+        };
+
+        let dir_x = ray_dir.get_n(xi);
+        let dir_y = ray_dir.get_n(yi);
+        let dir_z = ray_dir.get_n(zi);
+
+        // Calculate shear constants.
+        let sx = dir_x / dir_z;
+        let sy = dir_y / dir_z;
+        let sz = 1.0 / dir_z;
+
+        RayTriPrecompute {
+            i: (xi, yi, zi),
+            s: (sx, sy, sz),
+        }
+    }
+}
 
 /// Intersects `ray` with `tri`, returning `Some((t, b0, b1, b2))`, or `None`
 /// if no intersection.
@@ -13,42 +55,23 @@ use crate::{fp_utils::fp_gamma, math::Point, ray::Ray};
 ///
 /// Uses the ray-triangle test from the paper "Watertight Ray/Triangle
 /// Intersection" by Woop et al.
-pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32, f32, f32)> {
-    // Calculate the permuted dimension indices for the new ray space.
-    let (xi, yi, zi) = {
-        let xabs = ray.dir.x().abs();
-        let yabs = ray.dir.y().abs();
-        let zabs = ray.dir.z().abs();
-
-        if xabs > yabs && xabs > zabs {
-            (1, 2, 0)
-        } else if yabs > zabs {
-            (2, 0, 1)
-        } else {
-            (0, 1, 2)
-        }
-    };
-
-    let dir_x = ray.dir.get_n(xi);
-    let dir_y = ray.dir.get_n(yi);
-    let dir_z = ray.dir.get_n(zi);
-
-    // Calculate shear constants.
-    let sx = dir_x / dir_z;
-    let sy = dir_y / dir_z;
-    let sz = 1.0 / dir_z;
-
+pub fn intersect_ray(
+    ray_orig: Point,
+    ray_pre: RayTriPrecompute,
+    ray_max_t: f32,
+    tri: (Point, Point, Point),
+) -> Option<(f32, f32, f32, f32)> {
     // Calculate vertices in ray space.
-    let p0 = tri.0 - ray.orig;
-    let p1 = tri.1 - ray.orig;
-    let p2 = tri.2 - ray.orig;
+    let p0 = tri.0 - ray_orig;
+    let p1 = tri.1 - ray_orig;
+    let p2 = tri.2 - ray_orig;
 
-    let p0x = p0.get_n(xi) - (sx * p0.get_n(zi));
-    let p0y = p0.get_n(yi) - (sy * p0.get_n(zi));
-    let p1x = p1.get_n(xi) - (sx * p1.get_n(zi));
-    let p1y = p1.get_n(yi) - (sy * p1.get_n(zi));
-    let p2x = p2.get_n(xi) - (sx * p2.get_n(zi));
-    let p2y = p2.get_n(yi) - (sy * p2.get_n(zi));
+    let p0x = p0.get_n(ray_pre.i.0) - (ray_pre.s.0 * p0.get_n(ray_pre.i.2));
+    let p0y = p0.get_n(ray_pre.i.1) - (ray_pre.s.1 * p0.get_n(ray_pre.i.2));
+    let p1x = p1.get_n(ray_pre.i.0) - (ray_pre.s.0 * p1.get_n(ray_pre.i.2));
+    let p1y = p1.get_n(ray_pre.i.1) - (ray_pre.s.1 * p1.get_n(ray_pre.i.2));
+    let p2x = p2.get_n(ray_pre.i.0) - (ray_pre.s.0 * p2.get_n(ray_pre.i.2));
+    let p2y = p2.get_n(ray_pre.i.1) - (ray_pre.s.1 * p2.get_n(ray_pre.i.2));
 
     // Calculate scaled barycentric coordinates.
     let mut e0 = (p1x * p2y) - (p1y * p2x);
@@ -74,14 +97,14 @@ pub fn intersect_ray(ray: &Ray, tri: (Point, Point, Point)) -> Option<(f32, f32,
     }
 
     // Calculate t of hitpoint.
-    let p0z = sz * p0.get_n(zi);
-    let p1z = sz * p1.get_n(zi);
-    let p2z = sz * p2.get_n(zi);
+    let p0z = ray_pre.s.2 * p0.get_n(ray_pre.i.2);
+    let p1z = ray_pre.s.2 * p1.get_n(ray_pre.i.2);
+    let p2z = ray_pre.s.2 * p2.get_n(ray_pre.i.2);
     let t_scaled = (e0 * p0z) + (e1 * p1z) + (e2 * p2z);
 
     // Check if the hitpoint t is within ray min/max t.
-    if (det > 0.0 && (t_scaled <= 0.0 || t_scaled > (ray.max_t * det)))
-        || (det < 0.0 && (t_scaled >= 0.0 || t_scaled < (ray.max_t * det)))
+    if (det > 0.0 && (t_scaled <= 0.0 || t_scaled > (ray_max_t * det)))
+        || (det < 0.0 && (t_scaled >= 0.0 || t_scaled < (ray_max_t * det)))
     {
         return None;
     }

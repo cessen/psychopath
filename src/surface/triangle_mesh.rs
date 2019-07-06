@@ -8,11 +8,13 @@ use crate::{
     boundable::Boundable,
     lerp::lerp_slice,
     math::{cross, dot, Matrix4x4, Normal, Point},
-    ray::{AccelRay, Ray},
+    ray::{RayBatch, RayStack},
     shading::SurfaceShader,
 };
 
 use super::{triangle, Surface, SurfaceIntersection, SurfaceIntersectionData};
+
+const MAX_LEAF_TRIANGLE_COUNT: usize = 3;
 
 #[derive(Copy, Clone, Debug)]
 pub struct TriangleMesh<'a> {
@@ -93,7 +95,7 @@ impl<'a> TriangleMesh<'a> {
         };
 
         // Build BVH
-        let accel = BVH4::from_objects(arena, &mut indices[..], 3, |tri| {
+        let accel = BVH4::from_objects(arena, &mut indices[..], MAX_LEAF_TRIANGLE_COUNT, |tri| {
             &bounds
                 [(tri.3 as usize * time_sample_count)..((tri.3 as usize + 1) * time_sample_count)]
         });
@@ -117,8 +119,8 @@ impl<'a> Boundable for TriangleMesh<'a> {
 impl<'a> Surface for TriangleMesh<'a> {
     fn intersect_rays(
         &self,
-        accel_rays: &mut [AccelRay],
-        wrays: &[Ray],
+        rays: &mut RayBatch,
+        ray_stack: &mut RayStack,
         isects: &mut [SurfaceIntersection],
         shader: &SurfaceShader,
         space: &[Matrix4x4],
@@ -131,144 +133,177 @@ impl<'a> Surface for TriangleMesh<'a> {
         };
 
         self.accel
-            .traverse(&mut accel_rays[..], self.indices, |tri_indices, rs| {
-                // For static triangles with static transforms, cache them.
-                let is_cached = self.time_sample_count == 1 && space.len() <= 1;
-                let mut tri = if is_cached {
-                    let tri = (
-                        self.vertices[tri_indices.0 as usize],
-                        self.vertices[tri_indices.1 as usize],
-                        self.vertices[tri_indices.2 as usize],
-                    );
-                    if space.is_empty() {
-                        tri
-                    } else {
-                        (
-                            tri.0 * static_mat_space,
-                            tri.1 * static_mat_space,
-                            tri.2 * static_mat_space,
-                        )
-                    }
-                } else {
-                    unsafe { std::mem::uninitialized() }
-                };
+            .traverse(rays, ray_stack, |idx_range, rays, ray_stack| {
+                let tri_count = idx_range.end - idx_range.start;
 
-                // Test each ray against the current triangle.
-                for r in rs {
-                    let wr = &wrays[r.id as usize];
+                // Build the triangle cache if we can!
+                let is_cached = ray_stack.ray_count_in_next_task() >= tri_count
+                    && self.time_sample_count == 1
+                    && space.len() <= 1;
+                let mut tri_cache = [unsafe { std::mem::uninitialized() }; MAX_LEAF_TRIANGLE_COUNT];
+                if is_cached {
+                    for tri_idx in idx_range.clone() {
+                        let i = tri_idx - idx_range.start;
+                        let tri_indices = self.indices[tri_idx];
 
-                    // Get triangle if necessary
-                    if !is_cached {
-                        tri = if self.time_sample_count == 1 {
-                            // No deformation motion blur, so fast-path it.
-                            (
-                                self.vertices[tri_indices.0 as usize],
-                                self.vertices[tri_indices.1 as usize],
-                                self.vertices[tri_indices.2 as usize],
-                            )
-                        } else {
-                            // Deformation motion blur, need to interpolate.
-                            let p0_slice = &self.vertices[(tri_indices.0 as usize
-                                * self.time_sample_count)
-                                ..((tri_indices.0 as usize + 1) * self.time_sample_count)];
-                            let p1_slice = &self.vertices[(tri_indices.1 as usize
-                                * self.time_sample_count)
-                                ..((tri_indices.1 as usize + 1) * self.time_sample_count)];
-                            let p2_slice = &self.vertices[(tri_indices.2 as usize
-                                * self.time_sample_count)
-                                ..((tri_indices.2 as usize + 1) * self.time_sample_count)];
-
-                            let p0 = lerp_slice(p0_slice, wr.time);
-                            let p1 = lerp_slice(p1_slice, wr.time);
-                            let p2 = lerp_slice(p2_slice, wr.time);
-
-                            (p0, p1, p2)
-                        };
-                    }
-
-                    // Transform triangle if necessary, and get transform space.
-                    let mat_space = if !space.is_empty() {
-                        if space.len() > 1 {
-                            // Per-ray transform, for motion blur
-                            let mat_space = lerp_slice(space, wr.time).inverse();
-                            tri = (tri.0 * mat_space, tri.1 * mat_space, tri.2 * mat_space);
-                            mat_space
-                        } else {
-                            // Same transform for all rays
-                            if !is_cached {
-                                tri = (
-                                    tri.0 * static_mat_space,
-                                    tri.1 * static_mat_space,
-                                    tri.2 * static_mat_space,
-                                );
-                            }
-                            static_mat_space
-                        }
-                    } else {
-                        // No transforms
-                        Matrix4x4::new()
-                    };
-
-                    // Test ray against triangle
-                    if let Some((t, b0, b1, b2)) = triangle::intersect_ray(wr, tri) {
-                        if t < r.max_t {
-                            if r.is_occlusion() {
-                                isects[r.id as usize] = SurfaceIntersection::Occlude;
-                                r.mark_done();
-                            } else {
-                                // Calculate intersection point and error magnitudes
-                                let (pos, pos_err) = triangle::surface_point(tri, (b0, b1, b2));
-
-                                // Calculate geometric surface normal
-                                let geo_normal = cross(tri.0 - tri.1, tri.0 - tri.2).into_normal();
-
-                                // Calculate interpolated surface normal, if any
-                                let shading_normal = if let Some(normals) = self.normals {
-                                    let n0_slice = &normals[(tri_indices.0 as usize
-                                        * self.time_sample_count)
-                                        ..((tri_indices.0 as usize + 1) * self.time_sample_count)];
-                                    let n1_slice = &normals[(tri_indices.1 as usize
-                                        * self.time_sample_count)
-                                        ..((tri_indices.1 as usize + 1) * self.time_sample_count)];
-                                    let n2_slice = &normals[(tri_indices.2 as usize
-                                        * self.time_sample_count)
-                                        ..((tri_indices.2 as usize + 1) * self.time_sample_count)];
-
-                                    let n0 = lerp_slice(n0_slice, wr.time).normalized();
-                                    let n1 = lerp_slice(n1_slice, wr.time).normalized();
-                                    let n2 = lerp_slice(n2_slice, wr.time).normalized();
-
-                                    let s_nor = ((n0 * b0) + (n1 * b1) + (n2 * b2)) * mat_space;
-                                    if dot(s_nor, geo_normal) >= 0.0 {
-                                        s_nor
-                                    } else {
-                                        -s_nor
-                                    }
-                                } else {
-                                    geo_normal
-                                };
-
-                                let intersection_data = SurfaceIntersectionData {
-                                    incoming: wr.dir,
-                                    t: t,
-                                    pos: pos,
-                                    pos_err: pos_err,
-                                    nor: shading_normal,
-                                    nor_g: geo_normal,
-                                    local_space: mat_space,
-                                    sample_pdf: 0.0,
-                                };
-
-                                // Fill in intersection data
-                                isects[r.id as usize] = SurfaceIntersection::Hit {
-                                    intersection_data: intersection_data,
-                                    closure: shader.shade(&intersection_data, wr.time),
-                                };
-                                r.max_t = t;
-                            }
+                        // For static triangles with static transforms, cache them.
+                        tri_cache[i] = (
+                            self.vertices[tri_indices.0 as usize],
+                            self.vertices[tri_indices.1 as usize],
+                            self.vertices[tri_indices.2 as usize],
+                        );
+                        if !space.is_empty() {
+                            tri_cache[i].0 = tri_cache[i].0 * static_mat_space;
+                            tri_cache[i].1 = tri_cache[i].1 * static_mat_space;
+                            tri_cache[i].2 = tri_cache[i].2 * static_mat_space;
                         }
                     }
                 }
+
+                // Test each ray against the triangles.
+                ray_stack.do_next_task(|ray_idx| {
+                    let ray_idx = ray_idx as usize;
+
+                    if rays.is_done(ray_idx) {
+                        return;
+                    }
+
+                    let ray_time = rays.time(ray_idx);
+
+                    // Calculate the ray space, if necessary.
+                    let mat_space = if space.len() > 1 {
+                        // Per-ray transform, for motion blur
+                        lerp_slice(space, ray_time).inverse()
+                    } else {
+                        static_mat_space
+                    };
+
+                    // Iterate through the triangles and test the ray against them.
+                    let mut non_shadow_hit = false;
+                    let mut hit_tri = unsafe { std::mem::uninitialized() };
+                    let mut hit_tri_indices = unsafe { std::mem::uninitialized() };
+                    let mut hit_tri_data = unsafe { std::mem::uninitialized() };
+                    let ray_pre = triangle::RayTriPrecompute::new(rays.dir(ray_idx));
+                    for tri_idx in idx_range.clone() {
+                        let tri_indices = self.indices[tri_idx];
+
+                        // Get triangle if necessary
+                        let tri = if is_cached {
+                            let i = tri_idx - idx_range.start;
+                            tri_cache[i]
+                        } else {
+                            let mut tri = if self.time_sample_count == 1 {
+                                // No deformation motion blur, so fast-path it.
+                                (
+                                    self.vertices[tri_indices.0 as usize],
+                                    self.vertices[tri_indices.1 as usize],
+                                    self.vertices[tri_indices.2 as usize],
+                                )
+                            } else {
+                                // Deformation motion blur, need to interpolate.
+                                let p0_slice = &self.vertices[(tri_indices.0 as usize
+                                    * self.time_sample_count)
+                                    ..((tri_indices.0 as usize + 1) * self.time_sample_count)];
+                                let p1_slice = &self.vertices[(tri_indices.1 as usize
+                                    * self.time_sample_count)
+                                    ..((tri_indices.1 as usize + 1) * self.time_sample_count)];
+                                let p2_slice = &self.vertices[(tri_indices.2 as usize
+                                    * self.time_sample_count)
+                                    ..((tri_indices.2 as usize + 1) * self.time_sample_count)];
+
+                                let p0 = lerp_slice(p0_slice, ray_time);
+                                let p1 = lerp_slice(p1_slice, ray_time);
+                                let p2 = lerp_slice(p2_slice, ray_time);
+
+                                (p0, p1, p2)
+                            };
+
+                            if !space.is_empty() {
+                                tri.0 = tri.0 * mat_space;
+                                tri.1 = tri.1 * mat_space;
+                                tri.2 = tri.2 * mat_space;
+                            }
+
+                            tri
+                        };
+
+                        // Test ray against triangle
+                        if let Some((t, b0, b1, b2)) = triangle::intersect_ray(
+                            rays.orig(ray_idx),
+                            ray_pre,
+                            rays.max_t(ray_idx),
+                            tri,
+                        ) {
+                            if rays.is_occlusion(ray_idx) {
+                                isects[ray_idx] = SurfaceIntersection::Occlude;
+                                rays.mark_done(ray_idx);
+                                break;
+                            } else {
+                                non_shadow_hit = true;
+                                rays.set_max_t(ray_idx, t);
+                                hit_tri = tri;
+                                hit_tri_indices = tri_indices;
+                                hit_tri_data = (t, b0, b1, b2);
+                            }
+                        }
+                    }
+
+                    // Calculate intersection data if necessary.
+                    if non_shadow_hit {
+                        let (t, b0, b1, b2) = hit_tri_data;
+
+                        // Calculate intersection point and error magnitudes
+                        let (pos, pos_err) = triangle::surface_point(hit_tri, (b0, b1, b2));
+
+                        // Calculate geometric surface normal
+                        let geo_normal =
+                            cross(hit_tri.0 - hit_tri.1, hit_tri.0 - hit_tri.2).into_normal();
+
+                        // Calculate interpolated surface normal, if any
+                        let shading_normal = if let Some(normals) = self.normals {
+                            let n0_slice = &normals[(hit_tri_indices.0 as usize
+                                * self.time_sample_count)
+                                ..((hit_tri_indices.0 as usize + 1) * self.time_sample_count)];
+                            let n1_slice = &normals[(hit_tri_indices.1 as usize
+                                * self.time_sample_count)
+                                ..((hit_tri_indices.1 as usize + 1) * self.time_sample_count)];
+                            let n2_slice = &normals[(hit_tri_indices.2 as usize
+                                * self.time_sample_count)
+                                ..((hit_tri_indices.2 as usize + 1) * self.time_sample_count)];
+
+                            let n0 = lerp_slice(n0_slice, ray_time).normalized();
+                            let n1 = lerp_slice(n1_slice, ray_time).normalized();
+                            let n2 = lerp_slice(n2_slice, ray_time).normalized();
+
+                            let s_nor = ((n0 * b0) + (n1 * b1) + (n2 * b2)) * mat_space;
+                            if dot(s_nor, geo_normal) >= 0.0 {
+                                s_nor
+                            } else {
+                                -s_nor
+                            }
+                        } else {
+                            geo_normal
+                        };
+
+                        let intersection_data = SurfaceIntersectionData {
+                            incoming: rays.dir(ray_idx),
+                            t: t,
+                            pos: pos,
+                            pos_err: pos_err,
+                            nor: shading_normal,
+                            nor_g: geo_normal,
+                            local_space: mat_space,
+                            sample_pdf: 0.0,
+                        };
+
+                        // Fill in intersection data
+                        isects[ray_idx] = SurfaceIntersection::Hit {
+                            intersection_data: intersection_data,
+                            closure: shader.shade(&intersection_data, ray_time),
+                        };
+                    }
+                });
+                ray_stack.pop_task();
             });
     }
 }

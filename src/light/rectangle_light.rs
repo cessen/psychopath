@@ -6,7 +6,7 @@ use crate::{
     color::{Color, SpectralSample},
     lerp::lerp_slice,
     math::{cross, dot, Matrix4x4, Normal, Point, Vector},
-    ray::{AccelRay, Ray},
+    ray::{RayBatch, RayStack},
     sampling::{
         spherical_triangle_solid_angle, triangle_surface_area, uniform_sample_spherical_triangle,
         uniform_sample_triangle,
@@ -257,20 +257,23 @@ impl<'a> SurfaceLight for RectangleLight<'a> {
 impl<'a> Surface for RectangleLight<'a> {
     fn intersect_rays(
         &self,
-        accel_rays: &mut [AccelRay],
-        wrays: &[Ray],
+        rays: &mut RayBatch,
+        ray_stack: &mut RayStack,
         isects: &mut [SurfaceIntersection],
         shader: &SurfaceShader,
         space: &[Matrix4x4],
     ) {
         let _ = shader; // Silence 'unused' warning
 
-        for r in accel_rays.iter_mut() {
-            let wr = &wrays[r.id as usize];
+        ray_stack.pop_do_next_task(|ray_idx| {
+            let time = rays.time(ray_idx);
+            let orig = rays.orig(ray_idx);
+            let dir = rays.dir(ray_idx);
+            let max_t = rays.max_t(ray_idx);
 
             // Calculate time interpolated values
-            let dim = lerp_slice(self.dimensions, r.time);
-            let xform = lerp_slice(space, r.time);
+            let dim = lerp_slice(self.dimensions, time);
+            let xform = lerp_slice(space, time);
 
             let space_inv = xform.inverse();
 
@@ -281,18 +284,19 @@ impl<'a> Surface for RectangleLight<'a> {
             let p4 = Point::new(dim.0 * 0.5, dim.1 * -0.5, 0.0) * space_inv;
 
             // Test against two triangles that make up the light
+            let ray_pre = triangle::RayTriPrecompute::new(dir);
             for tri in &[(p1, p2, p3), (p3, p4, p1)] {
-                if let Some((t, b0, b1, b2)) = triangle::intersect_ray(wr, *tri) {
-                    if t < r.max_t {
-                        if r.is_occlusion() {
-                            isects[r.id as usize] = SurfaceIntersection::Occlude;
-                            r.mark_done();
+                if let Some((t, b0, b1, b2)) = triangle::intersect_ray(orig, ray_pre, max_t, *tri) {
+                    if t < max_t {
+                        if rays.is_occlusion(ray_idx) {
+                            isects[ray_idx] = SurfaceIntersection::Occlude;
+                            rays.mark_done(ray_idx);
                         } else {
                             let (pos, pos_err) = triangle::surface_point(*tri, (b0, b1, b2));
                             let normal = cross(tri.0 - tri.1, tri.0 - tri.2).into_normal();
 
                             let intersection_data = SurfaceIntersectionData {
-                                incoming: wr.dir,
+                                incoming: dir,
                                 t: t,
                                 pos: pos,
                                 pos_err: pos_err,
@@ -301,35 +305,35 @@ impl<'a> Surface for RectangleLight<'a> {
                                 local_space: xform,
                                 sample_pdf: self.sample_pdf(
                                     &xform,
-                                    wr.orig,
-                                    wr.dir,
+                                    orig,
+                                    dir,
                                     pos,
-                                    wr.wavelength,
-                                    r.time,
+                                    rays.wavelength(ray_idx),
+                                    time,
                                 ),
                             };
 
                             let closure = {
                                 let inv_surface_area = (1.0 / (dim.0 as f64 * dim.1 as f64)) as f32;
-                                let color = lerp_slice(self.colors, r.time) * inv_surface_area;
+                                let color = lerp_slice(self.colors, time) * inv_surface_area;
                                 SurfaceClosure::Emit(color)
                             };
 
                             // Fill in intersection
-                            isects[r.id as usize] = SurfaceIntersection::Hit {
+                            isects[ray_idx] = SurfaceIntersection::Hit {
                                 intersection_data: intersection_data,
                                 closure: closure,
                             };
 
                             // Set ray's max t
-                            r.max_t = t;
+                            rays.set_max_t(ray_idx, t);
                         }
 
                         break;
                     }
                 }
             }
-        }
+        });
     }
 }
 
