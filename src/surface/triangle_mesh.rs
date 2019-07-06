@@ -38,44 +38,49 @@ impl<'a> TriangleMesh<'a> {
         // Copy verts over to a contiguous area of memory, reorganizing them
         // so that each vertices' time samples are contiguous in memory.
         let vertices = {
-            let vertices =
-                unsafe { arena.alloc_array_uninitialized(vert_count * time_sample_count) };
+            let vertices = arena.alloc_array_uninitialized(vert_count * time_sample_count);
 
             for vi in 0..vert_count {
                 for ti in 0..time_sample_count {
-                    vertices[(vi * time_sample_count) + ti] = verts[ti][vi];
+                    unsafe {
+                        *vertices[(vi * time_sample_count) + ti].as_mut_ptr() = verts[ti][vi];
+                    }
                 }
             }
 
-            vertices
+            unsafe { std::mem::transmute(vertices) }
         };
 
         // Copy vertex normals, if any, organizing them the same as vertices
         // above.
         let normals = match vert_normals {
             Some(ref vnors) => {
-                let normals =
-                    unsafe { arena.alloc_array_uninitialized(vert_count * time_sample_count) };
+                let normals = arena.alloc_array_uninitialized(vert_count * time_sample_count);
 
                 for vi in 0..vert_count {
                     for ti in 0..time_sample_count {
-                        normals[(vi * time_sample_count) + ti] = vnors[ti][vi];
+                        unsafe {
+                            *normals[(vi * time_sample_count) + ti].as_mut_ptr() = vnors[ti][vi];
+                        }
                     }
                 }
 
-                Some(&normals[..])
+                unsafe { Some(std::mem::transmute(&normals[..])) }
             }
 
             None => None,
         };
 
         // Copy triangle vertex indices over, appending the triangle index itself to the tuple
-        let indices = {
-            let indices = unsafe { arena.alloc_array_uninitialized(tri_indices.len()) };
+        let indices: &mut [(u32, u32, u32, u32)] = {
+            let indices = arena.alloc_array_uninitialized(tri_indices.len());
             for (i, tri_i) in tri_indices.iter().enumerate() {
-                indices[i] = (tri_i.0 as u32, tri_i.2 as u32, tri_i.1 as u32, i as u32);
+                unsafe {
+                    *indices[i].as_mut_ptr() =
+                        (tri_i.0 as u32, tri_i.2 as u32, tri_i.1 as u32, i as u32);
+                }
             }
-            indices
+            unsafe { std::mem::transmute(indices) }
         };
 
         // Create bounds array for use during BVH construction
@@ -140,22 +145,27 @@ impl<'a> Surface for TriangleMesh<'a> {
                 let is_cached = ray_stack.ray_count_in_next_task() >= tri_count
                     && self.time_sample_count == 1
                     && space.len() <= 1;
-                let mut tri_cache = [unsafe { std::mem::uninitialized() }; MAX_LEAF_TRIANGLE_COUNT];
+                let mut tri_cache = [std::mem::MaybeUninit::uninit(); MAX_LEAF_TRIANGLE_COUNT];
                 if is_cached {
                     for tri_idx in idx_range.clone() {
                         let i = tri_idx - idx_range.start;
                         let tri_indices = self.indices[tri_idx];
 
                         // For static triangles with static transforms, cache them.
-                        tri_cache[i] = (
-                            self.vertices[tri_indices.0 as usize],
-                            self.vertices[tri_indices.1 as usize],
-                            self.vertices[tri_indices.2 as usize],
-                        );
-                        if !space.is_empty() {
-                            tri_cache[i].0 = tri_cache[i].0 * static_mat_space;
-                            tri_cache[i].1 = tri_cache[i].1 * static_mat_space;
-                            tri_cache[i].2 = tri_cache[i].2 * static_mat_space;
+                        unsafe {
+                            *tri_cache[i].as_mut_ptr() = (
+                                self.vertices[tri_indices.0 as usize],
+                                self.vertices[tri_indices.1 as usize],
+                                self.vertices[tri_indices.2 as usize],
+                            );
+                            if !space.is_empty() {
+                                (*tri_cache[i].as_mut_ptr()).0 =
+                                    (*tri_cache[i].as_mut_ptr()).0 * static_mat_space;
+                                (*tri_cache[i].as_mut_ptr()).1 =
+                                    (*tri_cache[i].as_mut_ptr()).1 * static_mat_space;
+                                (*tri_cache[i].as_mut_ptr()).2 =
+                                    (*tri_cache[i].as_mut_ptr()).2 * static_mat_space;
+                            }
                         }
                     }
                 }
@@ -180,9 +190,9 @@ impl<'a> Surface for TriangleMesh<'a> {
 
                     // Iterate through the triangles and test the ray against them.
                     let mut non_shadow_hit = false;
-                    let mut hit_tri = unsafe { std::mem::uninitialized() };
-                    let mut hit_tri_indices = unsafe { std::mem::uninitialized() };
-                    let mut hit_tri_data = unsafe { std::mem::uninitialized() };
+                    let mut hit_tri = std::mem::MaybeUninit::uninit();
+                    let mut hit_tri_indices = std::mem::MaybeUninit::uninit();
+                    let mut hit_tri_data = std::mem::MaybeUninit::uninit();
                     let ray_pre = triangle::RayTriPrecompute::new(rays.dir(ray_idx));
                     for tri_idx in idx_range.clone() {
                         let tri_indices = self.indices[tri_idx];
@@ -190,7 +200,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                         // Get triangle if necessary
                         let tri = if is_cached {
                             let i = tri_idx - idx_range.start;
-                            tri_cache[i]
+                            unsafe { tri_cache[i].assume_init() }
                         } else {
                             let mut tri = if self.time_sample_count == 1 {
                                 // No deformation motion blur, so fast-path it.
@@ -241,16 +251,19 @@ impl<'a> Surface for TriangleMesh<'a> {
                             } else {
                                 non_shadow_hit = true;
                                 rays.set_max_t(ray_idx, t);
-                                hit_tri = tri;
-                                hit_tri_indices = tri_indices;
-                                hit_tri_data = (t, b0, b1, b2);
+                                unsafe {
+                                    *hit_tri.as_mut_ptr() = tri;
+                                    *hit_tri_indices.as_mut_ptr() = tri_indices;
+                                    *hit_tri_data.as_mut_ptr() = (t, b0, b1, b2);
+                                }
                             }
                         }
                     }
 
                     // Calculate intersection data if necessary.
                     if non_shadow_hit {
-                        let (t, b0, b1, b2) = hit_tri_data;
+                        let hit_tri = unsafe { hit_tri.assume_init() };
+                        let (t, b0, b1, b2) = unsafe { hit_tri_data.assume_init() };
 
                         // Calculate intersection point and error magnitudes
                         let (pos, pos_err) = triangle::surface_point(hit_tri, (b0, b1, b2));
@@ -261,6 +274,7 @@ impl<'a> Surface for TriangleMesh<'a> {
 
                         // Calculate interpolated surface normal, if any
                         let shading_normal = if let Some(normals) = self.normals {
+                            let hit_tri_indices = unsafe { hit_tri_indices.assume_init() };
                             let n0_slice = &normals[(hit_tri_indices.0 as usize
                                 * self.time_sample_count)
                                 ..((hit_tri_indices.0 as usize + 1) * self.time_sample_count)];

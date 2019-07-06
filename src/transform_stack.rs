@@ -1,9 +1,12 @@
-use std::cmp;
+use std::{
+    cmp,
+    mem::{transmute, MaybeUninit},
+};
 
 use crate::{algorithm::merge_slices_to, math::Matrix4x4};
 
 pub struct TransformStack {
-    stack: Vec<Matrix4x4>,
+    stack: Vec<MaybeUninit<Matrix4x4>>,
     stack_indices: Vec<usize>,
 }
 
@@ -31,6 +34,7 @@ impl TransformStack {
         assert!(!xforms.is_empty());
 
         if self.stack.is_empty() {
+            let xforms: &[MaybeUninit<Matrix4x4>] = unsafe { transmute(xforms) };
             self.stack.extend(xforms);
         } else {
             let sil = self.stack_indices.len();
@@ -46,7 +50,12 @@ impl TransformStack {
                 unsafe { self.stack.set_len(l + maxlen) };
             }
             let (xfs1, xfs2) = self.stack.split_at_mut(i2);
-            merge_slices_to(&xfs1[i1..i2], xforms, xfs2, |xf1, xf2| *xf1 * *xf2);
+            merge_slices_to(
+                unsafe { transmute(&xfs1[i1..i2]) },
+                xforms,
+                xfs2,
+                |xf1, xf2| *xf1 * *xf2,
+            );
         }
 
         self.stack_indices.push(self.stack.len());
@@ -69,6 +78,6 @@ impl TransformStack {
         let i1 = self.stack_indices[sil - 2];
         let i2 = self.stack_indices[sil - 1];
 
-        &self.stack[i1..i2]
+        unsafe { transmute(&self.stack[i1..i2]) }
     }
 }

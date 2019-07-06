@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use std::cmp::{self, Ordering};
+use std::{
+    cmp::{self, Ordering},
+    mem::MaybeUninit,
+};
 
 use crate::{
     hash::hash_u64,
@@ -260,8 +263,12 @@ pub fn merge_slices_append<T: Lerp + Copy, F>(
 
 /// Merges two slices of things, storing the result in `slice_out`.
 /// Panics if `slice_out` is not the right size.
-pub fn merge_slices_to<T: Lerp + Copy, F>(slice1: &[T], slice2: &[T], slice_out: &mut [T], merge: F)
-where
+pub fn merge_slices_to<T: Lerp + Copy, F>(
+    slice1: &[T],
+    slice2: &[T],
+    slice_out: &mut [MaybeUninit<T>],
+    merge: F,
+) where
     F: Fn(&T, &T) -> T,
 {
     assert_eq!(slice_out.len(), cmp::max(slice1.len(), slice2.len()));
@@ -274,19 +281,25 @@ where
             slice_out.iter_mut(),
             Iterator::zip(slice1.iter(), slice2.iter()),
         ) {
-            *xfo = merge(xf1, xf2);
+            unsafe {
+                *xfo.as_mut_ptr() = merge(xf1, xf2);
+            }
         }
     } else if slice1.len() > slice2.len() {
         let s = (slice1.len() - 1) as f32;
         for (i, (xfo, xf1)) in Iterator::zip(slice_out.iter_mut(), slice1.iter()).enumerate() {
             let xf2 = lerp_slice(slice2, i as f32 / s);
-            *xfo = merge(xf1, &xf2);
+            unsafe {
+                *xfo.as_mut_ptr() = merge(xf1, &xf2);
+            }
         }
     } else if slice1.len() < slice2.len() {
         let s = (slice2.len() - 1) as f32;
         for (i, (xfo, xf2)) in Iterator::zip(slice_out.iter_mut(), slice2.iter()).enumerate() {
             let xf1 = lerp_slice(slice1, i as f32 / s);
-            *xfo = merge(&xf1, xf2);
+            unsafe {
+                *xfo.as_mut_ptr() = merge(&xf1, xf2);
+            }
         }
     }
 }

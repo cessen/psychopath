@@ -5,7 +5,8 @@
 use std::{
     cell::{Cell, RefCell},
     cmp::max,
-    mem::{align_of, size_of},
+    fmt,
+    mem::{align_of, size_of, transmute, MaybeUninit},
     slice,
 };
 
@@ -26,13 +27,25 @@ fn alignment_offset(addr: usize, alignment: usize) -> usize {
 ///
 /// Additionally, it attempts to minimize wasted space through some heuristics.  By
 /// default, it tries to keep memory waste within the arena below 10%.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct MemArena {
-    blocks: RefCell<Vec<Vec<u8>>>,
+    blocks: RefCell<Vec<Vec<MaybeUninit<u8>>>>,
     min_block_size: usize,
     max_waste_percentage: usize,
     stat_space_occupied: Cell<usize>,
     stat_space_allocated: Cell<usize>,
+}
+
+impl fmt::Debug for MemArena {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("MemArena")
+            .field("blocks.len():", &self.blocks.borrow().len())
+            .field("min_block_size", &self.min_block_size)
+            .field("max_waste_percentage", &self.max_waste_percentage)
+            .field("stat_space_occupied", &self.stat_space_occupied)
+            .field("stat_space_allocated", &self.stat_space_allocated)
+            .finish()
+    }
 }
 
 impl MemArena {
@@ -111,9 +124,11 @@ impl MemArena {
 
     /// Allocates memory for and initializes a type T, returning a mutable reference to it.
     pub fn alloc<T: Copy>(&self, value: T) -> &mut T {
-        let memory = unsafe { self.alloc_uninitialized() };
-        *memory = value;
-        memory
+        let memory = self.alloc_uninitialized();
+        unsafe {
+            *memory.as_mut_ptr() = value;
+        }
+        unsafe { transmute(memory) }
     }
 
     /// Allocates memory for and initializes a type T, returning a mutable reference to it.
@@ -121,20 +136,22 @@ impl MemArena {
     /// Additionally, the allocation will be made with the given byte alignment or
     /// the type's inherent alignment, whichever is greater.
     pub fn alloc_with_alignment<T: Copy>(&self, value: T, align: usize) -> &mut T {
-        let memory = unsafe { self.alloc_uninitialized_with_alignment(align) };
-        *memory = value;
-        memory
+        let memory = self.alloc_uninitialized_with_alignment(align);
+        unsafe {
+            *memory.as_mut_ptr() = value;
+        }
+        unsafe { transmute(memory) }
     }
 
     /// Allocates memory for a type `T`, returning a mutable reference to it.
     ///
     /// CAUTION: the memory returned is uninitialized.  Make sure to initalize before using!
-    pub unsafe fn alloc_uninitialized<T: Copy>(&self) -> &mut T {
+    pub fn alloc_uninitialized<T: Copy>(&self) -> &mut MaybeUninit<T> {
         assert!(size_of::<T>() > 0);
 
-        let memory = self.alloc_raw(size_of::<T>(), align_of::<T>()) as *mut T;
+        let memory = self.alloc_raw(size_of::<T>(), align_of::<T>()) as *mut MaybeUninit<T>;
 
-        memory.as_mut().unwrap()
+        unsafe { memory.as_mut().unwrap() }
     }
 
     /// Allocates memory for a type `T`, returning a mutable reference to it.
@@ -143,24 +160,27 @@ impl MemArena {
     /// the type's inherent alignment, whichever is greater.
     ///
     /// CAUTION: the memory returned is uninitialized.  Make sure to initalize before using!
-    pub unsafe fn alloc_uninitialized_with_alignment<T: Copy>(&self, align: usize) -> &mut T {
+    pub fn alloc_uninitialized_with_alignment<T: Copy>(&self, align: usize) -> &mut MaybeUninit<T> {
         assert!(size_of::<T>() > 0);
 
-        let memory = self.alloc_raw(size_of::<T>(), max(align, align_of::<T>())) as *mut T;
+        let memory =
+            self.alloc_raw(size_of::<T>(), max(align, align_of::<T>())) as *mut MaybeUninit<T>;
 
-        memory.as_mut().unwrap()
+        unsafe { memory.as_mut().unwrap() }
     }
 
     /// Allocates memory for `len` values of type `T`, returning a mutable slice to it.
     /// All elements are initialized to the given `value`.
     pub fn alloc_array<T: Copy>(&self, len: usize, value: T) -> &mut [T] {
-        let memory = unsafe { self.alloc_array_uninitialized(len) };
+        let memory = self.alloc_array_uninitialized(len);
 
         for v in memory.iter_mut() {
-            *v = value;
+            unsafe {
+                *v.as_mut_ptr() = value;
+            }
         }
 
-        memory
+        unsafe { transmute(memory) }
     }
 
     /// Allocates memory for `len` values of type `T`, returning a mutable slice to it.
@@ -174,25 +194,29 @@ impl MemArena {
         value: T,
         align: usize,
     ) -> &mut [T] {
-        let memory = unsafe { self.alloc_array_uninitialized_with_alignment(len, align) };
+        let memory = self.alloc_array_uninitialized_with_alignment(len, align);
 
         for v in memory.iter_mut() {
-            *v = value;
+            unsafe {
+                *v.as_mut_ptr() = value;
+            }
         }
 
-        memory
+        unsafe { transmute(memory) }
     }
 
     /// Allocates and initializes memory to duplicate the given slice, returning a mutable slice
     /// to the new copy.
     pub fn copy_slice<T: Copy>(&self, other: &[T]) -> &mut [T] {
-        let memory = unsafe { self.alloc_array_uninitialized(other.len()) };
+        let memory = self.alloc_array_uninitialized(other.len());
 
         for (v, other) in memory.iter_mut().zip(other.iter()) {
-            *v = *other;
+            unsafe {
+                *v.as_mut_ptr() = *other;
+            }
         }
 
-        memory
+        unsafe { transmute(memory) }
     }
 
     /// Allocates and initializes memory to duplicate the given slice, returning a mutable slice
@@ -201,19 +225,21 @@ impl MemArena {
     /// Additionally, the allocation will be made with the given byte alignment or
     /// the type's inherent alignment, whichever is greater.
     pub fn copy_slice_with_alignment<T: Copy>(&self, other: &[T], align: usize) -> &mut [T] {
-        let memory = unsafe { self.alloc_array_uninitialized_with_alignment(other.len(), align) };
+        let memory = self.alloc_array_uninitialized_with_alignment(other.len(), align);
 
         for (v, other) in memory.iter_mut().zip(other.iter()) {
-            *v = *other;
+            unsafe {
+                *v.as_mut_ptr() = *other;
+            }
         }
 
-        memory
+        unsafe { transmute(memory) }
     }
 
     /// Allocates memory for `len` values of type `T`, returning a mutable slice to it.
     ///
     /// CAUTION: the memory returned is uninitialized.  Make sure to initalize before using!
-    pub unsafe fn alloc_array_uninitialized<T: Copy>(&self, len: usize) -> &mut [T] {
+    pub fn alloc_array_uninitialized<T: Copy>(&self, len: usize) -> &mut [MaybeUninit<T>] {
         assert!(size_of::<T>() > 0);
 
         let array_mem_size = {
@@ -222,9 +248,9 @@ impl MemArena {
             aligned_type_size * len
         };
 
-        let memory = self.alloc_raw(array_mem_size, align_of::<T>()) as *mut T;
+        let memory = self.alloc_raw(array_mem_size, align_of::<T>()) as *mut MaybeUninit<T>;
 
-        slice::from_raw_parts_mut(memory, len)
+        unsafe { slice::from_raw_parts_mut(memory, len) }
     }
 
     /// Allocates memory for `len` values of type `T`, returning a mutable slice to it.
@@ -233,11 +259,11 @@ impl MemArena {
     /// the type's inherent alignment, whichever is greater.
     ///
     /// CAUTION: the memory returned is uninitialized.  Make sure to initalize before using!
-    pub unsafe fn alloc_array_uninitialized_with_alignment<T: Copy>(
+    pub fn alloc_array_uninitialized_with_alignment<T: Copy>(
         &self,
         len: usize,
         align: usize,
-    ) -> &mut [T] {
+    ) -> &mut [MaybeUninit<T>] {
         assert!(size_of::<T>() > 0);
 
         let array_mem_size = {
@@ -246,9 +272,10 @@ impl MemArena {
             aligned_type_size * len
         };
 
-        let memory = self.alloc_raw(array_mem_size, max(align, align_of::<T>())) as *mut T;
+        let memory =
+            self.alloc_raw(array_mem_size, max(align, align_of::<T>())) as *mut MaybeUninit<T>;
 
-        slice::from_raw_parts_mut(memory, len)
+        unsafe { slice::from_raw_parts_mut(memory, len) }
     }
 
     /// Allocates space with a given size and alignment.
@@ -257,7 +284,7 @@ impl MemArena {
     ///
     /// CAUTION: this returns uninitialized memory.  Make sure to initialize the
     /// memory after calling.
-    unsafe fn alloc_raw(&self, size: usize, alignment: usize) -> *mut u8 {
+    fn alloc_raw(&self, size: usize, alignment: usize) -> *mut MaybeUninit<u8> {
         assert!(alignment > 0);
 
         self.stat_space_allocated
@@ -279,10 +306,12 @@ impl MemArena {
 
             // If it will fit in the current block, use the current block.
             if (start_index + size) <= blocks.first().unwrap().capacity() {
-                blocks.first_mut().unwrap().set_len(start_index + size);
+                unsafe {
+                    blocks.first_mut().unwrap().set_len(start_index + size);
+                }
 
                 let block_ptr = blocks.first_mut().unwrap().as_mut_ptr();
-                return block_ptr.add(start_index);
+                return unsafe { block_ptr.add(start_index) };
             }
             // If it won't fit in the current block, create a new block and use that.
             else {
@@ -318,13 +347,15 @@ impl MemArena {
                         .set(self.stat_space_occupied.get() + size + alignment - 1);
 
                     blocks.push(Vec::with_capacity(size + alignment - 1));
-                    blocks.last_mut().unwrap().set_len(size + alignment - 1);
+                    unsafe {
+                        blocks.last_mut().unwrap().set_len(size + alignment - 1);
+                    }
 
                     let start_index =
                         alignment_offset(blocks.last().unwrap().as_ptr() as usize, alignment);
 
                     let block_ptr = blocks.last_mut().unwrap().as_mut_ptr();
-                    return block_ptr.add(start_index);
+                    return unsafe { block_ptr.add(start_index) };
                 }
                 // Otherwise create a new shared block.
                 else {
@@ -339,10 +370,12 @@ impl MemArena {
                     let start_index =
                         alignment_offset(blocks.first().unwrap().as_ptr() as usize, alignment);
 
-                    blocks.first_mut().unwrap().set_len(start_index + size);
+                    unsafe {
+                        blocks.first_mut().unwrap().set_len(start_index + size);
+                    }
 
                     let block_ptr = blocks.first_mut().unwrap().as_mut_ptr();
-                    return block_ptr.add(start_index);
+                    return unsafe { block_ptr.add(start_index) };
                 }
             }
         }

@@ -1,3 +1,5 @@
+use std::mem::{transmute, MaybeUninit};
+
 use mem_arena::MemArena;
 
 use crate::{
@@ -74,11 +76,11 @@ impl<'a> LightTree<'a> {
             let mut builder = LightTreeBuilder::new();
             builder.recursive_build(0, 0, objects, &info_getter);
 
-            let root = unsafe { arena.alloc_uninitialized::<Node>() };
+            let root = arena.alloc_uninitialized::<Node>();
             LightTree::construct_from_builder(arena, &builder, builder.root_node_index(), root);
 
             LightTree {
-                root: Some(root),
+                root: Some(unsafe { transmute(root) }),
                 depth: builder.depth,
             }
         }
@@ -88,25 +90,27 @@ impl<'a> LightTree<'a> {
         arena: &'a MemArena,
         base: &LightTreeBuilder,
         node_index: usize,
-        node_mem: &mut Node<'a>,
+        node_mem: &mut MaybeUninit<Node<'a>>,
     ) {
         if base.nodes[node_index].is_leaf {
             // Leaf
             let bounds_range = base.nodes[node_index].bounds_range;
             let bounds = arena.copy_slice(&base.bounds[bounds_range.0..bounds_range.1]);
 
-            *node_mem = Node::Leaf {
-                light_index: base.nodes[node_index].child_index,
-                bounds: bounds,
-                energy: base.nodes[node_index].energy,
-            };
+            unsafe {
+                *node_mem.as_mut_ptr() = Node::Leaf {
+                    light_index: base.nodes[node_index].child_index,
+                    bounds: bounds,
+                    energy: base.nodes[node_index].energy,
+                };
+            }
         } else {
             // Inner
             let bounds_range = base.nodes[node_index].bounds_range;
             let bounds = arena.copy_slice(&base.bounds[bounds_range.0..bounds_range.1]);
 
             let child_count = base.node_child_count(node_index);
-            let children = unsafe { arena.alloc_array_uninitialized::<Node>(child_count) };
+            let children = arena.alloc_array_uninitialized::<Node>(child_count);
             for i in 0..child_count {
                 LightTree::construct_from_builder(
                     arena,
@@ -116,11 +120,13 @@ impl<'a> LightTree<'a> {
                 );
             }
 
-            *node_mem = Node::Inner {
-                children: children,
-                bounds: bounds,
-                energy: base.nodes[node_index].energy,
-            };
+            unsafe {
+                *node_mem.as_mut_ptr() = Node::Inner {
+                    children: transmute(children),
+                    bounds: bounds,
+                    energy: base.nodes[node_index].energy,
+                };
+            }
         }
     }
 }

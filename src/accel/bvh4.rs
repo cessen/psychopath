@@ -4,6 +4,8 @@
 
 #![allow(dead_code)]
 
+use std::mem::{transmute, MaybeUninit};
+
 use mem_arena::MemArena;
 
 use crate::{
@@ -71,7 +73,7 @@ impl<'a> BVH4<'a> {
         } else {
             let base = BVHBase::from_objects(objects, objects_per_leaf, bounder);
 
-            let fill_node = unsafe { arena.alloc_uninitialized_with_alignment::<BVH4Node>(32) };
+            let fill_node = arena.alloc_uninitialized_with_alignment::<BVH4Node>(32);
             let node_count = BVH4::construct_from_base(
                 arena,
                 &base,
@@ -80,7 +82,7 @@ impl<'a> BVH4<'a> {
             );
 
             BVH4 {
-                root: Some(fill_node),
+                root: Some(unsafe { transmute(fill_node) }),
                 depth: (base.depth / 2) + 1,
                 node_count: node_count,
                 _bounds: {
@@ -184,7 +186,7 @@ impl<'a> BVH4<'a> {
         arena: &'a MemArena,
         base: &BVHBase,
         node: &BVHBaseNode,
-        fill_node: &mut BVH4Node<'a>,
+        fill_node: &mut MaybeUninit<BVH4Node<'a>>,
     ) -> usize {
         let mut node_count = 0;
 
@@ -282,8 +284,7 @@ impl<'a> BVH4<'a> {
                         .max()
                         .unwrap();
                     debug_assert!(bounds_len >= 1);
-                    let bounds =
-                        unsafe { arena.alloc_array_uninitialized_with_alignment(bounds_len, 32) };
+                    let bounds = arena.alloc_array_uninitialized_with_alignment(bounds_len, 32);
                     if bounds_len < 2 {
                         let b1 =
                             children[0].map_or(BBox::new(), |c| base.bounds[c.bounds_range().0]);
@@ -293,7 +294,9 @@ impl<'a> BVH4<'a> {
                             children[2].map_or(BBox::new(), |c| base.bounds[c.bounds_range().0]);
                         let b4 =
                             children[3].map_or(BBox::new(), |c| base.bounds[c.bounds_range().0]);
-                        bounds[0] = BBox4::from_bboxes(b1, b2, b3, b4);
+                        unsafe {
+                            *bounds[0].as_mut_ptr() = BBox4::from_bboxes(b1, b2, b3, b4);
+                        }
                     } else {
                         for (i, b) in bounds.iter_mut().enumerate() {
                             let time = i as f32 / (bounds_len - 1) as f32;
@@ -314,34 +317,39 @@ impl<'a> BVH4<'a> {
                                 let (x, y) = c.bounds_range();
                                 lerp_slice(&base.bounds[x..y], time)
                             });
-                            *b = BBox4::from_bboxes(b1, b2, b3, b4);
+                            unsafe {
+                                *b.as_mut_ptr() = BBox4::from_bboxes(b1, b2, b3, b4);
+                            }
                         }
                     }
                     bounds
                 };
 
                 // Construct child nodes
-                let child_nodes = unsafe {
-                    arena.alloc_array_uninitialized_with_alignment::<BVH4Node>(child_count, 32)
-                };
+                let child_nodes =
+                    arena.alloc_array_uninitialized_with_alignment::<BVH4Node>(child_count, 32);
                 for (i, c) in children[0..child_count].iter().enumerate() {
                     node_count +=
                         BVH4::construct_from_base(arena, base, c.unwrap(), &mut child_nodes[i]);
                 }
 
                 // Build this node
-                *fill_node = BVH4Node::Internal {
-                    bounds: bounds,
-                    children: child_nodes,
-                    traversal_code: calc_traversal_code(split_info),
-                };
+                unsafe {
+                    *fill_node.as_mut_ptr() = BVH4Node::Internal {
+                        bounds: transmute(bounds),
+                        children: transmute(child_nodes),
+                        traversal_code: calc_traversal_code(split_info),
+                    };
+                }
             }
 
             // Create internal node
             &BVHBaseNode::Leaf { object_range, .. } => {
-                *fill_node = BVH4Node::Leaf {
-                    object_range: object_range,
-                };
+                unsafe {
+                    *fill_node.as_mut_ptr() = BVH4Node::Leaf {
+                        object_range: object_range,
+                    };
+                }
                 node_count += 1;
             }
         }
