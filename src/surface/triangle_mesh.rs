@@ -183,6 +183,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                     let mut hit_tri = unsafe { std::mem::uninitialized() };
                     let mut hit_tri_indices = unsafe { std::mem::uninitialized() };
                     let mut hit_tri_data = unsafe { std::mem::uninitialized() };
+                    let ray_pre = triangle::RayTriPrecompute::new(rays.dir(ray_idx));
                     for tri_idx in idx_range.clone() {
                         let tri_indices = self.indices[tri_idx];
 
@@ -229,7 +230,7 @@ impl<'a> Surface for TriangleMesh<'a> {
                         // Test ray against triangle
                         if let Some((t, b0, b1, b2)) = triangle::intersect_ray(
                             rays.orig(ray_idx),
-                            rays.dir(ray_idx),
+                            ray_pre,
                             rays.max_t(ray_idx),
                             tri,
                         ) {

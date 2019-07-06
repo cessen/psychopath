@@ -284,8 +284,9 @@ impl<'a> Surface for RectangleLight<'a> {
             let p4 = Point::new(dim.0 * 0.5, dim.1 * -0.5, 0.0) * space_inv;
 
             // Test against two triangles that make up the light
+            let ray_pre = triangle::RayTriPrecompute::new(dir);
             for tri in &[(p1, p2, p3), (p3, p4, p1)] {
-                if let Some((t, b0, b1, b2)) = triangle::intersect_ray(orig, dir, max_t, *tri) {
+                if let Some((t, b0, b1, b2)) = triangle::intersect_ray(orig, ray_pre, max_t, *tri) {
                     if t < max_t {
                         if rays.is_occlusion(ray_idx) {
                             isects[ray_idx] = SurfaceIntersection::Occlude;
