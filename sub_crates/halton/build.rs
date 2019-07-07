@@ -98,33 +98,10 @@ pub const MAX_DIMENSION: u32 = {};
     f.write_all(
         format!(
             r#"
-#[inline]
 pub fn sample(dimension: u32, index: u32) -> f32 {{
+    let mut index = index;
+
     match dimension {{"#
-        )
-        .as_bytes(),
-    )
-    .unwrap();
-
-    for i in 0..NUM_DIMENSIONS {
-        f.write_all(
-            format!(
-                r#"
-        {} => halton{}(index),"#,
-                i, primes[i]
-            )
-            .as_bytes(),
-        )
-        .unwrap();
-    }
-
-    f.write_all(
-        format!(
-            r#"
-        _ => panic!("Exceeded max dimensions."),
-    }}
-}}
-    "#
         )
         .as_bytes(),
     )
@@ -134,23 +111,22 @@ pub fn sample(dimension: u32, index: u32) -> f32 {{
     f.write_all(
         format!(
             r#"
-// Special case: radical inverse in base 2, with direct bit reversal.
-fn halton2(mut index: u32) -> f32 {{
-    index = (index << 16) | (index >> 16);
-    index = ((index & 0x00ff00ff) << 8) | ((index & 0xff00ff00) >> 8);
-    index = ((index & 0x0f0f0f0f) << 4) | ((index & 0xf0f0f0f0) >> 4);
-    index = ((index & 0x33333333) << 2) | ((index & 0xcccccccc) >> 2);
-    index = ((index & 0x55555555) << 1) | ((index & 0xaaaaaaaa) >> 1);
-    return (index as f32) * (1.0 / ((1u64 << 32) as f32));
-}}
-    "#
+        // Special case: radical inverse in base 2, with direct bit reversal.
+        0 => {{
+            index = (index << 16) | (index >> 16);
+            index = ((index & 0x00ff00ff) << 8) | ((index & 0xff00ff00) >> 8);
+            index = ((index & 0x0f0f0f0f) << 4) | ((index & 0xf0f0f0f0) >> 4);
+            index = ((index & 0x33333333) << 2) | ((index & 0xcccccccc) >> 2);
+            index = ((index & 0x55555555) << 1) | ((index & 0xaaaaaaaa) >> 1);
+            return (index as f32) * (1.0 / ((1u64 << 32) as f32));
+        }}"#,
         )
         .as_bytes(),
     )
     .unwrap();
 
+    // The rest of the dimensions.
     for i in 1..NUM_DIMENSIONS {
-        // Skip base 2.
         let base = primes[i];
 
         // Based on the permutation table size, we process multiple digits at once.
@@ -187,26 +163,28 @@ fn halton2(mut index: u32) -> f32 {{
         f.write_all(
             format!(
                 r#"
-fn halton{}(index: u32) -> f32 {{
-    static PERM{}: [u16; {}] = [{}];"#,
-                base,
+
+        {} => {{
+            static PERM{}: [u16; {}] = [{}];"#,
+                i,
                 base,
                 perm.len(),
                 perm_string
             )
             .as_bytes(),
         )
-        .unwrap();;
+        .unwrap();
 
         f.write_all(
             format!(
                 r#"
-    return (unsafe{{*PERM{}.get_unchecked((index % {}) as usize)}} as u32 * {} +"#,
+            return unsafe {{(
+                *PERM{}.get_unchecked((index % {}) as usize) as u32 * {}"#,
                 base, pow_base, power
             )
             .as_bytes(),
         )
-        .unwrap();;
+        .unwrap();
 
         // Advance to next set of digits.
         let mut div = 1;
@@ -216,20 +194,21 @@ fn halton{}(index: u32) -> f32 {{
             f.write_all(
                 format!(
                     r#"
-            unsafe{{*PERM{}.get_unchecked(((index / {}) % {}) as usize)}} as u32 * {} +"#,
+                + *PERM{}.get_unchecked(((index / {}) % {}) as usize) as u32 * {}"#,
                     base, div, pow_base, power
                 )
                 .as_bytes(),
             )
-            .unwrap();;
+            .unwrap();
         }
 
         f.write_all(
             format!(
                 r#"
-            unsafe{{*PERM{}.get_unchecked(((index / {}) % {}) as usize)}} as u32) as f32 *
-                   (0.999999940395355224609375f32 / ({}u32 as f32)); // Results in [0,1).
-}}
+                + *PERM{}.get_unchecked(((index / {}) % {}) as usize) as u32
+            )}} as f32
+            * (0.999999940395355224609375f32 / ({}u32 as f32)); // Results in [0,1).
+        }}
         "#,
                 base,
                 div * pow_base,
@@ -238,8 +217,20 @@ fn halton{}(index: u32) -> f32 {{
             )
             .as_bytes(),
         )
-        .unwrap();;
+        .unwrap();
     }
+
+    f.write_all(
+        format!(
+            r#"
+        _ => panic!("Halton sampling: exceeded max dimensions."),
+    }}
+}}
+    "#
+        )
+        .as_bytes(),
+    )
+    .unwrap();
 }
 
 /// Check primality. Not optimized, since it's not performance-critical.
