@@ -1,18 +1,17 @@
-//! Encoding/decoding for a 32-bit shared-exponent representation of three
-//! positive floating point numbers.
+//! Encoding/decoding for unsigned 32-bit trifloat numbers.
 //!
-//! This is useful for e.g. compactly storing HDR colors.  The encoding
-//! uses 9 bits of mantissa per number, and 5 bits for the shared
-//! exponent.  The bit layout is [mantissa 1, mantissa 2, mantissa 3,
-//! exponent].  The exponent is stored as an unsigned integer with a
-//! bias of 10.
+//! The encoding uses 9 bits of mantissa per number, and 5 bits for the shared
+//! exponent.  The bit layout is [mantissa 1, mantissa 2, mantissa 3, exponent].
+//! The exponent is stored as an unsigned integer with a bias of 10.
 //!
-//! The largest representable number is 2^21 - 4096, and the smallest
-//! representable non-zero number is 2^-19.
+//! The largest representable number is `2^21 - 4096`, and the smallest
+//! representable non-zero number is `2^-19`.
 //!
 //! Since the exponent is shared between the three values, the precision
 //! of all three values depends on the largest of the three.  All integers
 //! up to 512 can be represented exactly in the largest value.
+
+use crate::{fiddle_exp2, fiddle_log2};
 
 /// Largest representable number.
 pub const MAX: f32 = 2_093_056.0;
@@ -23,19 +22,18 @@ pub const MIN: f32 = 0.000_001_907_348_6;
 /// Difference between 1.0 and the next largest representable number.
 pub const EPSILON: f32 = 1.0 / 256.0;
 
-#[derive(Debug, Copy, Clone)]
-pub struct U9(u32);
+const EXP_BIAS: i32 = 10;
+const MIN_EXP: i32 = 0 - EXP_BIAS;
+const MAX_EXP: i32 = 31 - EXP_BIAS;
 
-/// Encodes three floating point values into the trifloat format.
+/// Encodes three floating point values into a signed 32-bit trifloat.
 ///
-/// Floats that are larger than the max representable value in trifloat
-/// will saturate.  Values are converted to trifloat by rounding, so the
-/// max error introduced by this function is epsilon / 2.
+/// Input floats larger than `MAX` will saturate to `MAX`, including infinity.
+/// Values are converted to trifloat precision by rounding.
 ///
 /// Warning: negative values and NaN's are _not_ supported by the trifloat
 /// format.  There are debug-only assertions in place to catch such
-/// values in the input floats.  Infinity is also not supported in the
-/// format, but will simply saturate to the largest representable value.
+/// values in the input floats.
 #[inline]
 pub fn encode(floats: (f32, f32, f32)) -> u32 {
     debug_assert!(
@@ -45,9 +43,9 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
             && !floats.0.is_nan()
             && !floats.1.is_nan()
             && !floats.2.is_nan(),
-        "trifloat::encode(): encoding to tri-floats only works correctly for \
-         positive, non-NaN numbers, but the numbers passed were: ({}, \
-         {}, {})",
+        "trifloat::unsigned32::encode(): encoding to unsigned tri-floats only \
+         works correctly for positive, non-NaN numbers, but the numbers passed \
+         were: ({}, {}, {})",
         floats.0,
         floats.1,
         floats.2
@@ -60,13 +58,13 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
     }
 
     // Calculate the exponent and 1.0/multiplier for encoding the values.
-    let mut exponent = (fiddle_log2(largest_value) + 1).max(-10).min(21);
+    let mut exponent = (fiddle_log2(largest_value) + 1).max(MIN_EXP).min(MAX_EXP);
     let mut inv_multiplier = fiddle_exp2(-exponent + 9);
 
     // Edge-case: make sure rounding pushes the largest value up
     // appropriately if needed.
     if (largest_value * inv_multiplier) + 0.5 >= 512.0 {
-        exponent = (exponent + 1).min(21);
+        exponent = (exponent + 1).min(MAX_EXP);
         inv_multiplier = fiddle_exp2(-exponent + 9);
     }
 
@@ -74,13 +72,13 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
     let x = (floats.0 * inv_multiplier + 0.5).min(511.0) as u32 & 0b1_1111_1111;
     let y = (floats.1 * inv_multiplier + 0.5).min(511.0) as u32 & 0b1_1111_1111;
     let z = (floats.2 * inv_multiplier + 0.5).min(511.0) as u32 & 0b1_1111_1111;
-    let e = (exponent + 10) as u32 & 0b1_1111;
+    let e = (exponent + EXP_BIAS) as u32 & 0b1_1111;
 
     // Pack values into a u32.
     (x << (5 + 9 + 9)) | (y << (5 + 9)) | (z << 5) | e
 }
 
-/// Decodes a trifloat into three full floating point numbers.
+/// Decodes an unsigned 32-bit trifloat into three full floating point numbers.
 ///
 /// This operation is lossless and cannot fail.
 #[inline]
@@ -91,36 +89,13 @@ pub fn decode(trifloat: u32) -> (f32, f32, f32) {
     let z = (trifloat >> 5) & 0b1_1111_1111;
     let e = trifloat & 0b1_1111;
 
-    let multiplier = fiddle_exp2(e as i32 - 10 - 9);
+    let multiplier = fiddle_exp2(e as i32 - EXP_BIAS - 9);
 
     (
         x as f32 * multiplier,
         y as f32 * multiplier,
         z as f32 * multiplier,
     )
-}
-
-/// Calculates 2.0^exp using IEEE bit fiddling.
-///
-/// Only works for integer exponents in the range [-126, 127]
-/// due to IEEE 32-bit float limits.
-#[inline(always)]
-fn fiddle_exp2(exp: i32) -> f32 {
-    use std::f32;
-    f32::from_bits(((exp + 127) as u32) << 23)
-}
-
-/// Calculates a floor(log2(n)) using IEEE bit fiddling.
-///
-/// Because of IEEE floating point format, infinity and NaN
-/// floating point values return 128, and subnormal numbers always
-/// return -127.  These particular behaviors are not, of course,
-/// mathemetically correct, but are actually desireable for the
-/// calculations in this library.
-#[inline(always)]
-fn fiddle_log2(n: f32) -> i32 {
-    use std::f32;
-    ((f32::to_bits(n) >> 23) & 0b1111_1111) as i32 - 127
 }
 
 #[cfg(test)]
@@ -215,5 +190,46 @@ mod tests {
         let fs = (MIN * 0.49, 0.0, 0.0);
         assert_eq!(encode(fs), 0);
         assert_eq!(round_trip(fs), (0.0, 0.0, 0.0));
+    }
+
+    #[test]
+    #[should_panic]
+    fn nans_01() {
+        encode((std::f32::NAN, 0.0, 0.0));
+    }
+
+    #[test]
+    #[should_panic]
+    fn nans_02() {
+        encode((0.0, std::f32::NAN, 0.0));
+    }
+
+    #[test]
+    #[should_panic]
+    fn nans_03() {
+        encode((0.0, 0.0, std::f32::NAN));
+    }
+
+    #[test]
+    #[should_panic]
+    fn negative_01() {
+        encode((-1.0, 0.0, 0.0));
+    }
+
+    #[test]
+    #[should_panic]
+    fn negative_02() {
+        encode((0.0, -1.0, 0.0));
+    }
+
+    #[test]
+    #[should_panic]
+    fn negative_03() {
+        encode((0.0, 0.0, -1.0));
+    }
+
+    #[test]
+    fn negative_04() {
+        encode((-0.0, -0.0, -0.0));
     }
 }
