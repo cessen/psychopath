@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 // pub mod micropoly_batch;
+pub mod micropoly_batch;
 pub mod triangle;
 pub mod triangle_mesh;
 
