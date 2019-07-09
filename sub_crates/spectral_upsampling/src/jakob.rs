@@ -60,37 +60,20 @@ fn small_rgb_to_spectrum_p4(
 ) -> Float4 {
     // Determine largest RGB component, and calculate the other two
     // components scaled for lookups.
-    let (i, max_val, x, y) = {
-        let mut i = 0;
-        let mut max_val = rgb.0;
-        let mut x = rgb.1;
-        let mut y = rgb.2;
-
-        if rgb.1 > max_val {
-            i = 1;
-            max_val = rgb.1;
-            x = rgb.2;
-            y = rgb.0;
-        }
-
-        if rgb.2 > max_val {
-            i = 2;
-            max_val = rgb.2;
-            x = rgb.0;
-            y = rgb.1;
-        }
-
-        let scale = 63.0 / max_val;
-        x *= scale;
-        y *= scale;
-
-        (i, max_val, x, y)
+    let (i, max_val, x, y) = if rgb.0 > rgb.1 && rgb.0 > rgb.2 {
+        (0, rgb.0, rgb.1, rgb.2)
+    } else if rgb.1 > rgb.2 {
+        (1, rgb.1, rgb.2, rgb.0)
+    } else {
+        (2, rgb.2, rgb.0, rgb.1)
     };
-
-    // Make sure we're not looking up black, to avoid NaN's from divide by zero.
     if max_val == 0.0 {
+        // If max_val is zero, just return zero.  This avoids NaN's from
+        // divide by zero.  This is also correct, since it's black.
         return Float4::splat(0.0);
     }
+    let x = x * 63.0 / max_val;
+    let y = y * 63.0 / max_val;
 
     // Calculate lookup coordinates.
     let xi = (x as usize).min(table_res - 2);
