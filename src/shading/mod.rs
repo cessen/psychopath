@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use crate::{color::Color, surface::SurfaceIntersectionData};
 
-use self::surface_closure::SurfaceClosure;
+pub use self::surface_closure::SurfaceClosure;
 
 /// Trait for surface shaders.
 pub trait SurfaceShader: Debug + Sync {

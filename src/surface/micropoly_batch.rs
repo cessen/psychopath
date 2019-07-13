@@ -11,7 +11,7 @@ use crate::{
     lerp::lerp_slice,
     math::{cross, dot, Matrix4x4, Normal, Point},
     ray::{RayBatch, RayStack},
-    shading::{SimpleSurfaceShader, SurfaceShader},
+    shading::SurfaceClosure,
 };
 
 use super::{triangle, SurfaceIntersection, SurfaceIntersectionData};
@@ -33,7 +33,9 @@ pub struct MicropolyBatch<'a> {
     normals: &'a [Normal],
 
     // Per-vertex shading data.
-    vertex_closures: &'a [SimpleSurfaceShader],
+    compressed_vertex_closure_size: usize, // Size in bites of a single compressed closure
+    vertex_closure_time_sample_count: usize,
+    compressed_vertex_closures: &'a [u8], // Packed compressed closures
 
     // Micro-triangle indices.  Each element of the tuple specifies the index
     // of a vertex, which indexes into all of the arrays above.
@@ -127,7 +129,9 @@ impl<'a> MicropolyBatch<'a> {
             time_sample_count: time_sample_count,
             vertices: vertices,
             normals: normals,
-            vertex_closures: &[],
+            compressed_vertex_closure_size: 0,
+            vertex_closure_time_sample_count: 1,
+            compressed_vertex_closures: &[],
             indices: indices,
             accel: accel,
         }
@@ -317,8 +321,16 @@ impl<'a> MicropolyBatch<'a> {
 
                         // Calculate interpolated surface closure.
                         // TODO: actually interpolate.
-                        let closure = self.vertex_closures
-                            [hit_tri_indices.0 as usize * self.time_sample_count];
+                        let closure = {
+                            let start_byte = hit_tri_indices.0 as usize
+                                * self.compressed_vertex_closure_size
+                                * self.vertex_closure_time_sample_count;
+                            let end_byte = start_byte + self.compressed_vertex_closure_size;
+                            let (closure, _) = SurfaceClosure::from_compressed(
+                                &self.compressed_vertex_closures[start_byte..end_byte],
+                            );
+                            closure
+                        };
 
                         let intersection_data = SurfaceIntersectionData {
                             incoming: rays.dir(ray_idx),
@@ -334,7 +346,7 @@ impl<'a> MicropolyBatch<'a> {
                         // Fill in intersection data
                         isects[ray_idx] = SurfaceIntersection::Hit {
                             intersection_data: intersection_data,
-                            closure: closure.shade(&intersection_data, ray_time),
+                            closure: closure,
                         };
                     }
                 });

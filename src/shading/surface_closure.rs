@@ -6,7 +6,7 @@ use float4::Float4;
 
 use crate::{
     color::{Color, SpectralSample},
-    lerp::lerp,
+    lerp::{lerp, Lerp},
     math::{clamp, dot, zup_to_vec, Normal, Vector},
     sampling::cosine_sample_hemisphere,
 };
@@ -151,6 +151,128 @@ impl SurfaceClosure {
                 nor,
                 nor_g,
             ),
+        }
+    }
+
+    /// Returns the post-compression size of this closure.
+    pub fn compressed_size(&self) -> usize {
+        1 + match *self {
+            Lambert(color) => color.compressed_size(),
+            GGX { color, .. } => {
+                2 // Roughness
+                + 2 // Fresnel
+                + color.compressed_size() // Color
+            }
+            Emit(color) => color.compressed_size(),
+        }
+    }
+
+    /// Writes the compressed form of this closure to `out_data`.
+    ///
+    /// `out_data` must be at least `compressed_size()` bytes long, otherwise
+    /// this method will panic.
+    ///
+    /// Returns the number of bytes written.
+    pub fn write_compressed(&self, out_data: &mut [u8]) -> usize {
+        match *self {
+            Lambert(color) => {
+                out_data[0] = 0; // Discriminant
+                color.write_compressed(&mut out_data[1..]);
+            }
+            GGX {
+                color,
+                roughness,
+                fresnel,
+            } => {
+                out_data[0] = 1; // Discriminant
+
+                // Roughness and fresnel (we write these first because they are
+                // constant-size, whereas the color is variable-size, so this
+                // makes things a little easier).
+                let rgh =
+                    ((roughness.max(0.0).min(1.0) * std::u16::MAX as f32) as u16).to_le_bytes();
+                let frs = ((fresnel.max(0.0).min(1.0) * std::u16::MAX as f32) as u16).to_le_bytes();
+                out_data[1] = rgh[0];
+                out_data[2] = rgh[1];
+                out_data[3] = frs[0];
+                out_data[4] = frs[1];
+
+                // Color
+                color.write_compressed(&mut out_data[5..]); // Color
+            }
+            Emit(color) => {
+                out_data[0] = 2; // Discriminant
+                color.write_compressed(&mut out_data[1..]);
+            }
+        }
+        self.compressed_size()
+    }
+
+    /// Constructs a SurfaceClosure from compressed closure data, and also
+    /// returns the number of bytes consumed from `in_data`.
+    pub fn from_compressed(in_data: &[u8]) -> (SurfaceClosure, usize) {
+        match in_data[0] {
+            0 => {
+                // Lambert
+                let (col, size) = Color::from_compressed(&in_data[1..]);
+                (SurfaceClosure::Lambert(col), 1 + size)
+            }
+
+            1 => {
+                // GGX
+                let mut rgh = [0u8; 2];
+                let mut frs = [0u8; 2];
+                rgh[0] = in_data[1];
+                rgh[1] = in_data[2];
+                frs[0] = in_data[3];
+                frs[1] = in_data[4];
+                let rgh = u16::from_le_bytes(rgh) as f32 * (1.0 / std::u16::MAX as f32);
+                let frs = u16::from_le_bytes(frs) as f32 * (1.0 / std::u16::MAX as f32);
+                let (col, size) = Color::from_compressed(&in_data[5..]);
+                (
+                    SurfaceClosure::GGX {
+                        color: col,
+                        roughness: rgh,
+                        fresnel: frs,
+                    },
+                    5 + size,
+                )
+            }
+
+            2 => {
+                // Emit
+                let (col, size) = Color::from_compressed(&in_data[1..]);
+                (SurfaceClosure::Emit(col), 1 + size)
+            }
+
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Lerp for SurfaceClosure {
+    fn lerp(self, other: SurfaceClosure, alpha: f32) -> SurfaceClosure {
+        match (self, other) {
+            (Lambert(col1), Lambert(col2)) => Lambert(lerp(col1, col2, alpha)),
+            (
+                GGX {
+                    color: col1,
+                    roughness: rgh1,
+                    fresnel: frs1,
+                },
+                GGX {
+                    color: col2,
+                    roughness: rgh2,
+                    fresnel: frs2,
+                },
+            ) => GGX {
+                color: lerp(col1, col2, alpha),
+                roughness: lerp(rgh1, rgh2, alpha),
+                fresnel: lerp(frs1, frs2, alpha),
+            },
+            (Emit(col1), Emit(col2)) => Emit(lerp(col1, col2, alpha)),
+
+            _ => panic!("Cannot lerp between different surface closure types."),
         }
     }
 }

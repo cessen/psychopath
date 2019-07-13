@@ -5,7 +5,9 @@ pub use color::{
     xyz_to_rec709_e,
 };
 use float4::Float4;
+use half::f16;
 use spectral_upsampling::meng::{spectrum_xyz_to_p_4, EQUAL_ENERGY_REFLECTANCE};
+use trifloat::signed48;
 
 use crate::{lerp::Lerp, math::fast_exp};
 
@@ -136,6 +138,115 @@ impl Color {
             }
 
             Color::Temperature { factor, .. } => factor,
+        }
+    }
+
+    /// Returns the post-compression size of this color.
+    pub fn compressed_size(&self) -> usize {
+        match self {
+            Color::XYZ(_, _, _) => 7,
+
+            Color::Blackbody { .. } => 5,
+
+            Color::Temperature { .. } => 5,
+        }
+    }
+
+    /// Writes the compressed form of this color to `out_data`.
+    ///
+    /// `out_data` must be at least `compressed_size()` bytes long, otherwise
+    /// this method will panic.
+    ///
+    /// Returns the number of bytes written.
+    pub fn write_compressed(&self, out_data: &mut [u8]) -> usize {
+        match *self {
+            Color::XYZ(x, y, z) => {
+                out_data[0] = 0; // Discriminant
+                let col = signed48::encode((x, y, z));
+                let col = col.to_le_bytes();
+                (&mut out_data[1..7]).copy_from_slice(&col[0..6]);
+            }
+
+            Color::Blackbody {
+                temperature,
+                factor,
+            } => {
+                out_data[0] = 1; // Discriminant
+                let tmp = (temperature.min(std::u16::MAX as f32) as u16).to_le_bytes();
+                let fac = f16::from_f32(factor).to_bits().to_le_bytes();
+                out_data[1] = tmp[0];
+                out_data[2] = tmp[1];
+                out_data[3] = fac[0];
+                out_data[4] = fac[1];
+            }
+
+            Color::Temperature {
+                temperature,
+                factor,
+            } => {
+                out_data[0] = 2; // Discriminant
+                let tmp = (temperature.min(std::u16::MAX as f32) as u16).to_le_bytes();
+                let fac = f16::from_f32(factor).to_bits().to_le_bytes();
+                out_data[1] = tmp[0];
+                out_data[2] = tmp[1];
+                out_data[3] = fac[0];
+                out_data[4] = fac[1];
+            }
+        }
+        self.compressed_size()
+    }
+
+    /// Constructs a Color from compressed color data, and also returns the
+    /// number of bytes consumed from `in_data`.
+    pub fn from_compressed(in_data: &[u8]) -> (Color, usize) {
+        match in_data[0] {
+            0 => {
+                // XYZ
+                let mut bytes = [0u8; 8];
+                (&mut bytes[0..6]).copy_from_slice(&in_data[1..7]);
+                let (x, y, z) = signed48::decode(u64::from_le_bytes(bytes));
+                (Color::XYZ(x, y, z), 7)
+            }
+
+            1 => {
+                // Blackbody
+                let mut tmp = [0u8; 2];
+                let mut fac = [0u8; 2];
+                tmp[0] = in_data[1];
+                tmp[1] = in_data[2];
+                fac[0] = in_data[3];
+                fac[1] = in_data[4];
+                let tmp = u16::from_le_bytes(tmp);
+                let fac = f16::from_bits(u16::from_le_bytes(fac));
+                (
+                    Color::Blackbody {
+                        temperature: tmp as f32,
+                        factor: fac.into(),
+                    },
+                    5,
+                )
+            }
+
+            2 => {
+                // Temperature
+                let mut tmp = [0u8; 2];
+                let mut fac = [0u8; 2];
+                tmp[0] = in_data[1];
+                tmp[1] = in_data[2];
+                fac[0] = in_data[3];
+                fac[1] = in_data[4];
+                let tmp = u16::from_le_bytes(tmp);
+                let fac = f16::from_bits(u16::from_le_bytes(fac));
+                (
+                    Color::Temperature {
+                        temperature: tmp as f32,
+                        factor: fac.into(),
+                    },
+                    5,
+                )
+            }
+
+            _ => unreachable!(),
         }
     }
 }
