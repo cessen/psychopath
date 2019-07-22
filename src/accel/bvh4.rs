@@ -6,6 +6,8 @@
 
 use std::mem::{transmute, MaybeUninit};
 
+use glam::Vec4Mask;
+
 use mem_arena::MemArena;
 
 use crate::{
@@ -23,7 +25,6 @@ use super::{
 };
 
 use bvh_order::{calc_traversal_code, SplitAxes, TRAVERSAL_TABLE};
-use float4::Bool4;
 
 pub fn ray_code(dir: Vector) -> usize {
     let ray_sign_is_neg = [dir.x() < 0.0, dir.y() < 0.0, dir.z() < 0.0];
@@ -122,12 +123,12 @@ impl<'a> BVH4<'a> {
                     traversal_code,
                 } => {
                     node_tests += ray_stack.ray_count_in_next_task() as u64;
-                    let mut all_hits = Bool4::new_false();
+                    let mut all_hits = Vec4Mask::default();
 
                     // Ray testing
                     ray_stack.pop_do_next_task_and_push_rays(children.len(), |ray_idx| {
                         if rays.is_done(ray_idx) {
-                            Bool4::new_false()
+                            Vec4Mask::default()
                         } else {
                             let hits = if bounds.len() == 1 {
                                 bounds[0].intersect_ray(
@@ -148,7 +149,7 @@ impl<'a> BVH4<'a> {
                     });
 
                     // If there were any intersections, create tasks.
-                    if !all_hits.is_all_false() {
+                    if all_hits.any() {
                         let order_code = traversal_table[traversal_code as usize];
                         let mut lane_count = 0;
                         let mut i = children.len() as u8;

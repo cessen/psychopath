@@ -5,42 +5,44 @@ use std::{
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
-use float4::Float4;
+use glam::Vec4;
 
 use super::{CrossProduct, DotProduct, Matrix4x4, Vector};
 
 /// A surface normal in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
 pub struct Normal {
-    pub co: Float4,
+    pub co: Vec4,
 }
 
 impl Normal {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Normal {
         Normal {
-            co: Float4::new(x, y, z, 0.0),
+            co: Vec4::new(x, y, z, 0.0),
         }
     }
 
     #[inline(always)]
     pub fn length(&self) -> f32 {
-        (self.co * self.co).h_sum().sqrt()
+        self.co.length()
     }
 
     #[inline(always)]
     pub fn length2(&self) -> f32 {
-        (self.co * self.co).h_sum()
+        self.co.length_squared()
     }
 
     #[inline(always)]
     pub fn normalized(&self) -> Normal {
-        *self / self.length()
+        Normal {
+            co: self.co.normalize(),
+        }
     }
 
     #[inline(always)]
     pub fn into_vector(self) -> Vector {
-        Vector::new(self.co.get_0(), self.co.get_1(), self.co.get_2())
+        Vector { co: self.co }
     }
 
     #[inline(always)]
@@ -55,32 +57,32 @@ impl Normal {
 
     #[inline(always)]
     pub fn x(&self) -> f32 {
-        self.co.get_0()
+        self.co.x()
     }
 
     #[inline(always)]
     pub fn y(&self) -> f32 {
-        self.co.get_1()
+        self.co.y()
     }
 
     #[inline(always)]
     pub fn z(&self) -> f32 {
-        self.co.get_2()
+        self.co.z()
     }
 
     #[inline(always)]
     pub fn set_x(&mut self, x: f32) {
-        self.co.set_0(x);
+        self.co.set_x(x);
     }
 
     #[inline(always)]
     pub fn set_y(&mut self, y: f32) {
-        self.co.set_1(y);
+        self.co.set_y(y);
     }
 
     #[inline(always)]
     pub fn set_z(&mut self, z: f32) {
-        self.co.set_2(z);
+        self.co.set_z(z);
     }
 }
 
@@ -129,15 +131,10 @@ impl Mul<Matrix4x4> for Normal {
 
     #[inline]
     fn mul(self, other: Matrix4x4) -> Normal {
-        let mat = other.inverse().transposed();
-        Normal {
-            co: Float4::new(
-                (self.co * mat.values[0]).h_sum(),
-                (self.co * mat.values[1]).h_sum(),
-                (self.co * mat.values[2]).h_sum(),
-                0.0,
-            ),
-        }
+        let mat = other.0.inverse().transpose();
+        let mut co = mat.mul_vec4(self.co);
+        co.set_w(0.0);
+        Normal { co: co }
     }
 }
 
@@ -164,7 +161,7 @@ impl Neg for Normal {
 impl DotProduct for Normal {
     #[inline(always)]
     fn dot(self, other: Normal) -> f32 {
-        (self.co * other.co).h_sum()
+        self.co.dot(other.co)
     }
 }
 
@@ -172,12 +169,7 @@ impl CrossProduct for Normal {
     #[inline]
     fn cross(self, other: Normal) -> Normal {
         Normal {
-            co: Float4::new(
-                (self.co.get_1() * other.co.get_2()) - (self.co.get_2() * other.co.get_1()),
-                (self.co.get_2() * other.co.get_0()) - (self.co.get_0() * other.co.get_2()),
-                (self.co.get_0() * other.co.get_1()) - (self.co.get_1() * other.co.get_0()),
-                0.0,
-            ),
+            co: self.co.truncate().cross(other.co.truncate()).extend(0.0),
         }
     }
 }
@@ -186,6 +178,7 @@ impl CrossProduct for Normal {
 mod tests {
     use super::super::{CrossProduct, DotProduct, Matrix4x4};
     use super::*;
+    use approx::UlpsEq;
 
     #[test]
     fn add() {
@@ -220,8 +213,10 @@ mod tests {
         let m = Matrix4x4::new_from_values(
             1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 13.0, 7.0, 15.0, 3.0,
         );
-        let nm = Normal::new(-19.258825, 5.717648, -1.770588);
-        assert!(((n * m) - nm).length2() < 0.00001);
+        let mut nm = n * m;
+        nm.co.set_w(0.0);
+        let nm2 = Normal::new(-19.258825, 5.717648, -1.770588);
+        assert!(nm.co.ulps_eq(&nm2.co, 0.0, 4));
     }
 
     #[test]

@@ -2,7 +2,6 @@
 members = [
     "sub_crates/bvh_order",
     "sub_crates/color",
-    "sub_crates/float4",
     "sub_crates/halton",
     "sub_crates/math3d",
     "sub_crates/mem_arena",
@@ -36,6 +35,7 @@ png_encode_mini = "0.1.2"
 rustc-serialize = "0.3"
 scoped_threadpool = "0.1"
 time = "0.1"
+glam = {git="https://github.com/bitshifter/glam-rs.git", rev="0f314f99", default-features=false, features=["approx"]}
 
 # Local crate dependencies
 [dependencies.bvh_order]
@@ -43,9 +43,6 @@ path = "sub_crates/bvh_order"
 
 [dependencies.color]
 path = "sub_crates/color"
-
-[dependencies.float4]
-path = "sub_crates/float4"
 
 [dependencies.halton]
 path = "sub_crates/halton"

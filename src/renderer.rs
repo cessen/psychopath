@@ -9,7 +9,7 @@ use std::{
 use crossbeam::sync::MsQueue;
 use scoped_threadpool::Pool;
 
-use float4::Float4;
+use glam::Vec4;
 
 use crate::{
     accel::ACCEL_NODE_RAY_TESTS,
@@ -374,12 +374,12 @@ pub struct LightPath {
     wavelength: f32,
 
     next_bounce_ray: Option<Ray>,
-    next_attenuation_fac: Float4,
+    next_attenuation_fac: Vec4,
 
     closure_sample_pdf: f32,
-    light_attenuation: Float4,
-    pending_color_addition: Float4,
-    color: Float4,
+    light_attenuation: Vec4,
+    pending_color_addition: Vec4,
+    color: Vec4,
 }
 
 #[allow(clippy::new_ret_no_self)]
@@ -405,12 +405,12 @@ impl LightPath {
                 wavelength: wavelength,
 
                 next_bounce_ray: None,
-                next_attenuation_fac: Float4::splat(1.0),
+                next_attenuation_fac: Vec4::splat(1.0),
 
                 closure_sample_pdf: 1.0,
-                light_attenuation: Float4::splat(1.0),
-                pending_color_addition: Float4::splat(0.0),
-                color: Float4::splat(0.0),
+                light_attenuation: Vec4::splat(1.0),
+                pending_color_addition: Vec4::splat(0.0),
+                color: Vec4::splat(0.0),
             },
             scene.camera.generate_ray(
                 image_plane_co.0,
@@ -565,7 +565,7 @@ impl LightPath {
 
                         // If there's any possible contribution, set up for a
                         // light ray.
-                        if attenuation.e.h_max() <= 0.0 {
+                        if attenuation.e.max_element() <= 0.0 {
                             false
                         } else {
                             // Calculate and store the light that will be contributed
@@ -599,7 +599,7 @@ impl LightPath {
                         };
 
                         // Check if pdf is zero, to avoid NaN's.
-                        if (pdf > 0.0) && (filter.e.h_max() > 0.0) {
+                        if (pdf > 0.0) && (filter.e.max_element() > 0.0) {
                             // Account for the additional light attenuation from
                             // this bounce
                             self.next_attenuation_fac = filter.e;

@@ -163,7 +163,7 @@ pub fn surface_point(tri: (Point, Point, Point), bary: (f32, f32, f32)) -> (Poin
         + (tri.2.into_vector().abs() * bary.2))
         * fp_gamma(7))
     .co
-    .h_max();
+    .max_element();
 
     (pos, pos_err)
 }

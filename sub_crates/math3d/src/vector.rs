@@ -5,37 +5,39 @@ use std::{
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
-use float4::Float4;
+use glam::Vec4;
 
 use super::{CrossProduct, DotProduct, Matrix4x4, Normal, Point};
 
 /// A direction vector in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
 pub struct Vector {
-    pub co: Float4,
+    pub co: Vec4,
 }
 
 impl Vector {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Vector {
         Vector {
-            co: Float4::new(x, y, z, 0.0),
+            co: Vec4::new(x, y, z, 0.0),
         }
     }
 
     #[inline(always)]
     pub fn length(&self) -> f32 {
-        (self.co * self.co).h_sum().sqrt()
+        self.co.length()
     }
 
     #[inline(always)]
     pub fn length2(&self) -> f32 {
-        (self.co * self.co).h_sum()
+        self.co.length_squared()
     }
 
     #[inline(always)]
     pub fn normalized(&self) -> Vector {
-        *self / self.length()
+        Vector {
+            co: self.co.normalize(),
+        }
     }
 
     #[inline(always)]
@@ -65,32 +67,32 @@ impl Vector {
 
     #[inline(always)]
     pub fn x(&self) -> f32 {
-        self.co.get_0()
+        self.co.x()
     }
 
     #[inline(always)]
     pub fn y(&self) -> f32 {
-        self.co.get_1()
+        self.co.y()
     }
 
     #[inline(always)]
     pub fn z(&self) -> f32 {
-        self.co.get_2()
+        self.co.z()
     }
 
     #[inline(always)]
     pub fn set_x(&mut self, x: f32) {
-        self.co.set_0(x);
+        self.co.set_x(x);
     }
 
     #[inline(always)]
     pub fn set_y(&mut self, y: f32) {
-        self.co.set_1(y);
+        self.co.set_y(y);
     }
 
     #[inline(always)]
     pub fn set_z(&mut self, z: f32) {
-        self.co.set_2(z);
+        self.co.set_z(z);
     }
 }
 
@@ -140,12 +142,7 @@ impl Mul<Matrix4x4> for Vector {
     #[inline]
     fn mul(self, other: Matrix4x4) -> Vector {
         Vector {
-            co: Float4::new(
-                (self.co * other.values[0]).h_sum(),
-                (self.co * other.values[1]).h_sum(),
-                (self.co * other.values[2]).h_sum(),
-                (self.co * other.values[3]).h_sum(),
-            ),
+            co: other.0.mul_vec4(self.co),
         }
     }
 }
@@ -173,7 +170,7 @@ impl Neg for Vector {
 impl DotProduct for Vector {
     #[inline(always)]
     fn dot(self, other: Vector) -> f32 {
-        (self.co * other.co).h_sum()
+        self.co.dot(other.co)
     }
 }
 
@@ -181,12 +178,7 @@ impl CrossProduct for Vector {
     #[inline]
     fn cross(self, other: Vector) -> Vector {
         Vector {
-            co: Float4::new(
-                (self.co.get_1() * other.co.get_2()) - (self.co.get_2() * other.co.get_1()),
-                (self.co.get_2() * other.co.get_0()) - (self.co.get_0() * other.co.get_2()),
-                (self.co.get_0() * other.co.get_1()) - (self.co.get_1() * other.co.get_0()),
-                0.0,
-            ),
+            co: self.co.truncate().cross(other.co.truncate()).extend(0.0),
         }
     }
 }
@@ -230,7 +222,7 @@ mod tests {
             1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 13.0, 7.0, 15.0, 3.0,
         );
         let mut vm = Vector::new(14.0, 46.0, 58.0);
-        vm.co.set_3(90.5);
+        vm.co.set_w(90.5);
         assert_eq!(v * m, vm);
     }
 

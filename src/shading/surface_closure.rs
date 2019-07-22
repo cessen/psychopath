@@ -2,7 +2,7 @@
 
 use std::f32::consts::PI as PI_32;
 
-use float4::Float4;
+use glam::Vec4;
 
 use crate::{
     color::{Color, SpectralSample},
@@ -492,27 +492,27 @@ mod ggx_closure {
             let spectrum_sample = col.to_spectral_sample(wavelength);
             let rev_fresnel = 1.0 - fresnel;
             let c0 = lerp(
-                schlick_fresnel_from_fac(spectrum_sample.e.get_0(), hb),
-                spectrum_sample.e.get_0(),
+                schlick_fresnel_from_fac(spectrum_sample.e.x(), hb),
+                spectrum_sample.e.x(),
                 rev_fresnel,
             );
             let c1 = lerp(
-                schlick_fresnel_from_fac(spectrum_sample.e.get_1(), hb),
-                spectrum_sample.e.get_1(),
+                schlick_fresnel_from_fac(spectrum_sample.e.y(), hb),
+                spectrum_sample.e.y(),
                 rev_fresnel,
             );
             let c2 = lerp(
-                schlick_fresnel_from_fac(spectrum_sample.e.get_2(), hb),
-                spectrum_sample.e.get_2(),
+                schlick_fresnel_from_fac(spectrum_sample.e.z(), hb),
+                spectrum_sample.e.z(),
                 rev_fresnel,
             );
             let c3 = lerp(
-                schlick_fresnel_from_fac(spectrum_sample.e.get_3(), hb),
-                spectrum_sample.e.get_3(),
+                schlick_fresnel_from_fac(spectrum_sample.e.w(), hb),
+                spectrum_sample.e.w(),
                 rev_fresnel,
             );
 
-            SpectralSample::from_parts(Float4::new(c0, c1, c2, c3), wavelength)
+            SpectralSample::from_parts(Vec4::new(c0, c1, c2, c3), wavelength)
         };
 
         // Calculate everything else

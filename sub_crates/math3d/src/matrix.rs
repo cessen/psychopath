@@ -1,29 +1,21 @@
 #![allow(dead_code)]
 
-use std::ops::{Index, IndexMut, Mul};
+use std::ops::{Add, Mul};
 
-use float4::{invert, transpose, Float4};
+use approx::RelativeEq;
+use glam::{Mat4, Vec4};
 
 use super::Point;
 
 /// A 4x4 matrix, used for transforms
-#[derive(Debug, Copy, Clone)]
-pub struct Matrix4x4 {
-    pub values: [Float4; 4],
-}
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Matrix4x4(pub Mat4);
 
 impl Matrix4x4 {
     /// Creates a new identity matrix
     #[inline]
     pub fn new() -> Matrix4x4 {
-        Matrix4x4 {
-            values: [
-                Float4::new(1.0, 0.0, 0.0, 0.0),
-                Float4::new(0.0, 1.0, 0.0, 0.0),
-                Float4::new(0.0, 0.0, 1.0, 0.0),
-                Float4::new(0.0, 0.0, 0.0, 1.0),
-            ],
-        }
+        Matrix4x4(Mat4::identity())
     }
 
     /// Creates a new matrix with the specified values:
@@ -52,108 +44,37 @@ impl Matrix4x4 {
         o: f32,
         p: f32,
     ) -> Matrix4x4 {
-        Matrix4x4 {
-            values: [
-                Float4::new(a, b, c, d),
-                Float4::new(e, f, g, h),
-                Float4::new(i, j, k, l),
-                Float4::new(m, n, o, p),
-            ],
-        }
+        Matrix4x4(Mat4::new(
+            Vec4::new(a, e, i, m),
+            Vec4::new(b, f, j, n),
+            Vec4::new(c, g, k, o),
+            Vec4::new(d, h, l, p),
+        ))
     }
 
     #[inline]
     pub fn from_location(loc: Point) -> Matrix4x4 {
-        Matrix4x4 {
-            values: [
-                Float4::new(1.0, 0.0, 0.0, loc.x()),
-                Float4::new(0.0, 1.0, 0.0, loc.y()),
-                Float4::new(0.0, 0.0, 1.0, loc.z()),
-                Float4::new(0.0, 0.0, 0.0, 1.0),
-            ],
-        }
+        Matrix4x4(Mat4::from_translation(loc.co.truncate()))
     }
 
     /// Returns whether the matrices are approximately equal to each other.
-    /// Each corresponding element in the matrices cannot have a relative error
-    /// exceeding `epsilon`.
+    /// Each corresponding element in the matrices cannot have a relative
+    /// error exceeding epsilon.
     #[inline]
     pub fn aprx_eq(&self, other: Matrix4x4, epsilon: f32) -> bool {
-        let mut result = true;
-
-        for y in 0..4 {
-            for x in 0..4 {
-                // All of this stuff is just an approximate comparison
-                // of floating point numbers.  See:
-                // http://floating-point-gui.de/errors/comparison/
-                // It might be worth breaking this out into a separate funcion,
-                // but I'm not entirely sure where to put it.
-                let a = self[y].get_n(x);
-                let b = other[y].get_n(x);
-                let aabs = a.abs();
-                let babs = b.abs();
-                let diff = (a - b).abs();
-                if a == b {
-                } else if (aabs <= std::f32::EPSILON) || (babs <= std::f32::EPSILON) {
-                    result = result && (diff < std::f32::EPSILON);
-                } else {
-                    let rel = 2.0 * diff / (aabs + babs);
-                    println!("{}", rel);
-                    result = result && (rel < epsilon);
-                }
-            }
-        }
-
-        result
+        self.0.relative_eq(&other.0, std::f32::EPSILON, epsilon)
     }
 
     /// Returns the transpose of the matrix
     #[inline]
     pub fn transposed(&self) -> Matrix4x4 {
-        let mut m = *self;
-        transpose(&mut m.values);
-        m
+        Matrix4x4(self.0.transpose())
     }
 
     /// Returns the inverse of the Matrix
     #[inline]
-    #[allow(clippy::float_cmp)]
     pub fn inverse(&self) -> Matrix4x4 {
-        let mut m = *self;
-        let det = invert(&mut m.values);
-        debug_assert_ne!(det, 0.0);
-        m
-    }
-}
-
-impl Index<usize> for Matrix4x4 {
-    type Output = Float4;
-
-    #[inline(always)]
-    fn index(&self, _index: usize) -> &Float4 {
-        &self.values[_index]
-    }
-}
-
-impl IndexMut<usize> for Matrix4x4 {
-    #[inline(always)]
-    fn index_mut(&mut self, _index: usize) -> &mut Float4 {
-        &mut self.values[_index]
-    }
-}
-
-impl PartialEq for Matrix4x4 {
-    #[inline]
-    fn eq(&self, other: &Matrix4x4) -> bool {
-        let mut result = true;
-
-        for y in 0..4 {
-            for x in 0..4 {
-                result = result && (self[y].get_n(x) == other[y].get_n(x));
-            }
-        }
-
-        result
+        Matrix4x4(self.0.inverse())
     }
 }
 
@@ -164,40 +85,32 @@ impl Default for Matrix4x4 {
 }
 
 /// Multiply two matrices together
-impl Mul<Matrix4x4> for Matrix4x4 {
-    type Output = Matrix4x4;
+impl Mul for Matrix4x4 {
+    type Output = Self;
 
     #[inline]
-    fn mul(self, other: Matrix4x4) -> Matrix4x4 {
-        let m = self.transposed();
-        Matrix4x4 {
-            values: [
-                Float4::new(
-                    (m[0] * other[0]).h_sum(),
-                    (m[1] * other[0]).h_sum(),
-                    (m[2] * other[0]).h_sum(),
-                    (m[3] * other[0]).h_sum(),
-                ),
-                Float4::new(
-                    (m[0] * other[1]).h_sum(),
-                    (m[1] * other[1]).h_sum(),
-                    (m[2] * other[1]).h_sum(),
-                    (m[3] * other[1]).h_sum(),
-                ),
-                Float4::new(
-                    (m[0] * other[2]).h_sum(),
-                    (m[1] * other[2]).h_sum(),
-                    (m[2] * other[2]).h_sum(),
-                    (m[3] * other[2]).h_sum(),
-                ),
-                Float4::new(
-                    (m[0] * other[3]).h_sum(),
-                    (m[1] * other[3]).h_sum(),
-                    (m[2] * other[3]).h_sum(),
-                    (m[3] * other[3]).h_sum(),
-                ),
-            ],
-        }
+    fn mul(self, other: Self) -> Self {
+        Self(other.0.mul_mat4(&self.0))
+    }
+}
+
+/// Multiply a matrix by a f32
+impl Mul<f32> for Matrix4x4 {
+    type Output = Self;
+
+    #[inline]
+    fn mul(self, other: f32) -> Self {
+        Self(self.0 * other)
+    }
+}
+
+/// Add two matrices together
+impl Add for Matrix4x4 {
+    type Output = Self;
+
+    #[inline]
+    fn add(self, other: Self) -> Self {
+        Self(self.0 + other.0)
     }
 }
 
@@ -218,22 +131,24 @@ mod tests {
     }
 
     #[test]
-    fn aproximate_equality_test() {
+    fn approximate_equality_test() {
         let a = Matrix4x4::new();
         let b = Matrix4x4::new_from_values(
-            1.001, 0.0, 0.0, 0.0, 0.0, 1.001, 0.0, 0.0, 0.0, 0.0, 1.001, 0.0, 0.0, 0.0, 0.0, 1.001,
+            1.000001, 0.0, 0.0, 0.0, 0.0, 1.000001, 0.0, 0.0, 0.0, 0.0, 1.000001, 0.0, 0.0, 0.0,
+            0.0, 1.000001,
         );
         let c = Matrix4x4::new_from_values(
-            1.003, 0.0, 0.0, 0.0, 0.0, 1.003, 0.0, 0.0, 0.0, 0.0, 1.003, 0.0, 0.0, 0.0, 0.0, 1.003,
+            1.000003, 0.0, 0.0, 0.0, 0.0, 1.000003, 0.0, 0.0, 0.0, 0.0, 1.000003, 0.0, 0.0, 0.0,
+            0.0, 1.000003,
         );
         let d = Matrix4x4::new_from_values(
-            -1.001, 0.0, 0.0, 0.0, 0.0, -1.001, 0.0, 0.0, 0.0, 0.0, -1.001, 0.0, 0.0, 0.0, 0.0,
-            -1.001,
+            -1.000001, 0.0, 0.0, 0.0, 0.0, -1.000001, 0.0, 0.0, 0.0, 0.0, -1.000001, 0.0, 0.0, 0.0,
+            0.0, -1.000001,
         );
 
-        assert!(a.aprx_eq(b, 0.002));
-        assert!(!a.aprx_eq(c, 0.002));
-        assert!(!a.aprx_eq(d, 0.002));
+        assert!(a.aprx_eq(b, 0.000001));
+        assert!(!a.aprx_eq(c, 0.000001));
+        assert!(!a.aprx_eq(d, 0.000001));
     }
 
     #[test]
@@ -260,7 +175,7 @@ mod tests {
         let b = a.inverse();
         let c = Matrix4x4::new();
 
-        assert!((a * b).aprx_eq(c, 0.00001));
+        assert!((dbg!(a * b)).aprx_eq(dbg!(c), 0.0000001));
     }
 
     #[test]

@@ -73,23 +73,15 @@ impl<T: Lerp> Lerp for (T, T) {
     }
 }
 
-impl Lerp for float4::Float4 {
-    fn lerp(self, other: float4::Float4, alpha: f32) -> float4::Float4 {
+impl Lerp for glam::Vec4 {
+    fn lerp(self, other: glam::Vec4, alpha: f32) -> glam::Vec4 {
         (self * (1.0 - alpha)) + (other * alpha)
     }
 }
 
 impl Lerp for Matrix4x4 {
     fn lerp(self, other: Matrix4x4, alpha: f32) -> Matrix4x4 {
-        let alpha_minus = 1.0 - alpha;
-        Matrix4x4 {
-            values: [
-                (self[0] * alpha_minus) + (other[0] * alpha),
-                (self[1] * alpha_minus) + (other[1] * alpha),
-                (self[2] * alpha_minus) + (other[2] * alpha),
-                (self[3] * alpha_minus) + (other[3] * alpha),
-            ],
-        }
+        (self * (1.0 - alpha)) + (other * alpha)
     }
 }
 

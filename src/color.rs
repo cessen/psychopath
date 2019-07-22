@@ -4,7 +4,7 @@ pub use color::{
     rec709_e_to_xyz, rec709_to_xyz, xyz_to_aces_ap0, xyz_to_aces_ap0_e, xyz_to_rec709,
     xyz_to_rec709_e,
 };
-use float4::Float4;
+use glam::Vec4;
 use half::f16;
 use spectral_upsampling::meng::{spectrum_xyz_to_p_4, EQUAL_ENERGY_REFLECTANCE};
 use trifloat::signed48;
@@ -31,10 +31,10 @@ fn nth_wavelength(hero_wavelength: f32, n: usize) -> f32 {
     }
 }
 
-/// Returns all wavelengths of a hero wavelength set as a Float4
+/// Returns all wavelengths of a hero wavelength set as a Vec4
 #[inline(always)]
-fn wavelengths(hero_wavelength: f32) -> Float4 {
-    Float4::new(
+fn wavelengths(hero_wavelength: f32) -> Vec4 {
+    Vec4::new(
         nth_wavelength(hero_wavelength, 0),
         nth_wavelength(hero_wavelength, 1),
         nth_wavelength(hero_wavelength, 2),
@@ -94,11 +94,11 @@ impl Color {
             } => {
                 SpectralSample::from_parts(
                     // TODO: make this SIMD
-                    Float4::new(
-                        plancks_law(temperature, wls.get_0()) * factor,
-                        plancks_law(temperature, wls.get_1()) * factor,
-                        plancks_law(temperature, wls.get_2()) * factor,
-                        plancks_law(temperature, wls.get_3()) * factor,
+                    Vec4::new(
+                        plancks_law(temperature, wls.x()) * factor,
+                        plancks_law(temperature, wls.y()) * factor,
+                        plancks_law(temperature, wls.z()) * factor,
+                        plancks_law(temperature, wls.w()) * factor,
                     ),
                     hero_wavelength,
                 )
@@ -109,11 +109,11 @@ impl Color {
             } => {
                 SpectralSample::from_parts(
                     // TODO: make this SIMD
-                    Float4::new(
-                        plancks_law_normalized(temperature, wls.get_0()) * factor,
-                        plancks_law_normalized(temperature, wls.get_1()) * factor,
-                        plancks_law_normalized(temperature, wls.get_2()) * factor,
-                        plancks_law_normalized(temperature, wls.get_3()) * factor,
+                    Vec4::new(
+                        plancks_law_normalized(temperature, wls.x()) * factor,
+                        plancks_law_normalized(temperature, wls.y()) * factor,
+                        plancks_law_normalized(temperature, wls.z()) * factor,
+                        plancks_law_normalized(temperature, wls.w()) * factor,
                     ),
                     hero_wavelength,
                 )
@@ -388,7 +388,7 @@ fn plancks_law_normalized(temperature: f32, wavelength: f32) -> f32 {
 
 #[derive(Copy, Clone, Debug)]
 pub struct SpectralSample {
-    pub e: Float4,
+    pub e: Vec4,
     hero_wavelength: f32,
 }
 
@@ -396,7 +396,7 @@ impl SpectralSample {
     pub fn new(wavelength: f32) -> SpectralSample {
         debug_assert!(wavelength >= WL_MIN && wavelength <= WL_MAX);
         SpectralSample {
-            e: Float4::splat(0.0),
+            e: Vec4::splat(0.0),
             hero_wavelength: wavelength,
         }
     }
@@ -405,12 +405,12 @@ impl SpectralSample {
     pub fn from_value(value: f32, wavelength: f32) -> SpectralSample {
         debug_assert!(wavelength >= WL_MIN && wavelength <= WL_MAX);
         SpectralSample {
-            e: Float4::splat(value),
+            e: Vec4::splat(value),
             hero_wavelength: wavelength,
         }
     }
 
-    pub fn from_parts(e: Float4, wavelength: f32) -> SpectralSample {
+    pub fn from_parts(e: Vec4, wavelength: f32) -> SpectralSample {
         debug_assert!(wavelength >= WL_MIN && wavelength <= WL_MAX);
         SpectralSample {
             e: e,
@@ -520,10 +520,10 @@ impl XYZ {
     }
 
     pub fn from_spectral_sample(ss: &SpectralSample) -> XYZ {
-        let xyz0 = XYZ::from_wavelength(ss.wl_n(0), ss.e.get_0());
-        let xyz1 = XYZ::from_wavelength(ss.wl_n(1), ss.e.get_1());
-        let xyz2 = XYZ::from_wavelength(ss.wl_n(2), ss.e.get_2());
-        let xyz3 = XYZ::from_wavelength(ss.wl_n(3), ss.e.get_3());
+        let xyz0 = XYZ::from_wavelength(ss.wl_n(0), ss.e.x());
+        let xyz1 = XYZ::from_wavelength(ss.wl_n(1), ss.e.y());
+        let xyz2 = XYZ::from_wavelength(ss.wl_n(2), ss.e.z());
+        let xyz3 = XYZ::from_wavelength(ss.wl_n(3), ss.e.w());
         (xyz0 + xyz1 + xyz2 + xyz3) * 0.75
     }
 
@@ -601,8 +601,8 @@ impl DivAssign<f32> for XYZ {
 /// the method in the paper "Physically Meaningful Rendering using Tristimulus
 /// Colours" by Meng et al.
 #[inline(always)]
-fn xyz_to_spectrum_4(xyz: (f32, f32, f32), wavelengths: Float4) -> Float4 {
-    spectrum_xyz_to_p_4(wavelengths, xyz) * Float4::splat(1.0 / EQUAL_ENERGY_REFLECTANCE)
+fn xyz_to_spectrum_4(xyz: (f32, f32, f32), wavelengths: Vec4) -> Vec4 {
+    spectrum_xyz_to_p_4(wavelengths, xyz) * Vec4::splat(1.0 / EQUAL_ENERGY_REFLECTANCE)
     // aces_to_spectrum_p4(wavelengths, xyz_to_aces_ap0_e(xyz))
 }
 

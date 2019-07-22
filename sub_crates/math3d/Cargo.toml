@@ -10,5 +10,6 @@ name = "math3d"
 path = "src/lib.rs"
 
 # Local crate dependencies
-[dependencies.float4]
-path = "../float4"
+[dependencies]
+glam = {git="https://github.com/bitshifter/glam-rs.git", rev="0f314f99", default-features=false, features=["approx"]}
+approx = "0.3"

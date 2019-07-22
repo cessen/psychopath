@@ -5,21 +5,21 @@ use std::{
     ops::{Add, Mul, Sub},
 };
 
-use float4::Float4;
+use glam::Vec4;
 
 use super::{Matrix4x4, Vector};
 
 /// A position in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
 pub struct Point {
-    pub co: Float4,
+    pub co: Vec4,
 }
 
 impl Point {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Point {
         Point {
-            co: Float4::new(x, y, z, 1.0),
+            co: Vec4::new(x, y, z, 1.0),
         }
     }
 
@@ -28,7 +28,7 @@ impl Point {
     #[inline(always)]
     pub fn norm(&self) -> Point {
         Point {
-            co: self.co / self.co.get_3(),
+            co: self.co / self.co.w(),
         }
     }
 
@@ -38,7 +38,7 @@ impl Point {
         let n2 = other.norm();
 
         Point {
-            co: n1.co.v_min(n2.co),
+            co: n1.co.min(n2.co),
         }
     }
 
@@ -48,13 +48,15 @@ impl Point {
         let n2 = other.norm();
 
         Point {
-            co: n1.co.v_max(n2.co),
+            co: n1.co.max(n2.co),
         }
     }
 
     #[inline(always)]
     pub fn into_vector(self) -> Vector {
-        Vector::new(self.co.get_0(), self.co.get_1(), self.co.get_2())
+        let mut v = Vector { co: self.co };
+        v.co.set_w(0.0);
+        v
     }
 
     #[inline(always)]
@@ -69,32 +71,32 @@ impl Point {
 
     #[inline(always)]
     pub fn x(&self) -> f32 {
-        self.co.get_0()
+        self.co.x()
     }
 
     #[inline(always)]
     pub fn y(&self) -> f32 {
-        self.co.get_1()
+        self.co.y()
     }
 
     #[inline(always)]
     pub fn z(&self) -> f32 {
-        self.co.get_2()
+        self.co.z()
     }
 
     #[inline(always)]
     pub fn set_x(&mut self, x: f32) {
-        self.co.set_0(x);
+        self.co.set_x(x);
     }
 
     #[inline(always)]
     pub fn set_y(&mut self, y: f32) {
-        self.co.set_1(y);
+        self.co.set_y(y);
     }
 
     #[inline(always)]
     pub fn set_z(&mut self, z: f32) {
-        self.co.set_2(z);
+        self.co.set_z(z);
     }
 }
 
@@ -144,12 +146,7 @@ impl Mul<Matrix4x4> for Point {
     #[inline]
     fn mul(self, other: Matrix4x4) -> Point {
         Point {
-            co: Float4::new(
-                (self.co * other.values[0]).h_sum(),
-                (self.co * other.values[1]).h_sum(),
-                (self.co * other.values[2]).h_sum(),
-                (self.co * other.values[3]).h_sum(),
-            ),
+            co: other.0.mul_vec4(self.co),
         }
     }
 }
@@ -163,7 +160,7 @@ mod tests {
     fn norm() {
         let mut p1 = Point::new(1.0, 2.0, 3.0);
         let p2 = Point::new(2.0, 4.0, 6.0);
-        p1.co.set_3(0.5);
+        p1.co.set_w(0.5);
 
         assert_eq!(p2, p1.norm());
     }
@@ -203,7 +200,7 @@ mod tests {
             1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 2.0, 3.0, 1.0, 5.0,
         );
         let mut pm = Point::new(15.5, 54.0, 70.0);
-        pm.co.set_3(18.5);
+        pm.co.set_w(18.5);
         assert_eq!(p * m, pm);
     }
 

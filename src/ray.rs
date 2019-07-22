@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use float4::{Bool4, Float4};
+use glam::{Vec4, Vec4Mask};
 
 use crate::math::{Matrix4x4, Point, Vector};
 
@@ -86,7 +86,7 @@ impl RayBatch {
     pub fn set_from_ray(&mut self, ray: &Ray, is_occlusion: bool, idx: usize) {
         self.hot[idx].orig_local = ray.orig;
         self.hot[idx].dir_inv_local = Vector {
-            co: Float4::splat(1.0) / ray.dir.co,
+            co: Vec4::splat(1.0) / ray.dir.co,
         };
         self.hot[idx].max_t = ray.max_t;
         self.hot[idx].time = ray.time;
@@ -122,7 +122,7 @@ impl RayBatch {
     pub fn update_local(&mut self, idx: usize, xform: &Matrix4x4) {
         self.hot[idx].orig_local = self.cold[idx].orig * *xform;
         self.hot[idx].dir_inv_local = Vector {
-            co: Float4::splat(1.0) / (self.cold[idx].dir * *xform).co,
+            co: Vec4::splat(1.0) / (self.cold[idx].dir * *xform).co,
         };
     }
 
@@ -349,7 +349,7 @@ impl RayStack {
     /// indicated lanes.
     pub fn pop_do_next_task_and_push_rays<F>(&mut self, output_lane_count: usize, mut handle_ray: F)
     where
-        F: FnMut(usize) -> Bool4,
+        F: FnMut(usize) -> Vec4Mask,
     {
         // Pop the task and do necessary bookkeeping.
         let task = self.tasks.pop().unwrap();
@@ -372,9 +372,9 @@ impl RayStack {
         // Execute task.
         for i in task_range.0..task_range.1 {
             let ray_idx = *unsafe { self.lanes[task.lane].idxs.get_unchecked(i) };
-            let push_mask = handle_ray(ray_idx as usize);
+            let push_mask = handle_ray(ray_idx as usize).bitmask();
             for l in 0..output_lane_count {
-                if push_mask.get_n(l) {
+                if (push_mask & (1 << l)) != 0 {
                     self.lanes[l as usize].idxs.push(ray_idx);
                 }
             }

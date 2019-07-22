@@ -6,7 +6,7 @@
 /// The provides similar color matching as full Jakob, at the expense of
 /// somewhat lower quality spectrums, and the inability to precalculate
 /// the coefficents for even more efficient evaluation later on.
-use float4::Float4;
+use glam::Vec4;
 
 /// How many polynomial coefficients?
 const RGB2SPEC_N_COEFFS: usize = 3;
@@ -15,7 +15,7 @@ const RGB2SPEC_N_COEFFS: usize = 3;
 include!(concat!(env!("OUT_DIR"), "/jakob_table_inc.rs"));
 
 #[inline]
-pub fn rec709_to_spectrum_p4(lambdas: Float4, rgb: (f32, f32, f32)) -> Float4 {
+pub fn rec709_to_spectrum_p4(lambdas: Vec4, rgb: (f32, f32, f32)) -> Vec4 {
     small_rgb_to_spectrum_p4(
         REC709_TABLE,
         REC709_TABLE_RES,
@@ -26,7 +26,7 @@ pub fn rec709_to_spectrum_p4(lambdas: Float4, rgb: (f32, f32, f32)) -> Float4 {
 }
 
 #[inline]
-pub fn rec2020_to_spectrum_p4(lambdas: Float4, rgb: (f32, f32, f32)) -> Float4 {
+pub fn rec2020_to_spectrum_p4(lambdas: Vec4, rgb: (f32, f32, f32)) -> Vec4 {
     small_rgb_to_spectrum_p4(
         REC2020_TABLE,
         REC2020_TABLE_RES,
@@ -37,7 +37,7 @@ pub fn rec2020_to_spectrum_p4(lambdas: Float4, rgb: (f32, f32, f32)) -> Float4 {
 }
 
 #[inline]
-pub fn aces_to_spectrum_p4(lambdas: Float4, rgb: (f32, f32, f32)) -> Float4 {
+pub fn aces_to_spectrum_p4(lambdas: Vec4, rgb: (f32, f32, f32)) -> Vec4 {
     small_rgb_to_spectrum_p4(
         ACES_TABLE,
         ACES_TABLE_RES,
@@ -55,9 +55,9 @@ fn small_rgb_to_spectrum_p4(
     table: &[[(f32, f32, f32); 2]],
     table_res: usize,
     table_mid_value: f32,
-    lambdas: Float4,
+    lambdas: Vec4,
     rgb: (f32, f32, f32),
-) -> Float4 {
+) -> Vec4 {
     // Determine largest RGB component, and calculate the other two
     // components scaled for lookups.
     let (i, max_val, x, y) = if rgb.0 > rgb.1 && rgb.0 > rgb.2 {
@@ -70,7 +70,7 @@ fn small_rgb_to_spectrum_p4(
     if max_val == 0.0 {
         // If max_val is zero, just return zero.  This avoids NaN's from
         // divide by zero.  This is also correct, since it's black.
-        return Float4::splat(0.0);
+        return Vec4::splat(0.0);
     }
     let x = x * 63.0 / max_val;
     let y = y * 63.0 / max_val;
@@ -90,20 +90,20 @@ fn small_rgb_to_spectrum_p4(
 
     // Convert to SIMD format for faster interpolation.
     let a0 = [
-        Float4::new(a0[0].0, a0[0].1, a0[0].2, 0.0),
-        Float4::new(a0[1].0, a0[1].1, a0[1].2, 0.0),
+        Vec4::new(a0[0].0, a0[0].1, a0[0].2, 0.0),
+        Vec4::new(a0[1].0, a0[1].1, a0[1].2, 0.0),
     ];
     let a1 = [
-        Float4::new(a1[0].0, a1[0].1, a1[0].2, 0.0),
-        Float4::new(a1[1].0, a1[1].1, a1[1].2, 0.0),
+        Vec4::new(a1[0].0, a1[0].1, a1[0].2, 0.0),
+        Vec4::new(a1[1].0, a1[1].1, a1[1].2, 0.0),
     ];
     let a2 = [
-        Float4::new(a2[0].0, a2[0].1, a2[0].2, 0.0),
-        Float4::new(a2[1].0, a2[1].1, a2[1].2, 0.0),
+        Vec4::new(a2[0].0, a2[0].1, a2[0].2, 0.0),
+        Vec4::new(a2[1].0, a2[1].1, a2[1].2, 0.0),
     ];
     let a3 = [
-        Float4::new(a3[0].0, a3[0].1, a3[0].2, 0.0),
-        Float4::new(a3[1].0, a3[1].1, a3[1].2, 0.0),
+        Vec4::new(a3[0].0, a3[0].1, a3[0].2, 0.0),
+        Vec4::new(a3[1].0, a3[1].1, a3[1].2, 0.0),
     ];
 
     // Do interpolation.
@@ -117,16 +117,14 @@ fn small_rgb_to_spectrum_p4(
 
     // Evaluate the spectral function and return the result.
     if max_val <= table_mid_value {
-        rgb2spec_eval_4([c[0].get_0(), c[0].get_1(), c[0].get_2()], lambdas)
-            * (1.0 / table_mid_value)
-            * max_val
+        rgb2spec_eval_4([c[0].x(), c[0].y(), c[0].z()], lambdas) * (1.0 / table_mid_value) * max_val
     } else if max_val < 1.0 {
         let n = (max_val - table_mid_value) / (1.0 - table_mid_value);
-        let s0 = rgb2spec_eval_4([c[0].get_0(), c[0].get_1(), c[0].get_2()], lambdas);
-        let s1 = rgb2spec_eval_4([c[1].get_0(), c[1].get_1(), c[1].get_2()], lambdas);
+        let s0 = rgb2spec_eval_4([c[0].x(), c[0].y(), c[0].z()], lambdas);
+        let s1 = rgb2spec_eval_4([c[1].x(), c[1].y(), c[1].z()], lambdas);
         (s0 * (1.0 - n)) + (s1 * n)
     } else {
-        rgb2spec_eval_4([c[1].get_0(), c[1].get_1(), c[1].get_2()], lambdas) * max_val
+        rgb2spec_eval_4([c[1].x(), c[1].y(), c[1].z()], lambdas) * max_val
     }
 }
 
@@ -134,18 +132,22 @@ fn small_rgb_to_spectrum_p4(
 // Coefficient -> eval functions
 
 #[inline(always)]
-fn rgb2spec_fma_4(a: Float4, b: Float4, c: Float4) -> Float4 {
-    a.fmadd(b, c)
+fn rgb2spec_fma_4(a: Vec4, b: Vec4, c: Vec4) -> Vec4 {
+    (a * b) + c
 }
 
-fn rgb2spec_eval_4(coeff: [f32; RGB2SPEC_N_COEFFS], lambda: Float4) -> Float4 {
-    let co0 = Float4::splat(coeff[0]);
-    let co1 = Float4::splat(coeff[1]);
-    let co2 = Float4::splat(coeff[2]);
+fn rgb2spec_eval_4(coeff: [f32; RGB2SPEC_N_COEFFS], lambda: Vec4) -> Vec4 {
+    let co0 = Vec4::splat(coeff[0]);
+    let co1 = Vec4::splat(coeff[1]);
+    let co2 = Vec4::splat(coeff[2]);
 
     let x = rgb2spec_fma_4(rgb2spec_fma_4(co0, lambda, co1), lambda, co2);
 
-    let y = Float4::splat(1.0) / (rgb2spec_fma_4(x, x, Float4::splat(1.0))).sqrt();
+    let y = {
+        // TODO: replace this with a SIMD sqrt op.
+        let (x, y, z, w) = rgb2spec_fma_4(x, x, Vec4::splat(1.0)).into();
+        Vec4::new(x.sqrt(), y.sqrt(), z.sqrt(), w.sqrt()).reciprocal()
+    };
 
-    rgb2spec_fma_4(Float4::splat(0.5) * x, y, Float4::splat(0.5))
+    rgb2spec_fma_4(Vec4::splat(0.5) * x, y, Vec4::splat(0.5))
 }

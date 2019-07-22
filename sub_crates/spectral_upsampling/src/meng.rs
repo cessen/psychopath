@@ -6,7 +6,7 @@
 
 use std::f32;
 
-use float4::Float4;
+use glam::Vec4;
 
 mod meng_spectra_tables;
 
@@ -174,9 +174,9 @@ pub fn spectrum_xyz_to_p(lambda: f32, xyz: (f32, f32, f32)) -> f32 {
 ///
 /// Works on 4 wavelengths at once via SIMD.
 #[inline]
-pub fn spectrum_xyz_to_p_4(lambdas: Float4, xyz: (f32, f32, f32)) -> Float4 {
-    assert!(lambdas.h_min() >= SPECTRUM_SAMPLE_MIN);
-    assert!(lambdas.h_max() <= SPECTRUM_SAMPLE_MAX);
+pub fn spectrum_xyz_to_p_4(lambdas: Vec4, xyz: (f32, f32, f32)) -> Vec4 {
+    assert!(lambdas.min_element() >= SPECTRUM_SAMPLE_MIN);
+    assert!(lambdas.max_element() <= SPECTRUM_SAMPLE_MAX);
 
     let inv_norm = xyz.0 + xyz.1 + xyz.2;
     let norm = {
@@ -184,7 +184,7 @@ pub fn spectrum_xyz_to_p_4(lambdas: Float4, xyz: (f32, f32, f32)) -> Float4 {
         if norm < f32::MAX {
             norm
         } else {
-            return Float4::splat(0.0);
+            return Vec4::splat(0.0);
         }
     };
 
@@ -197,7 +197,7 @@ pub fn spectrum_xyz_to_p_4(lambdas: Float4, xyz: (f32, f32, f32)) -> Float4 {
         || uv.1 < 0.0
         || uv.1 >= SPECTRUM_GRID_HEIGHT as f32
     {
-        return Float4::splat(0.0);
+        return Vec4::splat(0.0);
     }
 
     let uvi = (uv.0 as i32, uv.1 as i32);
@@ -214,53 +214,48 @@ pub fn spectrum_xyz_to_p_4(lambdas: Float4, xyz: (f32, f32, f32)) -> Float4 {
 
     // If the cell has no points, nothing we can do, so return 0.0
     if num == 0 {
-        return Float4::splat(0.0);
+        return Vec4::splat(0.0);
     }
 
     // Normalize lambda to spectrum table index range.
-    let sb: Float4 = (lambdas - Float4::splat(SPECTRUM_SAMPLE_MIN))
+    let sb: Vec4 = (lambdas - Vec4::splat(SPECTRUM_SAMPLE_MIN))
         / (SPECTRUM_SAMPLE_MAX - SPECTRUM_SAMPLE_MIN)
         * (SPECTRUM_NUM_SAMPLES as f32 - 1.0);
-    debug_assert!(sb.h_min() >= 0.0);
-    debug_assert!(sb.h_max() <= SPECTRUM_NUM_SAMPLES as f32);
+    debug_assert!(sb.min_element() >= 0.0);
+    debug_assert!(sb.max_element() <= SPECTRUM_NUM_SAMPLES as f32);
 
     // Get the spectral values for the vertices of the grid cell.
     // TODO: use integer SIMD intrinsics to make this part faster.
-    let mut p = [Float4::splat(0.0); 6];
-    let sb0: [i32; 4] = [
-        sb.get_0() as i32,
-        sb.get_1() as i32,
-        sb.get_2() as i32,
-        sb.get_3() as i32,
-    ];
+    let mut p = [Vec4::splat(0.0); 6];
+    let sb0: [i32; 4] = [sb.x() as i32, sb.y() as i32, sb.z() as i32, sb.w() as i32];
     assert!(sb0[0].max(sb0[1]).max(sb0[2].max(sb0[3])) < SPECTRUM_NUM_SAMPLES);
     let sb1: [i32; 4] = [
-        (sb.get_0() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
-        (sb.get_1() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
-        (sb.get_2() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
-        (sb.get_3() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
+        (sb.x() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
+        (sb.y() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
+        (sb.z() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
+        (sb.w() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
     ];
-    let sbf = sb - Float4::new(sb0[0] as f32, sb0[1] as f32, sb0[2] as f32, sb0[3] as f32);
+    let sbf = sb - Vec4::new(sb0[0] as f32, sb0[1] as f32, sb0[2] as f32, sb0[3] as f32);
     for i in 0..(num as usize) {
         debug_assert!(idx[i] >= 0);
         let spectrum = &SPECTRUM_DATA_POINTS[idx[i] as usize].spectrum;
-        let p0 = Float4::new(
+        let p0 = Vec4::new(
             spectrum[sb0[0] as usize],
             spectrum[sb0[1] as usize],
             spectrum[sb0[2] as usize],
             spectrum[sb0[3] as usize],
         );
-        let p1 = Float4::new(
+        let p1 = Vec4::new(
             spectrum[sb1[0] as usize],
             spectrum[sb1[1] as usize],
             spectrum[sb1[2] as usize],
             spectrum[sb1[3] as usize],
         );
-        p[i] = p0 * (Float4::splat(1.0) - sbf) + p1 * sbf;
+        p[i] = p0 * (Vec4::splat(1.0) - sbf) + p1 * sbf;
     }
 
     // Linearly interpolate the spectral power of the cell vertices.
-    let mut interpolated_p = Float4::splat(0.0);
+    let mut interpolated_p = Vec4::splat(0.0);
     if inside {
         // Fast path for normal inner quads:
         let uv2 = (uv.0 - uvi.0 as f32, uv.1 - uvi.1 as f32);

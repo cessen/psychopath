@@ -45,12 +45,12 @@ impl BBox {
         let t2 = (self.max.co - orig.co) * dir_inv.co;
 
         // Find the far and near intersection
-        let mut far_t = t1.v_max(t2);
-        let mut near_t = t1.v_min(t2);
-        far_t.set_3(std::f32::INFINITY);
-        near_t.set_3(0.0);
-        let far_hit_t = fast_minf32(far_t.h_min() * BBOX_MAXT_ADJUST, max_t);
-        let near_hit_t = near_t.h_max();
+        let mut far_t = t1.max(t2);
+        let mut near_t = t1.min(t2);
+        far_t.set_w(std::f32::INFINITY);
+        near_t.set_w(0.0);
+        let far_hit_t = fast_minf32(far_t.min_element() * BBOX_MAXT_ADJUST, max_t);
+        let near_hit_t = near_t.max_element();
 
         // Did we hit?
         near_hit_t <= far_hit_t
@@ -106,10 +106,10 @@ impl BitOr for BBox {
     fn bitor(self, rhs: BBox) -> BBox {
         BBox::from_points(
             Point {
-                co: self.min.co.v_min(rhs.min.co),
+                co: self.min.co.min(rhs.min.co),
             },
             Point {
-                co: self.max.co.v_max(rhs.max.co),
+                co: self.max.co.max(rhs.max.co),
             },
         )
     }
@@ -128,10 +128,10 @@ impl BitOr<Point> for BBox {
     fn bitor(self, rhs: Point) -> BBox {
         BBox::from_points(
             Point {
-                co: self.min.co.v_min(rhs.co),
+                co: self.min.co.min(rhs.co),
             },
             Point {
-                co: self.max.co.v_max(rhs.co),
+                co: self.max.co.max(rhs.co),
             },
         )
     }
