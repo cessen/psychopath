@@ -5,21 +5,21 @@ use std::{
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
-use glam::Vec4;
+use glam::Vec3;
 
 use super::{CrossProduct, DotProduct, Matrix4x4, Normal, Point};
 
 /// A direction vector in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
 pub struct Vector {
-    pub co: Vec4,
+    pub co: Vec3,
 }
 
 impl Vector {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Vector {
         Vector {
-            co: Vec4::new(x, y, z, 0.0),
+            co: Vec3::new(x, y, z),
         }
     }
 
@@ -42,17 +42,21 @@ impl Vector {
 
     #[inline(always)]
     pub fn abs(&self) -> Vector {
-        Vector::new(self.x().abs(), self.y().abs(), self.z().abs())
+        Vector {
+            co: self.co * self.co.sign(),
+        }
     }
 
     #[inline(always)]
     pub fn into_point(self) -> Point {
-        Point::new(self.x(), self.y(), self.z())
+        Point {
+            co: self.co.extend(1.0),
+        }
     }
 
     #[inline(always)]
     pub fn into_normal(self) -> Normal {
-        Normal::new(self.x(), self.y(), self.z())
+        Normal { co: self.co }
     }
 
     #[inline(always)]
@@ -142,7 +146,7 @@ impl Mul<Matrix4x4> for Vector {
     #[inline]
     fn mul(self, other: Matrix4x4) -> Vector {
         Vector {
-            co: other.0.mul_vec4(self.co),
+            co: other.0.transform_vector3(self.co),
         }
     }
 }
@@ -178,7 +182,7 @@ impl CrossProduct for Vector {
     #[inline]
     fn cross(self, other: Vector) -> Vector {
         Vector {
-            co: self.co.truncate().cross(other.co.truncate()).extend(0.0),
+            co: self.co.cross(other.co),
         }
     }
 }
@@ -221,9 +225,7 @@ mod tests {
         let m = Matrix4x4::new_from_values(
             1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 13.0, 7.0, 15.0, 3.0,
         );
-        let mut vm = Vector::new(14.0, 46.0, 58.0);
-        vm.co.set_w(90.5);
-        assert_eq!(v * m, vm);
+        assert_eq!(v * m, Vector::new(14.0, 46.0, 58.0));
     }
 
     #[test]
@@ -232,8 +234,7 @@ mod tests {
         let m = Matrix4x4::new_from_values(
             1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 0.0, 0.0, 0.0, 1.0,
         );
-        let vm = Vector::new(14.0, 46.0, 58.0);
-        assert_eq!(v * m, vm);
+        assert_eq!(v * m, Vector::new(14.0, 46.0, 58.0));
     }
 
     #[test]

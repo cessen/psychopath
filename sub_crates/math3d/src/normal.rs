@@ -5,21 +5,21 @@ use std::{
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
-use glam::Vec4;
+use glam::Vec3;
 
 use super::{CrossProduct, DotProduct, Matrix4x4, Vector};
 
 /// A surface normal in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
 pub struct Normal {
-    pub co: Vec4,
+    pub co: Vec3,
 }
 
 impl Normal {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Normal {
         Normal {
-            co: Vec4::new(x, y, z, 0.0),
+            co: Vec3::new(x, y, z),
         }
     }
 
@@ -132,9 +132,9 @@ impl Mul<Matrix4x4> for Normal {
     #[inline]
     fn mul(self, other: Matrix4x4) -> Normal {
         let mat = other.0.inverse().transpose();
-        let mut co = mat.mul_vec4(self.co);
-        co.set_w(0.0);
-        Normal { co: co }
+        Normal {
+            co: mat.transform_vector3(self.co),
+        }
     }
 }
 
@@ -169,7 +169,7 @@ impl CrossProduct for Normal {
     #[inline]
     fn cross(self, other: Normal) -> Normal {
         Normal {
-            co: self.co.truncate().cross(other.co.truncate()).extend(0.0),
+            co: self.co.cross(other.co),
         }
     }
 }
@@ -213,8 +213,7 @@ mod tests {
         let m = Matrix4x4::new_from_values(
             1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 13.0, 7.0, 15.0, 3.0,
         );
-        let mut nm = n * m;
-        nm.co.set_w(0.0);
+        let nm = n * m;
         let nm2 = Normal::new(-19.258825, 5.717648, -1.770588);
         assert!(nm.co.ulps_eq(&nm2.co, 0.0, 4));
     }

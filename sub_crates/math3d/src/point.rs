@@ -54,9 +54,9 @@ impl Point {
 
     #[inline(always)]
     pub fn into_vector(self) -> Vector {
-        let mut v = Vector { co: self.co };
-        v.co.set_w(0.0);
-        v
+        Vector {
+            co: self.co.truncate(),
+        }
     }
 
     #[inline(always)]
@@ -113,7 +113,7 @@ impl Add<Vector> for Point {
     #[inline(always)]
     fn add(self, other: Vector) -> Point {
         Point {
-            co: self.co + other.co,
+            co: self.co + other.co.extend(0.0),
         }
     }
 }
@@ -124,7 +124,7 @@ impl Sub for Point {
     #[inline(always)]
     fn sub(self, other: Point) -> Vector {
         Vector {
-            co: self.norm().co - other.norm().co,
+            co: (self.norm().co - other.norm().co).truncate(),
         }
     }
 }
@@ -135,7 +135,7 @@ impl Sub<Vector> for Point {
     #[inline(always)]
     fn sub(self, other: Vector) -> Point {
         Point {
-            co: self.co - other.co,
+            co: self.co - other.co.extend(0.0),
         }
     }
 }
