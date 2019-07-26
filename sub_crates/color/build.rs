@@ -20,10 +20,9 @@ fn main() {
             w: (0.3127, 0.3290),
         };
 
-        let to_xyz = rgb_to_xyz(chroma, 1.0);
         let dest_path = Path::new(&out_dir).join("rec709_inc.rs");
         let mut f = File::create(&dest_path).unwrap();
-        write_conversion_functions("rec709", to_xyz, &mut f);
+        write_conversion_functions("rec709", chroma, &mut f);
     }
 
     // Rec2020
@@ -35,10 +34,9 @@ fn main() {
             w: (0.3127, 0.3290),
         };
 
-        let to_xyz = rgb_to_xyz(chroma, 1.0);
         let dest_path = Path::new(&out_dir).join("rec2020_inc.rs");
         let mut f = File::create(&dest_path).unwrap();
-        write_conversion_functions("rec2020", to_xyz, &mut f);
+        write_conversion_functions("rec2020", chroma, &mut f);
     }
 
     // ACES AP0
@@ -50,10 +48,9 @@ fn main() {
             w: (0.32168, 0.33767),
         };
 
-        let to_xyz = rgb_to_xyz(chroma, 1.0);
         let dest_path = Path::new(&out_dir).join("aces_ap0_inc.rs");
         let mut f = File::create(&dest_path).unwrap();
-        write_conversion_functions("aces_ap0", to_xyz, &mut f);
+        write_conversion_functions("aces_ap0", chroma, &mut f);
     }
 
     // ACES AP1
@@ -65,15 +62,16 @@ fn main() {
             w: (0.32168, 0.33767),
         };
 
-        let to_xyz = rgb_to_xyz(chroma, 1.0);
         let dest_path = Path::new(&out_dir).join("aces_ap1_inc.rs");
         let mut f = File::create(&dest_path).unwrap();
-        write_conversion_functions("aces_ap1", to_xyz, &mut f);
+        write_conversion_functions("aces_ap1", chroma, &mut f);
     }
 }
 
 /// Generates conversion functions for the given rgb to xyz transform matrix.
-fn write_conversion_functions(space_name: &str, to_xyz: [[f64; 3]; 3], f: &mut File) {
+fn write_conversion_functions(space_name: &str, chroma: Chromaticities, f: &mut File) {
+    let to_xyz = rgb_to_xyz(chroma, 1.0);
+
     f.write_all(
         format!(
             r#"
@@ -129,7 +127,12 @@ pub fn xyz_to_{}(xyz: (f32, f32, f32)) -> (f32, f32, f32) {{
     )
     .unwrap();
 
-    let e_to_xyz = adapt_to_e(to_xyz, 1.0);
+    let e_chroma = {
+        let mut e_chroma = chroma;
+        e_chroma.w = (1.0 / 3.0, 1.0 / 3.0);
+        e_chroma
+    };
+    let e_to_xyz = rgb_to_xyz(e_chroma, 1.0);
     f.write_all(
         format!(
             r#"
@@ -235,31 +238,6 @@ fn rgb_to_xyz(chroma: Chromaticities, y: f64) -> [[f64; 3]; 3] {
     mat[2][2] = sb * (1.0 - chroma.b.0 - chroma.b.1);
 
     mat
-}
-
-/// Chromatically adapts a matrix from `rgb_to_xyz` to a whitepoint of E.
-///
-/// In other words, makes it so that RGB (1,1,1) maps to XYZ (1,1,1).
-fn adapt_to_e(mat: [[f64; 3]; 3], y: f64) -> [[f64; 3]; 3] {
-    let r_fac = y / (mat[0][0] + mat[0][1] + mat[0][2]);
-    let g_fac = y / (mat[1][0] + mat[1][1] + mat[1][2]);
-    let b_fac = y / (mat[2][0] + mat[2][1] + mat[2][2]);
-
-    let mut mat2 = [[0.0; 3]; 3];
-
-    mat2[0][0] = mat[0][0] * r_fac;
-    mat2[0][1] = mat[0][1] * r_fac;
-    mat2[0][2] = mat[0][2] * r_fac;
-
-    mat2[1][0] = mat[1][0] * g_fac;
-    mat2[1][1] = mat[1][1] * g_fac;
-    mat2[1][2] = mat[1][2] * g_fac;
-
-    mat2[2][0] = mat[2][0] * b_fac;
-    mat2[2][1] = mat[2][1] * b_fac;
-    mat2[2][2] = mat[2][2] * b_fac;
-
-    mat2
 }
 
 /// Calculates the inverse of the given 3x3 matrix.
