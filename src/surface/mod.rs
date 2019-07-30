@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 // pub mod micropoly_batch;
+pub mod bilinear_patch;
 pub mod micropoly_batch;
 pub mod triangle;
 pub mod triangle_mesh;
@@ -24,6 +25,11 @@ pub trait Surface: Boundable + Debug + Sync {
         shader: &SurfaceShader,
         space: &[Matrix4x4],
     );
+}
+
+pub trait Splitable: Copy {
+    /// Splits the surface into two pieces if necessary.
+    fn split(&self /* TODO: splitting criteria. */) -> Option<(Self, Self)>;
 }
 
 #[derive(Debug, Copy, Clone)]
