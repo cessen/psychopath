@@ -16,6 +16,8 @@ use crate::{
     shading::SurfaceShader,
 };
 
+const MAX_EDGE_DICE: u32 = 128;
+
 pub trait Surface: Boundable + Debug + Sync {
     fn intersect_rays(
         &self,
@@ -29,7 +31,40 @@ pub trait Surface: Boundable + Debug + Sync {
 
 pub trait Splitable: Copy {
     /// Splits the surface into two pieces if necessary.
-    fn split(&self /* TODO: splitting criteria. */) -> Option<(Self, Self)>;
+    fn split<F>(&self, metric: F) -> Option<(Self, Self)>
+    where
+        F: Fn(Point, Point) -> f32;
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum PointOrder {
+    AsIs,
+    Flip,
+}
+
+pub fn point_order(p1: Point, p2: Point) -> PointOrder {
+    let max_diff = {
+        let v = p2 - p1;
+        let v_abs = v.abs();
+
+        let mut diff = v.x();
+        let mut diff_abs = v_abs.x();
+        if v_abs.y() > diff_abs {
+            diff = v.y();
+            diff_abs = v_abs.y();
+        }
+        if v_abs.z() > diff_abs {
+            diff = v.z();
+        }
+
+        diff
+    };
+
+    if max_diff <= 0.0 {
+        PointOrder::AsIs
+    } else {
+        PointOrder::Flip
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
