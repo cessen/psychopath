@@ -28,6 +28,8 @@ fn main() {
         .unwrap();
     f.write_all(format!("\nconst REC709_TABLE_MID_VALUE: f32 = {};", MID_VALUE).as_bytes())
         .unwrap();
+    f.write_all("\n#[allow(clippy::unreadable_literal, clippy::approx_constant)]".as_bytes())
+        .unwrap();
     f.write_all("\npub static REC709_TABLE: &[[(f32, f32, f32); 2]; 64 * 64 * 3] = &[".as_bytes())
         .unwrap();
     for item in &rec709_table {
@@ -48,6 +50,8 @@ fn main() {
         .unwrap();
     f.write_all(format!("\nconst REC2020_TABLE_MID_VALUE: f32 = {};", MID_VALUE).as_bytes())
         .unwrap();
+    f.write_all("\n#[allow(clippy::unreadable_literal, clippy::approx_constant)]".as_bytes())
+        .unwrap();
     f.write_all("\npub static REC2020_TABLE: &[[(f32, f32, f32); 2]; 64 * 64 * 3] = &[".as_bytes())
         .unwrap();
     for item in &rec2020_table {
@@ -67,6 +71,8 @@ fn main() {
     f.write_all(format!("\nconst ACES_TABLE_RES: usize = {};", TABLE_RES).as_bytes())
         .unwrap();
     f.write_all(format!("\nconst ACES_TABLE_MID_VALUE: f32 = {};", MID_VALUE).as_bytes())
+        .unwrap();
+    f.write_all("\n#[allow(clippy::unreadable_literal, clippy::approx_constant)]".as_bytes())
         .unwrap();
     f.write_all("\npub static ACES_TABLE: &[[(f32, f32, f32); 2]; 64 * 64 * 3] = &[".as_bytes())
         .unwrap();
