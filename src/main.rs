@@ -10,6 +10,7 @@
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::needless_range_loop)]
 #![allow(clippy::excessive_precision)]
+#![allow(clippy::transmute_ptr_to_ptr)]
 
 extern crate lazy_static;
 
@@ -57,7 +58,7 @@ use crate::{
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[allow(clippy::cyclomatic_complexity)]
+#[allow(clippy::cognitive_complexity)]
 fn main() {
     let mut t = Timer::new();
 

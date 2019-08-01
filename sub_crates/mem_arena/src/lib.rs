@@ -1,6 +1,7 @@
 #![allow(clippy::redundant_field_names)]
 #![allow(clippy::needless_return)]
 #![allow(clippy::mut_from_ref)]
+#![allow(clippy::transmute_ptr_to_ptr)]
 
 use std::{
     cell::{Cell, RefCell},

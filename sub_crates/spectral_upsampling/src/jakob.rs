@@ -51,6 +51,7 @@ pub fn aces_to_spectrum_p4(lambdas: Vec4, rgb: (f32, f32, f32)) -> Vec4 {
 // Core functions, specialized above for specific color spaces.
 
 #[inline(always)]
+#[allow(clippy::many_single_char_names)]
 fn small_rgb_to_spectrum_p4(
     table: &[[(f32, f32, f32); 2]],
     table_res: usize,

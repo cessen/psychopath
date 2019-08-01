@@ -337,8 +337,8 @@ impl Lerp for Color {
 
 fn plancks_law(temperature: f32, wavelength: f32) -> f32 {
     const C: f32 = 299_792_458.0; // Speed of light
-    const H: f32 = 6.62607015e-34; // Planck constant
-    const KB: f32 = 1.38064852e-23; // Boltzmann constant
+    const H: f32 = 6.626_070_15e-34; // Planck constant
+    const KB: f32 = 1.380_648_52e-23; // Boltzmann constant
 
     // At 400 kelvin and below, the spectrum is black anyway,
     // but the equations become numerically unstable somewhere

@@ -580,7 +580,7 @@ pub fn make_transform_format_error(byte_offset: usize) -> PsyParseError {
 }
 
 pub fn parse_color(contents: &str) -> Result<Color, PsyParseError> {
-    let items: Vec<_> = contents.split(",").map(|s| s.trim()).collect();
+    let items: Vec<_> = contents.split(',').map(|s| s.trim()).collect();
     if items.len() != 2 {
         return Err(PsyParseError::UnknownError(0));
     }

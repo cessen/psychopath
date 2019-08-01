@@ -2,7 +2,7 @@
 // clippy warnings that stem from the C code.
 #![allow(clippy::needless_return)]
 #![allow(clippy::useless_let_if_seq)]
-#![allow(clippy::cyclomatic_complexity)]
+#![allow(clippy::cognitive_complexity)]
 
 use std::f32;
 

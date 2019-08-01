@@ -64,7 +64,7 @@ impl<'a> BVH4<'a> {
     where
         F: 'b + Fn(&T) -> &'b [BBox],
     {
-        if objects.len() == 0 {
+        if objects.is_empty() {
             BVH4 {
                 root: None,
                 depth: 0,
@@ -116,8 +116,8 @@ impl<'a> BVH4<'a> {
         let mut stack_ptr = 1;
 
         while stack_ptr > 0 {
-            match node_stack[stack_ptr] {
-                &BVH4Node::Internal {
+            match *node_stack[stack_ptr] {
+                BVH4Node::Internal {
                     bounds,
                     children,
                     traversal_code,
@@ -143,7 +143,7 @@ impl<'a> BVH4<'a> {
                                     rays.max_t(ray_idx),
                                 )
                             };
-                            all_hits = all_hits | hits;
+                            all_hits |= hits;
                             hits
                         }
                     });
@@ -168,7 +168,7 @@ impl<'a> BVH4<'a> {
                     }
                 }
 
-                &BVH4Node::Leaf { object_range } => {
+                BVH4Node::Leaf { object_range } => {
                     // Do the ray tests.
                     obj_ray_test(object_range.0..object_range.1, rays, ray_stack);
 
@@ -191,12 +191,12 @@ impl<'a> BVH4<'a> {
     ) -> usize {
         let mut node_count = 0;
 
-        match node {
+        match *node {
             // Create internal node
-            &BVHBaseNode::Internal {
-                bounds_range: _,
+            BVHBaseNode::Internal {
                 children_indices,
                 split_axis,
+                ..
             } => {
                 let child_l = &base.nodes[children_indices.0];
                 let child_r = &base.nodes[children_indices.1];
@@ -274,7 +274,7 @@ impl<'a> BVH4<'a> {
                     let bounds_len = children
                         .iter()
                         .map(|c| {
-                            if let &Some(n) = c {
+                            if let Some(n) = *c {
                                 let len = n.bounds_range().1 - n.bounds_range().0;
                                 debug_assert!(len >= 1);
                                 len
@@ -345,7 +345,7 @@ impl<'a> BVH4<'a> {
             }
 
             // Create internal node
-            &BVHBaseNode::Leaf { object_range, .. } => {
+            BVHBaseNode::Leaf { object_range, .. } => {
                 unsafe {
                     *fill_node.as_mut_ptr() = BVH4Node::Leaf {
                         object_range: object_range,

@@ -11,7 +11,7 @@ use crate::{
 
 use glam::{Vec4, Vec4Mask};
 
-const BBOX_MAXT_ADJUST: f32 = 1.00000024;
+const BBOX_MAXT_ADJUST: f32 = 1.000_000_24;
 
 /// A SIMD set of 4 3D axis-aligned bounding boxes.
 #[derive(Debug, Copy, Clone)]

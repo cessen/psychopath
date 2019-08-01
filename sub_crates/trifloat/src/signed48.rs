@@ -13,6 +13,8 @@
 //! All integers in the range `[-8192, 8192]` can be represented exactly in the
 //! largest value.
 
+#![allow(clippy::cast_lossless)]
+
 use crate::{fiddle_exp2, fiddle_log2};
 
 /// Largest representable number.
@@ -27,6 +29,7 @@ pub const MIN: f32 = -274_844_352_512.0;
 /// Smallest representable positive number.
 ///
 /// This is the number with the smallest possible magnitude (aside from zero).
+#[allow(clippy::excessive_precision)]
 pub const MIN_POSITIVE: f32 = 0.000_000_000_003_637_978_807_091_713;
 
 /// Difference between 1.0 and the next largest representable number.
