@@ -1,5 +1,8 @@
 use super::{point_order, PointOrder, Splitable, MAX_EDGE_DICE};
-use crate::{lerp::lerp, math::Point};
+use crate::{
+    lerp::{lerp, lerp_slice},
+    math::Point,
+};
 
 #[derive(Debug, Copy, Clone)]
 pub struct BilinearPatch<'a> {
@@ -41,8 +44,8 @@ impl<'a> Splitable for BilinearSubPatch<'a> {
     where
         F: Fn(Point, Point) -> f32,
     {
-        // Get the points of the sub-patch.
-        let patch = self.original.control_points[0];
+        // Get the points of the sub-patch at time 0.5.
+        let patch = lerp_slice(self.original.control_points, 0.5);
         let points = [
             bilerp_point(patch, self.clip[0]),
             bilerp_point(patch, self.clip[1]),
@@ -58,52 +61,79 @@ impl<'a> Splitable for BilinearSubPatch<'a> {
             metric(points[3], points[0]),
         ];
 
-        // Do the split, if needed.
-        for i in 0..4 {
-            if self.must_split[i] || edge_metric[i] > MAX_EDGE_DICE as f32 {
-                let edge_1 = (i, (i + 1) % 4);
-                let edge_2 = ((i + 2) % 4, (i + 3) % 4);
-                let new_must_split = {
-                    let mut new_must_split = self.must_split;
-                    new_must_split[edge_1.0] = false;
-                    new_must_split[edge_2.0] = false;
-                    new_must_split
-                };
+        // Find an edge to split, if any.
+        let split_edge_index = {
+            // Find the "longest" edge in terms of the metric.
+            let (edge_i, m) = edge_metric
+                .iter()
+                .enumerate()
+                .max_by(|a, b| {
+                    if a.1 > b.1 {
+                        std::cmp::Ordering::Greater
+                    } else {
+                        std::cmp::Ordering::Less
+                    }
+                })
+                .unwrap();
 
-                let midpoint_1 = lerp(self.clip[edge_1.0], self.clip[edge_1.1], 0.5);
-                let midpoint_2 = {
-                    let alpha = if self.must_split[edge_2.0]
-                        || edge_metric[edge_2.0] > MAX_EDGE_DICE as f32
-                    {
+            // Return an edge to split, if a split is needed.
+            if *m > MAX_EDGE_DICE as f32 {
+                // Split needed because of over-long edge.
+                Some(edge_i)
+            } else {
+                // Return the the first edge with "must_split" set, if any.
+                // Otherwise returns `None`.
+                self.must_split
+                    .iter()
+                    .enumerate()
+                    .find(|a| *a.1)
+                    .map(|a| a.0)
+            }
+        };
+
+        // Do the split if needed
+        if let Some(i) = split_edge_index {
+            let edge_1 = (i, (i + 1) % 4);
+            let edge_2 = ((i + 2) % 4, (i + 3) % 4);
+            let new_must_split = {
+                let mut new_must_split = self.must_split;
+                new_must_split[edge_1.0] = false;
+                new_must_split[edge_2.0] = false;
+                new_must_split
+            };
+
+            let midpoint_1 = lerp(self.clip[edge_1.0], self.clip[edge_1.1], 0.5);
+            let midpoint_2 = {
+                let alpha =
+                    if self.must_split[edge_2.0] || edge_metric[edge_2.0] > MAX_EDGE_DICE as f32 {
                         0.5
                     } else {
                         let edge_2_dice_rate = edge_metric[edge_2.0].ceil();
                         (edge_2_dice_rate * 0.5).floor() / edge_2_dice_rate
                     };
 
-                    match point_order(points[edge_2.0], points[edge_2.1]) {
-                        PointOrder::AsIs => lerp(self.clip[edge_2.0], self.clip[edge_2.1], alpha),
-                        PointOrder::Flip => lerp(self.clip[edge_2.1], self.clip[edge_2.0], alpha),
-                    }
-                };
+                match point_order(points[edge_2.0], points[edge_2.1]) {
+                    PointOrder::AsIs => lerp(self.clip[edge_2.0], self.clip[edge_2.1], alpha),
+                    PointOrder::Flip => lerp(self.clip[edge_2.1], self.clip[edge_2.0], alpha),
+                }
+            };
 
-                // Build the new sub-patches
-                let mut patch_1 = BilinearSubPatch {
-                    original: self.original,
-                    clip: self.clip,
-                    must_split: new_must_split,
-                };
-                let mut patch_2 = patch_1;
-                patch_1.clip[edge_1.1] = midpoint_1;
-                patch_1.clip[edge_2.0] = midpoint_2;
-                patch_2.clip[edge_1.0] = midpoint_1;
-                patch_2.clip[edge_2.1] = midpoint_2;
+            // Build the new sub-patches
+            let mut patch_1 = BilinearSubPatch {
+                original: self.original,
+                clip: self.clip,
+                must_split: new_must_split,
+            };
+            let mut patch_2 = patch_1;
+            patch_1.clip[edge_1.1] = midpoint_1;
+            patch_1.clip[edge_2.0] = midpoint_2;
+            patch_2.clip[edge_1.0] = midpoint_1;
+            patch_2.clip[edge_2.1] = midpoint_2;
 
-                return Some((patch_1, patch_2));
-            }
+            Some((patch_1, patch_2))
+        } else {
+            // No split
+            None
         }
-
-        // No splitting needed to be done.
-        None
     }
 }

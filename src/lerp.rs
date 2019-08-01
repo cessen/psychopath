@@ -3,7 +3,7 @@
 use math3d::{Matrix4x4, Normal, Point, Vector};
 
 /// Trait for allowing a type to be linearly interpolated.
-pub trait Lerp {
+pub trait Lerp: Copy {
     fn lerp(self, other: Self, alpha: f32) -> Self;
 }
 
@@ -17,7 +17,7 @@ pub fn lerp<T: Lerp>(a: T, b: T, alpha: f32) -> T {
 
 /// Interpolates a slice of data as if each adjecent pair of elements
 /// represent a linear segment.
-pub fn lerp_slice<T: Lerp + Copy>(s: &[T], alpha: f32) -> T {
+pub fn lerp_slice<T: Lerp>(s: &[T], alpha: f32) -> T {
     debug_assert!(!s.is_empty());
     debug_assert!(alpha >= 0.0);
     debug_assert!(alpha <= 1.0);
@@ -70,6 +70,33 @@ impl Lerp for f64 {
 impl<T: Lerp> Lerp for (T, T) {
     fn lerp(self, other: (T, T), alpha: f32) -> (T, T) {
         (self.0.lerp(other.0, alpha), self.1.lerp(other.1, alpha))
+    }
+}
+
+impl<T: Lerp> Lerp for [T; 2] {
+    fn lerp(self, other: Self, alpha: f32) -> Self {
+        [self[0].lerp(other[0], alpha), self[1].lerp(other[1], alpha)]
+    }
+}
+
+impl<T: Lerp> Lerp for [T; 3] {
+    fn lerp(self, other: Self, alpha: f32) -> Self {
+        [
+            self[0].lerp(other[0], alpha),
+            self[1].lerp(other[1], alpha),
+            self[2].lerp(other[2], alpha),
+        ]
+    }
+}
+
+impl<T: Lerp> Lerp for [T; 4] {
+    fn lerp(self, other: Self, alpha: f32) -> Self {
+        [
+            self[0].lerp(other[0], alpha),
+            self[1].lerp(other[1], alpha),
+            self[2].lerp(other[2], alpha),
+            self[3].lerp(other[3], alpha),
+        ]
     }
 }
 
