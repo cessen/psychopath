@@ -16,24 +16,24 @@ Scene $Scene_fr1 {
     World {
         BackgroundShader {
             Type [Color]
-            Color [0.000000 0.000000 0.000000]
+            Color [rec709, 0.000000 0.000000 0.000000]
         }
     }
     Assembly {
         SurfaceShader $Green {
             Type [Lambert]
-            Color [0.117000 0.412500 0.115000]
+            Color [rec709, 0.117000 0.412500 0.115000]
         }
         SurfaceShader $Red {
             Type [Lambert]
-            Color [0.611000 0.055500 0.062000]
+            Color [rec709, 0.611000 0.055500 0.062000]
         }
         SurfaceShader $White {
             Type [Lambert]
-            Color [0.729500 0.735500 0.729000]
+            Color [rec709, 0.729500 0.735500 0.729000]
         }
         RectangleLight $__Area {
-            Color [84.300003 53.800003 18.500000]
+            Color [rec709, 84.300003 53.800003 18.500000]
             Dimensions [1.350000 1.100000]
         }
         Instance {
