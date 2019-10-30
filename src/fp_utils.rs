@@ -13,36 +13,32 @@ pub fn fp_gamma(n: u32) -> f32 {
 }
 
 pub fn increment_ulp(v: f32) -> f32 {
-    // Handle special cases
-    if (v.is_infinite() && v > 0.0) || v.is_nan() {
-        return v;
-    }
-
-    // Handle zero
-    let v = if v == -0.0 { 0.0 } else { v };
-
-    // Increase ulp by 1
-    if v >= 0.0 {
-        bits_to_f32(f32_to_bits(v) + 1)
+    if v.is_finite() {
+        if v > 0.0 {
+            f32::from_bits(v.to_bits() + 1)
+        } else if v < -0.0 {
+            f32::from_bits(v.to_bits() - 1)
+        } else {
+            f32::from_bits(0x00_00_00_01)
+        }
     } else {
-        bits_to_f32(f32_to_bits(v) - 1)
+        // Infinity or NaN.
+        v
     }
 }
 
 pub fn decrement_ulp(v: f32) -> f32 {
-    // Handle special cases
-    if (v.is_infinite() && v < 0.0) || v.is_nan() {
-        return v;
-    }
-
-    // Handle zero
-    let v = if v == 0.0 { -0.0 } else { v };
-
-    // Decrease ulp by 1
-    if v <= -0.0 {
-        bits_to_f32(f32_to_bits(v) + 1)
+    if v.is_finite() {
+        if v > 0.0 {
+            f32::from_bits(v.to_bits() - 1)
+        } else if v < -0.0 {
+            f32::from_bits(v.to_bits() + 1)
+        } else {
+            f32::from_bits(0x80_00_00_01)
+        }
     } else {
-        bits_to_f32(f32_to_bits(v) - 1)
+        // Infinity or NaN.
+        v
     }
 }
 
@@ -83,18 +79,6 @@ pub fn robust_ray_origin(pos: Point, pos_err: f32, nor: Normal, ray_dir: Vector)
     };
 
     Point::new(x, y, z)
-}
-
-#[inline(always)]
-fn f32_to_bits(v: f32) -> u32 {
-    use std::mem::transmute_copy;
-    unsafe { transmute_copy::<f32, u32>(&v) }
-}
-
-#[inline(always)]
-fn bits_to_f32(bits: u32) -> f32 {
-    use std::mem::transmute_copy;
-    unsafe { transmute_copy::<u32, f32>(&bits) }
 }
 
 #[cfg(test)]
