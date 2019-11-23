@@ -4,10 +4,10 @@
 use std::str::{self, FromStr};
 
 use nom::{
-    character::complete::{digit1, multispace0},
-    combinator::map_res,
+    character::complete::{digit1, multispace0, one_of},
+    combinator::{map_res, opt, recognize},
     number::complete::float,
-    sequence::delimited,
+    sequence::{delimited, tuple},
     IResult,
 };
 
@@ -25,16 +25,16 @@ pub fn ws_usize(input: &str) -> IResult<&str, usize, ()> {
     map_res(delimited(multispace0, digit1, multispace0), usize::from_str)(input)
 }
 
-// pub fn ws_i32(input: &str) -> IResult<&str, u32, ()> {
-//   map_res(
-//     delimited(
-//         multispace0,
-//         digit1,
-//         multispace0,
-//     ),
-//     u32::from_str,
-//   )(input)
-// }
+pub fn ws_i32(input: &str) -> IResult<&str, i32, ()> {
+    map_res(
+        delimited(
+            multispace0,
+            recognize(tuple((opt(one_of("-")), digit1))),
+            multispace0,
+        ),
+        i32::from_str,
+    )(input)
+}
 
 // ========================================================
 
@@ -59,6 +59,25 @@ mod test {
         assert_eq!(ws_usize("42   "), Ok((&""[..], 42)));
         assert_eq!(ws_usize("     42"), Ok((&""[..], 42)));
         assert_eq!(ws_usize("     42   53"), Ok((&"53"[..], 42)));
+    }
+
+    #[test]
+    fn ws_i32_1() {
+        assert_eq!(ws_i32("42"), Ok((&""[..], 42)));
+        assert_eq!(ws_i32("     42"), Ok((&""[..], 42)));
+        assert_eq!(ws_i32("42   "), Ok((&""[..], 42)));
+        assert_eq!(ws_i32("     42"), Ok((&""[..], 42)));
+        assert_eq!(ws_i32("     42   53"), Ok((&"53"[..], 42)));
+    }
+
+    #[test]
+    fn ws_i32_2() {
+        assert_eq!(ws_i32("-42"), Ok((&""[..], -42)));
+        assert_eq!(ws_i32("     -42"), Ok((&""[..], -42)));
+        assert_eq!(ws_i32("-42   "), Ok((&""[..], -42)));
+        assert_eq!(ws_i32("     -42"), Ok((&""[..], -42)));
+        assert_eq!(ws_i32("     -42   53"), Ok((&"53"[..], -42)));
+        assert_eq!(ws_i32("--42").is_err(), true);
     }
 
     #[test]
