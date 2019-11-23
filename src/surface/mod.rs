@@ -24,7 +24,7 @@ pub trait Surface: Boundable + Debug + Sync {
         rays: &mut RayBatch,
         ray_stack: &mut RayStack,
         isects: &mut [SurfaceIntersection],
-        shader: &SurfaceShader,
+        shader: &dyn SurfaceShader,
         space: &[Matrix4x4],
     );
 }

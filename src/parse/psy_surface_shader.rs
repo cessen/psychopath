@@ -24,7 +24,7 @@ use super::{
 pub fn parse_surface_shader<'a>(
     arena: &'a MemArena,
     tree: &'a DataTree,
-) -> Result<&'a SurfaceShader, PsyParseError> {
+) -> Result<&'a dyn SurfaceShader, PsyParseError> {
     let type_name = if let Some((_, text, _)) = tree.iter_leaf_children_with_type("Type").nth(0) {
         text.trim()
     } else {

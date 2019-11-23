@@ -100,15 +100,15 @@ impl Image {
         let mut f = io::BufWriter::new(File::create(path)?);
 
         // Write header
-        r#try!(write!(f, "P3\n{} {}\n255\n", self.res.0, self.res.1));
+        write!(f, "P3\n{} {}\n255\n", self.res.0, self.res.1)?;
 
         // Write pixels
         for y in 0..self.res.1 {
             for x in 0..self.res.0 {
                 let (r, g, b) = quantize_tri_255(xyz_to_srgbe(self.get(x, y).to_tuple()));
-                r#try!(write!(f, "{} {} {} ", r, g, b));
+                write!(f, "{} {} {} ", r, g, b)?;
             }
-            r#try!(write!(f, "\n"));
+            write!(f, "\n")?;
         }
 
         // Done
@@ -120,14 +120,14 @@ impl Image {
         let mut f = io::BufWriter::new(File::create(path)?);
 
         // Write header
-        r#try!(write!(f, "P6\n{} {}\n255\n", self.res.0, self.res.1));
+        write!(f, "P6\n{} {}\n255\n", self.res.0, self.res.1)?;
 
         // Write pixels
         for y in 0..self.res.1 {
             for x in 0..self.res.0 {
                 let (r, g, b) = quantize_tri_255(xyz_to_srgbe(self.get(x, y).to_tuple()));
                 let d = [r, g, b];
-                r#try!(f.write_all(&d));
+                f.write_all(&d)?;
             }
         }
 

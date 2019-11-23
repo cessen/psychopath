@@ -24,7 +24,7 @@ pub struct Assembly<'a> {
     pub xforms: &'a [Matrix4x4],
 
     // Surface shader list
-    pub surface_shaders: &'a [&'a SurfaceShader],
+    pub surface_shaders: &'a [&'a dyn SurfaceShader],
 
     // Object list
     pub objects: &'a [Object<'a>],
@@ -155,7 +155,7 @@ pub struct AssemblyBuilder<'a> {
     xforms: Vec<Matrix4x4>,
 
     // Shader list
-    surface_shaders: Vec<&'a SurfaceShader>,
+    surface_shaders: Vec<&'a dyn SurfaceShader>,
     surface_shader_map: HashMap<String, usize>, // map Name -> Index
 
     // Object list
@@ -182,7 +182,7 @@ impl<'a> AssemblyBuilder<'a> {
         }
     }
 
-    pub fn add_surface_shader(&mut self, name: &str, shader: &'a SurfaceShader) {
+    pub fn add_surface_shader(&mut self, name: &str, shader: &'a dyn SurfaceShader) {
         // Make sure the name hasn't already been used.
         if self.surface_shader_map.contains_key(name) {
             panic!("Attempted to add surface shader to assembly with a name that already exists.");
@@ -397,8 +397,8 @@ impl<'a> AssemblyBuilder<'a> {
 
 #[derive(Copy, Clone, Debug)]
 pub enum Object<'a> {
-    Surface(&'a Surface),
-    SurfaceLight(&'a SurfaceLight),
+    Surface(&'a dyn Surface),
+    SurfaceLight(&'a dyn SurfaceLight),
 }
 
 #[derive(Debug, Copy, Clone)]

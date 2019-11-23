@@ -455,7 +455,7 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
 fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>, PsyParseError> {
     if tree.is_internal() {
         let background_color;
-        let mut lights: Vec<&WorldLightSource> = Vec::new();
+        let mut lights: Vec<&dyn WorldLightSource> = Vec::new();
 
         // Parse background shader
         let bgs = {

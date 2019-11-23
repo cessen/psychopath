@@ -152,7 +152,7 @@ impl<'a> TracerInner<'a> {
     fn trace_object<'b>(
         &'b mut self,
         obj: &Object,
-        surface_shader: Option<&SurfaceShader>,
+        surface_shader: Option<&dyn SurfaceShader>,
         rays: &mut RayBatch,
         ray_stack: &mut RayStack,
     ) {

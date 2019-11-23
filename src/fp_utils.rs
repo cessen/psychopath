@@ -128,5 +128,4 @@ mod tests {
         assert_eq!(increment_ulp(decrement_ulp(1.2)), 1.2);
         assert_eq!(increment_ulp(decrement_ulp(-1.2)), -1.2);
     }
-
 }

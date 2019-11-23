@@ -127,7 +127,7 @@ impl<'a> Surface for TriangleMesh<'a> {
         rays: &mut RayBatch,
         ray_stack: &mut RayStack,
         isects: &mut [SurfaceIntersection],
-        shader: &SurfaceShader,
+        shader: &dyn SurfaceShader,
         space: &[Matrix4x4],
     ) {
         // Precalculate transform for non-motion blur cases
