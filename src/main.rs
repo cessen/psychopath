@@ -43,7 +43,7 @@ mod transform_stack;
 use std::{fs::File, io, io::Read, mem, path::Path, str::FromStr};
 
 use clap::{App, Arg};
-use nom::{error_position, take_until};
+use nom::bytes::complete::take_until;
 
 use mem_arena::MemArena;
 
@@ -211,7 +211,8 @@ fn main() {
 
             let mut done = false;
             let mut trunc_len = 0;
-            if let nom::IResult::Done(remaining, _) = take_until!(&input[start..end], "__PSY_EOF__")
+            if let nom::IResult::Ok((remaining, _)) =
+                take_until::<&str, &[u8], ()>("__PSY_EOF__")(&input[start..end])
             {
                 done = true;
                 trunc_len = input.len() - remaining.len();

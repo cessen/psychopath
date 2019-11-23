@@ -2,7 +2,7 @@
 
 use std::result::Result;
 
-use nom::{call, closure, tuple, tuple_parser, IResult};
+use nom::{combinator::all_consuming, sequence::tuple, IResult};
 
 use mem_arena::MemArena;
 
@@ -35,7 +35,7 @@ pub fn parse_distant_disk_light<'a>(
                     contents,
                     byte_offset,
                 } if type_name == "Radius" => {
-                    if let IResult::Done(_, radius) = ws_f32(contents.as_bytes()) {
+                    if let IResult::Ok((_, radius)) = all_consuming(ws_f32)(contents) {
                         radii.push(radius);
                     } else {
                         // Found radius, but its contents is not in the right format
@@ -49,8 +49,8 @@ pub fn parse_distant_disk_light<'a>(
                     contents,
                     byte_offset,
                 } if type_name == "Direction" => {
-                    if let IResult::Done(_, direction) =
-                        closure!(tuple!(ws_f32, ws_f32, ws_f32))(contents.as_bytes())
+                    if let IResult::Ok((_, direction)) =
+                        all_consuming(tuple((ws_f32, ws_f32, ws_f32)))(contents)
                     {
                         directions.push(Vector::new(direction.0, direction.1, direction.2));
                     } else {
@@ -100,7 +100,7 @@ pub fn parse_sphere_light<'a>(
                     contents,
                     byte_offset,
                 } if type_name == "Radius" => {
-                    if let IResult::Done(_, radius) = ws_f32(contents.as_bytes()) {
+                    if let IResult::Ok((_, radius)) = all_consuming(ws_f32)(contents) {
                         radii.push(radius);
                     } else {
                         // Found radius, but its contents is not in the right format
@@ -149,8 +149,8 @@ pub fn parse_rectangle_light<'a>(
                     contents,
                     byte_offset,
                 } if type_name == "Dimensions" => {
-                    if let IResult::Done(_, radius) =
-                        closure!(tuple!(ws_f32, ws_f32))(contents.as_bytes())
+                    if let IResult::Ok((_, radius)) =
+                        all_consuming(tuple((ws_f32, ws_f32)))(contents)
                     {
                         dimensions.push(radius);
                     } else {

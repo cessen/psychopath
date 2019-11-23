@@ -2,7 +2,7 @@
 
 use std::result::Result;
 
-use nom::IResult;
+use nom::{combinator::all_consuming, IResult};
 
 use mem_arena::MemArena;
 
@@ -77,7 +77,7 @@ pub fn parse_surface_shader<'a>(
             let roughness = if let Some((_, contents, byte_offset)) =
                 tree.iter_leaf_children_with_type("Roughness").nth(0)
             {
-                if let IResult::Done(_, roughness) = ws_f32(contents.as_bytes()) {
+                if let IResult::Ok((_, roughness)) = all_consuming(ws_f32)(contents) {
                     roughness
                 } else {
                     return Err(PsyParseError::UnknownError(byte_offset));
@@ -93,7 +93,7 @@ pub fn parse_surface_shader<'a>(
             let fresnel = if let Some((_, contents, byte_offset)) =
                 tree.iter_leaf_children_with_type("Fresnel").nth(0)
             {
-                if let IResult::Done(_, fresnel) = ws_f32(contents.as_bytes()) {
+                if let IResult::Ok((_, fresnel)) = all_consuming(ws_f32)(contents) {
                     fresnel
                 } else {
                     return Err(PsyParseError::UnknownError(byte_offset));

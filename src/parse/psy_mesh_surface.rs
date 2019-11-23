@@ -2,7 +2,7 @@
 
 use std::result::Result;
 
-use nom::{call, closure, tuple, tuple_parser, IResult};
+use nom::{sequence::tuple, IResult};
 
 use mem_arena::MemArena;
 
@@ -37,15 +37,11 @@ pub fn parse_mesh_surface<'a>(
     // and other validation.
 
     // Get verts
-    for (_, text, _) in tree.iter_leaf_children_with_type("Vertices") {
-        let mut raw_text = text.trim().as_bytes();
-
+    for (_, mut text, _) in tree.iter_leaf_children_with_type("Vertices") {
         // Collect verts for this time sample
         let mut tverts = Vec::new();
-        while let IResult::Done(remaining, vert) =
-            closure!(tuple!(ws_f32, ws_f32, ws_f32))(raw_text)
-        {
-            raw_text = remaining;
+        while let IResult::Ok((remaining, vert)) = tuple((ws_f32, ws_f32, ws_f32))(text) {
+            text = remaining;
 
             tverts.push(Point::new(vert.0, vert.1, vert.2));
         }
@@ -59,14 +55,11 @@ pub fn parse_mesh_surface<'a>(
     }
 
     // Get normals, if they exist
-    for (_, text, _) in tree.iter_leaf_children_with_type("Normals") {
-        let mut raw_text = text.trim().as_bytes();
-
-        // Collect verts for this time sample
+    for (_, mut text, _) in tree.iter_leaf_children_with_type("Normals") {
+        // Collect normals for this time sample
         let mut tnormals = Vec::new();
-        while let IResult::Done(remaining, nor) = closure!(tuple!(ws_f32, ws_f32, ws_f32))(raw_text)
-        {
-            raw_text = remaining;
+        while let IResult::Ok((remaining, nor)) = tuple((ws_f32, ws_f32, ws_f32))(text) {
+            text = remaining;
 
             tnormals.push(Normal::new(nor.0, nor.1, nor.2).normalized());
         }
@@ -82,22 +75,18 @@ pub fn parse_mesh_surface<'a>(
     }
 
     // Get face vert counts
-    if let Some((_, text, _)) = tree.iter_leaf_children_with_type("FaceVertCounts").nth(0) {
-        let mut raw_text = text.trim().as_bytes();
-
-        while let IResult::Done(remaining, count) = ws_usize(raw_text) {
-            raw_text = remaining;
+    if let Some((_, mut text, _)) = tree.iter_leaf_children_with_type("FaceVertCounts").nth(0) {
+        while let IResult::Ok((remaining, count)) = ws_usize(text) {
+            text = remaining;
 
             face_vert_counts.push(count);
         }
     }
 
     // Get face vert indices
-    if let Some((_, text, _)) = tree.iter_leaf_children_with_type("FaceVertIndices").nth(0) {
-        let mut raw_text = text.trim().as_bytes();
-
-        while let IResult::Done(remaining, index) = ws_usize(raw_text) {
-            raw_text = remaining;
+    if let Some((_, mut text, _)) = tree.iter_leaf_children_with_type("FaceVertIndices").nth(0) {
+        while let IResult::Ok((remaining, index)) = ws_usize(text) {
+            text = remaining;
 
             face_vert_indices.push(index);
         }

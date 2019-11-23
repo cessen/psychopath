@@ -2,7 +2,7 @@
 
 use std::{f32, result::Result};
 
-use nom::{call, closure, eof, error_position, terminated, tuple, tuple_parser, IResult};
+use nom::{combinator::all_consuming, sequence::tuple, IResult};
 
 use mem_arena::MemArena;
 
@@ -273,8 +273,8 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
                     contents,
                     byte_offset,
                 } if type_name == "Resolution" => {
-                    if let IResult::Done(_, (w, h)) =
-                        closure!(terminated!(tuple!(ws_u32, ws_u32), eof!()))(contents.as_bytes())
+                    if let IResult::Ok((_, (w, h))) =
+                        all_consuming(tuple((ws_u32, ws_u32)))(contents)
                     {
                         found_res = true;
                         res = (w, h);
@@ -294,7 +294,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
                     contents,
                     byte_offset,
                 } if type_name == "SamplesPerPixel" => {
-                    if let IResult::Done(_, n) = ws_u32(contents.as_bytes()) {
+                    if let IResult::Ok((_, n)) = all_consuming(ws_u32)(contents) {
                         found_spp = true;
                         spp = n;
                     } else {
@@ -314,7 +314,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
                     contents,
                     byte_offset,
                 } if type_name == "Seed" => {
-                    if let IResult::Done(_, n) = ws_u32(contents.as_bytes()) {
+                    if let IResult::Ok((_, n)) = all_consuming(ws_u32)(contents) {
                         seed = n;
                     } else {
                         // Found Seed, but its contents is not in the right format
@@ -366,7 +366,7 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
                     contents,
                     byte_offset,
                 } if type_name == "Fov" => {
-                    if let IResult::Done(_, fov) = ws_f32(contents.as_bytes()) {
+                    if let IResult::Ok((_, fov)) = all_consuming(ws_f32)(contents) {
                         fovs.push(fov * (f32::consts::PI / 180.0));
                     } else {
                         // Found Fov, but its contents is not in the right format
@@ -385,7 +385,7 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
                     contents,
                     byte_offset,
                 } if type_name == "FocalDistance" => {
-                    if let IResult::Done(_, fd) = ws_f32(contents.as_bytes()) {
+                    if let IResult::Ok((_, fd)) = all_consuming(ws_f32)(contents) {
                         focus_distances.push(fd);
                     } else {
                         // Found FocalDistance, but its contents is not in the right format
@@ -404,7 +404,7 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
                     contents,
                     byte_offset,
                 } if type_name == "ApertureRadius" => {
-                    if let IResult::Done(_, ar) = ws_f32(contents.as_bytes()) {
+                    if let IResult::Ok((_, ar)) = all_consuming(ws_f32)(contents) {
                         aperture_radii.push(ar);
                     } else {
                         // Found ApertureRadius, but its contents is not in the right format
@@ -554,21 +554,20 @@ fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>,
 }
 
 pub fn parse_matrix(contents: &str) -> Result<Matrix4x4, PsyParseError> {
-    if let IResult::Done(_, ns) = closure!(terminated!(
-        tuple!(
-            ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32,
-            ws_f32, ws_f32, ws_f32, ws_f32, ws_f32
-        ),
-        eof!()
-    ))(contents.as_bytes())
+    if let IResult::Ok((leftover, ns)) = all_consuming(tuple((
+        ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32,
+        ws_f32, ws_f32, ws_f32, ws_f32, ws_f32,
+    )))(contents)
     {
-        return Ok(Matrix4x4::new_from_values(
-            ns.0, ns.4, ns.8, ns.12, ns.1, ns.5, ns.9, ns.13, ns.2, ns.6, ns.10, ns.14, ns.3, ns.7,
-            ns.11, ns.15,
-        ));
-    } else {
-        return Err(PsyParseError::UnknownError(0));
+        if leftover.is_empty() {
+            return Ok(Matrix4x4::new_from_values(
+                ns.0, ns.4, ns.8, ns.12, ns.1, ns.5, ns.9, ns.13, ns.2, ns.6, ns.10, ns.14, ns.3,
+                ns.7, ns.11, ns.15,
+            ));
+        }
     }
+
+    return Err(PsyParseError::UnknownError(0));
 }
 
 pub fn make_transform_format_error(byte_offset: usize) -> PsyParseError {
@@ -587,9 +586,7 @@ pub fn parse_color(contents: &str) -> Result<Color, PsyParseError> {
 
     match items[0] {
         "rec709" => {
-            if let IResult::Done(_, color) =
-                closure!(tuple!(ws_f32, ws_f32, ws_f32))(items[1].as_bytes())
-            {
+            if let IResult::Ok((_, color)) = tuple((ws_f32, ws_f32, ws_f32))(items[1]) {
                 return Ok(Color::new_xyz(rec709_e_to_xyz(color)));
             } else {
                 return Err(PsyParseError::UnknownError(0));
@@ -597,9 +594,7 @@ pub fn parse_color(contents: &str) -> Result<Color, PsyParseError> {
         }
 
         "blackbody" => {
-            if let IResult::Done(_, (temperature, factor)) =
-                closure!(tuple!(ws_f32, ws_f32))(items[1].as_bytes())
-            {
+            if let IResult::Ok((_, (temperature, factor))) = tuple((ws_f32, ws_f32))(items[1]) {
                 return Ok(Color::new_blackbody(temperature, factor));
             } else {
                 return Err(PsyParseError::UnknownError(0));
@@ -607,9 +602,7 @@ pub fn parse_color(contents: &str) -> Result<Color, PsyParseError> {
         }
 
         "color_temperature" => {
-            if let IResult::Done(_, (temperature, factor)) =
-                closure!(tuple!(ws_f32, ws_f32))(items[1].as_bytes())
-            {
+            if let IResult::Ok((_, (temperature, factor))) = tuple((ws_f32, ws_f32))(items[1]) {
                 return Ok(Color::new_temperature(temperature, factor));
             } else {
                 return Err(PsyParseError::UnknownError(0));
