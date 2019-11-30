@@ -14,6 +14,7 @@ class Assembly:
 
         self.material_names = set()
         self.mesh_names = set()
+        self.patch_names = set()
         self.assembly_names = set()
 
         # Collect all the objects, materials, instances, etc.
@@ -40,6 +41,8 @@ class Assembly:
                         self.objects += [Assembly(self.render_engine, ob.dupli_group.objects, ob.dupli_group.layers, name, ob.dupli_group.dupli_offset*-1)]
             elif ob.type == 'MESH':
                 name = self.get_mesh(ob, group_prefix)
+            elif ob.type == 'SURFACE':
+                name = self.get_bicubic_patch(ob, group_prefix)
             elif ob.type == 'LAMP' and ob.data.type == 'POINT':
                 name = self.get_sphere_lamp(ob, group_prefix)
             elif ob.type == 'LAMP' and ob.data.type == 'AREA':
@@ -132,6 +135,32 @@ class Assembly:
         else:
             return None
 
+    def get_bicubic_patch(self, ob, group_prefix):
+        # Figure out if we need to export or not and figure out what name to
+        # export with.
+        has_modifiers = len(ob.modifiers) > 0
+        deform_mb = needs_def_mb(ob)
+        if has_modifiers or deform_mb:
+            patch_name = group_prefix + escape_name("__" + ob.name + "__" + ob.data.name + "_")
+        else:
+            patch_name = group_prefix + escape_name("__" + ob.data.name + "_")
+        should_export_patch = patch_name not in self.patch_names
+
+        # Get patch
+        if should_export_patch:
+            self.patch_names.add(patch_name)
+            self.objects += [BicubicPatch(self.render_engine, ob, patch_name)]
+
+            # Get materials
+            for ms in ob.material_slots:
+                if ms != None:
+                    if ms.material.name not in self.material_names:
+                        self.material_names.add(ms.material.name)
+                        self.materials += [Material(self.render_engine, ms.material)]
+
+            return patch_name
+        else:
+            return None
 
     def get_sphere_lamp(self, ob, group_prefix):
         name = group_prefix + "__" + escape_name(ob.name)
@@ -198,6 +227,40 @@ class Mesh:
         w.write("]\n", False)
 
         # MeshSurface/SubdivisionSurface section end
+        w.unindent()
+        w.write("}\n")
+
+
+class BicubicPatch:
+    """ Holds data for a patch to be exported.
+    """
+    def __init__(self, render_engine, ob, name):
+        self.ob = ob
+        self.name = name
+        self.needs_mb = needs_def_mb(self.ob)
+        self.time_patches = []
+
+    def take_sample(self, render_engine, scene, time):
+        if len(self.time_patches) == 0 or self.needs_mb:
+            render_engine.update_stats("", "Psychopath: Collecting '{}' at time {}".format(self.ob.name, time))
+            self.time_patches += [self.ob.data.copy()]
+
+    def cleanup(self):
+        for patch in self.time_patches:
+            bpy.data.curves.remove(patch)
+
+    def export(self, render_engine, w):
+        render_engine.update_stats("", "Psychopath: Exporting %s" % self.ob.name)
+
+        # Write patch
+        w.write("BicubicPatch $%s {\n" % self.name)
+        w.indent()
+        for patch in self.time_patches:
+            verts = patch.splines[0].points
+            vstr = ""
+            for v in verts:
+                vstr += "{:.6} {:.6} {:.6} ".format(v.co[0], v.co[1], v.co[2])
+            w.write("Vertices [{}]\n".format(vstr[:-1]))
         w.unindent()
         w.write("}\n")
 
