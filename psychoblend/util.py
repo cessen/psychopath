@@ -11,8 +11,39 @@ def mat2str(m):
     s = ""
     for j in range(4):
         for i in range(4):
-            s += (" %f" % m[i][j])
+            s += " {:.6}".format(m[i][j])
     return s[1:]
+
+
+def color2str(color_type, color_data):
+    if color_type == 'Rec709':
+        return "Color [rec709, {:.6} {:.6} {:.6}]".format(
+            color_data[0],
+            color_data[1],
+            color_data[2],
+        )
+    elif color_type == 'Blackbody':
+        return "Color [blackbody, {:.6} {:.6}]".format(
+            color_data[0],
+            color_data[1],
+        )
+    elif color_type == 'ColorTemperature':
+        return "Color [color_temperature, {:.6} {:.6}]".format(
+            color_data[0],
+            color_data[1],
+        )
+
+
+def psycolor2str(psymat):
+    color_type = psymat.color_type
+    color_data = psymat.color
+
+    if color_type == 'Blackbody' or color_type == 'ColorTemperature':
+        # TODO: add the brightness multiplier to the Psychoblend material
+        # settings.  Here we're just defaulting it to 1.0.
+        color_data = [psymat.color_blackbody_temp, 1.0]
+
+    return color2str(color_type, color_data)
 
 
 def needs_def_mb(ob):

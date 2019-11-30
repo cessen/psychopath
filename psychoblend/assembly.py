@@ -1,6 +1,6 @@
 import bpy
 
-from .util import escape_name, mat2str, needs_def_mb, needs_xform_mb, ExportCancelled
+from .util import escape_name, mat2str, color2str, psycolor2str, needs_def_mb, needs_xform_mb, ExportCancelled
 
 class Assembly:
     def __init__(self, render_engine, objects, visible_layers, group_prefix="", translation_offset=(0,0,0)):
@@ -180,21 +180,21 @@ class Mesh:
         # Write vertices and (if it's smooth shaded) normals
         for ti in range(len(self.time_meshes)):
             w.write("Vertices [")
-            w.write(" ".join([("%f" % i) for vert in self.time_meshes[ti].vertices for i in vert.co]), False)
+            w.write(" ".join(["{:.6} {:.6} {:.6}".format(vert.co[0], vert.co[1], vert.co[2]) for vert in self.time_meshes[ti].vertices]), False)
             w.write("]\n", False)
             if self.time_meshes[0].polygons[0].use_smooth and self.ob.data.psychopath.is_subdivision_surface == False:
                 w.write("Normals [")
-                w.write(" ".join([("%f" % i) for vert in self.time_meshes[ti].vertices for i in vert.normal]), False)
+                w.write(" ".join(["{:.6} {:.6} {:.6}".format(vert.normal[0], vert.normal[1], vert.normal[2]) for vert in self.time_meshes[ti].vertices]), False)
                 w.write("]\n", False)
 
         # Write face vertex counts
         w.write("FaceVertCounts [")
-        w.write(" ".join([("%d" % len(p.vertices)) for p in self.time_meshes[0].polygons]), False)
+        w.write(" ".join(["{}".format(len(p.vertices)) for p in self.time_meshes[0].polygons]), False)
         w.write("]\n", False)
 
         # Write face vertex indices
         w.write("FaceVertIndices [")
-        w.write(" ".join([("%d"%v) for p in self.time_meshes[0].polygons for v in p.vertices]), False)
+        w.write(" ".join(["{}".format(v) for p in self.time_meshes[0].polygons for v in p.vertices]), False)
         w.write("]\n", False)
 
         # MeshSurface/SubdivisionSurface section end
@@ -232,14 +232,9 @@ class SphereLamp:
         w.write("SphereLight $%s {\n" % self.name)
         w.indent()
         for col in self.time_col:
-            if col[0] == 'Rec709':
-                w.write("Color [rec709, %f %f %f]\n" % (col[1][0], col[1][1], col[1][2]))
-            elif col[0] == 'Blackbody':
-                w.write("Color [blackbody, %f %f]\n" % (col[1], col[2]))
-            elif col[0] == 'ColorTemperature':
-                w.write("Color [color_temperature, %f %f]\n" % (col[1], col[2]))
+            w.write(color2str(col[0], col[1]) + "\n")
         for rad in self.time_rad:
-            w.write("Radius [%f]\n" % rad)
+            w.write("Radius [{:.6}]\n".format(rad))
 
         w.unindent()
         w.write("}\n")
@@ -278,14 +273,9 @@ class RectLamp:
         w.write("RectangleLight $%s {\n" % self.name)
         w.indent()
         for col in self.time_col:
-            if col[0] == 'Rec709':
-                w.write("Color [rec709, %f %f %f]\n" % (col[1][0], col[1][1], col[1][2]))
-            elif col[0] == 'Blackbody':
-                w.write("Color [blackbody, %f %f]\n" % (col[1], col[2]))
-            elif col[0] == 'ColorTemperature':
-                w.write("Color [color_temperature, %f %f]\n" % (col[1], col[2]))
+            w.write(color2str(col[0], col[1]) + "\n")
         for dim in self.time_dim:
-            w.write("Dimensions [%f %f]\n" % dim)
+            w.write("Dimensions [{:.6} {:.6}]\n".format(dim[0], dim[1]))
 
         w.unindent()
         w.write("}\n")
@@ -338,57 +328,15 @@ class Material:
         w.indent()
         if self.mat.psychopath.surface_shader_type == 'Emit':
             w.write("Type [Emit]\n")
-            if self.mat.psychopath.color_type == 'Rec709':
-                col = self.mat.psychopath.color
-                w.write("Color [rec709, %f %f %f]\n" % (
-                    col[0], col[1], col[2],
-                ))
-            elif self.mat.psychopath.color_type == 'Blackbody':
-                w.write("Color [blackbody, %f %f]\n" % (
-                    self.mat.psychopath.color_blackbody_temp,
-                    1.0,
-                ))
-            elif self.mat.psychopath.color_type == 'ColorTemperature':
-                w.write("Color [color_temperature, %f %f]\n" % (
-                    self.mat.psychopath.color_blackbody_temp,
-                    1.0,
-                ))
+            w.write(psycolor2str(self.mat.psychopath) + "\n")
         elif self.mat.psychopath.surface_shader_type == 'Lambert':
             w.write("Type [Lambert]\n")
-            if self.mat.psychopath.color_type == 'Rec709':
-                col = self.mat.psychopath.color
-                w.write("Color [rec709, %f %f %f]\n" % (
-                    col[0], col[1], col[2],
-                ))
-            elif self.mat.psychopath.color_type == 'Blackbody':
-                w.write("Color [blackbody, %f %f]\n" % (
-                    self.mat.psychopath.color_blackbody_temp,
-                    1.0,
-                ))
-            elif self.mat.psychopath.color_type == 'ColorTemperature':
-                w.write("Color [color_temperature, %f %f]\n" % (
-                    self.mat.psychopath.color_blackbody_temp,
-                    1.0,
-                ))
+            w.write(psycolor2str(self.mat.psychopath) + "\n")
         elif self.mat.psychopath.surface_shader_type == 'GGX':
             w.write("Type [GGX]\n")
-            if self.mat.psychopath.color_type == 'Rec709':
-                col = self.mat.psychopath.color
-                w.write("Color [rec709, %f %f %f]\n" % (
-                    col[0], col[1], col[2],
-                ))
-            elif self.mat.psychopath.color_type == 'Blackbody':
-                w.write("Color [blackbody, %f %f]\n" % (
-                    self.mat.psychopath.color_blackbody_temp,
-                    1.0,
-                ))
-            elif self.mat.psychopath.color_type == 'ColorTemperature':
-                w.write("Color [color_temperature, %f %f]\n" % (
-                    self.mat.psychopath.color_blackbody_temp,
-                    1.0,
-                ))
-            w.write("Roughness [%f]\n" % self.mat.psychopath.roughness)
-            w.write("Fresnel [%f]\n" % self.mat.psychopath.fresnel)
+            w.write(psycolor2str(self.mat.psychopath) + "\n")
+            w.write("Roughness [{:.6}]\n".format(self.mat.psychopath.roughness))
+            w.write("Fresnel [{:.6}]\n".format(self.mat.psychopath.fresnel))
         else:
             raise "Unsupported surface shader type '%s'" % self.mat.psychopath.surface_shader_type
         w.unindent()

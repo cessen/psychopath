@@ -3,7 +3,7 @@ import bpy
 from math import degrees, tan, atan
 from mathutils import Vector, Matrix
 
-from .util import escape_name, mat2str, ExportCancelled
+from .util import escape_name, color2str, mat2str, ExportCancelled
 
 class World:
     def __init__(self, render_engine, scene, visible_layers, aspect_ratio):
@@ -90,16 +90,16 @@ class Camera:
         w.indent()
 
         for fov in self.fovs:
-            w.write("Fov [%f]\n" % fov)
+            w.write("Fov [{:.6}]\n".format(fov))
 
         for rad in self.aperture_radii:
-            w.write("ApertureRadius [%f]\n" % rad)
+            w.write("ApertureRadius [{:.6}]\n".format(rad))
 
         for dist in self.focal_distances:
-            w.write("FocalDistance [%f]\n" % dist)
+            w.write("FocalDistance [{:.6}]\n".format(dist))
 
         for mat in self.xforms:
-            w.write("Transform [%s]\n" % mat2str(mat))
+            w.write("Transform [{}]\n".format(mat2str(mat)))
 
         w.unindent()
         w.write("}\n")
@@ -116,7 +116,7 @@ class BackgroundShader:
             w.write("BackgroundShader {\n")
             w.indent();
             w.write("Type [Color]\n")
-            w.write("Color [rec709, %f %f %f]\n" % self.color)
+            w.write("Color [rec709, {:.6} {:.6} {:.6}]\n".format(self.color[0], self.color[1], self.color[2]))
             w.unindent()
             w.write("}\n")
 
@@ -147,16 +147,11 @@ class DistantDiskLamp:
         w.write("DistantDiskLight $%s {\n" % self.name)
         w.indent()
         for direc in self.time_dir:
-            w.write("Direction [%f %f %f]\n" % (direc[0], direc[1], direc[2]))
+            w.write("Direction [{:.6} {:.6} {:.6}]\n".format(direc[0], direc[1], direc[2]))
         for col in self.time_col:
-            if col[0] == 'Rec709':
-                w.write("Color [rec709, %f %f %f]\n" % (col[1][0], col[1][1], col[1][2]))
-            elif col[0] == 'Blackbody':
-                w.write("Color [blackbody, %f %f]\n" % (col[1], col[2]))
-            elif col[0] == 'ColorTemperature':
-                w.write("Color [color_temperature, %f %f]\n" % (col[1], col[2]))
+            w.write(color2str(col[0], col[1]) + "\n")
         for rad in self.time_rad:
-            w.write("Radius [%f]\n" % rad)
+            w.write("Radius [{:.6}]\n".format(rad))
 
         w.unindent()
         w.write("}\n")

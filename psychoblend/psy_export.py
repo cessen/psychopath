@@ -96,7 +96,7 @@ class PsychoExporter:
         res_y = int(self.scene.render.resolution_y * (self.scene.render.resolution_percentage / 100))
         self.w.write('Resolution [%d %d]\n' % (res_x, res_y))
         self.w.write("SamplesPerPixel [%d]\n" % self.scene.psychopath.spp)
-        self.w.write("DicingRate [%f]\n" % self.scene.psychopath.dicing_rate)
+        self.w.write("DicingRate [{:.6}]\n".format(self.scene.psychopath.dicing_rate))
         self.w.write('Seed [%d]\n' % self.fr)
 
         # RenderSettings section end
