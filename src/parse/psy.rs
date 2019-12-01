@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{f32, result::Result};
+use std::{collections::HashMap, f32, result::Result};
 
 use nom::{combinator::all_consuming, sequence::tuple, IResult};
 
@@ -11,15 +11,17 @@ use crate::{
     color::{rec709_e_to_xyz, Color},
     light::WorldLightSource,
     math::Matrix4x4,
-    renderer::Renderer,
+    // renderer::Renderer,
     scene::Scene,
     scene::World,
+    shading::SurfaceShader,
 };
 
 use super::{
     basics::{ws_f32, ws_u32},
     psy_assembly::parse_assembly,
     psy_light::parse_distant_disk_light,
+    psy_surface_shader::parse_surface_shader,
     DataTree,
 };
 
@@ -31,6 +33,7 @@ pub enum PsyParseError {
     UnknownVariant(usize, &'static str),        // Error message
     ExpectedInternalNode(usize, &'static str),  // Error message
     ExpectedLeafNode(usize, &'static str),      // Error message
+    ExpectedIdent(usize, &'static str),         // Error message
     MissingNode(usize, &'static str),           // Error message
     IncorrectLeafData(usize, &'static str),     // Error message
     WrongNodeCount(usize, &'static str, usize), // Error message, sections found
@@ -60,6 +63,11 @@ impl PsyParseError {
             }
 
             PsyParseError::ExpectedLeafNode(offset, error) => {
+                let line = line_count_to_byte_offset(psy_content, offset);
+                println!("Line {}: {}", line, error);
+            }
+
+            PsyParseError::ExpectedIdent(offset, error) => {
                 let line = line_count_to_byte_offset(psy_content, offset);
                 println!("Line {}: {}", line, error);
             }
@@ -95,7 +103,7 @@ fn line_count_to_byte_offset(text: &str, offset: usize) -> usize {
 pub fn parse_scene<'a>(
     arena: &'a Arena,
     tree: &'a DataTree,
-) -> Result<Renderer<'a>, PsyParseError> {
+) -> Result<Scene<'a>, PsyParseError> {
     // Verify we have the right number of each section
     if tree.iter_children_with_type("Output").count() != 1 {
         let count = tree.iter_children_with_type("Output").count();
@@ -132,6 +140,14 @@ pub fn parse_scene<'a>(
             count,
         ));
     }
+    if tree.iter_children_with_type("Shaders").count() != 1 {
+        let count = tree.iter_children_with_type("Shaders").count();
+        return Err(PsyParseError::WrongNodeCount(
+            tree.byte_offset(),
+            "Scene should have precisely one Shaders section.",
+            count,
+        ));
+    }
     if tree.iter_children_with_type("Assembly").count() != 1 {
         let count = tree.iter_children_with_type("Assembly").count();
         return Err(PsyParseError::WrongNodeCount(
@@ -161,6 +177,9 @@ pub fn parse_scene<'a>(
     // Parse world
     let world = parse_world(arena, tree.iter_children_with_type("World").nth(0).unwrap())?;
 
+    // Parse shaders
+    let shaders = parse_shaders(tree.iter_children_with_type("Shaders").nth(0).unwrap())?;
+
     // Parse root scene assembly
     let assembly = parse_assembly(
         arena,
@@ -178,25 +197,25 @@ pub fn parse_scene<'a>(
         None
     };
     let scene = Scene {
-        name: scene_name,
         camera: camera,
         world: world,
-        root: assembly,
+        shaders: shaders,
+        root_assembly: assembly,
     };
 
-    // Put renderer together
-    let renderer = Renderer {
-        output_file: output_info.clone(),
-        resolution: (
-            (render_settings.0).0 as usize,
-            (render_settings.0).1 as usize,
-        ),
-        spp: render_settings.1 as usize,
-        seed: render_settings.2,
-        scene: scene,
-    };
+    // // Put renderer together
+    // let renderer = Renderer {
+    //     output_file: output_info.clone(),
+    //     resolution: (
+    //         (render_settings.0).0 as usize,
+    //         (render_settings.0).1 as usize,
+    //     ),
+    //     spp: render_settings.1 as usize,
+    //     seed: render_settings.2,
+    //     scene: scene,
+    // };
 
-    return Ok(renderer);
+    return Ok(scene);
 }
 
 fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
@@ -549,6 +568,44 @@ fn parse_world<'a>(arena: &'a Arena, tree: &'a DataTree) -> Result<World<'a>, Ps
             "World section should be an internal \
              node, containing at least a \
              BackgroundShader.",
+        ));
+    }
+}
+
+fn parse_shaders<'a>(
+    tree: &'a DataTree,
+) -> Result<HashMap<String, Box<dyn SurfaceShader>>, PsyParseError> {
+    if tree.is_internal() {
+        let mut shaders = HashMap::new();
+
+        for shader_item in tree.iter_children() {
+            match shader_item {
+                DataTree::Internal {
+                    type_name,
+                    ident,
+                    children,
+                    byte_offset,
+                } if type_name == &"SurfaceShader" => {
+                    if let Some(name) = ident {
+                        shaders.insert(name.to_string(), parse_surface_shader(shader_item)?);
+                    } else {
+                        // TODO: error.
+                    }
+                }
+
+                _ => {
+                    // TODO: an error.
+                }
+            }
+        }
+
+        // Return the list of shaders.
+        return Ok(shaders);
+    } else {
+        return Err(PsyParseError::ExpectedInternalNode(
+            tree.byte_offset(),
+            "Shaders section should be an internal \
+             node.",
         ));
     }
 }

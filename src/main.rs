@@ -31,13 +31,13 @@ mod math;
 mod mis;
 mod parse;
 mod ray;
-mod renderer;
+// mod renderer;
 mod sampling;
 mod scene;
 mod shading;
 mod surface;
 mod timer;
-mod tracer;
+// mod tracer;
 mod transform_stack;
 
 use std::{fs::File, io, io::Read, mem, path::Path, str::FromStr};
@@ -51,7 +51,7 @@ use crate::{
     accel::BVH4Node,
     bbox::BBox,
     parse::{parse_scene, DataTree},
-    renderer::LightPath,
+    // renderer::LightPath,
     surface::SurfaceIntersection,
     timer::Timer,
 };
@@ -163,7 +163,7 @@ fn main() {
             "SurfaceIntersection size:  {} bytes",
             mem::size_of::<SurfaceIntersection>()
         );
-        println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
+        // println!("LightPath size: {} bytes", mem::size_of::<LightPath>());
         println!("BBox size: {} bytes", mem::size_of::<BBox>());
         // println!("BVHNode size: {} bytes", mem::size_of::<BVHNode>());
         println!("BVH4Node size: {} bytes", mem::size_of::<BVH4Node>());
@@ -247,7 +247,7 @@ fn main() {
                 }
 
                 let arena = Arena::new().with_block_size((1 << 20) * 4);
-                let mut r = parse_scene(&arena, child).unwrap_or_else(|e| {
+                let mut scene = parse_scene(&arena, child).unwrap_or_else(|e| {
                     e.print(&psy_contents);
                     panic!("Parse error.");
                 });
@@ -256,7 +256,7 @@ fn main() {
                     if !args.is_present("serialized_output") {
                         println!("\tOverriding scene spp: {}", spp);
                     }
-                    r.spp = usize::from_str(spp).unwrap();
+                    // r.spp = usize::from_str(spp).unwrap();
                 }
 
                 let max_samples_per_bucket =
@@ -279,78 +279,82 @@ fn main() {
                 if !args.is_present("serialized_output") {
                     println!("Rendering scene with {} threads...", thread_count);
                 }
-                let (mut image, rstats) = r.render(
-                    max_samples_per_bucket,
-                    crop,
-                    thread_count,
-                    args.is_present("serialized_output"),
-                );
-                // Print render stats
-                if !args.is_present("serialized_output") {
-                    let rtime = t.tick();
-                    let ntime = rtime as f64 / rstats.total_time;
-                    println!("\tRendered scene in {:.3}s", rtime);
-                    println!(
-                        "\t\tTrace:                  {:.3}s",
-                        ntime * rstats.trace_time
-                    );
-                    println!("\t\t\tRays traced:          {}", rstats.ray_count);
-                    println!(
-                        "\t\t\tRays/sec:             {}",
-                        (rstats.ray_count as f64 / (ntime * rstats.trace_time) as f64) as u64
-                    );
-                    println!("\t\t\tRay/node tests:       {}", rstats.accel_node_visits);
-                    println!(
-                        "\t\tInitial ray generation: {:.3}s",
-                        ntime * rstats.initial_ray_generation_time
-                    );
-                    println!(
-                        "\t\tRay generation:         {:.3}s",
-                        ntime * rstats.ray_generation_time
-                    );
-                    println!(
-                        "\t\tSample writing:         {:.3}s",
-                        ntime * rstats.sample_writing_time
-                    );
-                }
 
-                // Write to disk
-                if !args.is_present("serialized_output") {
-                    println!("Writing image to disk into '{}'...", r.output_file);
-                    if r.output_file.ends_with(".png") {
-                        image
-                            .write_png(Path::new(&r.output_file))
-                            .expect("Failed to write png...");
-                    } else if r.output_file.ends_with(".exr") {
-                        image.write_exr(Path::new(&r.output_file));
-                    } else {
-                        panic!("Unknown output file extension.");
-                    }
-                    println!("\tWrote image in {:.3}s", t.tick());
-                }
+                println!("{:#?}", scene);
 
-                // Print memory stats if stats are wanted.
-                if args.is_present("stats") {
-                    // let arena_stats = arena.stats();
-                    // let mib_occupied = arena_stats.0 as f64 / 1_048_576.0;
-                    // let mib_allocated = arena_stats.1 as f64 / 1_048_576.0;
+                println!("Didn't really render, because all that code is disabled!  Done!");
+                // let (mut image, rstats) = r.render(
+                //     max_samples_per_bucket,
+                //     crop,
+                //     thread_count,
+                //     args.is_present("serialized_output"),
+                // );
+                // // Print render stats
+                // if !args.is_present("serialized_output") {
+                //     let rtime = t.tick();
+                //     let ntime = rtime as f64 / rstats.total_time;
+                //     println!("\tRendered scene in {:.3}s", rtime);
+                //     println!(
+                //         "\t\tTrace:                  {:.3}s",
+                //         ntime * rstats.trace_time
+                //     );
+                //     println!("\t\t\tRays traced:          {}", rstats.ray_count);
+                //     println!(
+                //         "\t\t\tRays/sec:             {}",
+                //         (rstats.ray_count as f64 / (ntime * rstats.trace_time) as f64) as u64
+                //     );
+                //     println!("\t\t\tRay/node tests:       {}", rstats.accel_node_visits);
+                //     println!(
+                //         "\t\tInitial ray generation: {:.3}s",
+                //         ntime * rstats.initial_ray_generation_time
+                //     );
+                //     println!(
+                //         "\t\tRay generation:         {:.3}s",
+                //         ntime * rstats.ray_generation_time
+                //     );
+                //     println!(
+                //         "\t\tSample writing:         {:.3}s",
+                //         ntime * rstats.sample_writing_time
+                //     );
+                // }
 
-                    // println!("MemArena stats:");
+                // // Write to disk
+                // if !args.is_present("serialized_output") {
+                //     println!("Writing image to disk into '{}'...", r.output_file);
+                //     if r.output_file.ends_with(".png") {
+                //         image
+                //             .write_png(Path::new(&r.output_file))
+                //             .expect("Failed to write png...");
+                //     } else if r.output_file.ends_with(".exr") {
+                //         image.write_exr(Path::new(&r.output_file));
+                //     } else {
+                //         panic!("Unknown output file extension.");
+                //     }
+                //     println!("\tWrote image in {:.3}s", t.tick());
+                // }
 
-                    // if mib_occupied >= 1.0 {
-                    //     println!("\tOccupied:      {:.1} MiB", mib_occupied);
-                    // } else {
-                    //     println!("\tOccupied:      {:.4} MiB", mib_occupied);
-                    // }
+                // // Print memory stats if stats are wanted.
+                // if args.is_present("stats") {
+                //     let arena_stats = arena.stats();
+                //     let mib_occupied = arena_stats.0 as f64 / 1_048_576.0;
+                //     let mib_allocated = arena_stats.1 as f64 / 1_048_576.0;
 
-                    // if mib_allocated >= 1.0 {
-                    //     println!("\tUsed:          {:.1} MiB", mib_allocated);
-                    // } else {
-                    //     println!("\tUsed:          {:.4} MiB", mib_allocated);
-                    // }
+                //     println!("MemArena stats:");
 
-                    // println!("\tTotal blocks:  {}", arena_stats.2);
-                }
+                //     if mib_occupied >= 1.0 {
+                //         println!("\tOccupied:      {:.1} MiB", mib_occupied);
+                //     } else {
+                //         println!("\tOccupied:      {:.4} MiB", mib_occupied);
+                //     }
+
+                //     if mib_allocated >= 1.0 {
+                //         println!("\tUsed:          {:.1} MiB", mib_allocated);
+                //     } else {
+                //         println!("\tUsed:          {:.4} MiB", mib_allocated);
+                //     }
+
+                //     println!("\tTotal blocks:  {}", arena_stats.2);
+                // }
             }
         }
     }

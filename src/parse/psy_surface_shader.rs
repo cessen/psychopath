@@ -4,8 +4,6 @@ use std::result::Result;
 
 use nom::{combinator::all_consuming, IResult};
 
-use kioku::Arena;
-
 use crate::shading::{SimpleSurfaceShader, SurfaceShader};
 
 use super::{
@@ -21,10 +19,7 @@ use super::{
 //    accel: BVH,
 // }
 
-pub fn parse_surface_shader<'a>(
-    arena: &'a Arena,
-    tree: &'a DataTree,
-) -> Result<&'a dyn SurfaceShader, PsyParseError> {
+pub fn parse_surface_shader(tree: &DataTree) -> Result<Box<dyn SurfaceShader>, PsyParseError> {
     let type_name = if let Some((_, text, _)) = tree.iter_leaf_children_with_type("Type").nth(0) {
         text.trim()
     } else {
@@ -52,7 +47,7 @@ pub fn parse_surface_shader<'a>(
                 ));
             };
 
-            arena.alloc(SimpleSurfaceShader::Lambert { color: color })
+            Box::new(SimpleSurfaceShader::Lambert { color: color })
         }
 
         "GGX" => {
@@ -105,7 +100,7 @@ pub fn parse_surface_shader<'a>(
                 ));
             };
 
-            arena.alloc(SimpleSurfaceShader::GGX {
+            Box::new(SimpleSurfaceShader::GGX {
                 color: color,
                 roughness: roughness,
                 fresnel: fresnel,
@@ -129,7 +124,7 @@ pub fn parse_surface_shader<'a>(
                 ));
             };
 
-            arena.alloc(SimpleSurfaceShader::Emit { color: color })
+            Box::new(SimpleSurfaceShader::Emit { color: color })
         }
 
         _ => unimplemented!(),

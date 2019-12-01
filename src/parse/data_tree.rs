@@ -49,6 +49,13 @@ impl<'a> DataTree<'a> {
         }
     }
 
+    pub fn ident(&'a self) -> Option<&'a str> {
+        match *self {
+            DataTree::Internal { ident, .. } => ident,
+            DataTree::Leaf { .. } => None,
+        }
+    }
+
     pub fn byte_offset(&'a self) -> usize {
         match *self {
             DataTree::Internal { byte_offset, .. } | DataTree::Leaf { byte_offset, .. } => {
