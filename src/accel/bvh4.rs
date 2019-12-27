@@ -8,7 +8,7 @@ use std::mem::{transmute, MaybeUninit};
 
 use glam::Vec4Mask;
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     bbox::BBox,
@@ -56,7 +56,7 @@ pub enum BVH4Node<'a> {
 
 impl<'a> BVH4<'a> {
     pub fn from_objects<'b, T, F>(
-        arena: &'a MemArena,
+        arena: &'a Arena,
         objects: &mut [T],
         objects_per_leaf: usize,
         bounder: F,
@@ -74,7 +74,7 @@ impl<'a> BVH4<'a> {
         } else {
             let base = BVHBase::from_objects(objects, objects_per_leaf, bounder);
 
-            let fill_node = arena.alloc_uninitialized_with_alignment::<BVH4Node>(32);
+            let fill_node = arena.alloc_align_uninit::<BVH4Node>(32);
             let node_count = BVH4::construct_from_base(
                 arena,
                 &base,
@@ -184,7 +184,7 @@ impl<'a> BVH4<'a> {
     }
 
     fn construct_from_base(
-        arena: &'a MemArena,
+        arena: &'a Arena,
         base: &BVHBase,
         node: &BVHBaseNode,
         fill_node: &mut MaybeUninit<BVH4Node<'a>>,
@@ -285,7 +285,7 @@ impl<'a> BVH4<'a> {
                         .max()
                         .unwrap();
                     debug_assert!(bounds_len >= 1);
-                    let bounds = arena.alloc_array_uninitialized_with_alignment(bounds_len, 32);
+                    let bounds = arena.alloc_array_align_uninit(bounds_len, 32);
                     if bounds_len < 2 {
                         let b1 =
                             children[0].map_or(BBox::new(), |c| base.bounds[c.bounds_range().0]);
@@ -327,8 +327,7 @@ impl<'a> BVH4<'a> {
                 };
 
                 // Construct child nodes
-                let child_nodes =
-                    arena.alloc_array_uninitialized_with_alignment::<BVH4Node>(child_count, 32);
+                let child_nodes = arena.alloc_array_align_uninit::<BVH4Node>(child_count, 32);
                 for (i, c) in children[0..child_count].iter().enumerate() {
                     node_count +=
                         BVH4::construct_from_base(arena, base, c.unwrap(), &mut child_nodes[i]);

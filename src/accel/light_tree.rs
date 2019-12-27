@@ -1,6 +1,6 @@
 use std::mem::{transmute, MaybeUninit};
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     algorithm::merge_slices_append,
@@ -60,7 +60,7 @@ impl<'a> Node<'a> {
 
 impl<'a> LightTree<'a> {
     pub fn from_objects<'b, T, F>(
-        arena: &'a MemArena,
+        arena: &'a Arena,
         objects: &mut [T],
         info_getter: F,
     ) -> LightTree<'a>
@@ -76,7 +76,7 @@ impl<'a> LightTree<'a> {
             let mut builder = LightTreeBuilder::new();
             builder.recursive_build(0, 0, objects, &info_getter);
 
-            let root = arena.alloc_uninitialized::<Node>();
+            let root = arena.alloc_uninit::<Node>();
             LightTree::construct_from_builder(arena, &builder, builder.root_node_index(), root);
 
             LightTree {
@@ -87,7 +87,7 @@ impl<'a> LightTree<'a> {
     }
 
     fn construct_from_builder(
-        arena: &'a MemArena,
+        arena: &'a Arena,
         base: &LightTreeBuilder,
         node_index: usize,
         node_mem: &mut MaybeUninit<Node<'a>>,
@@ -110,7 +110,7 @@ impl<'a> LightTree<'a> {
             let bounds = arena.copy_slice(&base.bounds[bounds_range.0..bounds_range.1]);
 
             let child_count = base.node_child_count(node_index);
-            let children = arena.alloc_array_uninitialized::<Node>(child_count);
+            let children = arena.alloc_array_uninit::<Node>(child_count);
             for i in 0..child_count {
                 LightTree::construct_from_builder(
                     arena,

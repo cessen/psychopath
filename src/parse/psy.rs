@@ -4,7 +4,7 @@ use std::{f32, result::Result};
 
 use nom::{combinator::all_consuming, sequence::tuple, IResult};
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     camera::Camera,
@@ -93,7 +93,7 @@ fn line_count_to_byte_offset(text: &str, offset: usize) -> usize {
 
 /// Takes in a `DataTree` representing a Scene node and returns
 pub fn parse_scene<'a>(
-    arena: &'a MemArena,
+    arena: &'a Arena,
     tree: &'a DataTree,
 ) -> Result<Renderer<'a>, PsyParseError> {
     // Verify we have the right number of each section
@@ -350,7 +350,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
     };
 }
 
-fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a>, PsyParseError> {
+fn parse_camera<'a>(arena: &'a Arena, tree: &'a DataTree) -> Result<Camera<'a>, PsyParseError> {
     if let DataTree::Internal { ref children, .. } = *tree {
         let mut mats = Vec::new();
         let mut fovs = Vec::new();
@@ -452,7 +452,7 @@ fn parse_camera<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<Camera<'a
     }
 }
 
-fn parse_world<'a>(arena: &'a MemArena, tree: &'a DataTree) -> Result<World<'a>, PsyParseError> {
+fn parse_world<'a>(arena: &'a Arena, tree: &'a DataTree) -> Result<World<'a>, PsyParseError> {
     if tree.is_internal() {
         let background_color;
         let mut lights: Vec<&dyn WorldLightSource> = Vec::new();

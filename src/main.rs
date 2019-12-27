@@ -45,7 +45,7 @@ use std::{fs::File, io, io::Read, mem, path::Path, str::FromStr};
 use clap::{App, Arg};
 use nom::bytes::complete::take_until;
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     accel::BVH4Node,
@@ -246,7 +246,7 @@ fn main() {
                     println!("Building scene...");
                 }
 
-                let arena = MemArena::with_min_block_size((1 << 20) * 4);
+                let arena = Arena::new().with_block_size((1 << 20) * 4);
                 let mut r = parse_scene(&arena, child).unwrap_or_else(|e| {
                     e.print(&psy_contents);
                     panic!("Parse error.");
@@ -331,25 +331,25 @@ fn main() {
 
                 // Print memory stats if stats are wanted.
                 if args.is_present("stats") {
-                    let arena_stats = arena.stats();
-                    let mib_occupied = arena_stats.0 as f64 / 1_048_576.0;
-                    let mib_allocated = arena_stats.1 as f64 / 1_048_576.0;
+                    // let arena_stats = arena.stats();
+                    // let mib_occupied = arena_stats.0 as f64 / 1_048_576.0;
+                    // let mib_allocated = arena_stats.1 as f64 / 1_048_576.0;
 
-                    println!("MemArena stats:");
+                    // println!("MemArena stats:");
 
-                    if mib_occupied >= 1.0 {
-                        println!("\tOccupied:      {:.1} MiB", mib_occupied);
-                    } else {
-                        println!("\tOccupied:      {:.4} MiB", mib_occupied);
-                    }
+                    // if mib_occupied >= 1.0 {
+                    //     println!("\tOccupied:      {:.1} MiB", mib_occupied);
+                    // } else {
+                    //     println!("\tOccupied:      {:.4} MiB", mib_occupied);
+                    // }
 
-                    if mib_allocated >= 1.0 {
-                        println!("\tUsed:          {:.1} MiB", mib_allocated);
-                    } else {
-                        println!("\tUsed:          {:.4} MiB", mib_allocated);
-                    }
+                    // if mib_allocated >= 1.0 {
+                    //     println!("\tUsed:          {:.1} MiB", mib_allocated);
+                    // } else {
+                    //     println!("\tUsed:          {:.4} MiB", mib_allocated);
+                    // }
 
-                    println!("\tTotal blocks:  {}", arena_stats.2);
+                    // println!("\tTotal blocks:  {}", arena_stats.2);
                 }
             }
         }

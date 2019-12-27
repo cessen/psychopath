@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     accel::BVH4,
@@ -148,7 +148,7 @@ impl<'a> Boundable for Assembly<'a> {
 
 #[derive(Debug)]
 pub struct AssemblyBuilder<'a> {
-    arena: &'a MemArena,
+    arena: &'a Arena,
 
     // Instance list
     instances: Vec<Instance>,
@@ -168,7 +168,7 @@ pub struct AssemblyBuilder<'a> {
 }
 
 impl<'a> AssemblyBuilder<'a> {
-    pub fn new(arena: &'a MemArena) -> AssemblyBuilder<'a> {
+    pub fn new(arena: &'a Arena) -> AssemblyBuilder<'a> {
         AssemblyBuilder {
             arena: arena,
             instances: Vec::new(),

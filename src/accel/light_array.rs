@@ -1,4 +1,4 @@
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     bbox::BBox,
@@ -17,7 +17,7 @@ pub struct LightArray<'a> {
 impl<'a> LightArray<'a> {
     #[allow(dead_code)]
     pub fn from_objects<'b, T, F>(
-        arena: &'a MemArena,
+        arena: &'a Arena,
         objects: &mut [T],
         info_getter: F,
     ) -> LightArray<'a>

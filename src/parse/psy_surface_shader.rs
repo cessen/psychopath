@@ -4,7 +4,7 @@ use std::result::Result;
 
 use nom::{combinator::all_consuming, IResult};
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::shading::{SimpleSurfaceShader, SurfaceShader};
 
@@ -22,7 +22,7 @@ use super::{
 // }
 
 pub fn parse_surface_shader<'a>(
-    arena: &'a MemArena,
+    arena: &'a Arena,
     tree: &'a DataTree,
 ) -> Result<&'a dyn SurfaceShader, PsyParseError> {
     let type_name = if let Some((_, text, _)) = tree.iter_leaf_children_with_type("Type").nth(0) {

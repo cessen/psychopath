@@ -1,6 +1,6 @@
 use std::f64::consts::PI as PI_64;
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     bbox::BBox,
@@ -31,7 +31,7 @@ pub struct SphereLight<'a> {
 }
 
 impl<'a> SphereLight<'a> {
-    pub fn new<'b>(arena: &'b MemArena, radii: &[f32], colors: &[Color]) -> SphereLight<'b> {
+    pub fn new<'b>(arena: &'b Arena, radii: &[f32], colors: &[Color]) -> SphereLight<'b> {
         let bbs: Vec<_> = radii
             .iter()
             .map(|r| BBox {

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     accel::BVH4,
@@ -47,7 +47,7 @@ pub struct MicropolyBatch<'a> {
 
 impl<'a> MicropolyBatch<'a> {
     pub fn from_verts_and_indices<'b>(
-        arena: &'b MemArena,
+        arena: &'b Arena,
         verts: &[Vec<Point>],
         vert_normals: &[Vec<Normal>],
         tri_indices: &[(usize, usize, usize)],
@@ -58,7 +58,7 @@ impl<'a> MicropolyBatch<'a> {
         // Copy verts over to a contiguous area of memory, reorganizing them
         // so that each vertices' time samples are contiguous in memory.
         let vertices = {
-            let vertices = arena.alloc_array_uninitialized(vert_count * time_sample_count);
+            let vertices = arena.alloc_array_uninit(vert_count * time_sample_count);
 
             for vi in 0..vert_count {
                 for ti in 0..time_sample_count {
@@ -74,7 +74,7 @@ impl<'a> MicropolyBatch<'a> {
         // Copy vertex normals, if any, organizing them the same as vertices
         // above.
         let normals = {
-            let normals = arena.alloc_array_uninitialized(vert_count * time_sample_count);
+            let normals = arena.alloc_array_uninit(vert_count * time_sample_count);
 
             for vi in 0..vert_count {
                 for ti in 0..time_sample_count {
@@ -89,7 +89,7 @@ impl<'a> MicropolyBatch<'a> {
 
         // Copy triangle vertex indices over, appending the triangle index itself to the tuple
         let indices: &mut [(u32, u32, u32)] = {
-            let indices = arena.alloc_array_uninitialized(tri_indices.len());
+            let indices = arena.alloc_array_uninit(tri_indices.len());
             for (i, tri_i) in tri_indices.iter().enumerate() {
                 unsafe {
                     *indices[i].as_mut_ptr() = (tri_i.0 as u32, tri_i.2 as u32, tri_i.1 as u32);

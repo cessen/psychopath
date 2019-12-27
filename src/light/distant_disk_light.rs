@@ -1,6 +1,6 @@
 use std::f64::consts::PI as PI_64;
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     color::{Color, SpectralSample},
@@ -22,7 +22,7 @@ pub struct DistantDiskLight<'a> {
 
 impl<'a> DistantDiskLight<'a> {
     pub fn new(
-        arena: &'a MemArena,
+        arena: &'a Arena,
         radii: &[f32],
         directions: &[Vector],
         colors: &[Color],

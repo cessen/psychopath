@@ -2,7 +2,7 @@
 
 use std::result::Result;
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::scene::{Assembly, AssemblyBuilder, Object};
 
@@ -15,7 +15,7 @@ use super::{
 };
 
 pub fn parse_assembly<'a>(
-    arena: &'a MemArena,
+    arena: &'a Arena,
     tree: &'a DataTree,
 ) -> Result<Assembly<'a>, PsyParseError> {
     let mut builder = AssemblyBuilder::new(arena);

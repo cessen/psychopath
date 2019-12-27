@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     accel::BVH4,
@@ -27,7 +27,7 @@ pub struct TriangleMesh<'a> {
 
 impl<'a> TriangleMesh<'a> {
     pub fn from_verts_and_indices<'b>(
-        arena: &'b MemArena,
+        arena: &'b Arena,
         verts: &[Vec<Point>],
         vert_normals: &Option<Vec<Vec<Normal>>>,
         tri_indices: &[(usize, usize, usize)],
@@ -38,7 +38,7 @@ impl<'a> TriangleMesh<'a> {
         // Copy verts over to a contiguous area of memory, reorganizing them
         // so that each vertices' time samples are contiguous in memory.
         let vertices = {
-            let vertices = arena.alloc_array_uninitialized(vert_count * time_sample_count);
+            let vertices = arena.alloc_array_uninit(vert_count * time_sample_count);
 
             for vi in 0..vert_count {
                 for ti in 0..time_sample_count {
@@ -55,7 +55,7 @@ impl<'a> TriangleMesh<'a> {
         // above.
         let normals = match vert_normals {
             Some(ref vnors) => {
-                let normals = arena.alloc_array_uninitialized(vert_count * time_sample_count);
+                let normals = arena.alloc_array_uninit(vert_count * time_sample_count);
 
                 for vi in 0..vert_count {
                     for ti in 0..time_sample_count {
@@ -73,7 +73,7 @@ impl<'a> TriangleMesh<'a> {
 
         // Copy triangle vertex indices over, appending the triangle index itself to the tuple
         let indices: &mut [(u32, u32, u32, u32)] = {
-            let indices = arena.alloc_array_uninitialized(tri_indices.len());
+            let indices = arena.alloc_array_uninit(tri_indices.len());
             for (i, tri_i) in tri_indices.iter().enumerate() {
                 unsafe {
                     *indices[i].as_mut_ptr() =

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     lerp::lerp_slice,
@@ -20,7 +20,7 @@ pub struct Camera<'a> {
 
 impl<'a> Camera<'a> {
     pub fn new(
-        arena: &'a MemArena,
+        arena: &'a Arena,
         transforms: &[Matrix4x4],
         fovs: &[f32],
         mut aperture_radii: &[f32],

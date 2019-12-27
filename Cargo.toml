@@ -4,7 +4,6 @@ members = [
     "sub_crates/color",
     "sub_crates/halton",
     "sub_crates/math3d",
-    "sub_crates/mem_arena",
     "sub_crates/oct32norm",
     "sub_crates/sobol",
     "sub_crates/spectral_upsampling",
@@ -31,6 +30,7 @@ lazy_static = "1.0"
 nom = "5"
 num_cpus = "1.8"
 openexr = "0.6.0"
+kioku = "0.3"
 png_encode_mini = "0.1.2"
 rustc-serialize = "0.3"
 scoped_threadpool = "0.1"
@@ -49,9 +49,6 @@ path = "sub_crates/halton"
 
 [dependencies.math3d]
 path = "sub_crates/math3d"
-
-[dependencies.mem_arena]
-path = "sub_crates/mem_arena"
 
 [dependencies.oct32norm]
 path = "sub_crates/oct32norm"

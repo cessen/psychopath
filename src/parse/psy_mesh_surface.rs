@@ -4,7 +4,7 @@ use std::result::Result;
 
 use nom::{sequence::tuple, IResult};
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     math::{Normal, Point},
@@ -25,7 +25,7 @@ use super::{
 // }
 
 pub fn parse_mesh_surface<'a>(
-    arena: &'a MemArena,
+    arena: &'a Arena,
     tree: &'a DataTree,
 ) -> Result<TriangleMesh<'a>, PsyParseError> {
     let mut verts = Vec::new(); // Vec of vecs, one for each time sample

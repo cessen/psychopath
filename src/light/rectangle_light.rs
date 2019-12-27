@@ -1,4 +1,4 @@
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     bbox::BBox,
@@ -29,7 +29,7 @@ pub struct RectangleLight<'a> {
 
 impl<'a> RectangleLight<'a> {
     pub fn new<'b>(
-        arena: &'b MemArena,
+        arena: &'b Arena,
         dimensions: &[(f32, f32)],
         colors: &[Color],
     ) -> RectangleLight<'b> {

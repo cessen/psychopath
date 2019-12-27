@@ -4,7 +4,7 @@ use std::result::Result;
 
 use nom::{combinator::all_consuming, sequence::tuple, IResult};
 
-use mem_arena::MemArena;
+use kioku::Arena;
 
 use crate::{
     light::{DistantDiskLight, RectangleLight, SphereLight},
@@ -18,7 +18,7 @@ use super::{
 };
 
 pub fn parse_distant_disk_light<'a>(
-    arena: &'a MemArena,
+    arena: &'a Arena,
     tree: &'a DataTree,
 ) -> Result<DistantDiskLight<'a>, PsyParseError> {
     if let DataTree::Internal { ref children, .. } = *tree {
@@ -84,7 +84,7 @@ pub fn parse_distant_disk_light<'a>(
 }
 
 pub fn parse_sphere_light<'a>(
-    arena: &'a MemArena,
+    arena: &'a Arena,
     tree: &'a DataTree,
 ) -> Result<SphereLight<'a>, PsyParseError> {
     if let DataTree::Internal { ref children, .. } = *tree {
@@ -133,7 +133,7 @@ pub fn parse_sphere_light<'a>(
 }
 
 pub fn parse_rectangle_light<'a>(
-    arena: &'a MemArena,
+    arena: &'a Arena,
     tree: &'a DataTree,
 ) -> Result<RectangleLight<'a>, PsyParseError> {
     if let DataTree::Internal { ref children, .. } = *tree {
