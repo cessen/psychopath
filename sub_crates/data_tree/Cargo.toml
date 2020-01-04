@@ -1,0 +1,10 @@
+[package]
+name = "data_tree"
+version = "0.1.0"
+authors = ["Nathan Vegdahl <cessen@cessen.com>"]
+edition = "2018"
+license = "MIT"
+
+[lib]
+name = "data_tree"
+path = "src/lib.rs"

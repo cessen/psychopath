@@ -2,6 +2,7 @@
 members = [
     "sub_crates/bvh_order",
     "sub_crates/color",
+    "sub_crates/data_tree",
     "sub_crates/halton",
     "sub_crates/math3d",
     "sub_crates/oct32norm",
@@ -43,6 +44,9 @@ path = "sub_crates/bvh_order"
 
 [dependencies.color]
 path = "sub_crates/color"
+
+[dependencies.data_tree]
+path = "sub_crates/data_tree"
 
 [dependencies.halton]
 path = "sub_crates/halton"
