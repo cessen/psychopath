@@ -28,18 +28,18 @@ pub fn parse_distant_disk_light<'a>(
 
         // Parse
         for child in children.iter() {
-            match *child {
+            match child {
                 // Radius
                 DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
                 } if type_name == "Radius" => {
-                    if let IResult::Ok((_, radius)) = all_consuming(ws_f32)(contents) {
+                    if let IResult::Ok((_, radius)) = all_consuming(ws_f32)(&contents) {
                         radii.push(radius);
                     } else {
                         // Found radius, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError(byte_offset));
+                        return Err(PsyParseError::UnknownError(*byte_offset));
                     }
                 }
 
@@ -50,12 +50,12 @@ pub fn parse_distant_disk_light<'a>(
                     byte_offset,
                 } if type_name == "Direction" => {
                     if let IResult::Ok((_, direction)) =
-                        all_consuming(tuple((ws_f32, ws_f32, ws_f32)))(contents)
+                        all_consuming(tuple((ws_f32, ws_f32, ws_f32)))(&contents)
                     {
                         directions.push(Vector::new(direction.0, direction.1, direction.2));
                     } else {
                         // Found direction, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError(byte_offset));
+                        return Err(PsyParseError::UnknownError(*byte_offset));
                     }
                 }
 
@@ -65,11 +65,11 @@ pub fn parse_distant_disk_light<'a>(
                     contents,
                     byte_offset,
                 } if type_name == "Color" => {
-                    if let Ok(color) = parse_color(contents) {
+                    if let Ok(color) = parse_color(&contents) {
                         colors.push(color);
                     } else {
                         // Found color, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError(byte_offset));
+                        return Err(PsyParseError::UnknownError(*byte_offset));
                     }
                 }
 
@@ -93,18 +93,18 @@ pub fn parse_sphere_light<'a>(
 
         // Parse
         for child in children.iter() {
-            match *child {
+            match child {
                 // Radius
                 DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
                 } if type_name == "Radius" => {
-                    if let IResult::Ok((_, radius)) = all_consuming(ws_f32)(contents) {
+                    if let IResult::Ok((_, radius)) = all_consuming(ws_f32)(&contents) {
                         radii.push(radius);
                     } else {
                         // Found radius, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError(byte_offset));
+                        return Err(PsyParseError::UnknownError(*byte_offset));
                     }
                 }
 
@@ -114,11 +114,11 @@ pub fn parse_sphere_light<'a>(
                     contents,
                     byte_offset,
                 } if type_name == "Color" => {
-                    if let Ok(color) = parse_color(contents) {
+                    if let Ok(color) = parse_color(&contents) {
                         colors.push(color);
                     } else {
                         // Found color, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError(byte_offset));
+                        return Err(PsyParseError::UnknownError(*byte_offset));
                     }
                 }
 
@@ -142,7 +142,7 @@ pub fn parse_rectangle_light<'a>(
 
         // Parse
         for child in children.iter() {
-            match *child {
+            match child {
                 // Dimensions
                 DataTree::Leaf {
                     type_name,
@@ -150,12 +150,12 @@ pub fn parse_rectangle_light<'a>(
                     byte_offset,
                 } if type_name == "Dimensions" => {
                     if let IResult::Ok((_, radius)) =
-                        all_consuming(tuple((ws_f32, ws_f32)))(contents)
+                        all_consuming(tuple((ws_f32, ws_f32)))(&contents)
                     {
                         dimensions.push(radius);
                     } else {
                         // Found dimensions, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError(byte_offset));
+                        return Err(PsyParseError::UnknownError(*byte_offset));
                     }
                 }
 
@@ -165,11 +165,11 @@ pub fn parse_rectangle_light<'a>(
                     contents,
                     byte_offset,
                 } if type_name == "Color" => {
-                    if let Ok(color) = parse_color(contents) {
+                    if let Ok(color) = parse_color(&contents) {
                         colors.push(color);
                     } else {
                         // Found color, but its contents is not in the right format
-                        return Err(PsyParseError::UnknownError(byte_offset));
+                        return Err(PsyParseError::UnknownError(*byte_offset));
                     }
                 }
 

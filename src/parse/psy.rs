@@ -100,10 +100,7 @@ fn line_count_to_byte_offset(text: &str, offset: usize) -> usize {
 }
 
 /// Takes in a `DataTree` representing a Scene node and returns
-pub fn parse_scene<'a>(
-    arena: &'a Arena,
-    tree: &'a DataTree,
-) -> Result<Scene<'a>, PsyParseError> {
+pub fn parse_scene<'a>(arena: &'a Arena, tree: &'a DataTree) -> Result<Scene<'a>, PsyParseError> {
     // Verify we have the right number of each section
     if tree.iter_children_with_type("Output").count() != 1 {
         let count = tree.iter_children_with_type("Output").count();
@@ -187,9 +184,9 @@ pub fn parse_scene<'a>(
     )?;
 
     // Put scene together
-    let scene_name = if let DataTree::Internal { ident, .. } = *tree {
+    let scene_name = if let DataTree::Internal { ident, .. } = tree {
         if let Some(name) = ident {
-            Some(name.to_string())
+            Some(name.clone())
         } else {
             None
         }
@@ -224,7 +221,7 @@ fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
         let mut path = String::new();
 
         for child in children {
-            match *child {
+            match child {
                 DataTree::Leaf {
                     type_name,
                     contents,
@@ -234,14 +231,14 @@ fn parse_output_info(tree: &DataTree) -> Result<String, PsyParseError> {
                     let tc = contents.trim();
                     if tc.chars().count() < 2 {
                         return Err(PsyParseError::IncorrectLeafData(
-                            byte_offset,
+                            *byte_offset,
                             "File path format is \
                              incorrect.",
                         ));
                     }
                     if tc.chars().nth(0).unwrap() != '"' || !tc.ends_with('"') {
                         return Err(PsyParseError::IncorrectLeafData(
-                            byte_offset,
+                            *byte_offset,
                             "File paths must be \
                              surrounded by quotes.",
                         ));
@@ -285,7 +282,7 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
         let mut seed = 0;
 
         for child in children {
-            match *child {
+            match child {
                 // Resolution
                 DataTree::Leaf {
                     type_name,
@@ -293,14 +290,14 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
                     byte_offset,
                 } if type_name == "Resolution" => {
                     if let IResult::Ok((_, (w, h))) =
-                        all_consuming(tuple((ws_u32, ws_u32)))(contents)
+                        all_consuming(tuple((ws_u32, ws_u32)))(&contents)
                     {
                         found_res = true;
                         res = (w, h);
                     } else {
                         // Found Resolution, but its contents is not in the right format
                         return Err(PsyParseError::IncorrectLeafData(
-                            byte_offset,
+                            *byte_offset,
                             "Resolution should be specified with two \
                              integers in the form '[width height]'.",
                         ));
@@ -313,13 +310,13 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
                     contents,
                     byte_offset,
                 } if type_name == "SamplesPerPixel" => {
-                    if let IResult::Ok((_, n)) = all_consuming(ws_u32)(contents) {
+                    if let IResult::Ok((_, n)) = all_consuming(ws_u32)(&contents) {
                         found_spp = true;
                         spp = n;
                     } else {
                         // Found SamplesPerPixel, but its contents is not in the right format
                         return Err(PsyParseError::IncorrectLeafData(
-                            byte_offset,
+                            *byte_offset,
                             "SamplesPerPixel should be \
                              an integer specified in \
                              the form '[samples]'.",
@@ -333,12 +330,12 @@ fn parse_render_settings(tree: &DataTree) -> Result<((u32, u32), u32, u32), PsyP
                     contents,
                     byte_offset,
                 } if type_name == "Seed" => {
-                    if let IResult::Ok((_, n)) = all_consuming(ws_u32)(contents) {
+                    if let IResult::Ok((_, n)) = all_consuming(ws_u32)(&contents) {
                         seed = n;
                     } else {
                         // Found Seed, but its contents is not in the right format
                         return Err(PsyParseError::IncorrectLeafData(
-                            byte_offset,
+                            *byte_offset,
                             "Seed should be an integer \
                              specified in the form \
                              '[samples]'.",
@@ -378,19 +375,19 @@ fn parse_camera<'a>(arena: &'a Arena, tree: &'a DataTree) -> Result<Camera<'a>, 
 
         // Parse
         for child in children.iter() {
-            match *child {
+            match child {
                 // Fov
                 DataTree::Leaf {
                     type_name,
                     contents,
                     byte_offset,
                 } if type_name == "Fov" => {
-                    if let IResult::Ok((_, fov)) = all_consuming(ws_f32)(contents) {
+                    if let IResult::Ok((_, fov)) = all_consuming(ws_f32)(&contents) {
                         fovs.push(fov * (f32::consts::PI / 180.0));
                     } else {
                         // Found Fov, but its contents is not in the right format
                         return Err(PsyParseError::IncorrectLeafData(
-                            byte_offset,
+                            *byte_offset,
                             "Fov should be a decimal \
                              number specified in the \
                              form '[fov]'.",
@@ -404,12 +401,12 @@ fn parse_camera<'a>(arena: &'a Arena, tree: &'a DataTree) -> Result<Camera<'a>, 
                     contents,
                     byte_offset,
                 } if type_name == "FocalDistance" => {
-                    if let IResult::Ok((_, fd)) = all_consuming(ws_f32)(contents) {
+                    if let IResult::Ok((_, fd)) = all_consuming(ws_f32)(&contents) {
                         focus_distances.push(fd);
                     } else {
                         // Found FocalDistance, but its contents is not in the right format
                         return Err(PsyParseError::IncorrectLeafData(
-                            byte_offset,
+                            *byte_offset,
                             "FocalDistance should be a \
                              decimal number specified \
                              in the form '[fov]'.",
@@ -423,12 +420,12 @@ fn parse_camera<'a>(arena: &'a Arena, tree: &'a DataTree) -> Result<Camera<'a>, 
                     contents,
                     byte_offset,
                 } if type_name == "ApertureRadius" => {
-                    if let IResult::Ok((_, ar)) = all_consuming(ws_f32)(contents) {
+                    if let IResult::Ok((_, ar)) = all_consuming(ws_f32)(&contents) {
                         aperture_radii.push(ar);
                     } else {
                         // Found ApertureRadius, but its contents is not in the right format
                         return Err(PsyParseError::IncorrectLeafData(
-                            byte_offset,
+                            *byte_offset,
                             "ApertureRadius should be a \
                              decimal number specified \
                              in the form '[fov]'.",
@@ -442,11 +439,11 @@ fn parse_camera<'a>(arena: &'a Arena, tree: &'a DataTree) -> Result<Camera<'a>, 
                     contents,
                     byte_offset,
                 } if type_name == "Transform" => {
-                    if let Ok(mat) = parse_matrix(contents) {
+                    if let Ok(mat) = parse_matrix(&contents) {
                         mats.push(mat);
                     } else {
                         // Found Transform, but its contents is not in the right format
-                        return Err(make_transform_format_error(byte_offset));
+                        return Err(make_transform_format_error(*byte_offset));
                     }
                 }
 
@@ -499,7 +496,7 @@ fn parse_world<'a>(arena: &'a Arena, tree: &'a DataTree) -> Result<World<'a>, Ps
                 ));
             }
             if let DataTree::Leaf { contents, .. } =
-                *bgs.iter_children_with_type("Type").nth(0).unwrap()
+                bgs.iter_children_with_type("Type").nth(0).unwrap()
             {
                 contents.trim()
             } else {
@@ -512,17 +509,17 @@ fn parse_world<'a>(arena: &'a Arena, tree: &'a DataTree) -> Result<World<'a>, Ps
         };
         match bgs_type {
             "Color" => {
-                if let Some(&DataTree::Leaf {
+                if let Some(DataTree::Leaf {
                     contents,
                     byte_offset,
                     ..
                 }) = bgs.iter_children_with_type("Color").nth(0)
                 {
-                    if let Ok(color) = parse_color(contents) {
+                    if let Ok(color) = parse_color(&contents) {
                         background_color = color;
                     } else {
                         return Err(PsyParseError::IncorrectLeafData(
-                            byte_offset,
+                            *byte_offset,
                             "Color should be specified \
                              with three decimal numbers \
                              in the form '[R G B]'.",
@@ -548,7 +545,7 @@ fn parse_world<'a>(arena: &'a Arena, tree: &'a DataTree) -> Result<World<'a>, Ps
 
         // Parse light sources
         for child in tree.iter_children() {
-            match *child {
+            match child {
                 DataTree::Internal { type_name, .. } if type_name == "DistantDiskLight" => {
                     lights.push(arena.alloc(parse_distant_disk_light(arena, child)?));
                 }
