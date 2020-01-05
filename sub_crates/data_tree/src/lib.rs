@@ -153,12 +153,17 @@ impl<R: Read> Parser<R> {
                     });
                 }
                 EventParse::ReachedEnd => {
-                    if self.inner_opens == 0 {
-                        return Ok(Event::Done);
-                    } else {
-                        return Err(Error::UnclosedInnerNode(
-                            self.total_bytes_processed + valid_count,
-                        ));
+                    // If we're at the end, make sure we're in a valid
+                    // state and finish.  Otherwise, let things keep
+                    // going.
+                    if self.eof {
+                        if self.inner_opens == 0 {
+                            return Ok(Event::Done);
+                        } else {
+                            return Err(Error::UnclosedInnerNode(
+                                self.total_bytes_processed + valid_count,
+                            ));
+                        }
                     }
                 }
                 EventParse::IncompleteData => {
