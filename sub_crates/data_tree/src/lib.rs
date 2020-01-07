@@ -1,19 +1,12 @@
 #![allow(dead_code)]
 
-use std::io::{self, Read};
-
-//--------------------------------------------------------------------------
-
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Error {
-    ExpectedTypeNameOrInnerClose(usize),
-    UnexpectedIdent(usize),
+    ExpectedTypeNameOrClose(usize),
     ExpectedOpenOrIdent(usize),
-    ExpectedInnerOpen(usize),
-    UnexpectedInnerClose(usize),
-    UnclosedInnerNode(usize),
-    UnexpectedEOF(usize),
-    IOError(io::Error),
+    ExpectedOpen(usize),
+    UnexpectedClose(usize),
+    UnexpectedIdent(usize),
 }
 
 impl std::error::Error for Error {}
@@ -21,12 +14,6 @@ impl std::error::Error for Error {}
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         write!(f, "{:?}", self)
-    }
-}
-
-impl From<io::Error> for Error {
-    fn from(other: io::Error) -> Self {
-        Error::IOError(other)
     }
 }
 
@@ -47,7 +34,9 @@ pub enum Event<'a> {
         contents: &'a str,
         byte_offset: usize,
     },
-    Done,
+    NeedMoreInput,
+    ValidEnd, // All data so far is consumed, and this is a
+              // valid place to finish the parse.
 }
 
 impl<'a> Event<'a> {
@@ -74,7 +63,8 @@ impl<'a> Event<'a> {
                 contents: contents,
                 byte_offset: byte_offset + offset,
             },
-            Event::Done => *self,
+            Event::NeedMoreInput => *self,
+            Event::ValidEnd => *self,
         }
     }
 }
@@ -82,167 +72,88 @@ impl<'a> Event<'a> {
 //---------------------------------------------------------------------
 
 #[derive(Debug)]
-pub struct Parser<R: Read> {
-    reader: R,
-    buffer: Vec<u8>,
-    buf_fill_idx: usize,
+pub struct Parser {
+    buffer: String,
     buf_consumed_idx: usize,
     total_bytes_processed: usize,
     inner_opens: usize,
-    eof: bool,
 }
 
-impl<R: Read> Parser<R> {
-    pub fn new(reader: R) -> Parser<R> {
+impl Parser {
+    pub fn new() -> Parser {
         Parser {
-            reader: reader,
-            buffer: Vec::with_capacity(1024),
-            buf_fill_idx: 0,
+            buffer: String::with_capacity(1024),
             buf_consumed_idx: 0,
             total_bytes_processed: 0,
             inner_opens: 0,
-            eof: false,
         }
+    }
+
+    pub fn push_data(&mut self, text: &str) {
+        // Remove any consumed data.
+        if self.buf_consumed_idx > 0 {
+            self.buffer.replace_range(..self.buf_consumed_idx, "");
+            self.buf_consumed_idx = 0;
+        }
+
+        // Add the new data.
+        self.buffer.push_str(text);
     }
 
     pub fn next_event<'a>(&'a mut self) -> Result<Event<'a>, Error> {
         // Remove any consumed data.
         if self.buf_consumed_idx > 0 {
-            self.buffer
-                .copy_within(self.buf_consumed_idx..self.buf_fill_idx, 0);
-            self.buf_fill_idx -= self.buf_consumed_idx;
+            self.buffer.replace_range(..self.buf_consumed_idx, "");
             self.buf_consumed_idx = 0;
         }
 
-        loop {
-            // Determine how much of the buffer is valid utf8.
-            let valid_count = match std::str::from_utf8(&self.buffer[..self.buf_fill_idx]) {
-                Ok(_) => self.buf_fill_idx,
-                Err(e) => e.valid_up_to(),
-            };
-
-            // Make a str slice out of the valid prefix.
-            let buffer_text = std::str::from_utf8(&self.buffer[..valid_count]).unwrap();
-
-            // Try to parse an event from the valid prefix.
-            match try_parse_event(buffer_text) {
-                EventParse::Ok(event, bytes_consumed) => {
-                    // Update internal state.
-                    self.buf_consumed_idx += bytes_consumed;
-                    self.total_bytes_processed += bytes_consumed;
-                    if let Event::InnerOpen { .. } = event {
-                        self.inner_opens += 1;
-                    } else if let Event::InnerClose { byte_offset, .. } = event {
-                        if self.inner_opens == 0 {
-                            return Err(Error::UnexpectedInnerClose(
-                                byte_offset + self.total_bytes_processed,
-                            ));
-                        } else {
-                            self.inner_opens -= 1;
-                        }
-                    }
-
-                    // Hack the borrow checker, which doesn't understand
-                    // loops apparently, and return.
-                    return Ok(unsafe {
-                        std::mem::transmute::<Event, Event>(
-                            event.add_to_byte_offset(
-                                self.total_bytes_processed - self.buf_consumed_idx,
-                            ),
-                        )
-                    });
-                }
-                EventParse::ReachedEnd => {
-                    // If we're at the end, make sure we're in a valid
-                    // state and finish.  Otherwise, let things keep
-                    // going.
-                    if self.eof {
-                        if self.inner_opens == 0 {
-                            return Ok(Event::Done);
-                        } else {
-                            return Err(Error::UnclosedInnerNode(
-                                self.total_bytes_processed + valid_count,
-                            ));
-                        }
-                    }
-                }
-                EventParse::IncompleteData => {
-                    // If we're at the end, it's a problem.
-                    // Otherwise, wait for more data.
-                    if self.eof {
-                        return Err(Error::UnexpectedEOF(
-                            self.total_bytes_processed + valid_count,
+        // Try to parse an event from the valid prefix.
+        match try_parse_event(&self.buffer) {
+            EventParse::Ok(event, bytes_consumed) => {
+                // Update internal state.
+                if let Event::InnerOpen { .. } = event {
+                    self.inner_opens += 1;
+                } else if let Event::InnerClose { byte_offset, .. } = event {
+                    if self.inner_opens == 0 {
+                        return Err(Error::UnexpectedClose(
+                            byte_offset + self.total_bytes_processed,
                         ));
+                    } else {
+                        self.inner_opens -= 1;
                     }
                 }
+                self.buf_consumed_idx += bytes_consumed;
+                self.total_bytes_processed += bytes_consumed;
 
-                // Hard errors.
-                EventParse::ExpectedTypeNameOrInnerClose(byte_offset) => {
-                    return Err(Error::ExpectedTypeNameOrInnerClose(
-                        byte_offset + self.total_bytes_processed,
-                    ));
-                }
-                EventParse::ExpectedOpenOrIdent(byte_offset) => {
-                    return Err(Error::ExpectedOpenOrIdent(
-                        byte_offset + self.total_bytes_processed,
-                    ));
-                }
-                EventParse::ExpectedInnerOpen(byte_offset) => {
-                    return Err(Error::ExpectedInnerOpen(
-                        byte_offset + self.total_bytes_processed,
-                    ));
-                }
-                EventParse::UnexpectedIdent(byte_offset) => {
-                    return Err(Error::UnexpectedIdent(
-                        byte_offset + self.total_bytes_processed,
-                    ));
+                // Hack the borrow checker, which doesn't understand
+                // loops apparently, and return.
+                Ok(event.add_to_byte_offset(self.total_bytes_processed - self.buf_consumed_idx))
+            }
+            EventParse::ReachedEnd => {
+                // If we consumed all data, then if all nodes are properly
+                // closed we're done.  Otherwise we need more input.
+                if self.inner_opens == 0 {
+                    Ok(Event::ValidEnd)
+                } else {
+                    Ok(Event::NeedMoreInput)
                 }
             }
+            EventParse::IncompleteData => Ok(Event::NeedMoreInput),
 
-            // If we couldn't parse a complete event, and if there were
-            // no errors, read in more data and loop back to try again.
-            if !self.eof {
-                let (read_count, _valid_count) = self.do_read()?;
-                if read_count == 0 {
-                    self.eof = true;
-                }
-            }
+            // Hard errors.
+            EventParse::ExpectedTypeNameOrInnerClose(byte_offset) => Err(
+                Error::ExpectedTypeNameOrClose(byte_offset + self.total_bytes_processed),
+            ),
+            EventParse::ExpectedOpenOrIdent(byte_offset) => Err(Error::ExpectedOpenOrIdent(
+                byte_offset + self.total_bytes_processed,
+            )),
+            EventParse::ExpectedInnerOpen(byte_offset) => Err(Error::ExpectedOpen(
+                byte_offset + self.total_bytes_processed,
+            )),
+            EventParse::UnexpectedIdent(byte_offset) => Err(Error::UnexpectedIdent(
+                byte_offset + self.total_bytes_processed,
+            )),
         }
-    }
-
-    /// Returns (read_count, valid_utf8_bytes_count).
-    /// The former is how many new bytes were added to the buffer,
-    /// and the latter is the total valid prefix utf8 bytes in the
-    /// buffer after the read.
-    fn do_read(&mut self) -> io::Result<(usize, usize)> {
-        // Make sure the buffer has space for more data.
-        if (self.buf_fill_idx + 4) >= self.buffer.len() {
-            let new_len = ((self.buffer.len() * 3) / 2) + 4;
-            self.buffer.resize(new_len, 0);
-        }
-
-        // Read!
-        let read_count = self.reader.read(&mut self.buffer[self.buf_fill_idx..])?;
-
-        self.buf_fill_idx += read_count;
-
-        // Determine how much of the buffer is valid utf8.
-        let valid_count = match std::str::from_utf8(&self.buffer[..self.buf_fill_idx]) {
-            Ok(_) => self.buf_fill_idx,
-            Err(e) => e.valid_up_to(),
-        };
-
-        // Check for invalid utf8.
-        if (self.buf_fill_idx - valid_count) >= 4
-            || (read_count == 0 && self.buf_fill_idx > valid_count)
-        {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "stream contained invalid UTF-8",
-            ));
-        }
-
-        return Ok((read_count, valid_count));
     }
 }
 
@@ -815,5 +726,134 @@ mod tests {
             try_parse_event("  # A comment\n\n     "),
             EventParse::ReachedEnd,
         );
+    }
+
+    #[test]
+    fn parser_01() {
+        let mut parser = Parser::new();
+
+        parser.push_data("Hello");
+        assert_eq!(parser.next_event(), Ok(Event::NeedMoreInput));
+
+        parser.push_data("{");
+        assert_eq!(
+            parser.next_event(),
+            Ok(Event::InnerOpen {
+                type_name: "Hello",
+                ident: None,
+                byte_offset: 0,
+            })
+        );
+
+        assert_eq!(parser.next_event(), Ok(Event::NeedMoreInput));
+
+        parser.push_data("}");
+        assert_eq!(
+            parser.next_event(),
+            Ok(Event::InnerClose { byte_offset: 6 })
+        );
+
+        assert_eq!(parser.next_event(), Ok(Event::ValidEnd));
+    }
+
+    #[test]
+    fn parser_02() {
+        let mut parser = Parser::new();
+
+        parser.push_data("Hello");
+        assert_eq!(parser.next_event(), Ok(Event::NeedMoreInput));
+
+        parser.push_data("[");
+        assert_eq!(parser.next_event(), Ok(Event::NeedMoreInput));
+
+        parser.push_data("1.0 2.0 3.");
+        assert_eq!(parser.next_event(), Ok(Event::NeedMoreInput));
+
+        parser.push_data("0]");
+        assert_eq!(
+            parser.next_event(),
+            Ok(Event::Leaf {
+                type_name: "Hello",
+                contents: "1.0 2.0 3.0",
+                byte_offset: 0,
+            })
+        );
+
+        assert_eq!(parser.next_event(), Ok(Event::ValidEnd));
+    }
+
+    #[test]
+    fn parser_03() {
+        let mut parser = Parser::new();
+
+        parser.push_data("Hello $big_boy { World [1.0 2.0 3.0] }");
+
+        assert_eq!(
+            parser.next_event(),
+            Ok(Event::InnerOpen {
+                type_name: "Hello",
+                ident: Some("$big_boy"),
+                byte_offset: 0,
+            })
+        );
+
+        assert_eq!(
+            parser.next_event(),
+            Ok(Event::Leaf {
+                type_name: "World",
+                contents: "1.0 2.0 3.0",
+                byte_offset: 17,
+            })
+        );
+
+        assert_eq!(
+            parser.next_event(),
+            Ok(Event::InnerClose { byte_offset: 37 })
+        );
+
+        // Make sure repeated calls are stable.
+        assert_eq!(parser.next_event(), Ok(Event::ValidEnd));
+        assert_eq!(parser.next_event(), Ok(Event::ValidEnd));
+        assert_eq!(parser.next_event(), Ok(Event::ValidEnd));
+    }
+
+    #[test]
+    fn parser_04() {
+        let mut parser = Parser::new();
+
+        parser.push_data("$Hello");
+        assert_eq!(parser.next_event(), Err(Error::ExpectedTypeNameOrClose(0)));
+    }
+
+    #[test]
+    fn parser_05() {
+        let mut parser = Parser::new();
+
+        parser.push_data("Hello]");
+        assert_eq!(parser.next_event(), Err(Error::ExpectedOpenOrIdent(5)));
+    }
+
+    #[test]
+    fn parser_06() {
+        let mut parser = Parser::new();
+
+        parser.push_data("Hello}");
+        assert_eq!(parser.next_event(), Err(Error::ExpectedOpenOrIdent(5)));
+    }
+
+    #[test]
+    fn parser_07() {
+        let mut parser = Parser::new();
+
+        parser.push_data("Hello $yar [");
+        assert_eq!(parser.next_event(), Err(Error::UnexpectedIdent(6)));
+    }
+
+    #[test]
+    fn parser_08() {
+        let mut parser = Parser::new();
+
+        parser.push_data("}");
+        assert_eq!(parser.next_event(), Err(Error::UnexpectedClose(0)));
     }
 }
