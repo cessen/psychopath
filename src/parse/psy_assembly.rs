@@ -4,6 +4,11 @@ use std::result::Result;
 
 use kioku::Arena;
 
+use data_tree::{
+    reader::{DataTreeReader, ReaderError},
+    Event,
+};
+
 use crate::scene::{Assembly, Object, ObjectData};
 
 use super::{
@@ -15,7 +20,8 @@ use super::{
 
 pub fn parse_assembly<'a>(
     arena: &'a Arena,
-    tree: &'a DataTree,
+    events: &mut DataTreeReader,
+    ident: Option<&str>,
 ) -> Result<Assembly<'a>, PsyParseError> {
     if !tree.is_internal() {
         return Err(PsyParseError::UnknownError(tree.byte_offset()));

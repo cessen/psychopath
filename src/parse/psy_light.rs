@@ -6,6 +6,11 @@ use nom::{combinator::all_consuming, sequence::tuple, IResult};
 
 use kioku::Arena;
 
+use data_tree::{
+    reader::{DataTreeReader, ReaderError},
+    Event,
+};
+
 use crate::{
     light::{DistantDiskLight, RectangleLight, SphereLight},
     math::Vector,
@@ -19,7 +24,8 @@ use super::{
 
 pub fn parse_distant_disk_light<'a>(
     arena: &'a Arena,
-    tree: &'a DataTree,
+    events: &mut DataTreeReader,
+    ident: Option<&str>,
 ) -> Result<DistantDiskLight<'a>, PsyParseError> {
     if let DataTree::Internal { ref children, .. } = *tree {
         let mut radii = Vec::new();
@@ -85,7 +91,8 @@ pub fn parse_distant_disk_light<'a>(
 
 pub fn parse_sphere_light<'a>(
     arena: &'a Arena,
-    tree: &'a DataTree,
+    events: &mut DataTreeReader,
+    ident: Option<&str>,
 ) -> Result<SphereLight<'a>, PsyParseError> {
     if let DataTree::Internal { ref children, .. } = *tree {
         let mut radii = Vec::new();
@@ -134,7 +141,8 @@ pub fn parse_sphere_light<'a>(
 
 pub fn parse_rectangle_light<'a>(
     arena: &'a Arena,
-    tree: &'a DataTree,
+    events: &mut DataTreeReader,
+    ident: Option<&str>,
 ) -> Result<RectangleLight<'a>, PsyParseError> {
     if let DataTree::Internal { ref children, .. } = *tree {
         let mut dimensions = Vec::new();

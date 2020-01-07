@@ -6,6 +6,11 @@ use nom::{sequence::tuple, IResult};
 
 use kioku::Arena;
 
+use data_tree::{
+    reader::{DataTreeReader, ReaderError},
+    Event,
+};
+
 use crate::{
     math::{Normal, Point},
     surface::triangle_mesh::TriangleMesh,
@@ -26,7 +31,8 @@ use super::{
 
 pub fn parse_mesh_surface<'a>(
     arena: &'a Arena,
-    tree: &'a DataTree,
+    events: &mut DataTreeReader,
+    ident: Option<&str>,
 ) -> Result<TriangleMesh<'a>, PsyParseError> {
     let mut verts = Vec::new(); // Vec of vecs, one for each time sample
     let mut normals = Vec::new(); // Vec of vecs, on for each time sample

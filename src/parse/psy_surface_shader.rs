@@ -4,6 +4,11 @@ use std::result::Result;
 
 use nom::{combinator::all_consuming, IResult};
 
+use data_tree::{
+    reader::{DataTreeReader, ReaderError},
+    Event,
+};
+
 use crate::shading::{SimpleSurfaceShader, SurfaceShader};
 
 use super::{
@@ -19,7 +24,10 @@ use super::{
 //    accel: BVH,
 // }
 
-pub fn parse_surface_shader(tree: &DataTree) -> Result<Box<dyn SurfaceShader>, PsyParseError> {
+pub fn parse_surface_shader(
+    events: &mut DataTreeReader,
+    ident: Option<&str>,
+) -> Result<Box<dyn SurfaceShader>, PsyParseError> {
     let type_name = if let Some((_, text, _)) = tree.iter_leaf_children_with_type("Type").nth(0) {
         text.trim()
     } else {

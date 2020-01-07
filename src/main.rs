@@ -47,6 +47,11 @@ use nom::bytes::complete::take_until;
 
 use kioku::Arena;
 
+use data_tree::{
+    reader::{DataTreeReader, ReaderError},
+    Event,
+};
+
 use crate::{
     accel::BVH4Node,
     bbox::BBox,
@@ -191,63 +196,86 @@ fn main() {
         println!("Parsing scene file...",);
     }
     t.tick();
-    let psy_contents = if args.is_present("use_stdin") {
-        // Read from stdin
-        let mut input = Vec::new();
-        let tmp = std::io::stdin();
-        let mut stdin = tmp.lock();
-        let mut buf = vec![0u8; 4096];
-        loop {
-            let count = stdin
-                .read(&mut buf)
-                .expect("Unexpected end of scene input.");
-            let start = if input.len() < 11 {
-                0
-            } else {
-                input.len() - 11
-            };
-            let end = input.len() + count;
-            input.extend(&buf[..count]);
+    // let psy_contents = if args.is_present("use_stdin") {
+    //     // Read from stdin
+    //     let mut input = Vec::new();
+    //     let tmp = std::io::stdin();
+    //     let mut stdin = tmp.lock();
+    //     let mut buf = vec![0u8; 4096];
+    //     loop {
+    //         let count = stdin
+    //             .read(&mut buf)
+    //             .expect("Unexpected end of scene input.");
+    //         let start = if input.len() < 11 {
+    //             0
+    //         } else {
+    //             input.len() - 11
+    //         };
+    //         let end = input.len() + count;
+    //         input.extend(&buf[..count]);
 
-            let mut done = false;
-            let mut trunc_len = 0;
-            if let nom::IResult::Ok((remaining, _)) =
-                take_until::<&str, &[u8], ()>("__PSY_EOF__")(&input[start..end])
-            {
-                done = true;
-                trunc_len = input.len() - remaining.len();
-            }
-            if done {
-                input.truncate(trunc_len);
-                break;
-            }
-        }
-        String::from_utf8(input).unwrap()
-    } else {
-        // Read from file
-        let mut input = String::new();
-        let fp = args.value_of("input").unwrap();
-        let mut f = io::BufReader::new(File::open(fp).unwrap());
-        let _ = f.read_to_string(&mut input);
-        input
-    };
+    //         let mut done = false;
+    //         let mut trunc_len = 0;
+    //         if let nom::IResult::Ok((remaining, _)) =
+    //             take_until::<&str, &[u8], ()>("__PSY_EOF__")(&input[start..end])
+    //         {
+    //             done = true;
+    //             trunc_len = input.len() - remaining.len();
+    //         }
+    //         if done {
+    //             input.truncate(trunc_len);
+    //             break;
+    //         }
+    //     }
+    //     String::from_utf8(input).unwrap()
+    // } else {
+    //     // Read from file
+    //     let mut input = String::new();
+    //     let fp = args.value_of("input").unwrap();
+    //     let mut f = io::BufReader::new(File::open(fp).unwrap());
+    //     let _ = f.read_to_string(&mut input);
+    //     input
+    // };
 
-    let dt = DataTree::from_str(&psy_contents).unwrap();
-    if !args.is_present("serialized_output") {
-        println!("\tParsed scene file in {:.3}s", t.tick());
-    }
+    // let dt = DataTree::from_str(&psy_contents).unwrap();
+    // if !args.is_present("serialized_output") {
+    //     println!("\tParsed scene file in {:.3}s", t.tick());
+    // }
+
+    let mut psy_file = io::BufReader::new(File::open(fp).unwrap());
+    let mut events = DataTreeReader::new(&mut psy_file);
 
     // Iterate through scenes and render them
-    if let DataTree::Internal { ref children, .. } = dt {
-        for child in children {
-            t.tick();
-            if child.type_name() == "Scene" {
+    loop {
+        t.tick();
+        match events.next_event() {
+            Ok(Event::ValidEnd) => {
+                break;
+            }
+
+            Ok(_) => {
+                println!("Error: invalid scene in psy file.");
+                break;
+            }
+
+            Err(e) => {
+                println!("Error: {:?}", e);
+                break;
+            }
+
+            // Parse a scene and render it.
+            Ok(Event::InnerOpen {
+                type_name: "Scene",
+                ident,
+                ..
+            }) => {
                 if !args.is_present("serialized_output") {
                     println!("Building scene...");
                 }
 
                 let arena = Arena::new().with_block_size((1 << 20) * 4);
-                let mut scene = parse_scene(&arena, child).unwrap_or_else(|e| {
+                let ident = ident.into::<String>();
+                let mut scene = parse_scene(&arena, &mut events, &ident).unwrap_or_else(|e| {
                     e.print(&psy_contents);
                     panic!("Parse error.");
                 });
