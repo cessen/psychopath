@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+pub mod reader;
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Error {
     ExpectedTypeNameOrClose(usize),

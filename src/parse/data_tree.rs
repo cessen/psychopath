@@ -2,7 +2,10 @@
 
 use std::{io::Cursor, iter::Iterator, result::Result, slice};
 
-use data_tree::{Event, Parser};
+use data_tree::{
+    reader::{DataTreeReader, ReaderError},
+    Event,
+};
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum DataTree {
@@ -40,12 +43,11 @@ pub enum ParseError {
 
 impl<'a> DataTree {
     pub fn from_str(source_text: &'a str) -> Result<DataTree, ParseError> {
-        let mut parser = Parser::new(Cursor::new(source_text));
+        let mut parser = DataTreeReader::new(Cursor::new(source_text));
         let mut items = Vec::new();
 
         loop {
             let event = parser.next_event();
-            println!("{:?}", event);
             match event {
                 Ok(Event::InnerOpen {
                     type_name,
@@ -64,11 +66,13 @@ impl<'a> DataTree {
                 Ok(Event::InnerClose { .. }) => {
                     return Err(ParseError::Other("Unexpected closing tag."))
                 }
-                Ok(Event::Done) => {
+                Ok(Event::ValidEnd) => {
                     break;
                 }
 
-                Err(_) => return Err(ParseError::Other("Some error happened.")),
+                Ok(Event::NeedMoreInput) | Err(_) => {
+                    return Err(ParseError::Other("Some error happened."))
+                }
             }
         }
 
@@ -208,8 +212,8 @@ impl<'a> DataTree {
     }
 }
 
-fn parse_node<R: std::io::Read>(
-    parser: &mut Parser<R>,
+fn parse_node<R: std::io::BufRead>(
+    parser: &mut DataTreeReader<R>,
     type_name: String,
     ident: Option<String>,
     byte_offset: usize,
@@ -238,10 +242,10 @@ fn parse_node<R: std::io::Read>(
                 });
             }
             Ok(Event::InnerClose { .. }) => break,
-            Ok(Event::Done) => {
+            Ok(Event::ValidEnd) => {
                 return Err(ParseError::Other("Unexpected end of contents."));
             }
-            Err(_) => {
+            Ok(Event::NeedMoreInput) | Err(_) => {
                 return Err(ParseError::Other("Some error happened."));
             }
         }
@@ -253,6 +257,19 @@ fn parse_node<R: std::io::Read>(
         children: children,
         byte_offset: byte_offset,
     })
+}
+
+/// Splits text at approximately the given byte index,
+/// shifting it as needed to stay in bounds and be on a
+/// valid `char` break.
+fn aprx_split_at(text: &str, idx: usize) -> (&str, &str) {
+    let mut idx = text.len().min(idx);
+
+    while !text.is_char_boundary(idx) {
+        idx += 1;
+    }
+
+    (&text[..idx], &text[idx..])
 }
 
 /// An iterator over the children of a `DataTree` node that filters out the
