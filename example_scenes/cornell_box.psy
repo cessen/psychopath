@@ -9,7 +9,7 @@ Scene $Scene_fr1 {
     }
     Camera {
         Fov [39.449188]
-        FocalDistance [10.620000]
+        FocalDistance [10.62]
         ApertureRadius [0.0]
         Transform [1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 -2.779998 -8.000000 2.730010 1.0]
     }
@@ -22,15 +22,15 @@ Scene $Scene_fr1 {
     Shaders {
         SurfaceShader $Green {
             Type [Lambert]
-            Color [rec709, 0.117000 0.412500 0.115000]
+            Color [rec709, 0.117 0.4125 0.115]
         }
         SurfaceShader $Red {
             Type [Lambert]
-            Color [rec709, 0.611000 0.055500 0.062000]
+            Color [rec709, 0.611 0.0555 0.062]
         }
         SurfaceShader $White {
             Type [Lambert]
-            Color [rec709, 0.729500 0.735500 0.729000]
+            Color [rec709, 0.7295 0.7355 0.729]
         }
     }
     Assembly {
@@ -39,8 +39,8 @@ Scene $Scene_fr1 {
                 Transform [1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 2.779475 -2.794788 -5.498045 1.0]
             }
             RectangleLight {
-                Color [rec709, 84.300003 53.800003 18.500000]
-                Dimensions [1.350000 1.100000]
+                Color [rec709, 84.300003 53.800003 18.5]
+                Dimensions [1.35 1.1]
             }
         }
         Object $__Plane.010_ {
