@@ -127,8 +127,6 @@ impl Parser {
                 self.buf_consumed_idx += bytes_consumed;
                 self.total_bytes_processed += bytes_consumed;
 
-                // Hack the borrow checker, which doesn't understand
-                // loops apparently, and return.
                 Ok(event.add_to_byte_offset(self.total_bytes_processed - self.buf_consumed_idx))
             }
             EventParse::ReachedEnd => {
@@ -156,6 +154,56 @@ impl Parser {
                 byte_offset + self.total_bytes_processed,
             )),
         }
+    }
+
+    pub fn peek_event<'a>(&'a mut self) -> Result<Event<'a>, Error> {
+        // Remove any consumed data.
+        if self.buf_consumed_idx > 0 {
+            self.buffer.replace_range(..self.buf_consumed_idx, "");
+            self.buf_consumed_idx = 0;
+        }
+
+        // Try to parse an event from the valid prefix.
+        match try_parse_event(&self.buffer) {
+            EventParse::Ok(event, _bytes_consumed) => {
+                if let Event::InnerClose { byte_offset, .. } = event {
+                    if self.inner_opens == 0 {
+                        return Err(Error::UnexpectedClose(
+                            byte_offset + self.total_bytes_processed,
+                        ));
+                    }
+                }
+                Ok(event.add_to_byte_offset(self.total_bytes_processed))
+            }
+            EventParse::ReachedEnd => {
+                // If we consumed all data, then if all nodes are properly
+                // closed we're done.  Otherwise we need more input.
+                if self.inner_opens == 0 {
+                    Ok(Event::ValidEnd)
+                } else {
+                    Ok(Event::NeedMoreInput)
+                }
+            }
+            EventParse::IncompleteData => Ok(Event::NeedMoreInput),
+
+            // Hard errors.
+            EventParse::ExpectedTypeNameOrInnerClose(byte_offset) => Err(
+                Error::ExpectedTypeNameOrClose(byte_offset + self.total_bytes_processed),
+            ),
+            EventParse::ExpectedOpenOrIdent(byte_offset) => Err(Error::ExpectedOpenOrIdent(
+                byte_offset + self.total_bytes_processed,
+            )),
+            EventParse::ExpectedInnerOpen(byte_offset) => Err(Error::ExpectedOpen(
+                byte_offset + self.total_bytes_processed,
+            )),
+            EventParse::UnexpectedIdent(byte_offset) => Err(Error::UnexpectedIdent(
+                byte_offset + self.total_bytes_processed,
+            )),
+        }
+    }
+
+    pub fn byte_offset(&self) -> usize {
+        self.total_bytes_processed + self.buf_consumed_idx
     }
 }
 

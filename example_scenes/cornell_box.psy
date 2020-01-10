@@ -7,18 +7,6 @@ Scene $Scene_fr1 {
         SamplesPerPixel [16]
         Seed [1]
     }
-    Camera {
-        Fov [39.449188]
-        FocalDistance [10.62]
-        ApertureRadius [0.0]
-        Transform [1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 -2.779998 -8.000000 2.730010 1.0]
-    }
-    World {
-        BackgroundShader {
-            Type [Color]
-            Color [rec709, 0.0 0.0 0.0]
-        }
-    }
     Shaders {
         SurfaceShader $Green {
             Type [Lambert]
@@ -32,6 +20,18 @@ Scene $Scene_fr1 {
             Type [Lambert]
             Color [rec709, 0.7295 0.7355 0.729]
         }
+    }
+    World {
+        BackgroundShader {
+            Type [Color]
+            Color [rec709, 0.0 0.0 0.0]
+        }
+    }
+    Camera {
+        Fov [39.449188]
+        FocalDistance [10.62]
+        ApertureRadius [0.0]
+        Transform [1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 -2.779998 -8.000000 2.730010 1.0]
     }
     Assembly {
         Object $__Area {

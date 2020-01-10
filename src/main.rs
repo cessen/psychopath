@@ -47,15 +47,12 @@ use nom::bytes::complete::take_until;
 
 use kioku::Arena;
 
-use data_tree::{
-    reader::{DataTreeReader, ReaderError},
-    Event,
-};
+use data_tree::{reader::DataTreeReader, Event};
 
 use crate::{
     accel::BVH4Node,
     bbox::BBox,
-    parse::{parse_scene, DataTree},
+    parse::parse_scene,
     // renderer::LightPath,
     surface::SurfaceIntersection,
     timer::Timer,
@@ -242,27 +239,14 @@ fn main() {
     //     println!("\tParsed scene file in {:.3}s", t.tick());
     // }
 
-    let mut psy_file = io::BufReader::new(File::open(fp).unwrap());
+    let file_path = args.value_of("input").unwrap();
+    let mut psy_file = io::BufReader::new(File::open(file_path).unwrap());
     let mut events = DataTreeReader::new(&mut psy_file);
 
     // Iterate through scenes and render them
     loop {
         t.tick();
         match events.next_event() {
-            Ok(Event::ValidEnd) => {
-                break;
-            }
-
-            Ok(_) => {
-                println!("Error: invalid scene in psy file.");
-                break;
-            }
-
-            Err(e) => {
-                println!("Error: {:?}", e);
-                break;
-            }
-
             // Parse a scene and render it.
             Ok(Event::InnerOpen {
                 type_name: "Scene",
@@ -274,11 +258,13 @@ fn main() {
                 }
 
                 let arena = Arena::new().with_block_size((1 << 20) * 4);
-                let ident = ident.into::<String>();
-                let mut scene = parse_scene(&arena, &mut events, &ident).unwrap_or_else(|e| {
-                    e.print(&psy_contents);
-                    panic!("Parse error.");
-                });
+                let ident = ident.map(|v| v.to_string());
+                let scene =
+                    parse_scene(&arena, &mut events, ident.as_deref()).unwrap_or_else(|e| {
+                        println!("Parse error: {}", e);
+                        // e.print(&psy_contents);
+                        panic!("Parse error.");
+                    });
 
                 if let Some(spp) = args.value_of("spp") {
                     if !args.is_present("serialized_output") {
@@ -383,6 +369,20 @@ fn main() {
 
                 //     println!("\tTotal blocks:  {}", arena_stats.2);
                 // }
+            }
+
+            Ok(Event::ValidEnd) => {
+                break;
+            }
+
+            Err(e) => {
+                println!("Error: {:?}", e);
+                break;
+            }
+
+            Ok(_) => {
+                println!("Error: invalid scene in psy file.");
+                break;
             }
         }
     }

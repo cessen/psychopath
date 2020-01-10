@@ -44,7 +44,7 @@ fn wavelengths(hero_wavelength: f32) -> Vec4 {
 
 //----------------------------------------------------------------
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Color {
     XYZ(f32, f32, f32),
     Blackbody {

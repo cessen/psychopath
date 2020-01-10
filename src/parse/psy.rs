@@ -26,7 +26,6 @@ use super::{
     psy_assembly::parse_assembly,
     psy_light::parse_distant_disk_light,
     psy_surface_shader::parse_surface_shader,
-    DataTree,
 };
 
 #[derive(Debug)]
@@ -34,13 +33,13 @@ pub enum PsyParseError {
     // The first usize for all errors is their byte offset
     // into the psy content where they occured.
     UnknownError(usize),
-    UnknownVariant(usize, &'static str),        // Error message
-    ExpectedInternalNode(usize, &'static str),  // Error message
-    ExpectedLeafNode(usize, &'static str),      // Error message
-    ExpectedIdent(usize, &'static str),         // Error message
-    MissingNode(usize, &'static str),           // Error message
-    IncorrectLeafData(usize, &'static str),     // Error message
-    WrongNodeCount(usize, &'static str, usize), // Error message, sections found
+    UnknownVariant(usize, &'static str),       // Error message
+    ExpectedInternalNode(usize, &'static str), // Error message
+    ExpectedLeafNode(usize, &'static str),     // Error message
+    ExpectedIdent(usize, &'static str),        // Error message
+    MissingNode(usize, &'static str),          // Error message
+    IncorrectLeafData(usize, &'static str),    // Error message
+    WrongNodeCount(usize, &'static str),       // Error message
     InstancedMissingData(usize, &'static str, String), // Error message, data name
     ReaderError(ReaderError),
 }
@@ -87,15 +86,17 @@ impl PsyParseError {
                 println!("Line {}: {}", line, error);
             }
 
-            PsyParseError::WrongNodeCount(offset, error, count) => {
+            PsyParseError::WrongNodeCount(offset, error) => {
                 let line = line_count_to_byte_offset(psy_content, offset);
-                println!("Line {}: {}  Found: {}", line, error, count);
+                println!("Line {}: {}", line, error);
             }
 
             PsyParseError::InstancedMissingData(offset, error, ref data_name) => {
                 let line = line_count_to_byte_offset(psy_content, offset);
                 println!("Line {}: {} Data name: '{}'", line, error, data_name);
             }
+
+            _ => todo!(),
         }
     }
 }
@@ -124,10 +125,10 @@ fn line_count_to_byte_offset(text: &str, offset: usize) -> usize {
 pub fn parse_scene<'a>(
     arena: &'a Arena,
     events: &mut DataTreeReader<impl BufRead>,
-    ident: Option<&str>,
+    _ident: Option<&str>,
 ) -> Result<Scene<'a>, PsyParseError> {
     // Get output info.
-    let output_info = if let Event::InnerOpen {
+    let _output_info = if let Event::InnerOpen {
         type_name: "Output",
         ..
     } = events.next_event()?
@@ -138,23 +139,12 @@ pub fn parse_scene<'a>(
     };
 
     // Get render settings.
-    let render_settings = if let Event::InnerOpen {
+    let _render_settings = if let Event::InnerOpen {
         type_name: "RenderSettings",
         ..
     } = events.next_event()?
     {
         parse_render_settings(events)?
-    } else {
-        todo!(); // Return error.
-    };
-
-    // Get camera.
-    let camera = if let Event::InnerOpen {
-        type_name: "Camera",
-        ..
-    } = events.next_event()?
-    {
-        parse_camera(arena, events)?
     } else {
         todo!(); // Return error.
     };
@@ -180,14 +170,24 @@ pub fn parse_scene<'a>(
         todo!(); // Return error.
     };
 
-    // Get the root assembly.
-    let root_assembly = if let Event::InnerOpen {
-        type_name: "Assembly",
-        ident,
+    // Get camera.
+    let camera = if let Event::InnerOpen {
+        type_name: "Camera",
         ..
     } = events.next_event()?
     {
-        parse_assembly(arena, events, &(ident.into::<String>()))?
+        parse_camera(arena, events)?
+    } else {
+        todo!(); // Return error.
+    };
+
+    // Get the root assembly.
+    let root_assembly = if let Event::InnerOpen {
+        type_name: "Assembly",
+        ..
+    } = events.next_event()?
+    {
+        parse_assembly(arena, events)?
     } else {
         todo!(); // Return error.
     };
@@ -199,12 +199,11 @@ pub fn parse_scene<'a>(
     }
 
     // Put scene together
-    let scene_name = if let Some(name) = ident {
-        Some(name.into())
-    } else {
-        None
-    };
-
+    // let scene_name = if let Some(name) = ident {
+    //     Some(name.into())
+    // } else {
+    //     None
+    // };
     let scene = Scene {
         camera: camera,
         world: world,
@@ -241,13 +240,13 @@ fn parse_output_info(events: &mut DataTreeReader<impl BufRead>) -> Result<String
                 let tc = contents.trim();
                 if tc.chars().count() < 2 {
                     return Err(PsyParseError::IncorrectLeafData(
-                        *byte_offset,
+                        byte_offset,
                         "File path format is incorrect.",
                     ));
                 }
                 if tc.chars().nth(0).unwrap() != '"' || !tc.ends_with('"') {
                     return Err(PsyParseError::IncorrectLeafData(
-                        *byte_offset,
+                        byte_offset,
                         "File paths must be surrounded by quotes.",
                     ));
                 }
@@ -304,7 +303,7 @@ fn parse_render_settings(
                 } else {
                     // Found Resolution, but its contents is not in the right format
                     return Err(PsyParseError::IncorrectLeafData(
-                        *byte_offset,
+                        byte_offset,
                         "Resolution should be specified with two \
                          integers in the form '[width height]'.",
                     ));
@@ -312,7 +311,7 @@ fn parse_render_settings(
             }
 
             // SamplesPerPixel
-            DataTree::Leaf {
+            Event::Leaf {
                 type_name: "SamplesPerPixel",
                 contents,
                 byte_offset,
@@ -323,7 +322,7 @@ fn parse_render_settings(
                 } else {
                     // Found SamplesPerPixel, but its contents is not in the right format
                     return Err(PsyParseError::IncorrectLeafData(
-                        *byte_offset,
+                        byte_offset,
                         "SamplesPerPixel should be \
                          an integer specified in \
                          the form '[samples]'.",
@@ -332,7 +331,7 @@ fn parse_render_settings(
             }
 
             // Seed
-            DataTree::Leaf {
+            Event::Leaf {
                 type_name: "Seed",
                 contents,
                 byte_offset,
@@ -342,7 +341,7 @@ fn parse_render_settings(
                 } else {
                     // Found Seed, but its contents is not in the right format
                     return Err(PsyParseError::IncorrectLeafData(
-                        *byte_offset,
+                        byte_offset,
                         "Seed should be an integer \
                          specified in the form \
                          '[samples]'.",
@@ -395,7 +394,7 @@ fn parse_camera<'a>(
                 } else {
                     // Found Fov, but its contents is not in the right format
                     return Err(PsyParseError::IncorrectLeafData(
-                        *byte_offset,
+                        byte_offset,
                         "Fov should be a decimal \
                          number specified in the \
                          form '[fov]'.",
@@ -414,7 +413,7 @@ fn parse_camera<'a>(
                 } else {
                     // Found FocalDistance, but its contents is not in the right format
                     return Err(PsyParseError::IncorrectLeafData(
-                        *byte_offset,
+                        byte_offset,
                         "FocalDistance should be a \
                          decimal number specified \
                          in the form '[fov]'.",
@@ -433,7 +432,7 @@ fn parse_camera<'a>(
                 } else {
                     // Found ApertureRadius, but its contents is not in the right format
                     return Err(PsyParseError::IncorrectLeafData(
-                        *byte_offset,
+                        byte_offset,
                         "ApertureRadius should be a \
                          decimal number specified \
                          in the form '[fov]'.",
@@ -451,7 +450,7 @@ fn parse_camera<'a>(
                     mats.push(mat);
                 } else {
                     // Found Transform, but its contents is not in the right format
-                    return Err(make_transform_format_error(*byte_offset));
+                    return Err(make_transform_format_error(byte_offset));
                 }
             }
 
@@ -478,7 +477,7 @@ fn parse_world<'a>(
     arena: &'a Arena,
     events: &mut DataTreeReader<impl BufRead>,
 ) -> Result<World<'a>, PsyParseError> {
-    let background_color = None;
+    let mut background_color = None;
     let mut lights: Vec<&dyn WorldLightSource> = Vec::new();
 
     loop {
@@ -486,25 +485,26 @@ fn parse_world<'a>(
             // Parse background shader
             Event::InnerOpen {
                 type_name: "BackgroundShader",
+                ..
             } => {
                 let bgs_type = if let Event::Leaf {
                     type_name: "Type",
                     contents,
                     ..
-                } = events.next_event()
+                } = events.next_event()?
                 {
-                    contents.into::<String>()
+                    contents.to_string()
                 } else {
                     todo!(); // Return error.
                 };
 
-                match bgs_type {
+                match bgs_type.as_ref() {
                     "Color" => {
                         if let Event::Leaf {
                             type_name: "Color",
                             contents,
                             ..
-                        } = events.next_event()
+                        } = events.next_event()?
                         {
                             background_color = Some(parse_color(contents)?);
                         } else {
@@ -524,7 +524,7 @@ fn parse_world<'a>(
                 }
 
                 // Close it out.
-                if let Event::InnerClose { .. } = events.next_event() {
+                if let Event::InnerClose { .. } = events.next_event()? {
                 } else {
                     todo!(); // Return error.
                 }
@@ -533,9 +533,23 @@ fn parse_world<'a>(
             // Parse light sources
             Event::InnerOpen {
                 type_name: "DistantDiskLight",
+                ident,
                 ..
             } => {
-                lights.push(arena.alloc(parse_distant_disk_light(arena, events)?));
+                let ident = ident.map(|v| v.to_string());
+                lights.push(arena.alloc(parse_distant_disk_light(
+                    arena,
+                    events,
+                    ident.as_deref(),
+                )?));
+            }
+
+            Event::InnerClose { .. } => {
+                break;
+            }
+
+            _ => {
+                todo!(); // Return error.
             }
         }
     }
@@ -552,22 +566,30 @@ fn parse_world<'a>(
 }
 
 fn parse_shaders<'a>(
+    arena: &'a Arena,
     events: &mut DataTreeReader<impl BufRead>,
 ) -> Result<HashMap<String, Box<dyn SurfaceShader>>, PsyParseError> {
     let mut shaders = HashMap::new();
     loop {
-        match events.next_event() {
-            DataTree::Internal {
+        match events.next_event()? {
+            Event::InnerOpen {
                 type_name: "SurfaceShader",
                 ident,
-                byte_offset,
+                ..
             } => {
                 if let Some(name) = ident {
                     let name = name.to_string();
-                    shaders.insert(name, parse_surface_shader(events)?);
+                    shaders.insert(
+                        name.clone(),
+                        parse_surface_shader(arena, events, Some(&name))?,
+                    );
                 } else {
                     todo!("Shader has no name."); // Return error.
                 }
+            }
+
+            Event::InnerClose { .. } => {
+                break;
             }
 
             _ => {

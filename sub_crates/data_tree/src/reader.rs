@@ -81,4 +81,41 @@ impl<R: std::io::BufRead> DataTreeReader<R> {
             }
         }
     }
+
+    pub fn peek_event<'a>(&'a mut self) -> Result<Event<'a>, ReaderError> {
+        loop {
+            let valid_end = match self.parser.peek_event()? {
+                Event::ValidEnd => true,
+                Event::NeedMoreInput => false,
+                e => {
+                    return Ok(unsafe {
+                        // Transmute because the borrow checker is
+                        // over-conservative about this.  It thinks
+                        // the liftime isn't valid, but since we aren't
+                        // mutating self after returning (and in fact
+                        // can't because of the borrow) there's no way for
+                        // the references in this to become invalid.
+                        std::mem::transmute::<Event, Event>(e)
+                    });
+                }
+            };
+
+            if !self.eof {
+                self.buf.clear();
+                let read = self.reader.read_line(&mut self.buf)?;
+                self.parser.push_data(&self.buf);
+                if read == 0 {
+                    self.eof = true;
+                }
+            } else if !valid_end {
+                return Err(ReaderError::UnexpectedEOF);
+            } else {
+                return Ok(Event::ValidEnd);
+            }
+        }
+    }
+
+    pub fn byte_offset(&self) -> usize {
+        self.parser.byte_offset()
+    }
 }

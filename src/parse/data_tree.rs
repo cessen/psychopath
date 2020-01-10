@@ -2,10 +2,7 @@
 
 use std::{io::Cursor, iter::Iterator, result::Result, slice};
 
-use data_tree::{
-    reader::{DataTreeReader, ReaderError},
-    Event,
-};
+use data_tree::{reader::DataTreeReader, Event};
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum DataTree {
