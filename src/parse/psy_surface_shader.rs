@@ -11,8 +11,8 @@ use data_tree::{reader::DataTreeReader, Event};
 use crate::shading::{SimpleSurfaceShader, SurfaceShader};
 
 use super::{
-    basics::ws_f32,
-    psy::{parse_color, PsyParseError},
+    parse_utils::{ensure_close, ws_f32},
+    psy::{parse_color, PsyError, PsyResult},
 };
 
 // pub struct TriangleMesh {
@@ -26,7 +26,7 @@ pub fn parse_surface_shader(
     _arena: &Arena,
     events: &mut DataTreeReader<impl BufRead>,
     _ident: Option<&str>,
-) -> Result<Box<dyn SurfaceShader>, PsyParseError> {
+) -> PsyResult<Box<dyn SurfaceShader>> {
     // Get shader type.
     let shader = match events.next_event()? {
         Event::Leaf {
@@ -44,21 +44,17 @@ pub fn parse_surface_shader(
                     color
                 } else {
                     // Found color, but its contents is not in the right format
-                    return Err(PsyParseError::UnknownError(byte_offset));
+                    return Err(PsyError::UnknownError(byte_offset));
                 }
             } else {
-                return Err(PsyParseError::MissingNode(
+                return Err(PsyError::MissingNode(
                     events.byte_offset(),
-                    "Expected a Color field in Lambert SurfaceShader.",
+                    "Expected a Color field in Lambert SurfaceShader.".into(),
                 ));
             };
 
             // Close shader node.
-            if let Event::InnerClose { .. } = events.next_event()? {
-                // Success, do nothing.
-            } else {
-                todo!(); // Return error.
-            }
+            ensure_close(events)?;
 
             Box::new(SimpleSurfaceShader::Lambert { color: color })
         }
@@ -85,7 +81,7 @@ pub fn parse_surface_shader(
                         } else {
                             // Found color, but its contents is not in the right
                             // format.
-                            return Err(PsyParseError::UnknownError(byte_offset));
+                            return Err(PsyError::UnknownError(byte_offset));
                         }
                     }
 
@@ -98,7 +94,7 @@ pub fn parse_surface_shader(
                         if let IResult::Ok((_, rgh)) = all_consuming(ws_f32)(contents) {
                             roughness = Some(rgh);
                         } else {
-                            return Err(PsyParseError::UnknownError(byte_offset));
+                            return Err(PsyError::UnknownError(byte_offset));
                         }
                     }
 
@@ -111,7 +107,7 @@ pub fn parse_surface_shader(
                         if let IResult::Ok((_, frs)) = all_consuming(ws_f32)(contents) {
                             fresnel = Some(frs);
                         } else {
-                            return Err(PsyParseError::UnknownError(byte_offset));
+                            return Err(PsyError::UnknownError(byte_offset));
                         }
                     }
 
@@ -127,9 +123,9 @@ pub fn parse_surface_shader(
 
             // Validation: make sure all fields are present.
             if color == None || roughness == None || fresnel == None {
-                return Err(PsyParseError::MissingNode(
+                return Err(PsyError::MissingNode(
                     events.byte_offset(),
-                    "GGX shader requires one of each field: Color, Roughness, Fresnel.",
+                    "GGX shader requires one of each field: Color, Roughness, Fresnel.".into(),
                 ));
             }
 
@@ -155,21 +151,17 @@ pub fn parse_surface_shader(
                     color
                 } else {
                     // Found color, but its contents is not in the right format
-                    return Err(PsyParseError::UnknownError(byte_offset));
+                    return Err(PsyError::UnknownError(byte_offset));
                 }
             } else {
-                return Err(PsyParseError::MissingNode(
+                return Err(PsyError::MissingNode(
                     events.byte_offset(),
-                    "Expected a Color field in Emit SurfaceShader.",
+                    "Expected a Color field in Emit SurfaceShader.".into(),
                 ));
             };
 
             // Close shader node.
-            if let Event::InnerClose { .. } = events.next_event()? {
-                // Success, do nothing.
-            } else {
-                todo!(); // Return error.
-            }
+            ensure_close(events)?;
 
             Box::new(SimpleSurfaceShader::Emit { color: color })
         }
@@ -179,9 +171,9 @@ pub fn parse_surface_shader(
             byte_offset,
             ..
         } => {
-            return Err(PsyParseError::MissingNode(
+            return Err(PsyError::MissingNode(
                 byte_offset,
-                "Unknown SurfaceShader type.",
+                "Unknown SurfaceShader type.".into(),
             ));
         }
         _ => {

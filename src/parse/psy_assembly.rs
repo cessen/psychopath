@@ -9,7 +9,8 @@ use data_tree::{reader::DataTreeReader, Event};
 use crate::scene::{Assembly, Object, ObjectData};
 
 use super::{
-    psy::{parse_matrix, PsyParseError},
+    parse_utils::ensure_close,
+    psy::{parse_matrix, PsyError, PsyResult},
     psy_light::{parse_rectangle_light, parse_sphere_light},
     psy_mesh_surface::parse_mesh_surface,
 };
@@ -17,7 +18,7 @@ use super::{
 pub fn parse_assembly<'a>(
     arena: &'a Arena,
     events: &mut DataTreeReader<impl BufRead>,
-) -> Result<Assembly<'a>, PsyParseError> {
+) -> PsyResult<Assembly<'a>> {
     let mut assembly = Assembly::new();
     loop {
         match events.next_event()? {
@@ -30,9 +31,10 @@ pub fn parse_assembly<'a>(
                 let object_ident = if let Some(id) = ident {
                     id.to_string()
                 } else {
-                    return Err(PsyParseError::ExpectedIdent(
+                    return Err(PsyError::ExpectedIdent(
                         byte_offset,
-                        "\'Object\' types must have an identifier, but the identifier is missing.",
+                        "\'Object\' types must have an identifier, but the identifier is missing."
+                            .into(),
                     ));
                 };
 
@@ -92,26 +94,22 @@ pub fn parse_assembly<'a>(
                     } => ObjectData::Light(Box::new(parse_rectangle_light(arena, events)?)),
 
                     Event::InnerClose { byte_offset } => {
-                        return Err(PsyParseError::MissingNode(
+                        return Err(PsyError::MissingNode(
                             byte_offset,
-                            "Object contains no object data.",
+                            "Object contains no object data.".into(),
                         ));
                     }
 
                     _ => {
-                        return Err(PsyParseError::UnknownVariant(
+                        return Err(PsyError::UnknownVariant(
                             byte_offset,
-                            "Unknown data type for Object.",
+                            "Unknown data type for Object.".into(),
                         ));
                     }
                 };
 
                 // Close object node.
-                if let Event::InnerClose { .. } = events.next_event()? {
-                    // Success, do nothing.
-                } else {
-                    todo!(); // Return error.
-                }
+                ensure_close(events)?;
 
                 assembly.objects.insert(
                     object_ident,
@@ -133,7 +131,7 @@ pub fn parse_assembly<'a>(
     }
 
     // if !tree.is_internal() {
-    //     return Err(PsyParseError::UnknownError(tree.byte_offset()));
+    //     return Err(PsyError::UnknownError(tree.byte_offset()));
     // }
 
     // for object in tree.iter_children() {

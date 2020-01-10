@@ -22,33 +22,36 @@ use crate::{
 };
 
 use super::{
-    basics::{ws_f32, ws_u32},
+    parse_utils::{ensure_close, ws_f32, ws_u32},
     psy_assembly::parse_assembly,
     psy_light::parse_distant_disk_light,
     psy_surface_shader::parse_surface_shader,
 };
 
+pub type PsyResult<T> = Result<T, PsyError>;
+
 #[derive(Debug)]
-pub enum PsyParseError {
+pub enum PsyError {
     // The first usize for all errors is their byte offset
     // into the psy content where they occured.
     UnknownError(usize),
-    UnknownVariant(usize, &'static str),       // Error message
-    ExpectedInternalNode(usize, &'static str), // Error message
-    ExpectedLeafNode(usize, &'static str),     // Error message
-    ExpectedIdent(usize, &'static str),        // Error message
-    MissingNode(usize, &'static str),          // Error message
-    IncorrectLeafData(usize, &'static str),    // Error message
-    WrongNodeCount(usize, &'static str),       // Error message
-    InstancedMissingData(usize, &'static str, String), // Error message, data name
+    UnknownVariant(usize, String),               // Error message
+    ExpectedInternalNode(usize, String),         // Error message
+    ExpectedLeafNode(usize, String),             // Error message
+    ExpectedIdent(usize, String),                // Error message
+    MissingNode(usize, String),                  // Error message
+    IncorrectLeafData(usize, String),            // Error message
+    WrongNodeCount(usize, String),               // Error message
+    InstancedMissingData(usize, String, String), // Error message, data name
+    ExpectedInternalNodeClose(usize, String),
     ReaderError(ReaderError),
 }
 
-impl PsyParseError {
+impl PsyError {
     pub fn print(&self, psy_content: &str) {
-        match *self {
-            PsyParseError::UnknownError(offset) => {
-                let line = line_count_to_byte_offset(psy_content, offset);
+        match self {
+            PsyError::UnknownError(offset) => {
+                let line = line_count_to_byte_offset(psy_content, *offset);
                 println!(
                     "Line {}: Unknown parse error.  If you get this message, please report \
                      it to the developers so they can improve the error messages.",
@@ -56,43 +59,43 @@ impl PsyParseError {
                 );
             }
 
-            PsyParseError::UnknownVariant(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, offset);
+            PsyError::UnknownVariant(offset, error) => {
+                let line = line_count_to_byte_offset(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
-            PsyParseError::ExpectedInternalNode(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, offset);
+            PsyError::ExpectedInternalNode(offset, error) => {
+                let line = line_count_to_byte_offset(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
-            PsyParseError::ExpectedLeafNode(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, offset);
+            PsyError::ExpectedLeafNode(offset, error) => {
+                let line = line_count_to_byte_offset(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
-            PsyParseError::ExpectedIdent(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, offset);
+            PsyError::ExpectedIdent(offset, error) => {
+                let line = line_count_to_byte_offset(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
-            PsyParseError::MissingNode(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, offset);
+            PsyError::MissingNode(offset, error) => {
+                let line = line_count_to_byte_offset(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
-            PsyParseError::IncorrectLeafData(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, offset);
+            PsyError::IncorrectLeafData(offset, error) => {
+                let line = line_count_to_byte_offset(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
-            PsyParseError::WrongNodeCount(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, offset);
+            PsyError::WrongNodeCount(offset, error) => {
+                let line = line_count_to_byte_offset(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
-            PsyParseError::InstancedMissingData(offset, error, ref data_name) => {
-                let line = line_count_to_byte_offset(psy_content, offset);
+            PsyError::InstancedMissingData(offset, error, data_name) => {
+                let line = line_count_to_byte_offset(psy_content, *offset);
                 println!("Line {}: {} Data name: '{}'", line, error, data_name);
             }
 
@@ -101,17 +104,17 @@ impl PsyParseError {
     }
 }
 
-impl std::error::Error for PsyParseError {}
+impl std::error::Error for PsyError {}
 
-impl std::fmt::Display for PsyParseError {
+impl std::fmt::Display for PsyError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         write!(f, "{:?}", self)
     }
 }
 
-impl From<ReaderError> for PsyParseError {
+impl From<ReaderError> for PsyError {
     fn from(e: ReaderError) -> Self {
-        PsyParseError::ReaderError(e)
+        PsyError::ReaderError(e)
     }
 }
 
@@ -126,7 +129,7 @@ pub fn parse_scene<'a>(
     arena: &'a Arena,
     events: &mut DataTreeReader<impl BufRead>,
     _ident: Option<&str>,
-) -> Result<Scene<'a>, PsyParseError> {
+) -> PsyResult<Scene<'a>> {
     // Get output info.
     let _output_info = if let Event::InnerOpen {
         type_name: "Output",
@@ -226,7 +229,7 @@ pub fn parse_scene<'a>(
     return Ok(scene);
 }
 
-fn parse_output_info(events: &mut DataTreeReader<impl BufRead>) -> Result<String, PsyParseError> {
+fn parse_output_info(events: &mut DataTreeReader<impl BufRead>) -> PsyResult<String> {
     let mut found_path = false;
     let mut path = String::new();
     loop {
@@ -239,15 +242,15 @@ fn parse_output_info(events: &mut DataTreeReader<impl BufRead>) -> Result<String
                 // Trim and validate
                 let tc = contents.trim();
                 if tc.chars().count() < 2 {
-                    return Err(PsyParseError::IncorrectLeafData(
+                    return Err(PsyError::IncorrectLeafData(
                         byte_offset,
-                        "File path format is incorrect.",
+                        "File path format is incorrect.".into(),
                     ));
                 }
                 if tc.chars().nth(0).unwrap() != '"' || !tc.ends_with('"') {
-                    return Err(PsyParseError::IncorrectLeafData(
+                    return Err(PsyError::IncorrectLeafData(
                         byte_offset,
-                        "File paths must be surrounded by quotes.",
+                        "File paths must be surrounded by quotes.".into(),
                     ));
                 }
                 let len = tc.len();
@@ -272,7 +275,7 @@ fn parse_output_info(events: &mut DataTreeReader<impl BufRead>) -> Result<String
     if found_path {
         return Ok(path);
     } else {
-        // return Err(PsyParseError::MissingNode(
+        // return Err(PsyError::MissingNode(
         //     tree.byte_offset(),
         //     "Output section must contain a Path.",
         // ));
@@ -282,7 +285,7 @@ fn parse_output_info(events: &mut DataTreeReader<impl BufRead>) -> Result<String
 
 fn parse_render_settings(
     events: &mut DataTreeReader<impl BufRead>,
-) -> Result<((u32, u32), u32, u32), PsyParseError> {
+) -> PsyResult<((u32, u32), u32, u32)> {
     let mut found_res = false;
     let mut found_spp = false;
     let mut res = (0, 0);
@@ -302,10 +305,11 @@ fn parse_render_settings(
                     res = (w, h);
                 } else {
                     // Found Resolution, but its contents is not in the right format
-                    return Err(PsyParseError::IncorrectLeafData(
+                    return Err(PsyError::IncorrectLeafData(
                         byte_offset,
                         "Resolution should be specified with two \
-                         integers in the form '[width height]'.",
+                         integers in the form '[width height]'."
+                            .into(),
                     ));
                 }
             }
@@ -321,11 +325,11 @@ fn parse_render_settings(
                     spp = n;
                 } else {
                     // Found SamplesPerPixel, but its contents is not in the right format
-                    return Err(PsyParseError::IncorrectLeafData(
+                    return Err(PsyError::IncorrectLeafData(
                         byte_offset,
-                        "SamplesPerPixel should be \
-                         an integer specified in \
-                         the form '[samples]'.",
+                        "SamplesPerPixel should be an integer specified in \
+                         the form '[samples]'."
+                            .into(),
                     ));
                 }
             }
@@ -340,11 +344,11 @@ fn parse_render_settings(
                     seed = n;
                 } else {
                     // Found Seed, but its contents is not in the right format
-                    return Err(PsyParseError::IncorrectLeafData(
+                    return Err(PsyError::IncorrectLeafData(
                         byte_offset,
-                        "Seed should be an integer \
-                         specified in the form \
-                         '[samples]'.",
+                        "Seed should be an integer specified in the form \
+                         '[samples]'."
+                            .into(),
                     ));
                 }
             }
@@ -362,7 +366,7 @@ fn parse_render_settings(
     if found_res && found_spp {
         return Ok((res, spp, seed));
     } else {
-        // return Err(PsyParseError::MissingNode(
+        // return Err(PsyError::MissingNode(
         //     tree.byte_offset(),
         //     "RenderSettings must have both Resolution and \
         //      SamplesPerPixel specified.",
@@ -374,7 +378,7 @@ fn parse_render_settings(
 fn parse_camera<'a>(
     arena: &'a Arena,
     events: &mut DataTreeReader<impl BufRead>,
-) -> Result<Camera<'a>, PsyParseError> {
+) -> PsyResult<Camera<'a>> {
     let mut mats = Vec::new();
     let mut fovs = Vec::new();
     let mut focus_distances = Vec::new();
@@ -393,11 +397,11 @@ fn parse_camera<'a>(
                     fovs.push(fov * (f32::consts::PI / 180.0));
                 } else {
                     // Found Fov, but its contents is not in the right format
-                    return Err(PsyParseError::IncorrectLeafData(
+                    return Err(PsyError::IncorrectLeafData(
                         byte_offset,
-                        "Fov should be a decimal \
-                         number specified in the \
-                         form '[fov]'.",
+                        "Fov should be a decimal number specified in the \
+                         form '[fov]'."
+                            .into(),
                     ));
                 }
             }
@@ -412,11 +416,11 @@ fn parse_camera<'a>(
                     focus_distances.push(fd);
                 } else {
                     // Found FocalDistance, but its contents is not in the right format
-                    return Err(PsyParseError::IncorrectLeafData(
+                    return Err(PsyError::IncorrectLeafData(
                         byte_offset,
-                        "FocalDistance should be a \
-                         decimal number specified \
-                         in the form '[fov]'.",
+                        "FocalDistance should be a decimal number specified \
+                         in the form '[fov]'."
+                            .into(),
                     ));
                 }
             }
@@ -431,11 +435,11 @@ fn parse_camera<'a>(
                     aperture_radii.push(ar);
                 } else {
                     // Found ApertureRadius, but its contents is not in the right format
-                    return Err(PsyParseError::IncorrectLeafData(
+                    return Err(PsyError::IncorrectLeafData(
                         byte_offset,
-                        "ApertureRadius should be a \
-                         decimal number specified \
-                         in the form '[fov]'.",
+                        "ApertureRadius should be a decimal number specified \
+                         in the form '[fov]'."
+                            .into(),
                     ));
                 }
             }
@@ -476,7 +480,7 @@ fn parse_camera<'a>(
 fn parse_world<'a>(
     arena: &'a Arena,
     events: &mut DataTreeReader<impl BufRead>,
-) -> Result<World<'a>, PsyParseError> {
+) -> PsyResult<World<'a>> {
     let mut background_color = None;
     let mut lights: Vec<&dyn WorldLightSource> = Vec::new();
 
@@ -524,10 +528,7 @@ fn parse_world<'a>(
                 }
 
                 // Close it out.
-                if let Event::InnerClose { .. } = events.next_event()? {
-                } else {
-                    todo!(); // Return error.
-                }
+                ensure_close(events)?;
             }
 
             // Parse light sources
@@ -568,7 +569,7 @@ fn parse_world<'a>(
 fn parse_shaders<'a>(
     arena: &'a Arena,
     events: &mut DataTreeReader<impl BufRead>,
-) -> Result<HashMap<String, Box<dyn SurfaceShader>>, PsyParseError> {
+) -> PsyResult<HashMap<String, Box<dyn SurfaceShader>>> {
     let mut shaders = HashMap::new();
     loop {
         match events.next_event()? {
@@ -602,7 +603,7 @@ fn parse_shaders<'a>(
     return Ok(shaders);
 }
 
-pub fn parse_matrix(contents: &str) -> Result<Matrix4x4, PsyParseError> {
+pub fn parse_matrix(contents: &str) -> PsyResult<Matrix4x4> {
     if let IResult::Ok((leftover, ns)) = all_consuming(tuple((
         ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32,
         ws_f32, ws_f32, ws_f32, ws_f32, ws_f32,
@@ -619,15 +620,16 @@ pub fn parse_matrix(contents: &str) -> Result<Matrix4x4, PsyParseError> {
     todo!(); // Return an error.
 }
 
-pub fn make_transform_format_error(byte_offset: usize) -> PsyParseError {
-    PsyParseError::IncorrectLeafData(
+pub fn make_transform_format_error(byte_offset: usize) -> PsyError {
+    PsyError::IncorrectLeafData(
         byte_offset,
         "Transform should be sixteen integers specified in \
-         the form '[# # # # # # # # # # # # # # # #]'.",
+         the form '[# # # # # # # # # # # # # # # #]'."
+            .into(),
     )
 }
 
-pub fn parse_color(contents: &str) -> Result<Color, PsyParseError> {
+pub fn parse_color(contents: &str) -> PsyResult<Color> {
     let items: Vec<_> = contents.split(',').map(|s| s.trim()).collect();
     if items.len() != 2 {
         todo!(); // Return an error.

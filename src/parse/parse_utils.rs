@@ -1,7 +1,10 @@
 //! Some basic nom parsers
 #![allow(dead_code)]
 
-use std::str::{self, FromStr};
+use std::{
+    io::BufRead,
+    str::{self, FromStr},
+};
 
 use nom::{
     character::complete::{digit1, multispace0, one_of},
@@ -10,6 +13,10 @@ use nom::{
     sequence::{delimited, tuple},
     IResult,
 };
+
+use data_tree::{reader::DataTreeReader, Event};
+
+use super::psy::{PsyError, PsyResult};
 
 // ========================================================
 
@@ -34,6 +41,39 @@ pub fn ws_i32(input: &str) -> IResult<&str, i32, ()> {
         ),
         i32::from_str,
     )(input)
+}
+
+//---------------------------------------------------------
+
+/// Ensures that we encounter a InnerClose event, and returns a useful
+/// error if we don't.
+pub fn ensure_close(events: &mut DataTreeReader<impl BufRead>) -> PsyResult<()> {
+    match events.next_event()? {
+        Event::InnerClose { .. } => Ok(()),
+        Event::InnerOpen {
+            type_name,
+            byte_offset,
+            ..
+        } => Err(PsyError::ExpectedInternalNodeClose(
+            byte_offset,
+            format!(
+                "Expected the node to be closed, but instead found a '{}'.",
+                type_name
+            ),
+        )),
+        Event::Leaf {
+            type_name,
+            byte_offset,
+            ..
+        } => Err(PsyError::ExpectedInternalNodeClose(
+            byte_offset,
+            format!(
+                "Expected the node to be closed, but instead found a '{}'.",
+                type_name
+            ),
+        )),
+        _ => Err(PsyError::UnknownError(events.byte_offset())),
+    }
 }
 
 // ========================================================

@@ -14,15 +14,15 @@ use crate::{
 };
 
 use super::{
-    basics::ws_f32,
-    psy::{parse_color, PsyParseError},
+    parse_utils::ws_f32,
+    psy::{parse_color, PsyError, PsyResult},
 };
 
 pub fn parse_distant_disk_light<'a>(
     arena: &'a Arena,
     events: &mut DataTreeReader<impl BufRead>,
     _ident: Option<&str>,
-) -> Result<DistantDiskLight<'a>, PsyParseError> {
+) -> PsyResult<DistantDiskLight<'a>> {
     let mut radii = Vec::new();
     let mut directions = Vec::new();
     let mut colors = Vec::new();
@@ -39,7 +39,7 @@ pub fn parse_distant_disk_light<'a>(
                     radii.push(radius);
                 } else {
                     // Found radius, but its contents is not in the right format
-                    return Err(PsyParseError::UnknownError(byte_offset));
+                    return Err(PsyError::UnknownError(byte_offset));
                 }
             }
 
@@ -55,7 +55,7 @@ pub fn parse_distant_disk_light<'a>(
                     directions.push(Vector::new(direction.0, direction.1, direction.2));
                 } else {
                     // Found direction, but its contents is not in the right format
-                    return Err(PsyParseError::UnknownError(byte_offset));
+                    return Err(PsyError::UnknownError(byte_offset));
                 }
             }
 
@@ -69,7 +69,7 @@ pub fn parse_distant_disk_light<'a>(
                     colors.push(color);
                 } else {
                     // Found color, but its contents is not in the right format
-                    return Err(PsyParseError::UnknownError(byte_offset));
+                    return Err(PsyError::UnknownError(byte_offset));
                 }
             }
 
@@ -89,7 +89,7 @@ pub fn parse_distant_disk_light<'a>(
 pub fn parse_sphere_light<'a>(
     arena: &'a Arena,
     events: &mut DataTreeReader<impl BufRead>,
-) -> Result<SphereLight<'a>, PsyParseError> {
+) -> Result<SphereLight<'a>, PsyError> {
     let mut radii = Vec::new();
     let mut colors = Vec::new();
 
@@ -106,7 +106,7 @@ pub fn parse_sphere_light<'a>(
                     radii.push(radius);
                 } else {
                     // Found radius, but its contents is not in the right format
-                    return Err(PsyParseError::UnknownError(byte_offset));
+                    return Err(PsyError::UnknownError(byte_offset));
                 }
             }
 
@@ -120,7 +120,7 @@ pub fn parse_sphere_light<'a>(
                     colors.push(color);
                 } else {
                     // Found color, but its contents is not in the right format
-                    return Err(PsyParseError::UnknownError(byte_offset));
+                    return Err(PsyError::UnknownError(byte_offset));
                 }
             }
 
@@ -140,7 +140,7 @@ pub fn parse_sphere_light<'a>(
 pub fn parse_rectangle_light<'a>(
     arena: &'a Arena,
     events: &mut DataTreeReader<impl BufRead>,
-) -> Result<RectangleLight<'a>, PsyParseError> {
+) -> Result<RectangleLight<'a>, PsyError> {
     let mut dimensions = Vec::new();
     let mut colors = Vec::new();
 
@@ -158,7 +158,7 @@ pub fn parse_rectangle_light<'a>(
                     dimensions.push(radius);
                 } else {
                     // Found dimensions, but its contents is not in the right format
-                    return Err(PsyParseError::UnknownError(byte_offset));
+                    return Err(PsyError::UnknownError(byte_offset));
                 }
             }
 
@@ -172,7 +172,7 @@ pub fn parse_rectangle_light<'a>(
                     colors.push(color);
                 } else {
                     // Found color, but its contents is not in the right format
-                    return Err(PsyParseError::UnknownError(byte_offset));
+                    return Err(PsyError::UnknownError(byte_offset));
                 }
             }
 

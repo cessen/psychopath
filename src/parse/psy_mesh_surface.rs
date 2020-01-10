@@ -14,8 +14,8 @@ use crate::{
 };
 
 use super::{
-    basics::{ws_f32, ws_usize},
-    psy::PsyParseError,
+    parse_utils::{ws_f32, ws_usize},
+    psy::{PsyError, PsyResult},
 };
 
 // pub struct TriangleMesh {
@@ -28,7 +28,7 @@ use super::{
 pub fn parse_mesh_surface<'a>(
     arena: &'a Arena,
     events: &mut DataTreeReader<impl BufRead>,
-) -> Result<TriangleMesh<'a>, PsyParseError> {
+) -> PsyResult<TriangleMesh<'a>> {
     let mut verts = Vec::new(); // Vec of vecs, one for each time sample
     let mut normals = Vec::new(); // Vec of vecs, on for each time sample
     let mut face_vert_counts = Vec::new();
@@ -81,9 +81,9 @@ pub fn parse_mesh_surface<'a>(
                 byte_offset,
             } => {
                 if !face_vert_counts.is_empty() {
-                    return Err(PsyParseError::WrongNodeCount(
+                    return Err(PsyError::WrongNodeCount(
                         byte_offset,
-                        "Meshes can only have one FaceVertCounts section.",
+                        "Meshes can only have one FaceVertCounts section.".into(),
                     ));
                 }
                 let mut text = contents;
@@ -99,9 +99,9 @@ pub fn parse_mesh_surface<'a>(
                 byte_offset,
             } => {
                 if !face_vert_indices.is_empty() {
-                    return Err(PsyParseError::WrongNodeCount(
+                    return Err(PsyError::WrongNodeCount(
                         byte_offset,
-                        "Meshes can only have one FaceVertIndices section.",
+                        "Meshes can only have one FaceVertIndices section.".into(),
                     ));
                 }
                 let mut text = contents;
