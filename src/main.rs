@@ -47,7 +47,7 @@ use nom::bytes::complete::take_until;
 
 use kioku::Arena;
 
-use data_tree::{reader::DataTreeReader, Event};
+use data_tree::{DataTreeReader, Event};
 
 use crate::{
     accel::BVH4Node,
@@ -371,7 +371,7 @@ fn main() {
                 // }
             }
 
-            Ok(Event::ValidEnd) => {
+            Ok(Event::EOF) => {
                 break;
             }
 

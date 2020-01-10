@@ -4,10 +4,7 @@ use std::{collections::HashMap, f32, io::BufRead, result::Result};
 
 use nom::{combinator::all_consuming, sequence::tuple, IResult};
 
-use data_tree::{
-    reader::{DataTreeReader, ReaderError},
-    Event,
-};
+use data_tree::{DataTreeReader, Event};
 use kioku::Arena;
 
 use crate::{
@@ -44,7 +41,7 @@ pub enum PsyError {
     WrongNodeCount(usize, String),               // Error message
     InstancedMissingData(usize, String, String), // Error message, data name
     ExpectedInternalNodeClose(usize, String),
-    ReaderError(ReaderError),
+    ReaderError(data_tree::Error),
 }
 
 impl PsyError {
@@ -112,8 +109,8 @@ impl std::fmt::Display for PsyError {
     }
 }
 
-impl From<ReaderError> for PsyError {
-    fn from(e: ReaderError) -> Self {
+impl From<data_tree::Error> for PsyError {
+    fn from(e: data_tree::Error) -> Self {
         PsyError::ReaderError(e)
     }
 }

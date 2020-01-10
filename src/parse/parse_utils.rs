@@ -14,7 +14,7 @@ use nom::{
     IResult,
 };
 
-use data_tree::{reader::DataTreeReader, Event};
+use data_tree::{DataTreeReader, Event};
 
 use super::psy::{PsyError, PsyResult};
 

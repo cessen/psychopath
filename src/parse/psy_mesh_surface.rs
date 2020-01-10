@@ -6,7 +6,7 @@ use nom::{sequence::tuple, IResult};
 
 use kioku::Arena;
 
-use data_tree::{reader::DataTreeReader, Event};
+use data_tree::{DataTreeReader, Event};
 
 use crate::{
     math::{Normal, Point},

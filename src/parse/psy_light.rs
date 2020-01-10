@@ -6,7 +6,7 @@ use nom::{combinator::all_consuming, sequence::tuple, IResult};
 
 use kioku::Arena;
 
-use data_tree::{reader::DataTreeReader, Event};
+use data_tree::{DataTreeReader, Event};
 
 use crate::{
     light::{DistantDiskLight, RectangleLight, SphereLight},

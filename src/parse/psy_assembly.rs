@@ -4,7 +4,7 @@ use std::{io::BufRead, result::Result};
 
 use kioku::Arena;
 
-use data_tree::{reader::DataTreeReader, Event};
+use data_tree::{DataTreeReader, Event};
 
 use crate::scene::{Assembly, Object, ObjectData};
 
