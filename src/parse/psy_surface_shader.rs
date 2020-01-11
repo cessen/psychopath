@@ -11,7 +11,7 @@ use data_tree::{DataTreeReader, Event};
 use crate::shading::{SimpleSurfaceShader, SurfaceShader};
 
 use super::{
-    parse_utils::{ensure_close, ws_f32},
+    parse_utils::{ensure_close, ensure_subsections, ws_f32},
     psy::{parse_color, PsyError, PsyResult},
 };
 
@@ -63,7 +63,12 @@ pub fn parse_surface_shader(
             let mut roughness = None;
             let mut fresnel = None;
 
-            loop {
+            let valid_subsections = &[
+                ("Color", true, (1).into()),
+                ("Roughness", true, (1).into()),
+                ("Fresnel", true, (1).into()),
+            ];
+            ensure_subsections(events, valid_subsections, |events| {
                 match events.next_event()? {
                     // Color
                     Event::Leaf {
@@ -83,7 +88,12 @@ pub fn parse_surface_shader(
                         if let IResult::Ok((_, rgh)) = all_consuming(ws_f32)(contents) {
                             roughness = Some(rgh);
                         } else {
-                            return Err(PsyError::UnknownError(byte_offset));
+                            return Err(PsyError::IncorrectLeafData(
+                                byte_offset,
+                                "Roughness data isn't in the right format.  It \
+                                 should contain a single floating point value."
+                                    .into(),
+                            ));
                         }
                     }
 
@@ -96,27 +106,21 @@ pub fn parse_surface_shader(
                         if let IResult::Ok((_, frs)) = all_consuming(ws_f32)(contents) {
                             fresnel = Some(frs);
                         } else {
-                            return Err(PsyError::UnknownError(byte_offset));
+                            return Err(PsyError::IncorrectLeafData(
+                                byte_offset,
+                                "Fresnel data isn't in the right format.  It \
+                                 should contain a single floating point value."
+                                    .into(),
+                            ));
                         }
                     }
 
-                    Event::InnerClose { .. } => {
-                        break;
-                    }
-
-                    _ => {
-                        todo!(); // Return an error.
-                    }
+                    _ => unreachable!(),
                 }
-            }
+                Ok(())
+            })?;
 
-            // Validation: make sure all fields are present.
-            if color == None || roughness == None || fresnel == None {
-                return Err(PsyError::MissingNode(
-                    events.byte_offset(),
-                    "GGX shader requires one of each field: Color, Roughness, Fresnel.".into(),
-                ));
-            }
+            ensure_close(events)?;
 
             Box::new(SimpleSurfaceShader::GGX {
                 color: color.unwrap(),

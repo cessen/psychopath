@@ -14,7 +14,7 @@ use crate::{
 };
 
 use super::{
-    parse_utils::{ws_f32, ws_usize},
+    parse_utils::{ensure_close, ensure_subsections, ws_f32, ws_usize},
     psy::{PsyError, PsyResult},
 };
 
@@ -34,7 +34,14 @@ pub fn parse_mesh_surface<'a>(
     let mut face_vert_counts = Vec::new();
     let mut face_vert_indices = Vec::new();
 
-    loop {
+    let valid_subsections = &[
+        ("SurfaceShaderBind", true, (1).into()),
+        ("Vertices", true, (1..).into()),
+        ("Normals", true, (..).into()),
+        ("FaceVertCounts", true, (1).into()),
+        ("FaceVertIndices", true, (1).into()),
+    ];
+    ensure_subsections(events, valid_subsections, |events| {
         match events.next_event()? {
             Event::Leaf {
                 type_name: "SurfaceShaderBind",
@@ -46,7 +53,7 @@ pub fn parse_mesh_surface<'a>(
             Event::Leaf {
                 type_name: "Vertices",
                 contents,
-                ..
+                byte_offset,
             } => {
                 // Collect verts for this time sample
                 let mut text = contents;
@@ -56,13 +63,21 @@ pub fn parse_mesh_surface<'a>(
 
                     tverts.push(Point::new(vert.0, vert.1, vert.2));
                 }
+                if !text.is_empty() {
+                    return Err(PsyError::IncorrectLeafData(
+                        byte_offset,
+                        "Vertices are not in the right format.  Each vertex \
+                         must be specified by three decimal values."
+                            .into(),
+                    ));
+                }
                 verts.push(tverts);
             }
 
             Event::Leaf {
                 type_name: "Normals",
                 contents,
-                ..
+                byte_offset,
             } => {
                 // Collect normals for this time sample
                 let mut text = contents;
@@ -72,6 +87,14 @@ pub fn parse_mesh_surface<'a>(
 
                     tnormals.push(Normal::new(nor.0, nor.1, nor.2).normalized());
                 }
+                if !text.is_empty() {
+                    return Err(PsyError::IncorrectLeafData(
+                        byte_offset,
+                        "Normals are not in the right format.  Each normal \
+                         must be specified by three decimal values."
+                            .into(),
+                    ));
+                }
                 normals.push(tnormals);
             }
 
@@ -80,16 +103,18 @@ pub fn parse_mesh_surface<'a>(
                 contents,
                 byte_offset,
             } => {
-                if !face_vert_counts.is_empty() {
-                    return Err(PsyError::WrongNodeCount(
-                        byte_offset,
-                        "Meshes can only have one FaceVertCounts section.".into(),
-                    ));
-                }
                 let mut text = contents;
                 while let IResult::Ok((remaining, count)) = ws_usize(text) {
                     text = remaining;
                     face_vert_counts.push(count);
+                }
+                if !text.is_empty() {
+                    return Err(PsyError::IncorrectLeafData(
+                        byte_offset,
+                        "FaceVertCounts are not in the right format.  Should be \
+                         a simple list of space-separated integers."
+                            .into(),
+                    ));
                 }
             }
 
@@ -98,28 +123,27 @@ pub fn parse_mesh_surface<'a>(
                 contents,
                 byte_offset,
             } => {
-                if !face_vert_indices.is_empty() {
-                    return Err(PsyError::WrongNodeCount(
-                        byte_offset,
-                        "Meshes can only have one FaceVertIndices section.".into(),
-                    ));
-                }
                 let mut text = contents;
                 while let IResult::Ok((remaining, index)) = ws_usize(text) {
                     text = remaining;
                     face_vert_indices.push(index);
                 }
+                if !text.is_empty() {
+                    return Err(PsyError::IncorrectLeafData(
+                        byte_offset,
+                        "FaceVertCounts are not in the right format.  Should be \
+                         a simple list of space-separated integers."
+                            .into(),
+                    ));
+                }
             }
 
-            Event::InnerClose { .. } => {
-                break;
-            }
-
-            _ => {
-                todo!(); // Return error.
-            }
+            _ => unreachable!(),
         }
-    }
+        Ok(())
+    })?;
+
+    ensure_close(events)?;
 
     // Validation: make sure all time samples have same vert count.
     let vert_count = verts[0].len();
@@ -134,12 +158,6 @@ pub fn parse_mesh_surface<'a>(
         for ns in &normals {
             assert_eq!(vert_count, ns.len());
         }
-    }
-
-    // Validation: make sure we have any mesh data.
-    if verts.is_empty() || face_vert_counts.is_empty() || face_vert_indices.is_empty() {
-        todo!("Meshes must have at least one non-empty of each of the following sections: Vertices, FaceVertCounts, FaceVertIndices.");
-        // Return an error.
     }
 
     // Build triangle mesh

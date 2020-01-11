@@ -14,7 +14,7 @@ use crate::{
 };
 
 use super::{
-    parse_utils::ws_f32,
+    parse_utils::{ensure_close, ensure_subsections, ws_f32},
     psy::{parse_color, PsyError, PsyResult},
 };
 
@@ -28,7 +28,12 @@ pub fn parse_distant_disk_light<'a>(
     let mut colors = Vec::new();
 
     // Parse
-    loop {
+    let valid_subsections = &[
+        ("Radius", true, (1..).into()),
+        ("Direction", true, (1..).into()),
+        ("Color", true, (1..).into()),
+    ];
+    ensure_subsections(events, valid_subsections, |events| {
         match events.next_event()? {
             Event::Leaf {
                 type_name: "Radius",
@@ -39,7 +44,12 @@ pub fn parse_distant_disk_light<'a>(
                     radii.push(radius);
                 } else {
                     // Found radius, but its contents is not in the right format
-                    return Err(PsyError::UnknownError(byte_offset));
+                    return Err(PsyError::IncorrectLeafData(
+                        byte_offset,
+                        "Radius data isn't in the right format.  It should \
+                         contain a single floating point value."
+                            .into(),
+                    ));
                 }
             }
 
@@ -55,7 +65,12 @@ pub fn parse_distant_disk_light<'a>(
                     directions.push(Vector::new(direction.0, direction.1, direction.2));
                 } else {
                     // Found direction, but its contents is not in the right format
-                    return Err(PsyError::UnknownError(byte_offset));
+                    return Err(PsyError::IncorrectLeafData(
+                        byte_offset,
+                        "Direction data isn't in the right format.  It should \
+                         contain a single floating point value."
+                            .into(),
+                    ));
                 }
             }
 
@@ -68,15 +83,12 @@ pub fn parse_distant_disk_light<'a>(
                 colors.push(parse_color(byte_offset, &contents)?);
             }
 
-            Event::InnerClose { .. } => {
-                break;
-            }
-
-            _ => {
-                todo!(); // Return error.
-            }
+            _ => unreachable!(),
         }
-    }
+        Ok(())
+    })?;
+
+    ensure_close(events)?;
 
     return Ok(DistantDiskLight::new(arena, &radii, &directions, &colors));
 }
@@ -89,9 +101,12 @@ pub fn parse_sphere_light<'a>(
     let mut colors = Vec::new();
 
     // Parse
-    loop {
+    let valid_subsections = &[
+        ("Radius", true, (1..).into()),
+        ("Color", true, (1..).into()),
+    ];
+    ensure_subsections(events, valid_subsections, |events| {
         match events.next_event()? {
-            // Radius
             Event::Leaf {
                 type_name: "Radius",
                 contents,
@@ -101,7 +116,12 @@ pub fn parse_sphere_light<'a>(
                     radii.push(radius);
                 } else {
                     // Found radius, but its contents is not in the right format
-                    return Err(PsyError::UnknownError(byte_offset));
+                    return Err(PsyError::IncorrectLeafData(
+                        byte_offset,
+                        "Radius data isn't in the right format.  It should \
+                         contain a single floating point value."
+                            .into(),
+                    ));
                 }
             }
 
@@ -114,15 +134,12 @@ pub fn parse_sphere_light<'a>(
                 colors.push(parse_color(byte_offset, &contents)?);
             }
 
-            Event::InnerClose { .. } => {
-                break;
-            }
-
-            _ => {
-                todo!(); // Return error.
-            }
+            _ => unreachable!(),
         }
-    }
+        Ok(())
+    })?;
+
+    ensure_close(events)?;
 
     return Ok(SphereLight::new(arena, &radii, &colors));
 }
@@ -135,7 +152,11 @@ pub fn parse_rectangle_light<'a>(
     let mut colors = Vec::new();
 
     // Parse
-    loop {
+    let valid_subsections = &[
+        ("Dimensions", true, (1..).into()),
+        ("Color", true, (1..).into()),
+    ];
+    ensure_subsections(events, valid_subsections, |events| {
         match events.next_event()? {
             // Dimensions
             Event::Leaf {
@@ -148,7 +169,12 @@ pub fn parse_rectangle_light<'a>(
                     dimensions.push(radius);
                 } else {
                     // Found dimensions, but its contents is not in the right format
-                    return Err(PsyError::UnknownError(byte_offset));
+                    return Err(PsyError::IncorrectLeafData(
+                        byte_offset,
+                        "Dimensions data isn't in the right format.  It should \
+                         contain two space-separated floating point values."
+                            .into(),
+                    ));
                 }
             }
 
@@ -161,15 +187,12 @@ pub fn parse_rectangle_light<'a>(
                 colors.push(parse_color(byte_offset, &contents)?);
             }
 
-            Event::InnerClose { .. } => {
-                break;
-            }
-
-            _ => {
-                todo!(); // Return error.
-            }
+            _ => unreachable!(),
         }
-    }
+        Ok(())
+    })?;
+
+    ensure_close(events)?;
 
     return Ok(RectangleLight::new(arena, &dimensions, &colors));
 }
