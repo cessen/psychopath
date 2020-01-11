@@ -19,7 +19,7 @@ use crate::{
 };
 
 use super::{
-    parse_utils::{ensure_close, ws_f32, ws_u32},
+    parse_utils::{ensure_close, ensure_subsections, ws_f32, ws_u32},
     psy_assembly::parse_assembly,
     psy_light::parse_distant_disk_light,
     psy_surface_shader::parse_surface_shader,
@@ -127,76 +127,76 @@ pub fn parse_scene<'a>(
     events: &mut DataTreeReader<impl BufRead>,
     _ident: Option<&str>,
 ) -> PsyResult<Scene<'a>> {
-    // Get output info.
-    let _output_info = if let Event::InnerOpen {
-        type_name: "Output",
-        ..
-    } = events.next_event()?
-    {
-        parse_output_info(events)?
-    } else {
-        todo!(); // Return error.
-    };
+    // Get everything except the root assembly (which comes last).
+    let mut output_info = None;
+    let mut render_settings = None;
+    let mut shaders = None;
+    let mut world = None;
+    let mut camera = None;
+    let valid_subsections = &[
+        ("Output", false, (1).into()),
+        ("RenderSettings", false, (1).into()),
+        ("Shaders", false, (1).into()),
+        ("World", false, (1).into()),
+        ("Camera", false, (1).into()),
+    ];
+    ensure_subsections(events, valid_subsections, |events| {
+        match events.next_event()? {
+            Event::InnerOpen {
+                type_name: "Output",
+                ..
+            } => {
+                output_info = Some(parse_output_info(events)?);
+            }
 
-    // Get render settings.
-    let _render_settings = if let Event::InnerOpen {
-        type_name: "RenderSettings",
-        ..
-    } = events.next_event()?
-    {
-        parse_render_settings(events)?
-    } else {
-        todo!(); // Return error.
-    };
+            Event::InnerOpen {
+                type_name: "RenderSettings",
+                ..
+            } => {
+                render_settings = Some(parse_render_settings(events)?);
+            }
 
-    // Get shaders.
-    let shaders = if let Event::InnerOpen {
-        type_name: "Shaders",
-        ..
-    } = events.next_event()?
-    {
-        parse_shaders(arena, events)?
-    } else {
-        todo!(); // Return error.
-    };
+            Event::InnerOpen {
+                type_name: "Shaders",
+                ..
+            } => {
+                shaders = Some(parse_shaders(arena, events)?);
+            }
 
-    // Get world.
-    let world = if let Event::InnerOpen {
-        type_name: "World", ..
-    } = events.next_event()?
-    {
-        parse_world(arena, events)?
-    } else {
-        todo!(); // Return error.
-    };
+            Event::InnerOpen {
+                type_name: "World", ..
+            } => {
+                world = Some(parse_world(arena, events)?);
+            }
 
-    // Get camera.
-    let camera = if let Event::InnerOpen {
-        type_name: "Camera",
-        ..
-    } = events.next_event()?
-    {
-        parse_camera(arena, events)?
-    } else {
-        todo!(); // Return error.
-    };
+            Event::InnerOpen {
+                type_name: "Camera",
+                ..
+            } => {
+                camera = Some(parse_camera(arena, events)?);
+            }
+
+            _ => unreachable!(),
+        }
+        Ok(())
+    })?;
 
     // Get the root assembly.
-    let root_assembly = if let Event::InnerOpen {
-        type_name: "Assembly",
-        ..
-    } = events.next_event()?
-    {
-        parse_assembly(arena, events)?
-    } else {
-        todo!(); // Return error.
-    };
+    let mut root_assembly = None;
+    let valid_subsections = &[("Assembly", false, (1).into())];
+    ensure_subsections(events, valid_subsections, |events| {
+        match events.next_event()? {
+            Event::InnerOpen {
+                type_name: "Assembly",
+                ..
+            } => root_assembly = Some(parse_assembly(arena, events)?),
+            _ => unreachable!(),
+        }
+        Ok(())
+    })?;
 
     // Make sure we're closed out properly.
-    if let Event::InnerClose { .. } = events.next_event()? {
-    } else {
-        todo!(); // Return error.
-    }
+    ensure_close(events)?;
 
     // Put scene together
     // let scene_name = if let Some(name) = ident {
@@ -205,10 +205,10 @@ pub fn parse_scene<'a>(
     //     None
     // };
     let scene = Scene {
-        camera: camera,
-        world: world,
-        shaders: shaders,
-        root_assembly: root_assembly,
+        camera: camera.unwrap(),
+        world: world.unwrap(),
+        shaders: shaders.unwrap(),
+        root_assembly: root_assembly.unwrap(),
     };
 
     // // Put renderer together
@@ -227,9 +227,10 @@ pub fn parse_scene<'a>(
 }
 
 fn parse_output_info(events: &mut DataTreeReader<impl BufRead>) -> PsyResult<String> {
-    let mut found_path = false;
     let mut path = String::new();
-    loop {
+
+    let valid_subsections = &[("Path", true, (1).into())];
+    ensure_subsections(events, valid_subsections, |events| {
         match events.next_event()? {
             Event::Leaf {
                 type_name: "Path",
@@ -253,42 +254,36 @@ fn parse_output_info(events: &mut DataTreeReader<impl BufRead>) -> PsyResult<Str
                 let len = tc.len();
                 let tc = &tc[1..len - 1];
 
-                // Parse
                 // TODO: proper string escaping
-                found_path = true;
                 path = tc.to_string();
             }
 
-            Event::InnerClose { .. } => {
-                break;
-            }
-
             _ => {
-                todo!(); // Return error.
+                unreachable!();
             }
         }
-    }
+        Ok(())
+    })?;
 
-    if found_path {
-        return Ok(path);
-    } else {
-        // return Err(PsyError::MissingNode(
-        //     tree.byte_offset(),
-        //     "Output section must contain a Path.",
-        // ));
-        todo!(); // Return error.
-    }
+    ensure_close(events)?;
+
+    Ok(path)
 }
 
 fn parse_render_settings(
     events: &mut DataTreeReader<impl BufRead>,
 ) -> PsyResult<((u32, u32), u32, u32)> {
-    let mut found_res = false;
-    let mut found_spp = false;
     let mut res = (0, 0);
     let mut spp = 0;
     let mut seed = 0;
-    loop {
+
+    // Parse
+    let valid_subsections = &[
+        ("Resolution", true, (1).into()),
+        ("SamplesPerPixel", true, (1).into()),
+        ("Seed", true, (..).into()),
+    ];
+    ensure_subsections(events, valid_subsections, |events| {
         match events.next_event()? {
             // Resolution
             Event::Leaf {
@@ -298,7 +293,6 @@ fn parse_render_settings(
             } => {
                 if let IResult::Ok((_, (w, h))) = all_consuming(tuple((ws_u32, ws_u32)))(&contents)
                 {
-                    found_res = true;
                     res = (w, h);
                 } else {
                     // Found Resolution, but its contents is not in the right format
@@ -318,7 +312,6 @@ fn parse_render_settings(
                 byte_offset,
             } => {
                 if let IResult::Ok((_, n)) = all_consuming(ws_u32)(&contents) {
-                    found_spp = true;
                     spp = n;
                 } else {
                     // Found SamplesPerPixel, but its contents is not in the right format
@@ -350,26 +343,17 @@ fn parse_render_settings(
                 }
             }
 
-            Event::InnerClose { .. } => {
-                break;
-            }
-
             _ => {
-                todo!(); // Return error.
+                unreachable!();
             }
         }
-    }
 
-    if found_res && found_spp {
-        return Ok((res, spp, seed));
-    } else {
-        // return Err(PsyError::MissingNode(
-        //     tree.byte_offset(),
-        //     "RenderSettings must have both Resolution and \
-        //      SamplesPerPixel specified.",
-        // ));
-        todo!(); // Return error.
-    }
+        Ok(())
+    })?;
+
+    ensure_close(events)?;
+
+    Ok((res, spp, seed))
 }
 
 fn parse_camera<'a>(
@@ -382,7 +366,13 @@ fn parse_camera<'a>(
     let mut aperture_radii = Vec::new();
 
     // Parse
-    loop {
+    let valid_subsections = &[
+        ("Fov", true, (1..).into()),
+        ("FocalDistance", true, (1..).into()),
+        ("ApertureRadius", true, (1..).into()),
+        ("Transform", true, (1..).into()),
+    ];
+    ensure_subsections(events, valid_subsections, |events| {
         match events.next_event()? {
             // Fov
             Event::Leaf {
@@ -455,15 +445,15 @@ fn parse_camera<'a>(
                 }
             }
 
-            Event::InnerClose { .. } => {
-                break;
-            }
-
             _ => {
-                todo!(); // Return error.
+                unreachable!();
             }
         }
-    }
+
+        Ok(())
+    })?;
+
+    ensure_close(events)?;
 
     return Ok(Camera::new(
         arena,
@@ -481,7 +471,11 @@ fn parse_world<'a>(
     let mut background_color = None;
     let mut lights: Vec<&dyn WorldLightSource> = Vec::new();
 
-    loop {
+    let valid_subsections = &[
+        ("BackgroundShader", false, (1).into()),
+        ("DistantDiskLight", false, (..).into()),
+    ];
+    ensure_subsections(events, valid_subsections, |events| {
         match events.next_event()? {
             // Parse background shader
             Event::InnerOpen {
@@ -496,7 +490,7 @@ fn parse_world<'a>(
                 {
                     contents.to_string()
                 } else {
-                    todo!(); // Return error.
+                    panic!("No type specified for the BackgroundShader"); // Return error.
                 };
 
                 match bgs_type.as_ref() {
@@ -504,12 +498,12 @@ fn parse_world<'a>(
                         if let Event::Leaf {
                             type_name: "Color",
                             contents,
-                            ..
+                            byte_offset,
                         } = events.next_event()?
                         {
-                            background_color = Some(parse_color(contents)?);
+                            background_color = Some(parse_color(byte_offset, contents)?);
                         } else {
-                            todo!(
+                            panic!(
                                 "BackgroundShader's Type is Color, \
                                  but no Color is specified."
                             ); // Return error.
@@ -517,7 +511,7 @@ fn parse_world<'a>(
                     }
 
                     _ => {
-                        todo!(
+                        panic!(
                             "The specified BackgroundShader Type \
                              isn't a recognized type.",
                         ); // Return an error.
@@ -541,16 +535,12 @@ fn parse_world<'a>(
                     ident.as_deref(),
                 )?));
             }
-
-            Event::InnerClose { .. } => {
-                break;
-            }
-
-            _ => {
-                todo!(); // Return error.
-            }
+            _ => unreachable!(),
         }
-    }
+        Ok(())
+    })?;
+
+    ensure_close(events)?;
 
     if background_color == None {
         todo!(); // Return error.
@@ -568,12 +558,13 @@ fn parse_shaders<'a>(
     events: &mut DataTreeReader<impl BufRead>,
 ) -> PsyResult<HashMap<String, Box<dyn SurfaceShader>>> {
     let mut shaders = HashMap::new();
-    loop {
+    let valid_subsections = &[("SurfaceShader", false, (..).into())];
+    ensure_subsections(events, valid_subsections, |events| {
         match events.next_event()? {
             Event::InnerOpen {
                 type_name: "SurfaceShader",
                 ident,
-                ..
+                byte_offset,
             } => {
                 if let Some(name) = ident {
                     let name = name.to_string();
@@ -582,19 +573,19 @@ fn parse_shaders<'a>(
                         parse_surface_shader(arena, events, Some(&name))?,
                     );
                 } else {
-                    todo!("Shader has no name."); // Return error.
+                    return Err(PsyError::ExpectedIdent(
+                        byte_offset,
+                        "SurfaceShader has no name.".into(),
+                    ));
                 }
             }
 
-            Event::InnerClose { .. } => {
-                break;
-            }
-
-            _ => {
-                todo!(); // Return error.
-            }
+            _ => unreachable!(),
         }
-    }
+        Ok(())
+    })?;
+
+    ensure_close(events)?;
 
     // Return the list of shaders.
     return Ok(shaders);
@@ -626,39 +617,44 @@ pub fn make_transform_format_error(byte_offset: usize) -> PsyError {
     )
 }
 
-pub fn parse_color(contents: &str) -> PsyResult<Color> {
+pub fn parse_color(byte_offset: usize, contents: &str) -> PsyResult<Color> {
     let items: Vec<_> = contents.split(',').map(|s| s.trim()).collect();
     if items.len() != 2 {
-        todo!(); // Return an error.
+        return Err(PsyError::IncorrectLeafData(
+            byte_offset,
+            "Color has invalid format.".into(),
+        ));
     }
 
     match items[0] {
         "rec709" => {
             if let IResult::Ok((_, color)) = tuple((ws_f32, ws_f32, ws_f32))(items[1]) {
                 return Ok(Color::new_xyz(rec709_e_to_xyz(color)));
-            } else {
-                todo!(); // Return an error.
             }
         }
 
         "blackbody" => {
             if let IResult::Ok((_, (temperature, factor))) = tuple((ws_f32, ws_f32))(items[1]) {
                 return Ok(Color::new_blackbody(temperature, factor));
-            } else {
-                todo!(); // Return an error.
             }
         }
 
         "color_temperature" => {
             if let IResult::Ok((_, (temperature, factor))) = tuple((ws_f32, ws_f32))(items[1]) {
                 return Ok(Color::new_temperature(temperature, factor));
-            } else {
-                todo!(); // Return an error.
             }
         }
 
-        _ => {
-            todo!(); // Return an error.
+        s => {
+            return Err(PsyError::IncorrectLeafData(
+                byte_offset,
+                format!("Unrecognized color type '{}.", s),
+            ));
         }
     }
+
+    Err(PsyError::IncorrectLeafData(
+        byte_offset,
+        "Color has invalid format.".into(),
+    ))
 }

@@ -65,12 +65,7 @@ pub fn parse_distant_disk_light<'a>(
                 contents,
                 byte_offset,
             } => {
-                if let Ok(color) = parse_color(&contents) {
-                    colors.push(color);
-                } else {
-                    // Found color, but its contents is not in the right format
-                    return Err(PsyError::UnknownError(byte_offset));
-                }
+                colors.push(parse_color(byte_offset, &contents)?);
             }
 
             Event::InnerClose { .. } => {
@@ -116,12 +111,7 @@ pub fn parse_sphere_light<'a>(
                 contents,
                 byte_offset,
             } => {
-                if let Ok(color) = parse_color(&contents) {
-                    colors.push(color);
-                } else {
-                    // Found color, but its contents is not in the right format
-                    return Err(PsyError::UnknownError(byte_offset));
-                }
+                colors.push(parse_color(byte_offset, &contents)?);
             }
 
             Event::InnerClose { .. } => {
@@ -168,12 +158,7 @@ pub fn parse_rectangle_light<'a>(
                 contents,
                 byte_offset,
             } => {
-                if let Ok(color) = parse_color(&contents) {
-                    colors.push(color);
-                } else {
-                    // Found color, but its contents is not in the right format
-                    return Err(PsyError::UnknownError(byte_offset));
-                }
+                colors.push(parse_color(byte_offset, &contents)?);
             }
 
             Event::InnerClose { .. } => {

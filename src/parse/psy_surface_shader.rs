@@ -40,12 +40,7 @@ pub fn parse_surface_shader(
                 byte_offset,
             } = events.next_event()?
             {
-                if let Ok(color) = parse_color(contents) {
-                    color
-                } else {
-                    // Found color, but its contents is not in the right format
-                    return Err(PsyError::UnknownError(byte_offset));
-                }
+                parse_color(byte_offset, contents)?
             } else {
                 return Err(PsyError::MissingNode(
                     events.byte_offset(),
@@ -76,13 +71,7 @@ pub fn parse_surface_shader(
                         contents,
                         byte_offset,
                     } => {
-                        if let Ok(col) = parse_color(contents) {
-                            color = Some(col);
-                        } else {
-                            // Found color, but its contents is not in the right
-                            // format.
-                            return Err(PsyError::UnknownError(byte_offset));
-                        }
+                        color = Some(parse_color(byte_offset, contents)?);
                     }
 
                     // Roughness
@@ -147,12 +136,7 @@ pub fn parse_surface_shader(
                 byte_offset,
             } = events.next_event()?
             {
-                if let Ok(color) = parse_color(contents) {
-                    color
-                } else {
-                    // Found color, but its contents is not in the right format
-                    return Err(PsyError::UnknownError(byte_offset));
-                }
+                parse_color(byte_offset, contents)?
             } else {
                 return Err(PsyError::MissingNode(
                     events.byte_offset(),
