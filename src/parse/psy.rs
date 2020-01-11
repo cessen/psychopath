@@ -32,23 +32,22 @@ pub enum PsyError {
     // The first usize for all errors is their byte offset
     // into the psy content where they occured.
     UnknownError(usize),
-    UnknownVariant(usize, String),               // Error message
-    ExpectedInternalNode(usize, String),         // Error message
-    ExpectedLeafNode(usize, String),             // Error message
-    ExpectedIdent(usize, String),                // Error message
-    MissingNode(usize, String),                  // Error message
-    IncorrectLeafData(usize, String),            // Error message
-    WrongNodeCount(usize, String),               // Error message
-    InstancedMissingData(usize, String, String), // Error message, data name
-    ExpectedInternalNodeClose(usize, String),
+    UnknownVariant(usize, String),            // Error message
+    ExpectedInternalNode(usize, String),      // Error message
+    ExpectedLeafNode(usize, String),          // Error message
+    ExpectedIdent(usize, String),             // Error message
+    MissingNode(usize, String),               // Error message
+    IncorrectLeafData(usize, String),         // Error message
+    WrongNodeCount(usize, String),            // Error message
+    ExpectedInternalNodeClose(usize, String), // Error message
     ReaderError(data_tree::Error),
 }
 
 impl PsyError {
-    pub fn print(&self, psy_content: &str) {
+    pub fn print(&self, psy_content: impl BufRead) {
         match self {
             PsyError::UnknownError(offset) => {
-                let line = line_count_to_byte_offset(psy_content, *offset);
+                let line = byte_offset_to_line_char(psy_content, *offset);
                 println!(
                     "Line {}: Unknown parse error.  If you get this message, please report \
                      it to the developers so they can improve the error messages.",
@@ -57,46 +56,87 @@ impl PsyError {
             }
 
             PsyError::UnknownVariant(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, *offset);
+                let line = byte_offset_to_line_char(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
             PsyError::ExpectedInternalNode(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, *offset);
+                let line = byte_offset_to_line_char(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
             PsyError::ExpectedLeafNode(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, *offset);
+                let line = byte_offset_to_line_char(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
             PsyError::ExpectedIdent(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, *offset);
+                let line = byte_offset_to_line_char(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
             PsyError::MissingNode(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, *offset);
+                let line = byte_offset_to_line_char(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
             PsyError::IncorrectLeafData(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, *offset);
+                let line = byte_offset_to_line_char(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
             PsyError::WrongNodeCount(offset, error) => {
-                let line = line_count_to_byte_offset(psy_content, *offset);
+                let line = byte_offset_to_line_char(psy_content, *offset);
                 println!("Line {}: {}", line, error);
             }
 
-            PsyError::InstancedMissingData(offset, error, data_name) => {
-                let line = line_count_to_byte_offset(psy_content, *offset);
-                println!("Line {}: {} Data name: '{}'", line, error, data_name);
+            PsyError::ExpectedInternalNodeClose(offset, error) => {
+                let line = byte_offset_to_line_char(psy_content, *offset);
+                println!("Line {}: {}", line, error);
             }
 
-            _ => todo!(),
+            PsyError::ReaderError(data_tree::Error::ExpectedTypeNameOrClose(offset)) => {
+                let line = byte_offset_to_line_char(psy_content, *offset);
+                println!(
+                    "Line {}: Expected either a type name or a closing brace.",
+                    line
+                );
+            }
+
+            PsyError::ReaderError(data_tree::Error::ExpectedOpenOrIdent(offset)) => {
+                let line = byte_offset_to_line_char(psy_content, *offset);
+                println!(
+                    "Line {}: Expected either an opening brace/bracket or an ident.",
+                    line
+                );
+            }
+
+            PsyError::ReaderError(data_tree::Error::ExpectedOpen(offset)) => {
+                let line = byte_offset_to_line_char(psy_content, *offset);
+                println!("Line {}: Expected an opening brace.", line);
+            }
+
+            PsyError::ReaderError(data_tree::Error::UnexpectedClose(offset)) => {
+                let line = byte_offset_to_line_char(psy_content, *offset);
+                println!("Line {}: Encountered an unexpected closing brace.", line);
+            }
+
+            PsyError::ReaderError(data_tree::Error::UnexpectedIdent(offset)) => {
+                let line = byte_offset_to_line_char(psy_content, *offset);
+                println!("Line {}: Encountered and unexpected ident.", line);
+            }
+
+            PsyError::ReaderError(data_tree::Error::UnexpectedEOF) => {
+                let line = byte_offset_to_line_char(psy_content, std::usize::MAX);
+                println!(
+                    "Line {}: Unexpected end-of-stream, data tree incomplete.",
+                    line
+                );
+            }
+
+            PsyError::ReaderError(data_tree::Error::IO(error)) => {
+                println!("IO error while parsing scene: {}", error);
+            }
         }
     }
 }
@@ -115,8 +155,27 @@ impl From<data_tree::Error> for PsyError {
     }
 }
 
-fn line_count_to_byte_offset(text: &str, offset: usize) -> usize {
-    text[..offset].matches('\n').count() + 1
+fn byte_offset_to_line_char(mut reader: impl BufRead, byte_offset: usize) -> usize {
+    let mut line_buf = String::new();
+    let mut bytes_read = 0;
+    let mut current_line = 1;
+    loop {
+        line_buf.clear();
+        if let Ok(_) = reader.read_line(&mut line_buf) {
+            if line_buf.is_empty() {
+                break;
+            }
+            bytes_read += line_buf.len();
+            if byte_offset < bytes_read {
+                return current_line;
+            }
+            current_line += 1;
+        } else {
+            todo!(); // Handle error properly.
+        }
+    }
+
+    return current_line;
 }
 
 //----------------------------------------------------------------

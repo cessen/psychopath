@@ -100,11 +100,19 @@ pub fn parse_assembly<'a>(
                     ));
                 }
 
-                _ => {
+                Event::InnerOpen {
+                    type_name,
+                    byte_offset,
+                    ..
+                } => {
                     return Err(PsyError::UnknownVariant(
                         byte_offset,
-                        "Unknown data type for Object.".into(),
+                        format!("Unknown data type '{}' for Object.", type_name),
                     ));
+                }
+
+                _ => {
+                    return Err(PsyError::UnknownError(byte_offset));
                 }
             };
 

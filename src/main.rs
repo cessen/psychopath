@@ -40,7 +40,14 @@ mod timer;
 // mod tracer;
 mod transform_stack;
 
-use std::{fs::File, io, io::Read, mem, path::Path, str::FromStr};
+use std::{
+    fs::File,
+    io,
+    io::{Read, Seek},
+    mem,
+    path::Path,
+    str::FromStr,
+};
 
 use clap::{App, Arg};
 use nom::bytes::complete::take_until;
@@ -261,8 +268,8 @@ fn main() {
                 let ident = ident.map(|v| v.to_string());
                 let scene =
                     parse_scene(&arena, &mut events, ident.as_deref()).unwrap_or_else(|e| {
-                        println!("Parse error: {}", e);
-                        // e.print(&psy_contents);
+                        print!("Parse error: ");
+                        e.print(&mut io::BufReader::new(File::open(file_path).unwrap()));
                         panic!("Parse error.");
                     });
 
