@@ -244,8 +244,10 @@ impl<'a> Renderer<'a> {
                     for si in 0..self.spp {
                         // Calculate image plane x and y coordinates
                         let (img_x, img_y) = {
-                            let filter_x = fast_logit(get_sample(4, si as u32, scramble), 1.5) + 0.5;
-                            let filter_y = fast_logit(get_sample(5, si as u32, scramble), 1.5) + 0.5;
+                            let filter_x =
+                                fast_logit(get_sample(4, si as u32, scramble), 1.5) + 0.5;
+                            let filter_y =
+                                fast_logit(get_sample(5, si as u32, scramble), 1.5) + 0.5;
                             let samp_x = (filter_x + x as f32) * cmpx;
                             let samp_y = (filter_y + y as f32) * cmpy;
                             ((samp_x - 0.5) * x_extent, (0.5 - samp_y) * y_extent)
