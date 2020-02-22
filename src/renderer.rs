@@ -699,12 +699,10 @@ fn get_sample(dimension: u32, i: u32, scramble: u32) -> f32 {
 /// This is a pure, deterministic function.
 #[inline(always)]
 fn pixel_id(x: u32, y: u32) -> u32 {
-    // Pretend the image is 65536 x 65536 resolution,
-    // and do a mapping to a 1d array.  This should produce
-    // unique numbers for any reasonably sized image, and
-    // even for stupid big images will produce sufficiently
-    // unique numbers for our purposes.
-    y * (1 << 16) + x
+    // Map from 2d coordinates to a hilbert curve index.
+    // This gives unique numbers for all pixels within a
+    // 2^16 by 2^16 image, and wraps beyond that.
+    hilbert::xy2d(x & 0xffff, y & 0xffff)
 }
 
 #[derive(Debug)]
