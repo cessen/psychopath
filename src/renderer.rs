@@ -240,14 +240,12 @@ impl<'a> Renderer<'a> {
             // Generate light paths and initial rays
             for y in bucket.y..(bucket.y + bucket.h) {
                 for x in bucket.x..(bucket.x + bucket.w) {
-                    let scramble = hash_u32(((x as u32) << 16) ^ (y as u32), self.seed);
+                    let pix_id = pixel_id(x, y);
                     for si in 0..self.spp {
                         // Calculate image plane x and y coordinates
                         let (img_x, img_y) = {
-                            let filter_x =
-                                fast_logit(get_sample(4, si as u32, scramble), 1.5) + 0.5;
-                            let filter_y =
-                                fast_logit(get_sample(5, si as u32, scramble), 1.5) + 0.5;
+                            let filter_x = fast_logit(get_sample(4, si as u32, pix_id), 1.5) + 0.5;
+                            let filter_y = fast_logit(get_sample(5, si as u32, pix_id), 1.5) + 0.5;
                             let samp_x = (filter_x + x as f32) * cmpx;
                             let samp_y = (filter_y + y as f32) * cmpy;
                             ((samp_x - 0.5) * x_extent, (0.5 - samp_y) * y_extent)
@@ -257,15 +255,15 @@ impl<'a> Renderer<'a> {
                         let (path, ray) = LightPath::new(
                             &self.scene,
                             (x, y),
+                            pix_id,
                             (img_x, img_y),
                             (
-                                get_sample(0, si as u32, scramble),
-                                get_sample(1, si as u32, scramble),
+                                get_sample(0, si as u32, pix_id),
+                                get_sample(1, si as u32, pix_id),
                             ),
-                            get_sample(2, si as u32, scramble),
-                            map_0_1_to_wavelength(get_sample(3, si as u32, scramble)),
+                            get_sample(2, si as u32, pix_id),
+                            map_0_1_to_wavelength(get_sample(3, si as u32, pix_id)),
                             si as u32,
-                            scramble,
                         );
                         paths.push(path);
                         rays.push(ray, false);
@@ -371,8 +369,8 @@ pub struct LightPath {
     bounce_count: u32,
 
     pixel_co: (u32, u32),
-    lds_offset: u32,
-    lds_scramble: u32,
+    pixel_id: u32,
+    sample_number: u32, // Which sample in the LDS sequence this is.
     dim_offset: Cell<u32>,
     time: f32,
     wavelength: f32,
@@ -391,12 +389,12 @@ impl LightPath {
     fn new(
         scene: &Scene,
         pixel_co: (u32, u32),
+        pixel_id: u32,
         image_plane_co: (f32, f32),
         lens_uv: (f32, f32),
         time: f32,
         wavelength: f32,
-        lds_offset: u32,
-        lds_scramble: u32,
+        sample_number: u32,
     ) -> (LightPath, Ray) {
         (
             LightPath {
@@ -404,8 +402,8 @@ impl LightPath {
                 bounce_count: 0,
 
                 pixel_co: pixel_co,
-                lds_offset: lds_offset,
-                lds_scramble: lds_scramble,
+                pixel_id: pixel_id,
+                sample_number: sample_number,
                 dim_offset: Cell::new(6),
                 time: time,
                 wavelength: wavelength,
@@ -432,7 +430,7 @@ impl LightPath {
     fn next_lds_samp(&self) -> f32 {
         let dimension = self.dim_offset.get();
         self.dim_offset.set(dimension + 1);
-        get_sample(dimension, self.lds_offset, self.lds_scramble)
+        get_sample(dimension, self.sample_number, self.pixel_id)
     }
 
     fn next(
@@ -689,11 +687,24 @@ impl LightPath {
 #[inline(always)]
 fn get_sample(dimension: u32, i: u32, scramble: u32) -> f32 {
     use crate::hash::hash_u32_to_f32;
-    if dimension < halton::MAX_DIMENSION {
-        halton::sample(dimension, i + scramble)
+    if dimension < sobol::NUM_DIMENSIONS as u32 {
+        sobol::sample_with_scramble(dimension, i, hash_u32(dimension, scramble))
     } else {
         hash_u32_to_f32(dimension, i + scramble)
     }
+}
+
+/// Make a unique-ish pixel ID, given its coordinates.
+///
+/// This is a pure, deterministic function.
+#[inline(always)]
+fn pixel_id(x: u32, y: u32) -> u32 {
+    // Pretend the image is 65536 x 65536 resolution,
+    // and do a mapping to a 1d array.  This should produce
+    // unique numbers for any reasonably sized image, and
+    // even for stupid big images will produce sufficiently
+    // unique numbers for our purposes.
+    y * (1 << 16) + x
 }
 
 #[derive(Debug)]

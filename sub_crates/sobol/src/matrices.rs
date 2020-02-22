@@ -33,7 +33,7 @@
 pub const NUM_DIMENSIONS: usize = 1024;
 pub const SIZE: usize = 52;
 
-pub const MATRICES: [u32; NUM_DIMENSIONS * SIZE] = [
+pub const MATRICES: &[u32] = &[
     0x80000000u32,
     0x40000000u32,
     0x20000000u32,
