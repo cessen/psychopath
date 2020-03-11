@@ -18,22 +18,70 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Adapted to Rust by Nathan Vegdahl (2017)
+// Adapted to Rust by Nathan Vegdahl (2017).
+// Owen scrambling implementation also by Nathan Vegdahl (2020).
 
 mod matrices;
 
-pub use crate::matrices::{MATRICES, NUM_DIMENSIONS, SIZE};
+pub use crate::matrices::NUM_DIMENSIONS;
+use crate::matrices::{MATRICES, SIZE};
 
-/// Compute one component of the Sobol'-sequence, where the component
-/// corresponds to the dimension parameter, and the index specifies
-/// the point inside the sequence. The scramble parameter can be used
-/// to permute elementary intervals, and might be chosen randomly to
-/// generate a randomized QMC sequence.
+/// Compute one component of one sample from the Sobol'-sequence, where
+/// `dimension` specifies the component and `index` specifies the sample
+/// within the sequence.
 #[inline]
-pub fn sample_with_scramble(dimension: u32, mut index: u32, scramble: u32) -> f32 {
+pub fn sample(dimension: u32, index: u32) -> f32 {
+    u32_to_0_1_f32(sample_u32(dimension, index))
+}
+
+/// Same as `sample()` except applies random digit scrambling using the
+/// scramble parameter.
+///
+/// To get proper random digit scrambling, you need to use a different scramble
+/// value for each dimension.
+#[inline]
+pub fn sample_rd_scramble(dimension: u32, index: u32, scramble: u32) -> f32 {
+    u32_to_0_1_f32(sample_u32(dimension, index) ^ scramble)
+}
+
+/// Same as `sample()` except applies Owen scrambling using the given seed.
+///
+/// To get proper Owen scrambling, you need to use a different seed for each
+/// dimension.
+#[inline]
+pub fn sample_owen_scramble(dimension: u32, index: u32, seed: u32) -> f32 {
+    // Get the sobol point.
+    let mut n = sample_u32(dimension, index);
+
+    // We first apply the seed as if doing random digit scrambling.
+    // This is valid because random digit scrambling is a strict subset of
+    // Owen scrambling, and therefore does not invalidate the Owen scrambling
+    // below.  Instead, this simply serves to seed the Owen scrambling.
+    n ^= seed;
+
+    // Do owen scrambling.  This uses the technique presented in the paper
+    // "Stratified Sampling for Stochastic Transparency" by Laine and Karras.
+    // The basic idea is that we're running a hash function on the final valuw,
+    // but which only allows avalanche to happen upwards (e.g. a bit is never
+    // affected by higher bits).  This is acheived by only using multiplies by
+    // even numbers.  Normally this would be considered a poor hash function,
+    // but in this case that behavior is exactly what we want.
+    for _ in 0..4 {
+        // The constant here is a large prime * 2.
+        n ^= n * 0xa97774e6;
+    }
+
+    u32_to_0_1_f32(n)
+}
+
+//----------------------------------------------------------------------
+
+/// The actual core Sobol samplng code.  Used by the other functions.
+#[inline(always)]
+fn sample_u32(dimension: u32, mut index: u32) -> u32 {
     assert!((dimension as usize) < NUM_DIMENSIONS);
 
-    let mut result = scramble;
+    let mut result = 0;
     let mut i = (dimension as usize) * SIZE;
     while index != 0 {
         if (index & 1) != 0 {
@@ -44,10 +92,10 @@ pub fn sample_with_scramble(dimension: u32, mut index: u32, scramble: u32) -> f3
         i += 1;
     }
 
-    result as f32 * (1.0 / (1u64 << 32) as f32)
+    result
 }
 
-#[inline]
-pub fn sample(dimension: u32, index: u32) -> f32 {
-    sample_with_scramble(dimension, index, 0)
+#[inline(always)]
+fn u32_to_0_1_f32(n: u32) -> f32 {
+    n as f32 * (1.0 / (1u64 << 32) as f32)
 }

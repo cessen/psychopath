@@ -240,12 +240,14 @@ impl<'a> Renderer<'a> {
             // Generate light paths and initial rays
             for y in bucket.y..(bucket.y + bucket.h) {
                 for x in bucket.x..(bucket.x + bucket.w) {
-                    let pix_id = pixel_id(x, y);
+                    let pix_scramble = hash_u32(pixel_id(x, y), self.seed);
                     for si in 0..self.spp {
                         // Calculate image plane x and y coordinates
                         let (img_x, img_y) = {
-                            let filter_x = fast_logit(get_sample(4, si as u32, pix_id), 1.5) + 0.5;
-                            let filter_y = fast_logit(get_sample(5, si as u32, pix_id), 1.5) + 0.5;
+                            let filter_x =
+                                fast_logit(get_sample(4, si as u32, pix_scramble), 1.5) + 0.5;
+                            let filter_y =
+                                fast_logit(get_sample(5, si as u32, pix_scramble), 1.5) + 0.5;
                             let samp_x = (filter_x + x as f32) * cmpx;
                             let samp_y = (filter_y + y as f32) * cmpy;
                             ((samp_x - 0.5) * x_extent, (0.5 - samp_y) * y_extent)
@@ -255,14 +257,14 @@ impl<'a> Renderer<'a> {
                         let (path, ray) = LightPath::new(
                             &self.scene,
                             (x, y),
-                            pix_id,
+                            pix_scramble,
                             (img_x, img_y),
                             (
-                                get_sample(0, si as u32, pix_id),
-                                get_sample(1, si as u32, pix_id),
+                                get_sample(0, si as u32, pix_scramble),
+                                get_sample(1, si as u32, pix_scramble),
                             ),
-                            get_sample(2, si as u32, pix_id),
-                            map_0_1_to_wavelength(get_sample(3, si as u32, pix_id)),
+                            get_sample(2, si as u32, pix_scramble),
+                            map_0_1_to_wavelength(get_sample(3, si as u32, pix_scramble)),
                             si as u32,
                         );
                         paths.push(path);
@@ -369,7 +371,7 @@ pub struct LightPath {
     bounce_count: u32,
 
     pixel_co: (u32, u32),
-    pixel_id: u32,
+    pixel_scramble: u32,
     sample_number: u32, // Which sample in the LDS sequence this is.
     dim_offset: Cell<u32>,
     time: f32,
@@ -389,7 +391,7 @@ impl LightPath {
     fn new(
         scene: &Scene,
         pixel_co: (u32, u32),
-        pixel_id: u32,
+        pixel_scramble: u32,
         image_plane_co: (f32, f32),
         lens_uv: (f32, f32),
         time: f32,
@@ -402,7 +404,7 @@ impl LightPath {
                 bounce_count: 0,
 
                 pixel_co: pixel_co,
-                pixel_id: pixel_id,
+                pixel_scramble: pixel_scramble,
                 sample_number: sample_number,
                 dim_offset: Cell::new(6),
                 time: time,
@@ -430,7 +432,7 @@ impl LightPath {
     fn next_lds_samp(&self) -> f32 {
         let dimension = self.dim_offset.get();
         self.dim_offset.set(dimension + 1);
-        get_sample(dimension, self.sample_number, self.pixel_id)
+        get_sample(dimension, self.sample_number, self.pixel_scramble)
     }
 
     fn next(
@@ -688,9 +690,9 @@ impl LightPath {
 fn get_sample(dimension: u32, i: u32, scramble: u32) -> f32 {
     use crate::hash::hash_u32_to_f32;
     if dimension < sobol::NUM_DIMENSIONS as u32 {
-        sobol::sample_with_scramble(dimension, i, hash_u32(dimension, scramble))
+        sobol::sample_owen_scramble(dimension, i, scramble + dimension)
     } else {
-        hash_u32_to_f32(dimension, i + scramble)
+        hash_u32_to_f32(dimension, i ^ (scramble << 16))
     }
 }
 
