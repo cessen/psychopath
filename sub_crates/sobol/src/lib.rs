@@ -38,7 +38,9 @@ pub fn sample(dimension: u32, index: u32) -> f32 {
 /// scramble parameter.
 ///
 /// To get proper random digit scrambling, you need to use a different scramble
-/// value for each dimension.
+/// value for each dimension, and those values should be generated more-or-less
+/// randomly.  For example, using a 32-bit hash of the dimension parameter
+/// works well.
 #[inline]
 pub fn sample_rd_scramble(dimension: u32, index: u32, scramble: u32) -> f32 {
     u32_to_0_1_f32(sample_u32(dimension, index) ^ scramble)
@@ -47,7 +49,7 @@ pub fn sample_rd_scramble(dimension: u32, index: u32, scramble: u32) -> f32 {
 /// Same as `sample()` except applies Owen scrambling using the given seed.
 ///
 /// To get proper Owen scrambling, you need to use a different seed for each
-/// dimension.
+/// dimension.  For example, reusing the dimension parameter itself works well.
 #[inline]
 pub fn sample_owen_scramble(dimension: u32, index: u32, seed: u32) -> f32 {
     // Get the sobol point.
@@ -59,13 +61,17 @@ pub fn sample_owen_scramble(dimension: u32, index: u32, seed: u32) -> f32 {
     // below.  Instead, this simply serves to seed the Owen scrambling.
     n ^= seed;
 
-    // Do owen scrambling.  This uses the technique presented in the paper
-    // "Stratified Sampling for Stochastic Transparency" by Laine and Karras.
-    // The basic idea is that we're running a hash function on the final valuw,
-    // but which only allows avalanche to happen upwards (e.g. a bit is never
-    // affected by higher bits).  This is acheived by only using multiplies by
-    // even numbers.  Normally this would be considered a poor hash function,
-    // but in this case that behavior is exactly what we want.
+    // Do Owen scrambling.
+    // This uses the technique presented in the paper "Stratified Sampling for
+    // Stochastic Transparency" by Laine and Karras.
+    // The basic idea is that we're running a special kind of hash function
+    // that only allows avalanche to happen upwards (i.e. a bit is only
+    // affected by the bits lower than it).  This is achieved by only doing
+    // mixing via multiplication by even numbers.  Normally this would be
+    // considered a poor hash function, because normally you want all bits to
+    // have an equal chance of affecting all other bits.  But in this case that
+    // only-upwards behavior is exactly what we want, because it ends up being
+    // equivalent to Owen scrambling.
     for _ in 0..4 {
         // The constant here is a large prime * 2.
         n ^= n * 0xa97774e6;
@@ -85,7 +91,7 @@ fn sample_u32(dimension: u32, mut index: u32) -> u32 {
     let mut i = (dimension as usize) * SIZE;
     while index != 0 {
         if (index & 1) != 0 {
-            result ^= unsafe { *MATRICES.get_unchecked(i) };
+            result ^= MATRICES[i];
         }
 
         index >>= 1;
