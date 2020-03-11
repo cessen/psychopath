@@ -52,10 +52,19 @@ pub fn sample_rd_scramble(dimension: u32, index: u32, scramble: u32) -> f32 {
 /// dimension.  For example, reusing the dimension parameter itself works well.
 #[inline]
 pub fn sample_owen_scramble(dimension: u32, index: u32, seed: u32) -> f32 {
+    // Do a weak "hash" on the seed.  This isn't meant to be a real hash,
+    // we're just mixing the higher bits down into the lower bits so that
+    // naive seeds still work.
+    let mut seed = seed;
+    seed ^= seed.wrapping_mul(0x54bbba73);
+    seed ^= seed.wrapping_shr(16);
+    seed ^= seed.wrapping_mul(0x736caf6f);
+    seed ^= seed.wrapping_shr(16);
+
     // Get the sobol point.
     let mut n = sample_u32(dimension, index);
 
-    // We first apply the seed as if doing random digit scrambling.
+    // Apply the "hashed" seed as if doing random digit scrambling.
     // This is valid because random digit scrambling is a strict subset of
     // Owen scrambling, and therefore does not invalidate the Owen scrambling
     // below.  Instead, this simply serves to seed the Owen scrambling.
@@ -72,10 +81,11 @@ pub fn sample_owen_scramble(dimension: u32, index: u32, seed: u32) -> f32 {
     // have an equal chance of affecting all other bits.  But in this case that
     // only-upwards behavior is exactly what we want, because it ends up being
     // equivalent to Owen scrambling.
-    for _ in 0..4 {
-        // The constant here is a large prime * 2.
-        n ^= n * 0xa97774e6;
-    }
+    // The constants here are large primes.
+    n ^= n.wrapping_mul(0x54bbba73 * 2);
+    n ^= n.wrapping_mul(0x736caf6f * 2);
+    n ^= n.wrapping_mul(0x54bbba73 * 2);
+    n ^= n.wrapping_mul(0x736caf6f * 2);
 
     u32_to_0_1_f32(n)
 }
