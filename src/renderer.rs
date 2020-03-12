@@ -690,7 +690,7 @@ impl LightPath {
 fn get_sample(dimension: u32, i: u32, scramble: u32) -> f32 {
     use crate::hash::hash_u32_to_f32;
     if dimension < sobol::NUM_DIMENSIONS as u32 {
-        sobol::sample_owen_scramble(dimension, i, scramble + dimension)
+        sobol::sample_owen_scramble(dimension, i, hash_u32(dimension, scramble))
     } else {
         hash_u32_to_f32(dimension, i ^ (scramble << 16))
     }

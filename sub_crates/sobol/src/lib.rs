@@ -31,7 +31,7 @@ use crate::matrices::{MATRICES, SIZE};
 /// within the sequence.
 #[inline]
 pub fn sample(dimension: u32, index: u32) -> f32 {
-    u32_to_0_1_f32(sample_u32(dimension, index))
+    u32_to_0_1_f32(sobol_u32(dimension, index))
 }
 
 /// Same as `sample()` except applies random digit scrambling using the
@@ -43,49 +43,49 @@ pub fn sample(dimension: u32, index: u32) -> f32 {
 /// works well.
 #[inline]
 pub fn sample_rd_scramble(dimension: u32, index: u32, scramble: u32) -> f32 {
-    u32_to_0_1_f32(sample_u32(dimension, index) ^ scramble)
+    u32_to_0_1_f32(sobol_u32(dimension, index) ^ scramble)
 }
 
-/// Same as `sample()` except applies Owen scrambling using the given seed.
+/// Same as `sample()` except applies Owen scrambling using the given scramble
+/// parameter.
 ///
-/// To get proper Owen scrambling, you need to use a different seed for each
-/// dimension.  For example, reusing the dimension parameter itself works well.
+/// To get proper Owen scrambling, you need to use a different scramble
+/// value for each dimension, and those values should be generated more-or-less
+/// randomly.  For example, using a 32-bit hash of the dimension parameter
+/// works well.
 #[inline]
-pub fn sample_owen_scramble(dimension: u32, index: u32, seed: u32) -> f32 {
-    // Do a weak "hash" on the seed.  This isn't meant to be a real hash,
-    // we're just mixing the higher bits down into the lower bits so that
-    // naive seeds still work.
-    let mut seed = seed;
-    seed ^= seed.wrapping_mul(0x54bbba73);
-    seed ^= seed.wrapping_shr(16);
-    seed ^= seed.wrapping_mul(0x736caf6f);
-    seed ^= seed.wrapping_shr(16);
-
+pub fn sample_owen_scramble(dimension: u32, index: u32, scramble: u32) -> f32 {
     // Get the sobol point.
-    let mut n = sample_u32(dimension, index);
-
-    // Apply the "hashed" seed as if doing random digit scrambling.
-    // This is valid because random digit scrambling is a strict subset of
-    // Owen scrambling, and therefore does not invalidate the Owen scrambling
-    // below.  Instead, this simply serves to seed the Owen scrambling.
-    n ^= seed;
+    let mut n = sobol_u32(dimension, index);
 
     // Do Owen scrambling.
+    //
     // This uses the technique presented in the paper "Stratified Sampling for
     // Stochastic Transparency" by Laine and Karras.
     // The basic idea is that we're running a special kind of hash function
-    // that only allows avalanche to happen upwards (i.e. a bit is only
-    // affected by the bits lower than it).  This is achieved by only doing
-    // mixing via multiplication by even numbers.  Normally this would be
-    // considered a poor hash function, because normally you want all bits to
-    // have an equal chance of affecting all other bits.  But in this case that
-    // only-upwards behavior is exactly what we want, because it ends up being
-    // equivalent to Owen scrambling.
-    // The constants here are large primes.
-    n ^= n.wrapping_mul(0x54bbba73 * 2);
-    n ^= n.wrapping_mul(0x736caf6f * 2);
-    n ^= n.wrapping_mul(0x54bbba73 * 2);
-    n ^= n.wrapping_mul(0x736caf6f * 2);
+    // that only allows avalanche to happen downwards (i.e. a bit is only
+    // affected by the bits higher than it).  This is achieved by first
+    // reversing the bits and then doing mixing via multiplication by even
+    // numbers.
+    //
+    // Normally this would be considered a poor hash function, because normally
+    // you want all bits to have an equal chance of affecting all other bits.
+    // But in this case that only-downward behavior is exactly what we want,
+    // because it ends up being equivalent to Owen scrambling.
+    //
+    // Note that the application of the scramble parameter here is equivalent
+    // to doing random digit scrambling.  This is valid because random digit
+    // scrambling is a strict subset of Owen scrambling, and therefore does
+    // not invalidate the Owen scrambling itself.
+    //
+    // The constants here are large primes, selected semi-carefully to maximize
+    // avalanche between bits.
+    n = n.reverse_bits();
+    n ^= scramble; // Apply the scramble parameter.
+    n ^= n.wrapping_mul(0x2d2c6e5d << 1);
+    n ^= n.wrapping_mul(0x52d391b3 << 1);
+    n ^= n.wrapping_mul(0x736caf6f << 1);
+    n = n.reverse_bits();
 
     u32_to_0_1_f32(n)
 }
@@ -94,7 +94,7 @@ pub fn sample_owen_scramble(dimension: u32, index: u32, seed: u32) -> f32 {
 
 /// The actual core Sobol samplng code.  Used by the other functions.
 #[inline(always)]
-fn sample_u32(dimension: u32, mut index: u32) -> u32 {
+fn sobol_u32(dimension: u32, mut index: u32) -> u32 {
     assert!((dimension as usize) < NUM_DIMENSIONS);
 
     let mut result = 0;
