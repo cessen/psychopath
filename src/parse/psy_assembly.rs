@@ -74,14 +74,14 @@ pub fn parse_assembly<'a>(
             // Get object data.
             let object_data = match events.next_event()? {
                 Event::InnerOpen {
-                    type_name: "Assembly",
-                    ..
-                } => ObjectData::Assembly(Box::new(parse_assembly(arena, events)?)),
-
-                Event::InnerOpen {
                     type_name: "MeshSurface",
                     ..
-                } => ObjectData::Surface(Box::new(parse_mesh_surface(arena, events)?)),
+                } => ObjectData::Surface(Box::new(parse_mesh_surface(
+                    arena,
+                    &instance_xform_idxs[..],
+                    &assembly.xforms[..],
+                    events,
+                )?)),
 
                 Event::InnerOpen {
                     type_name: "SphereLight",

@@ -9,7 +9,7 @@ use kioku::Arena;
 use data_tree::{DataTreeReader, Event};
 
 use crate::{
-    math::{Normal, Point},
+    math::{Matrix4x4, Normal, Point},
     surface::triangle_mesh::TriangleMesh,
 };
 
@@ -18,15 +18,10 @@ use super::{
     psy::{PsyError, PsyResult},
 };
 
-// pub struct TriangleMesh {
-//    time_samples: usize,
-//    geo: Vec<(Point, Point, Point)>,
-//    indices: Vec<usize>,
-//    accel: BVH,
-// }
-
 pub fn parse_mesh_surface<'a>(
     arena: &'a Arena,
+    instance_xform_idxs: &[std::ops::Range<usize>],
+    xforms: &[Matrix4x4],
     events: &mut DataTreeReader<impl BufRead>,
 ) -> PsyResult<TriangleMesh<'a>> {
     let mut verts = Vec::new(); // Vec of vecs, one for each time sample

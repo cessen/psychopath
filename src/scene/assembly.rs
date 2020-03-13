@@ -2,6 +2,7 @@ use std::{collections::HashMap, ops::Range};
 
 use crate::{light::SurfaceLight, math::Matrix4x4, surface::Surface};
 
+/// Stores the objects of a scene and its acceleration structures.
 #[derive(Debug)]
 pub struct Assembly<'a> {
     pub objects: HashMap<String, Object<'a>>, // Name, Object.
@@ -21,7 +22,8 @@ impl<'a> Assembly<'a> {
 pub struct Object<'a> {
     pub data: ObjectData<'a>,
 
-    // One range per instance, indexing into the assembly's xforms array.
+    // One range per instance, indexing into the assembly's xforms
+    // array.  An empty Vec means a single instance with no transforms.
     pub instance_xform_idxs: Vec<Range<usize>>,
 }
 
@@ -30,5 +32,4 @@ pub enum ObjectData<'a> {
     Empty,
     Surface(Box<dyn Surface + 'a>),
     Light(Box<dyn SurfaceLight + 'a>),
-    Assembly(Box<Assembly<'a>>),
 }
