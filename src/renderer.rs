@@ -244,9 +244,9 @@ impl<'a> Renderer<'a> {
                         // Calculate image plane x and y coordinates
                         let (img_x, img_y) = {
                             let filter_x =
-                                fast_logit(get_sample(0, si as u32, (x, y), self.seed), 1.5) + 0.5;
+                                fast_logit(get_sample(4, si as u32, (x, y), self.seed), 1.5) + 0.5;
                             let filter_y =
-                                fast_logit(get_sample(1, si as u32, (x, y), self.seed), 1.5) + 0.5;
+                                fast_logit(get_sample(5, si as u32, (x, y), self.seed), 1.5) + 0.5;
                             let samp_x = (filter_x + x as f32) * cmpx;
                             let samp_y = (filter_y + y as f32) * cmpy;
                             ((samp_x - 0.5) * x_extent, (0.5 - samp_y) * y_extent)
@@ -262,8 +262,8 @@ impl<'a> Renderer<'a> {
                                 get_sample(2, si as u32, (x, y), self.seed),
                                 get_sample(3, si as u32, (x, y), self.seed),
                             ),
-                            get_sample(4, si as u32, (x, y), self.seed),
-                            map_0_1_to_wavelength(get_sample(5, si as u32, (x, y), self.seed)),
+                            get_sample(1, si as u32, (x, y), self.seed),
+                            map_0_1_to_wavelength(get_sample(0, si as u32, (x, y), self.seed)),
                             si as u32,
                         );
                         paths.push(path);
@@ -693,12 +693,27 @@ impl LightPath {
 #[inline(always)]
 fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
     let pixel_id = pixel_co.0 ^ (pixel_co.1 << 16);
-    if dimension < sobol::NUM_DIMENSIONS as u32 {
-        let scramble = hash_u32(pixel_id, seed);
-        sobol::sample_owen_scramble(dimension, i, hash_u32(dimension, scramble))
-    } else {
-        use crate::hash::hash_u32_to_f32;
-        hash_u32_to_f32(dimension ^ (i << 16), pixel_id)
+    match dimension {
+        0 => {
+            // Golden ratio sampling.
+            // NOTE: use this for the wavelength dimension, because
+            // due to the nature of hero wavelength sampling this ends up
+            // being crazily more efficient than pretty much any other sampler,
+            // and reduces variance by a huge amount.
+            let scramble = hash_u32(pixel_id, seed);
+            let n = (i + scramble) * 2654435769;
+            n as f32 * (1.0 / (1u64 << 32) as f32)
+        }
+        n if (n - 1) < sobol::NUM_DIMENSIONS as u32 => {
+            // Sobol sampling.
+            let scramble = hash_u32(pixel_id, seed);
+            sobol::sample_owen_scramble(dimension - 1, i, hash_u32(dimension, scramble))
+        }
+        _ => {
+            // Random sampling.
+            use crate::hash::hash_u32_to_f32;
+            hash_u32_to_f32(dimension ^ (i << 16), pixel_id)
+        }
     }
 }
 

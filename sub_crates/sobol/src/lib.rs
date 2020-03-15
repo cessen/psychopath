@@ -78,13 +78,13 @@ pub fn sample_owen_scramble(dimension: u32, index: u32, scramble: u32) -> f32 {
     // scrambling is a strict subset of Owen scrambling, and therefore does
     // not invalidate the Owen scrambling itself.
     //
-    // The constants here are large primes, selected semi-carefully to maximize
-    // avalanche between bits.
+    // The constants here were selected through an optimization process
+    // to maximize unidirectional low-bias avalanche between bits.
     n = n.reverse_bits();
     n ^= scramble; // Apply the scramble parameter.
-    n ^= n.wrapping_mul(0x2d2c6e5d << 1);
-    n ^= n.wrapping_mul(0x52d391b3 << 1);
-    n ^= n.wrapping_mul(0x736caf6f << 1);
+    n ^= n.wrapping_mul(0x08afbbe0);
+    n ^= n.wrapping_mul(0xa7389b46);
+    n ^= n.wrapping_mul(0x42bf6dbc);
     n = n.reverse_bits();
 
     u32_to_0_1_f32(n)
