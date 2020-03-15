@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unused_parens)]
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::excessive_precision)]
 #![allow(clippy::unreadable_literal)]
