@@ -701,7 +701,7 @@ fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
             // being crazily more efficient than pretty much any other sampler,
             // and reduces variance by a huge amount.
             let scramble = hash_u32(pixel_id, seed);
-            let n = (i + scramble) * 2654435769;
+            let n = i.wrapping_add(scramble).wrapping_mul(2654435769);
             n as f32 * (1.0 / (1u64 << 32) as f32)
         }
         n if (n - 1) < sobol::NUM_DIMENSIONS as u32 => {
