@@ -1,6 +1,6 @@
-/// An implementation of the Sobol low discrepancy sequence.
-///
-/// Includes variants with random digit scrambling and Owen scrambling.
+//! An implementation of the Sobol low discrepancy sequence.
+//!
+//! Includes variants with random digit scrambling and Owen scrambling.
 
 // The following `include` provides `MAX_DIMENSION` and `VECTORS`.
 // See the build.rs file for how this included file is generated.
