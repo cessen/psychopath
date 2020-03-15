@@ -98,14 +98,12 @@ fn sobol_u32(dimension: u32, mut index: u32) -> u32 {
     assert!((dimension as usize) < NUM_DIMENSIONS);
 
     let mut result = 0;
-    let mut i = (dimension as usize) * SIZE;
+    let mut i = dimension * SIZE as u32;
     while index != 0 {
-        if (index & 1) != 0 {
-            result ^= MATRICES[i];
-        }
-
-        index >>= 1;
-        i += 1;
+        let j = index.trailing_zeros();
+        result ^= MATRICES[(i + j) as usize];
+        i += j + 1;
+        index >>= j + 1;
     }
 
     result
