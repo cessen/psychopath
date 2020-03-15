@@ -1,30 +1,10 @@
-// Copyright (c) 2012 Leonhard Gruenschloss (leonhard@gruenschloss.org)
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights to
-// use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-// of the Software, and to permit persons to whom the Software is furnished to do
-// so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+/// An implementation of the Sobol low discrepancy sequence.
+///
+/// Includes variants with random digit scrambling and Owen scrambling.
 
-// Adapted to Rust by Nathan Vegdahl (2017).
-// Owen scrambling implementation also by Nathan Vegdahl (2020).
-
-mod matrices;
-
-pub use crate::matrices::NUM_DIMENSIONS;
-use crate::matrices::{MATRICES, SIZE};
+// The following `include` provides `MAX_DIMENSION` and `VECTORS`.
+// See the build.rs file for how this included file is generated.
+include!(concat!(env!("OUT_DIR"), "/vectors.inc"));
 
 /// Compute one component of one sample from the Sobol'-sequence, where
 /// `dimension` specifies the component and `index` specifies the sample
@@ -42,7 +22,7 @@ pub fn sample(dimension: u32, index: u32) -> f32 {
 /// randomly.  For example, using a 32-bit hash of the dimension parameter
 /// works well.
 #[inline]
-pub fn sample_rd_scramble(dimension: u32, index: u32, scramble: u32) -> f32 {
+pub fn sample_rd(dimension: u32, index: u32, scramble: u32) -> f32 {
     u32_to_0_1_f32(sobol_u32(dimension, index) ^ scramble)
 }
 
@@ -54,7 +34,7 @@ pub fn sample_rd_scramble(dimension: u32, index: u32, scramble: u32) -> f32 {
 /// randomly.  For example, using a 32-bit hash of the dimension parameter
 /// works well.
 #[inline]
-pub fn sample_owen_scramble(dimension: u32, index: u32, scramble: u32) -> f32 {
+pub fn sample_owen(dimension: u32, index: u32, scramble: u32) -> f32 {
     // Get the sobol point.
     let mut n = sobol_u32(dimension, index);
 
@@ -95,13 +75,14 @@ pub fn sample_owen_scramble(dimension: u32, index: u32, scramble: u32) -> f32 {
 /// The actual core Sobol samplng code.  Used by the other functions.
 #[inline(always)]
 fn sobol_u32(dimension: u32, mut index: u32) -> u32 {
-    assert!((dimension as usize) < NUM_DIMENSIONS);
+    assert!(dimension < MAX_DIMENSION);
+    let vecs = &VECTORS[dimension as usize];
 
     let mut result = 0;
-    let mut i = dimension * SIZE as u32;
+    let mut i = 0;
     while index != 0 {
         let j = index.trailing_zeros();
-        result ^= MATRICES[(i + j) as usize];
+        result ^= vecs[(i + j) as usize];
         i += j + 1;
         index >>= j + 1;
     }

@@ -704,10 +704,10 @@ fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
             let n = i.wrapping_add(scramble).wrapping_mul(2654435769);
             n as f32 * (1.0 / (1u64 << 32) as f32)
         }
-        n if (n - 1) < sobol::NUM_DIMENSIONS as u32 => {
+        n if (n - 1) < sobol::MAX_DIMENSION as u32 => {
             // Sobol sampling.
             let scramble = hash_u32(pixel_id, seed);
-            sobol::sample_owen_scramble(dimension - 1, i, hash_u32(dimension, scramble))
+            sobol::sample_owen(dimension - 1, i, hash_u32(dimension, scramble))
         }
         _ => {
             // Random sampling.
