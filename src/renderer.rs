@@ -692,7 +692,10 @@ impl LightPath {
 /// LDS samples aren't available.
 #[inline(always)]
 fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
-    let pixel_id = pixel_co.0 ^ (pixel_co.1 << 16);
+    // A unique random scramble value for every pixel coordinate up to
+    // a resolution of 65536 x 65536.  Also further randomized by a seed.
+    let scramble = hash_u32(pixel_co.0 ^ (pixel_co.1 << 16), seed);
+
     match dimension {
         0 => {
             // Golden ratio sampling.
@@ -700,19 +703,17 @@ fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
             // due to the nature of hero wavelength sampling this ends up
             // being crazily more efficient than pretty much any other sampler,
             // and reduces variance by a huge amount.
-            let scramble = hash_u32(pixel_id, seed);
             let n = i.wrapping_add(scramble).wrapping_mul(2654435769);
             n as f32 * (1.0 / (1u64 << 32) as f32)
         }
         n if (n - 1) < sobol::MAX_DIMENSION as u32 => {
             // Sobol sampling.
-            let scramble = hash_u32(pixel_id, seed);
             sobol::sample_owen(dimension - 1, i, hash_u32(dimension, scramble))
         }
         _ => {
             // Random sampling.
             use crate::hash::hash_u32_to_f32;
-            hash_u32_to_f32(dimension ^ (i << 16), hash_u32(pixel_id, seed))
+            hash_u32_to_f32(dimension ^ (i << 16), scramble)
         }
     }
 }
