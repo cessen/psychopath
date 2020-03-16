@@ -712,7 +712,7 @@ fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
         _ => {
             // Random sampling.
             use crate::hash::hash_u32_to_f32;
-            hash_u32_to_f32(dimension ^ (i << 16), pixel_id)
+            hash_u32_to_f32(dimension ^ (i << 16), hash_u32(pixel_id, seed))
         }
     }
 }
