@@ -48,9 +48,52 @@ pub fn sample_cranley(dimension: u32, index: u32, scramble: u32) -> f32 {
 /// works well.
 #[inline]
 pub fn sample_owen(dimension: u32, index: u32, scramble: u32) -> f32 {
-    // Get the sobol point.
-    let mut n = sobol_u32(dimension, index);
+    u32_to_0_1_f32(owen_scramble_u32(sobol_u32(dimension, index), scramble))
+}
 
+/// Same as `sample()` except applies both Owen scrambling and
+/// Cranley-Patterson rotation using the given scramble parameter.
+///
+/// For the technically curious: this first does Owen scrambling, and then
+/// Cranley-Patterson.  If it were done the other way around it would
+/// invalidate the Owen scrambling.
+///
+/// To get proper scrambling and rotation, you need to use a different scramble
+/// value for each dimension, and those values should be generated more-or-less
+/// randomly.  For example, using a 32-bit hash of the dimension parameter
+/// works well.
+#[inline]
+pub fn sample_owen_cranley(dimension: u32, index: u32, scramble: u32) -> f32 {
+    // Reusing the same scramble parameter for both the Owen scrambling and
+    // the Cranely-Patterson rotation actually works fine, because the Owen
+    // scrambling is implemented as a sort of hash, so they don't end up being
+    // correlated.
+    u32_to_0_1_f32(owen_scramble_u32(sobol_u32(dimension, index), scramble).wrapping_add(scramble))
+}
+
+//----------------------------------------------------------------------
+
+/// The actual core Sobol samplng code.  Used by the other functions.
+#[inline(always)]
+fn sobol_u32(dimension: u32, mut index: u32) -> u32 {
+    assert!(dimension < MAX_DIMENSION);
+    let vecs = &VECTORS[dimension as usize];
+
+    let mut result = 0;
+    let mut i = 0;
+    while index != 0 {
+        let j = index.trailing_zeros();
+        result ^= vecs[(i + j) as usize];
+        i += j + 1;
+        index >>= j + 1;
+    }
+
+    result
+}
+
+/// Scrambles `n` using Owen scrambling and the given scramble parameter.
+#[inline(always)]
+fn owen_scramble_u32(mut n: u32, scramble: u32) -> u32 {
     // We don't need the lowest 8 bits because we're converting to an f32 at
     // the end which only has 24 bits of precision anyway.  And doing this
     // allows the seed to affect the mixing of the higher bits to make them
@@ -88,30 +131,8 @@ pub fn sample_owen(dimension: u32, index: u32, scramble: u32) -> f32 {
     }
     n = n.reverse_bits();
 
-    // Shift back into place.
-    n <<= 8;
-
-    u32_to_0_1_f32(n)
-}
-
-//----------------------------------------------------------------------
-
-/// The actual core Sobol samplng code.  Used by the other functions.
-#[inline(always)]
-fn sobol_u32(dimension: u32, mut index: u32) -> u32 {
-    assert!(dimension < MAX_DIMENSION);
-    let vecs = &VECTORS[dimension as usize];
-
-    let mut result = 0;
-    let mut i = 0;
-    while index != 0 {
-        let j = index.trailing_zeros();
-        result ^= vecs[(i + j) as usize];
-        i += j + 1;
-        index >>= j + 1;
-    }
-
-    result
+    // Return the scrambled value, shifted back into place.
+    n << 8
 }
 
 #[inline(always)]
