@@ -1,6 +1,7 @@
 //! An implementation of the Sobol low discrepancy sequence.
 //!
-//! Includes variants with random digit scrambling and Owen scrambling.
+//! Includes variants with random digit scrambling, Cranley-Patterson rotation,
+//! and Owen scrambling.
 
 // The following `include` provides `MAX_DIMENSION` and `VECTORS`.
 // See the build.rs file for how this included file is generated.
@@ -26,6 +27,18 @@ pub fn sample_rd(dimension: u32, index: u32, scramble: u32) -> f32 {
     u32_to_0_1_f32(sobol_u32(dimension, index) ^ scramble)
 }
 
+/// Same as `sample()` except applies Cranley Patterson rotation using the
+/// given scramble parameter.
+///
+/// To get proper Cranley Patterson rotation, you need to use a different
+/// scramble value for each dimension, and those values should be generated
+/// more-or-less randomly.  For example, using a 32-bit hash of the dimension
+/// parameter works well.
+#[inline]
+pub fn sample_cranley(dimension: u32, index: u32, scramble: u32) -> f32 {
+    u32_to_0_1_f32(sobol_u32(dimension, index).wrapping_add(scramble))
+}
+
 /// Same as `sample()` except applies Owen scrambling using the given scramble
 /// parameter.
 ///
@@ -37,6 +50,12 @@ pub fn sample_rd(dimension: u32, index: u32, scramble: u32) -> f32 {
 pub fn sample_owen(dimension: u32, index: u32, scramble: u32) -> f32 {
     // Get the sobol point.
     let mut n = sobol_u32(dimension, index);
+
+    // We don't need the lowest 8 bits because we're converting to an f32 at
+    // the end which only has 24 bits of precision anyway.  And doing this
+    // allows the seed to affect the mixing of the higher bits to make them
+    // more random in the Owen scrambling below.
+    n >>= 8;
 
     // Do Owen scrambling.
     //
@@ -58,14 +77,19 @@ pub fn sample_owen(dimension: u32, index: u32, scramble: u32) -> f32 {
     // scrambling is a strict subset of Owen scrambling, and therefore does
     // not invalidate the Owen scrambling itself.
     //
-    // The constants here were selected through an optimization process
-    // to maximize unidirectional low-bias avalanche between bits.
+    // The permutation constants here were selected through an optimization
+    // process to maximize low-bias avalanche between bits.
+
     n = n.reverse_bits();
-    n ^= scramble; // Apply the scramble parameter.
-    n ^= n.wrapping_mul(0x08afbbe0);
-    n ^= n.wrapping_mul(0xa7389b46);
-    n ^= n.wrapping_mul(0x42bf6dbc);
+    n ^= scramble;
+    let perms = [0x7ed7a4b4, 0xcb95fcb6, 0x4ea13ebc];
+    for p in perms.iter() {
+        n ^= n.wrapping_mul(*p);
+    }
     n = n.reverse_bits();
+
+    // Shift back into place.
+    n <<= 8;
 
     u32_to_0_1_f32(n)
 }
