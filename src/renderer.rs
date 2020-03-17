@@ -707,8 +707,14 @@ fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
             n as f32 * (1.0 / (1u64 << 32) as f32)
         }
         n if (n - 1) < sobol::MAX_DIMENSION as u32 => {
+            let dim = n - 1;
             // Sobol sampling.
-            sobol::sample_owen(dimension - 1, i, hash_u32(dimension, scramble))
+            // We skip the first three dimensions here because it gives better
+            // results on many scenes for some reason.  This is likely worth
+            // investigating in the future, as it may indicate poor sampling
+            // elsewhere in the rendering pipeline (and skipping the first
+            // two dimensions may just mask it).
+            sobol::sample_owen(dim + 3, i, hash_u32(dim, scramble))
         }
         _ => {
             // Random sampling.
