@@ -709,10 +709,7 @@ fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
         n if (n - 1) < sobol::MAX_DIMENSION as u32 => {
             let dim = n - 1;
             // Sobol sampling.
-            // We skip the first 32 samples because doing so reduces noise
-            // in some areas when rendering at 64 spp.  Not sure why, but it
-            // works.
-            sobol::sample_owen_cranley(dim, i + 32, hash_u32(dim, scramble))
+            sobol::sample_owen_cranley(dim, i, hash_u32(dim, scramble))
         }
         _ => {
             // Random sampling.

@@ -7,7 +7,7 @@ use std::{env, fs::File, io::Write, path::Path};
 const NUM_DIMENSIONS: usize = 256;
 
 /// What file to generate the numbers from.
-const DIRECTION_NUMBERS_TEXT: &str = include_str!("direction_numbers/joe-kuo-other-3.1024.txt");
+const DIRECTION_NUMBERS_TEXT: &str = include_str!("direction_numbers/joe-kuo-cessen-3.1024.txt");
 
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
@@ -143,7 +143,9 @@ pub fn generate_direction_vectors(dimensions: usize) -> Vec<[u32; SOBOL_BITS]> {
 /// text file.  Returns the `a` and `m` parts.
 fn parse_direction_numbers(text: &str) -> Result<(u32, Vec<u32>), Box<dyn std::error::Error>> {
     let mut numbers = text.split_whitespace();
-    assert!(numbers.clone().count() >= 4);
+    if numbers.clone().count() < 4 || text.starts_with("#") {
+        return Err(Box::new(ParseError(())));
+    }
 
     // Skip the first two numbers, which are just the dimension and the count
     // of direction numbers for this dimension.
@@ -158,4 +160,13 @@ fn parse_direction_numbers(text: &str) -> Result<(u32, Vec<u32>), Box<dyn std::e
     }
 
     Ok((a, m))
+}
+
+#[derive(Debug, Copy, Clone)]
+struct ParseError(());
+impl std::error::Error for ParseError {}
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, _f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        Ok(())
+    }
 }

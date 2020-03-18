@@ -125,7 +125,7 @@ fn owen_scramble_u32(mut n: u32, scramble: u32) -> u32 {
 
     n = n.reverse_bits();
     n ^= scramble;
-    let perms = [0x7ed7a4b4, 0xcb95fcb6, 0x4ea13ebc];
+    let perms = [0xa56bb1c6, 0xef577134, 0xd0e5e808, 0x200bd50a];
     for p in perms.iter() {
         n ^= n.wrapping_mul(*p);
     }
