@@ -4,7 +4,7 @@
 use std::{env, fs::File, io::Write, path::Path};
 
 /// How many components to generate.
-const NUM_DIMENSIONS: usize = 256;
+const NUM_DIMENSIONS: usize = 1024;
 
 /// What file to generate the numbers from.
 const DIRECTION_NUMBERS_TEXT: &str = include_str!("direction_numbers/joe-kuo-cessen-3.1024.txt");
@@ -22,7 +22,7 @@ fn main() {
         .unwrap();
 
     // Write the vectors.
-    f.write_all("pub const VECTORS: &[[u32; 32]] = &[\n".as_bytes())
+    f.write_all(format!("pub const VECTORS: &[[u{0}; {0}]] = &[\n", SOBOL_BITS).as_bytes())
         .unwrap();
     for v in vectors.iter() {
         f.write_all("  [\n".as_bytes()).unwrap();
@@ -85,22 +85,23 @@ fn main() {
 //     OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 //     IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-const SOBOL_BITS: usize = 32;
+type SobolInt = u16;
+const SOBOL_BITS: usize = std::mem::size_of::<SobolInt>() * 8;
 
-pub fn generate_direction_vectors(dimensions: usize) -> Vec<[u32; SOBOL_BITS]> {
+pub fn generate_direction_vectors(dimensions: usize) -> Vec<[SobolInt; SOBOL_BITS]> {
     let mut vectors = Vec::new();
 
     // Calculate first dimension, which is just the van der Corput sequence.
-    let mut dim_0 = [0u32; SOBOL_BITS];
+    let mut dim_0 = [0 as SobolInt; SOBOL_BITS];
     for i in 0..SOBOL_BITS {
-        dim_0[i] = 1 << (31 - i);
+        dim_0[i] = 1 << (SOBOL_BITS - 1 - i);
     }
     vectors.push(dim_0);
 
     // Do the rest of the dimensions.
     let mut lines = DIRECTION_NUMBERS_TEXT.lines();
     for _ in 1..dimensions {
-        let mut v = [0u32; SOBOL_BITS];
+        let mut v = [0 as SobolInt; SOBOL_BITS];
 
         // Get data from the next valid line from the direction numbers text
         // file.
@@ -117,18 +118,18 @@ pub fn generate_direction_vectors(dimensions: usize) -> Vec<[u32; SOBOL_BITS]> {
         // Generate the direction numbers for this dimension.
         if SOBOL_BITS <= s as usize {
             for i in 0..SOBOL_BITS {
-                v[i] = m[i] << (31 - i);
+                v[i] = (m[i] << (SOBOL_BITS - 1 - i)) as SobolInt;
             }
         } else {
             for i in 0..(s as usize) {
-                v[i] = m[i] << (31 - i);
+                v[i] = (m[i] << (SOBOL_BITS - 1 - i)) as SobolInt;
             }
 
             for i in (s as usize)..SOBOL_BITS {
                 v[i] = v[i - s as usize] ^ (v[i - s as usize] >> s);
 
                 for k in 1..s {
-                    v[i] ^= ((a >> (s - 1 - k)) & 1) * v[i - k as usize];
+                    v[i] ^= ((a >> (s - 1 - k)) & 1) as SobolInt * v[i - k as usize];
                 }
             }
         }
