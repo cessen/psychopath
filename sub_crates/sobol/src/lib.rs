@@ -92,7 +92,8 @@ fn sobol_u32(dimension: u32, index: u32) -> u32 {
         let j = index.trailing_zeros();
         result ^= vecs[(i + j) as usize];
         i += j + 1;
-        index >>= j + 1;
+        index >>= j;
+        index >>= 1;
     }
 
     (result as u32) << 16
