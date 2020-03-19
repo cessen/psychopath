@@ -697,24 +697,14 @@ fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
     let scramble = hash_u32(pixel_co.0 ^ (pixel_co.1 << 16), seed);
 
     match dimension {
-        0 => {
-            // Golden ratio sampling.
-            // NOTE: use this for the wavelength dimension, because
-            // due to the nature of hero wavelength sampling this ends up
-            // being crazily more efficient than pretty much any other sampler,
-            // and reduces variance by a huge amount.
-            let n = i.wrapping_add(scramble).wrapping_mul(2654435769);
-            n as f32 * (1.0 / (1u64 << 32) as f32)
-        }
-        n if (n - 1) < sobol::MAX_DIMENSION as u32 => {
-            let dim = n - 1;
+        d if d < sobol::MAX_DIMENSION as u32 => {
             // Sobol sampling.
-            sobol::sample_owen_cranley(dim, i, hash_u32(dim, scramble))
+            sobol::sample_owen(d, i, hash_u32(d, scramble))
         }
-        _ => {
+        d => {
             // Random sampling.
             use crate::hash::hash_u32_to_f32;
-            hash_u32_to_f32(dimension ^ (i << 16), scramble)
+            hash_u32_to_f32(d ^ (i << 16), scramble)
         }
     }
 }
