@@ -54,24 +54,33 @@ pub fn sample_owen(dimension: u32, index: u32, scramble: u32) -> f32 {
     u32_to_0_1_f32(owen_scramble_u32(sobol_u32(dimension, index), scramble))
 }
 
-/// Same as `sample()` except applies both Owen scrambling and
-/// Cranley-Patterson rotation using the given scramble parameter.
+/// Same as `sample_owen()` except uses a slower more full version of
+/// Owen scrambling.
 ///
-/// For the technically curious: this first does Owen scrambling, and then
-/// Cranley-Patterson.  If it were done the other way around it would
-/// invalidate the Owen scrambling.
-///
-/// To get proper scrambling and rotation, you need to use a different scramble
-/// value for each dimension, and those values should be generated more-or-less
-/// randomly.  For example, using a 32-bit hash of the dimension parameter
-/// works well.
+/// This is mainly intended to help validate the faster Owen scrambling,
+/// and likely shouldn't be used for real things.  It is significantly
+/// slower.
 #[inline]
-pub fn sample_owen_cranley(dimension: u32, index: u32, scramble: u32) -> f32 {
-    // Reusing the same scramble parameter for both the Owen scrambling and
-    // the Cranely-Patterson rotation actually works fine, because the Owen
-    // scrambling is implemented as a sort of hash, so they don't end up being
-    // correlated.
-    u32_to_0_1_f32(owen_scramble_u32(sobol_u32(dimension, index), scramble).wrapping_add(scramble))
+pub fn sample_owen_slow(dimension: u32, index: u32, scramble: u32) -> f32 {
+    let mut n = sobol_u32(dimension, index);
+    n ^= scramble;
+    for i in 0..16 {
+        let mask = (1 << (31 - i)) - 1;
+        let hash = {
+            let mut hash = n & (!mask);
+            let seed = scramble + i;
+            let perms = [0x29aaaaa7, 0x736caf6f, 0x54aad35b, 0x2ab35aaa];
+            for p in perms.iter().cycle().take(6) {
+                hash = hash.wrapping_mul(*p);
+                hash ^= hash.wrapping_shr(16);
+                hash ^= seed;
+            }
+            hash
+        };
+        n ^= hash & mask;
+    }
+
+    u32_to_0_1_f32(n)
 }
 
 //----------------------------------------------------------------------
