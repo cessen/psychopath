@@ -250,6 +250,59 @@ impl SurfaceClosure {
     }
 }
 
+// Implemented for interpolation operations, not for any otherwise meaningful
+// notion of addition.
+impl std::ops::Add<SurfaceClosure> for SurfaceClosure {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        match (self, rhs) {
+            (Lambert(col1), Lambert(col2)) => Lambert(col1 + col2),
+            (
+                GGX {
+                    color: col1,
+                    roughness: rgh1,
+                    fresnel: frs1,
+                },
+                GGX {
+                    color: col2,
+                    roughness: rgh2,
+                    fresnel: frs2,
+                },
+            ) => GGX {
+                color: col1 + col2,
+                roughness: rgh1 + rgh2,
+                fresnel: frs1 + frs2,
+            },
+            (Emit(col1), Emit(col2)) => Emit(col1 + col2),
+
+            _ => panic!("Cannot add two different surface closure types."),
+        }
+    }
+}
+
+// Implemented for interpolation operations, not for any otherwise meaningful
+// notion of multiplication.
+impl std::ops::Mul<f32> for SurfaceClosure {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self {
+        match self {
+            Lambert(col) => Lambert(col * rhs),
+            GGX {
+                color: col,
+                roughness: rgh,
+                fresnel: frs,
+            } => GGX {
+                color: col * rhs,
+                roughness: rgh * rhs,
+                fresnel: frs * rhs,
+            },
+            Emit(col) => Emit(col * rhs),
+        }
+    }
+}
+
 impl Lerp for SurfaceClosure {
     fn lerp(self, other: SurfaceClosure, alpha: f32) -> SurfaceClosure {
         match (self, other) {

@@ -315,7 +315,8 @@ impl<'a> Surface for RectangleLight<'a> {
 
                             let closure = {
                                 let inv_surface_area = (1.0 / (dim.0 as f64 * dim.1 as f64)) as f32;
-                                let color = lerp_slice(self.colors, time) * inv_surface_area;
+                                let color = lerp_slice(self.colors, time)
+                                    .scale_brightness(inv_surface_area);
                                 SurfaceClosure::Emit(color)
                             };
 

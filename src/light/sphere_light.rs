@@ -321,7 +321,7 @@ impl<'a> Surface for SphereLight<'a> {
                 let closure = {
                     let inv_surface_area =
                         (1.0 / (4.0 * PI_64 * radius as f64 * radius as f64)) as f32;
-                    let color = lerp_slice(self.colors, time) * inv_surface_area;
+                    let color = lerp_slice(self.colors, time).scale_brightness(inv_surface_area);
                     SurfaceClosure::Emit(color)
                 };
 

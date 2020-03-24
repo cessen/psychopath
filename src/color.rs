@@ -1,5 +1,3 @@
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
-
 pub use color::{
     rec709_e_to_xyz, rec709_to_xyz, xyz_to_aces_ap0, xyz_to_aces_ap0_e, xyz_to_rec709,
     xyz_to_rec709_e,
@@ -249,12 +247,8 @@ impl Color {
             _ => unreachable!(),
         }
     }
-}
 
-impl Mul<f32> for Color {
-    type Output = Self;
-
-    fn mul(self, rhs: f32) -> Self {
+    pub fn scale_brightness(self, rhs: f32) -> Self {
         match self {
             Color::XYZ(x, y, z) => Color::XYZ(x * rhs, y * rhs, z * rhs),
 
@@ -277,9 +271,75 @@ impl Mul<f32> for Color {
     }
 }
 
-impl MulAssign<f32> for Color {
-    fn mul_assign(&mut self, rhs: f32) {
-        *self = *self * rhs;
+// Implemented for interpolation operations, not for any otherwise meaningful
+// notion of addition.
+impl std::ops::Add<Color> for Color {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        match (self, rhs) {
+            (Color::XYZ(x1, y1, z1), Color::XYZ(x2, y2, z2)) => {
+                Color::XYZ(x1 + x2, y1 + y2, z1 + z2)
+            }
+
+            (
+                Color::Blackbody {
+                    temperature: tmp1,
+                    factor: fac1,
+                },
+                Color::Blackbody {
+                    temperature: tmp2,
+                    factor: fac2,
+                },
+            ) => Color::Blackbody {
+                temperature: tmp1 + tmp2,
+                factor: fac1 + fac2,
+            },
+
+            (
+                Color::Temperature {
+                    temperature: tmp1,
+                    factor: fac1,
+                },
+                Color::Temperature {
+                    temperature: tmp2,
+                    factor: fac2,
+                },
+            ) => Color::Temperature {
+                temperature: tmp1 + tmp2,
+                factor: fac1 + fac2,
+            },
+
+            _ => panic!("Cannot add colors with different representations."),
+        }
+    }
+}
+
+// Implemented for interpolation operations, not for any otherwise meaningful
+// notion of multiplication.
+impl std::ops::Mul<f32> for Color {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self {
+        match self {
+            Color::XYZ(x, y, z) => Color::XYZ(x * rhs, y * rhs, z * rhs),
+
+            Color::Blackbody {
+                temperature,
+                factor,
+            } => Color::Blackbody {
+                temperature: temperature * rhs,
+                factor: factor * rhs,
+            },
+
+            Color::Temperature {
+                temperature,
+                factor,
+            } => Color::Temperature {
+                temperature: temperature * rhs,
+                factor: factor * rhs,
+            },
+        }
     }
 }
 
@@ -429,7 +489,7 @@ impl SpectralSample {
     }
 }
 
-impl Add for SpectralSample {
+impl std::ops::Add for SpectralSample {
     type Output = SpectralSample;
     fn add(self, rhs: SpectralSample) -> Self::Output {
         assert_eq!(self.hero_wavelength, rhs.hero_wavelength);
@@ -440,14 +500,14 @@ impl Add for SpectralSample {
     }
 }
 
-impl AddAssign for SpectralSample {
+impl std::ops::AddAssign for SpectralSample {
     fn add_assign(&mut self, rhs: SpectralSample) {
         assert_eq!(self.hero_wavelength, rhs.hero_wavelength);
         self.e = self.e + rhs.e;
     }
 }
 
-impl Mul for SpectralSample {
+impl std::ops::Mul for SpectralSample {
     type Output = SpectralSample;
     fn mul(self, rhs: SpectralSample) -> Self::Output {
         assert_eq!(self.hero_wavelength, rhs.hero_wavelength);
@@ -458,14 +518,14 @@ impl Mul for SpectralSample {
     }
 }
 
-impl MulAssign for SpectralSample {
+impl std::ops::MulAssign for SpectralSample {
     fn mul_assign(&mut self, rhs: SpectralSample) {
         assert_eq!(self.hero_wavelength, rhs.hero_wavelength);
         self.e = self.e * rhs.e;
     }
 }
 
-impl Mul<f32> for SpectralSample {
+impl std::ops::Mul<f32> for SpectralSample {
     type Output = SpectralSample;
     fn mul(self, rhs: f32) -> Self::Output {
         SpectralSample {
@@ -475,13 +535,13 @@ impl Mul<f32> for SpectralSample {
     }
 }
 
-impl MulAssign<f32> for SpectralSample {
+impl std::ops::MulAssign<f32> for SpectralSample {
     fn mul_assign(&mut self, rhs: f32) {
         self.e = self.e * rhs;
     }
 }
 
-impl Div<f32> for SpectralSample {
+impl std::ops::Div<f32> for SpectralSample {
     type Output = SpectralSample;
     fn div(self, rhs: f32) -> Self::Output {
         SpectralSample {
@@ -491,7 +551,7 @@ impl Div<f32> for SpectralSample {
     }
 }
 
-impl DivAssign<f32> for SpectralSample {
+impl std::ops::DivAssign<f32> for SpectralSample {
     fn div_assign(&mut self, rhs: f32) {
         self.e = self.e / rhs;
     }
@@ -538,7 +598,7 @@ impl Lerp for XYZ {
     }
 }
 
-impl Add for XYZ {
+impl std::ops::Add for XYZ {
     type Output = XYZ;
     fn add(self, rhs: XYZ) -> Self::Output {
         XYZ {
@@ -549,7 +609,7 @@ impl Add for XYZ {
     }
 }
 
-impl AddAssign for XYZ {
+impl std::ops::AddAssign for XYZ {
     fn add_assign(&mut self, rhs: XYZ) {
         self.x += rhs.x;
         self.y += rhs.y;
@@ -557,7 +617,7 @@ impl AddAssign for XYZ {
     }
 }
 
-impl Mul<f32> for XYZ {
+impl std::ops::Mul<f32> for XYZ {
     type Output = XYZ;
     fn mul(self, rhs: f32) -> Self::Output {
         XYZ {
@@ -568,7 +628,7 @@ impl Mul<f32> for XYZ {
     }
 }
 
-impl MulAssign<f32> for XYZ {
+impl std::ops::MulAssign<f32> for XYZ {
     fn mul_assign(&mut self, rhs: f32) {
         self.x *= rhs;
         self.y *= rhs;
@@ -576,7 +636,7 @@ impl MulAssign<f32> for XYZ {
     }
 }
 
-impl Div<f32> for XYZ {
+impl std::ops::Div<f32> for XYZ {
     type Output = XYZ;
     fn div(self, rhs: f32) -> Self::Output {
         XYZ {
@@ -587,7 +647,7 @@ impl Div<f32> for XYZ {
     }
 }
 
-impl DivAssign<f32> for XYZ {
+impl std::ops::DivAssign<f32> for XYZ {
     fn div_assign(&mut self, rhs: f32) {
         self.x /= rhs;
         self.y /= rhs;

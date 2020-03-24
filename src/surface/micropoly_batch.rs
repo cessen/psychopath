@@ -33,9 +33,9 @@ pub struct MicropolyBatch<'a> {
     normals: &'a [Normal],
 
     // Per-vertex shading data.
+    // TODO: time samples.
     compressed_vertex_closure_size: usize, // Size in bites of a single compressed closure
-    vertex_closure_time_sample_count: usize,
-    compressed_vertex_closures: &'a [u8], // Packed compressed closures
+    compressed_vertex_closures: &'a [u8],  // Packed compressed closures
 
     // Micro-triangle indices.  Each element of the tuple specifies the index
     // of a vertex, which indexes into all of the arrays above.
@@ -130,7 +130,6 @@ impl<'a> MicropolyBatch<'a> {
             vertices: vertices,
             normals: normals,
             compressed_vertex_closure_size: 0,
-            vertex_closure_time_sample_count: 1,
             compressed_vertex_closures: &[],
             indices: indices,
             accel: accel,
@@ -320,16 +319,19 @@ impl<'a> MicropolyBatch<'a> {
                         };
 
                         // Calculate interpolated surface closure.
-                        // TODO: actually interpolate.
+                        // TODO: time sampling.
                         let closure = {
-                            let start_byte = hit_tri_indices.0 as usize
-                                * self.compressed_vertex_closure_size
-                                * self.vertex_closure_time_sample_count;
-                            let end_byte = start_byte + self.compressed_vertex_closure_size;
-                            let (closure, _) = SurfaceClosure::from_compressed(
-                                &self.compressed_vertex_closures[start_byte..end_byte],
-                            );
-                            closure
+                            let get_closure = |index| {
+                                let start_byte = index * self.compressed_vertex_closure_size;
+                                SurfaceClosure::from_compressed(
+                                    &self.compressed_vertex_closures[start_byte..],
+                                )
+                                .0
+                            };
+                            let c0 = get_closure(hit_tri_indices.0 as usize);
+                            let c1 = get_closure(hit_tri_indices.1 as usize);
+                            let c2 = get_closure(hit_tri_indices.2 as usize);
+                            (c0 * b0) + (c1 * b1) + (c2 * b2)
                         };
 
                         let intersection_data = SurfaceIntersectionData {
