@@ -18,7 +18,7 @@ use crate::{
     hash::hash_u32,
     hilbert,
     image::Image,
-    math::{fast_logit, upper_power_of_two},
+    math::{probit, upper_power_of_two},
     mis::power_heuristic,
     ray::{Ray, RayBatch},
     scene::{Scene, SceneLightSample},
@@ -244,9 +244,11 @@ impl<'a> Renderer<'a> {
                         // Calculate image plane x and y coordinates
                         let (img_x, img_y) = {
                             let filter_x =
-                                fast_logit(get_sample(4, si as u32, (x, y), self.seed), 1.5) + 0.5;
+                                probit(get_sample(4, si as u32, (x, y), self.seed), 2.0 / 6.0)
+                                    + 0.5;
                             let filter_y =
-                                fast_logit(get_sample(5, si as u32, (x, y), self.seed), 1.5) + 0.5;
+                                probit(get_sample(5, si as u32, (x, y), self.seed), 2.0 / 6.0)
+                                    + 0.5;
                             let samp_x = (filter_x + x as f32) * cmpx;
                             let samp_y = (filter_y + y as f32) * cmpy;
                             ((samp_x - 0.5) * x_extent, (0.5 - samp_y) * y_extent)
