@@ -701,7 +701,9 @@ fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
     match dimension {
         d if d < sobol::MAX_DIMENSION as u32 => {
             // Sobol sampling.
-            sobol::sample_owen(d, i, hash_u32(d, scramble))
+            // We skip the first 4 samples, because that mitigates some poor
+            // sampling at low sample counts like 16.
+            sobol::sample_owen(d, i + 4, hash_u32(d, scramble))
         }
         d => {
             // Random sampling.
