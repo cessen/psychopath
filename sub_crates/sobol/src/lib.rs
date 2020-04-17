@@ -63,7 +63,7 @@ pub fn sample_owen(dimension: u32, index: u32, scramble: u32) -> f32 {
 #[inline]
 pub fn sample_owen_slow(dimension: u32, index: u32, scramble: u32) -> f32 {
     let mut n = sobol_u32(dimension, index);
-    n ^= scramble;
+    n = n.reverse_bits().wrapping_add(scramble).reverse_bits();
     for i in 0..16 {
         let mask = (1 << (31 - i)) - 1;
         let hash = {
