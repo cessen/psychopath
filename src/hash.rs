@@ -1,7 +1,7 @@
 pub fn hash_u32(n: u32, seed: u32) -> u32 {
     let mut hash = n;
     for _ in 0..3 {
-        hash = hash.wrapping_mul(1_936_502_639);
+        hash = hash.wrapping_mul(0x736caf6f);
         hash ^= hash.wrapping_shr(16);
         hash ^= seed;
     }

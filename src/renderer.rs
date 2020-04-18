@@ -694,21 +694,22 @@ impl LightPath {
 /// LDS samples aren't available.
 #[inline(always)]
 fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
-    // A unique random scramble value for every pixel coordinate up to
-    // a resolution of 65536 x 65536.  Also further randomized by a seed.
-    let scramble = hash_u32(pixel_co.0 ^ (pixel_co.1 << 16), seed);
+    // A unique seed for every pixel coordinate up to a resolution of
+    // 65536 x 65536.  Also incorperating the seed.
+    let seed = hash_u32(pixel_co.0 ^ (pixel_co.1 << 16), seed);
 
     match dimension {
         d if d < sobol::MAX_DIMENSION as u32 => {
             // Sobol sampling.
             // We skip the first 4 samples, because that mitigates some poor
             // sampling at low sample counts like 16.
-            sobol::sample_owen(d, i + 4, hash_u32(d, scramble))
+            sobol::sample(d, i + 4, seed)
+            // halton::sample(d, i + seed)
         }
         d => {
             // Random sampling.
             use crate::hash::hash_u32_to_f32;
-            hash_u32_to_f32(d ^ (i << 16), scramble)
+            hash_u32_to_f32(d ^ (i << 16), seed)
         }
     }
 }
