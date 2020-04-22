@@ -22,12 +22,14 @@ fn main() {
         .unwrap();
 
     // Write the vectors.
-    f.write_all(format!("pub const VECTORS: &[[u{0}; {0}]] = &[\n", SOBOL_BITS).as_bytes())
+    // We actually write them with reversed bits due to how the library uses
+    // them, which is atypical.
+    f.write_all(format!("pub const REV_VECTORS: &[[u{0}; {0}]] = &[\n", SOBOL_BITS).as_bytes())
         .unwrap();
     for v in vectors.iter() {
         f.write_all("  [\n".as_bytes()).unwrap();
         for n in v.iter() {
-            f.write_all(format!("    0x{:08x},\n", *n).as_bytes())
+            f.write_all(format!("    0x{:08x},\n", n.reverse_bits()).as_bytes())
                 .unwrap();
         }
         f.write_all("  ],\n".as_bytes()).unwrap();
