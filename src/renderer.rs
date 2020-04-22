@@ -404,7 +404,7 @@ impl LightPath {
                 event: LightPathEvent::CameraRay,
                 bounce_count: 0,
 
-                sampling_seed: sampling_seed,
+                sampling_seed: sampling_seed ^ 0x40d4682b,
                 pixel_co: pixel_co,
                 sample_number: sample_number,
                 dim_offset: 0,
