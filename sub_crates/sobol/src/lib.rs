@@ -15,8 +15,12 @@ include!(concat!(env!("OUT_DIR"), "/vectors.inc"));
 /// parameter exceeds 2^16-1, the sample set will start repeating.
 #[inline]
 pub fn sample(dimension: u32, index: u32, seed: u32) -> f32 {
+    // This index shuffling approach is due to Brent Burley, and is
+    // what allows us to create statistically independent Sobol sequences.
     let shuffled_rev_index = lk_scramble(index.reverse_bits(), hash(seed, 2));
+
     let scramble = hash(dimension ^ seed, 2);
+
     let sobol = lk_scramble(sobol_u32_rev(dimension, shuffled_rev_index), scramble).reverse_bits();
     u32_to_0_1_f32(sobol)
 }

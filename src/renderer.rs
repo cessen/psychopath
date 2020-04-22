@@ -374,7 +374,7 @@ pub struct LightPath {
     sampling_seed: u32,
     pixel_co: (u32, u32),
     sample_number: u32, // Which sample in the LDS sequence this is.
-    dim_offset: Cell<u32>,
+    dim_offset: u32,
     time: f32,
     wavelength: f32,
 
@@ -407,7 +407,7 @@ impl LightPath {
                 sampling_seed: sampling_seed,
                 pixel_co: pixel_co,
                 sample_number: sample_number,
-                dim_offset: Cell::new(6),
+                dim_offset: 0,
                 time: time,
                 wavelength: wavelength,
 
@@ -430,9 +430,14 @@ impl LightPath {
         )
     }
 
-    fn next_lds_samp(&self) -> f32 {
-        let dimension = self.dim_offset.get();
-        self.dim_offset.set(dimension + 1);
+    fn next_lds_sequence(&mut self) {
+        self.dim_offset = 0;
+        self.sampling_seed += 1;
+    }
+
+    fn next_lds_samp(&mut self) -> f32 {
+        let dimension = self.dim_offset;
+        self.dim_offset += 1;
         get_sample(
             dimension,
             self.sample_number,
@@ -481,6 +486,7 @@ impl LightPath {
                     self.light_attenuation /= self.closure_sample_pdf;
 
                     // Prepare light ray
+                    self.next_lds_sequence();
                     let light_n = self.next_lds_samp();
                     let light_uvw = (
                         self.next_lds_samp(),
@@ -599,6 +605,7 @@ impl LightPath {
 
                         // Sample closure
                         let (dir, filter, pdf) = {
+                            self.next_lds_sequence();
                             let u = self.next_lds_samp();
                             let v = self.next_lds_samp();
                             closure.sample(
@@ -701,10 +708,7 @@ fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
     match dimension {
         d if d < sobol::MAX_DIMENSION as u32 => {
             // Sobol sampling.
-            // We skip the first 4 samples, because that mitigates some poor
-            // sampling at low sample counts like 16.
-            sobol::sample(d, i + 4, seed)
-            // halton::sample(d, i + seed)
+            sobol::sample(d, i, seed)
         }
         d => {
             // Random sampling.
