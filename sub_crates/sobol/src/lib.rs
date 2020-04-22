@@ -80,6 +80,7 @@ fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
     n = n.wrapping_add(scramble);
     for &p in PERMS.iter() {
         n ^= n.wrapping_mul(p);
+        n += n << 1;
     }
     n
 }
