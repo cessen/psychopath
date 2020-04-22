@@ -9,15 +9,14 @@ include!(concat!(env!("OUT_DIR"), "/vectors.inc"));
 /// within the sequence.
 ///
 /// A different `seed` parameter results in a statistically independent Sobol
-/// sequence, uncorrelated to others with different seeds.  However, seed
-/// itself needs to be sufficiently random: you can't just pass 1, 2, 3, etc.
+/// sequence, uncorrelated to others with different seeds.
 ///
 /// Note: generates a maximum of 2^16 samples per dimension.  If the `index`
 /// parameter exceeds 2^16-1, the sample set will start repeating.
 #[inline]
 pub fn sample(dimension: u32, index: u32, seed: u32) -> f32 {
+    let shuffled_index = owen_scramble(index, hash(seed));
     let scramble = hash(dimension ^ seed);
-    let shuffled_index = owen_scramble(index, seed);
     u32_to_0_1_f32(owen_scramble(
         sobol_u32(dimension, shuffled_index),
         scramble,
@@ -104,7 +103,7 @@ fn owen_scramble_slow(mut n: u32, scramble: u32) -> u32 {
 
 #[inline(always)]
 fn hash(n: u32) -> u32 {
-    let mut hash = n;
+    let mut hash = n ^ 0x912f69ba;
     for _ in 0..3 {
         hash = hash.wrapping_mul(0x736caf6f);
         hash ^= hash.wrapping_shr(16);
