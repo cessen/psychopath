@@ -15,6 +15,7 @@ use crate::{
     accel::ACCEL_NODE_RAY_TESTS,
     color::{map_0_1_to_wavelength, SpectralSample, XYZ},
     fp_utils::robust_ray_origin,
+    hash::hash_u32,
     hilbert,
     image::Image,
     math::{probit, upper_power_of_two},
@@ -243,10 +244,10 @@ impl<'a> Renderer<'a> {
                         // Calculate image plane x and y coordinates
                         let (img_x, img_y) = {
                             let filter_x =
-                                probit(get_sample(4, si as u32, (x, y), self.seed), 2.0 / 6.0)
+                                probit(get_sample(3, si as u32, (x, y), self.seed), 2.0 / 6.0)
                                     + 0.5;
                             let filter_y =
-                                probit(get_sample(5, si as u32, (x, y), self.seed), 2.0 / 6.0)
+                                probit(get_sample(4, si as u32, (x, y), self.seed), 2.0 / 6.0)
                                     + 0.5;
                             let samp_x = (filter_x + x as f32) * cmpx;
                             let samp_y = (filter_y + y as f32) * cmpy;
@@ -260,11 +261,14 @@ impl<'a> Renderer<'a> {
                             (x, y),
                             (img_x, img_y),
                             (
+                                get_sample(1, si as u32, (x, y), self.seed),
                                 get_sample(2, si as u32, (x, y), self.seed),
-                                get_sample(3, si as u32, (x, y), self.seed),
                             ),
-                            get_sample(1, si as u32, (x, y), self.seed),
-                            map_0_1_to_wavelength(get_sample(0, si as u32, (x, y), self.seed)),
+                            get_sample(0, si as u32, (x, y), self.seed),
+                            map_0_1_to_wavelength(golden_ratio_sample(
+                                si as u32,
+                                hash_u32((x << 16) ^ y, self.seed),
+                            )),
                             si as u32,
                         );
                         paths.push(path);
@@ -715,6 +719,18 @@ fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
             hash_u32_to_f32(d ^ (i << 16), seed)
         }
     }
+}
+
+/// Golden ratio sampler.
+fn golden_ratio_sample(i: u32, scramble: u32) -> f32 {
+    // NOTE: use this for the wavelength dimension, because
+    // due to the nature of hero wavelength sampling this ends up
+    // being crazily more efficient than pretty much any other sampler,
+    // and reduces variance by a huge amount.
+    let n = i
+        .wrapping_add(hash_u32(scramble, 0))
+        .wrapping_mul(2654435769);
+    n as f32 * (1.0 / (1u64 << 32) as f32)
 }
 
 #[derive(Debug)]
