@@ -15,7 +15,6 @@ use crate::{
     accel::ACCEL_NODE_RAY_TESTS,
     color::{map_0_1_to_wavelength, SpectralSample, XYZ},
     fp_utils::robust_ray_origin,
-    hash::hash_u32,
     hilbert,
     image::Image,
     math::{probit, upper_power_of_two},
@@ -703,7 +702,7 @@ impl LightPath {
 fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
     // A unique seed for every pixel coordinate up to a resolution of
     // 65536 x 65536.  Also incorperating the seed.
-    let seed = hash_u32(pixel_co.0 ^ (pixel_co.1 << 16), seed);
+    let seed = pixel_co.0 ^ (pixel_co.1 << 16) ^ seed.wrapping_mul(0x736caf6f);
 
     match dimension {
         d if d < sobol::MAX_DIMENSION as u32 => {

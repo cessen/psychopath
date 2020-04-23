@@ -17,11 +17,14 @@ include!(concat!(env!("OUT_DIR"), "/vectors.inc"));
 pub fn sample(dimension: u32, index: u32, seed: u32) -> f32 {
     // This index shuffling approach is due to Brent Burley, and is
     // what allows us to create statistically independent Sobol sequences.
-    let shuffled_rev_index = lk_scramble(index.reverse_bits(), hash(seed, 2));
+    let shuffled_rev_index = lk_scramble(index.reverse_bits(), seed);
 
-    let scramble = hash(dimension ^ seed, 2);
+    let sobol = lk_scramble(
+        sobol_u32_rev(dimension, shuffled_rev_index),
+        dimension ^ seed,
+    )
+    .reverse_bits();
 
-    let sobol = lk_scramble(sobol_u32_rev(dimension, shuffled_rev_index), scramble).reverse_bits();
     u32_to_0_1_f32(sobol)
 }
 
@@ -77,7 +80,7 @@ fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
     // process to maximize low-bias avalanche between bits.
 
     const PERMS: [u32; 3] = [0x97b756bc, 0x4b0a8a12, 0x75c77e36];
-    n = n.wrapping_add(scramble);
+    n = n.wrapping_add(hash(scramble, 2));
     for &p in PERMS.iter() {
         n ^= n.wrapping_mul(p);
         n += n << 1;
@@ -94,7 +97,7 @@ fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
 #[allow(dead_code)]
 #[inline]
 fn lk_scramble_slow(mut n: u32, scramble: u32) -> u32 {
-    n = n.wrapping_add(scramble);
+    n = n.wrapping_add(hash(scramble, 3));
     for i in 0..31 {
         let low_mask = (1u32 << i).wrapping_sub(1);
         let low_bits_hash = hash((n & low_mask) ^ hash(i, 3), 3);
