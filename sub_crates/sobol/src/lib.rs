@@ -70,7 +70,7 @@ fn sobol_int4_rev(dimension_set: u32, index: u32) -> Int4 {
 
 /// Scrambles `n` using the Laine Karras hash.  This is equivalent to Owen
 /// scrambling, but on reversed bits.
-#[inline(always)]
+#[inline]
 fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
     // This uses the technique presented in the paper "Stratified Sampling for
     // Stochastic Transparency" by Laine and Karras to scramble the bits.

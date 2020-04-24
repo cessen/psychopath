@@ -4,7 +4,7 @@
 use std::{env, fs::File, io::Write, path::Path};
 
 /// How many components to generate.
-const NUM_DIMENSIONS: usize = 256;
+const NUM_DIMENSIONS: usize = 128;
 
 /// What file to generate the numbers from.
 const DIRECTION_NUMBERS_TEXT: &str = include_str!("direction_numbers/new-joe-kuo-5.1024.txt");
