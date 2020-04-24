@@ -67,24 +67,21 @@ fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
     // The basic idea is that we're running a special kind of hash function
     // that only allows avalanche to happen upwards (i.e. a bit is only
     // affected by the bits lower than it).  This is achieved by only doing
-    // mixing via operations that also adhere to that property, such as
-    // multiplication by even numbers.
+    // mixing via operations that also adhere to that property.
     //
     // Normally this would be considered a poor hash function, because normally
     // you want all bits to have an equal chance of affecting all other bits.
     // But in this case that only-upward behavior is exactly what we want,
     // because it ends up being equivalent to Owen scrambling on
     // reverse-ordered bits.
-    //
-    // The permutation constants here were selected through an optimization
-    // process to maximize low-bias avalanche between bits.
 
-    const PERMS: [u32; 3] = [0x97b756bc, 0x4b0a8a12, 0x75c77e36];
     n = n.wrapping_add(hash(scramble, 2));
-    for &p in PERMS.iter() {
-        n ^= n.wrapping_mul(p);
-        n = n.wrapping_add(n << 1);
-    }
+
+    n ^= 0xdc967795;
+    n = n.wrapping_mul(0x97b754b7);
+    n ^= 0x866350b1;
+    n = n.wrapping_mul(0x9e3779cd);
+
     n
 }
 
