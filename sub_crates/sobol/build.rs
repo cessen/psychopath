@@ -4,7 +4,7 @@
 use std::{env, fs::File, io::Write, path::Path};
 
 /// How many components to generate.
-const NUM_DIMENSIONS: usize = 1024;
+const NUM_DIMENSIONS: usize = 256;
 
 /// What file to generate the numbers from.
 const DIRECTION_NUMBERS_TEXT: &str = include_str!("direction_numbers/new-joe-kuo-5.1024.txt");
@@ -22,15 +22,36 @@ fn main() {
         .unwrap();
 
     // Write the vectors.
-    // We actually write them with reversed bits due to how the library uses
-    // them, which is atypical.
-    f.write_all(format!("pub const REV_VECTORS: &[[u{0}; {0}]] = &[\n", SOBOL_BITS).as_bytes())
-        .unwrap();
-    for v in vectors.iter() {
+    // We write them in a rather atypical way because of how the library
+    // uses them.  First, we interleave the numbers of each set of four
+    // dimensions, for SIMD evaluation.  Second, each number is written
+    // with reversed bits, to avoid needing to reverse them before scrambling.
+    f.write_all(
+        format!(
+            "pub const REV_VECTORS: &[[[u{0}; 4]; {0}]] = &[\n",
+            SOBOL_BITS
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+    for d4 in vectors.chunks_exact(4) {
         f.write_all("  [\n".as_bytes()).unwrap();
-        for n in v.iter() {
-            f.write_all(format!("    0x{:08x},\n", n.reverse_bits()).as_bytes())
-                .unwrap();
+        for ((a, b), (c, d)) in d4[0]
+            .iter()
+            .zip(d4[1].iter())
+            .zip(d4[2].iter().zip(d4[3].iter()))
+        {
+            f.write_all(
+                format!(
+                    "    [0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}],\n",
+                    a.reverse_bits(),
+                    b.reverse_bits(),
+                    c.reverse_bits(),
+                    d.reverse_bits()
+                )
+                .as_bytes(),
+            )
+            .unwrap();
         }
         f.write_all("  ],\n".as_bytes()).unwrap();
     }
@@ -87,7 +108,7 @@ fn main() {
 //     OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 //     IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-type SobolInt = u16;
+type SobolInt = u32;
 const SOBOL_BITS: usize = std::mem::size_of::<SobolInt>() * 8;
 
 pub fn generate_direction_vectors(dimensions: usize) -> Vec<[SobolInt; SOBOL_BITS]> {

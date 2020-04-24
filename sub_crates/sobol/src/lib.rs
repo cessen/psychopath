@@ -1,5 +1,8 @@
 //! An implementation of the Sobol sequence with Owen scrambling.
 
+mod wide;
+use wide::Int4;
+
 // The following `include` provides `MAX_DIMENSION` and `REV_VECTORS`.
 // See the build.rs file for how this included file is generated.
 include!(concat!(env!("OUT_DIR"), "/vectors.inc"));
@@ -15,17 +18,24 @@ include!(concat!(env!("OUT_DIR"), "/vectors.inc"));
 /// parameter exceeds 2^16-1, the sample set will start repeating.
 #[inline]
 pub fn sample(dimension: u32, index: u32, seed: u32) -> f32 {
+    sample_4d(dimension >> 2, index, seed)[(dimension & 0b11) as usize]
+}
+
+/// Same as `sample()` but calculates a set of 4 dimensions all at once
+/// using SIMD.
+#[inline]
+pub fn sample_4d(dimension_set: u32, index: u32, seed: u32) -> [f32; 4] {
     // This index shuffling approach is due to Brent Burley, and is
     // what allows us to create statistically independent Sobol sequences.
     let shuffled_rev_index = lk_scramble(index.reverse_bits(), seed);
 
-    let sobol = lk_scramble(
-        sobol_u32_rev(dimension, shuffled_rev_index),
-        dimension ^ seed,
+    let sobol = lk_int4_scramble(
+        sobol_int4_rev(dimension_set, shuffled_rev_index),
+        dimension_set ^ seed,
     )
     .reverse_bits();
 
-    u32_to_0_1_f32(sobol)
+    sobol.to_norm_floats()
 }
 
 //----------------------------------------------------------------------
@@ -40,22 +50,22 @@ pub fn sample(dimension: u32, index: u32, seed: u32) -> f32 {
 /// Note: if the `index` parameter exceeds 2^16-1, the sample set will start
 /// repeating.
 #[inline(always)]
-fn sobol_u32_rev(dimension: u32, index: u32) -> u32 {
-    assert!(dimension < MAX_DIMENSION);
-    let vecs = &REV_VECTORS[dimension as usize];
+fn sobol_int4_rev(dimension_set: u32, index: u32) -> Int4 {
+    assert!(dimension_set < (MAX_DIMENSION / 4));
+    let vecs = &REV_VECTORS[dimension_set as usize];
     let mut index = (index >> 16) as u16;
 
-    let mut result = 0;
+    let mut result = Int4::zero();
     let mut i = 0;
     while index != 0 {
         let j = index.leading_zeros();
-        result ^= vecs[(i + j) as usize];
+        result ^= vecs[(i + j) as usize].into();
         i += j + 1;
         index <<= j;
         index <<= 1;
     }
 
-    result as u32
+    result
 }
 
 /// Scrambles `n` using the Laine Karras hash.  This is equivalent to Owen
@@ -81,6 +91,26 @@ fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
     n = n.wrapping_mul(0x97b754b7);
     n ^= 0x866350b1;
     n = n.wrapping_mul(0x9e3779cd);
+
+    n
+}
+
+/// Same as `lk_scramble()`, except does it on 4 integers at a time
+/// with SIMD.
+#[inline(always)]
+fn lk_int4_scramble(mut n: Int4, scramble: u32) -> Int4 {
+    n += {
+        let a = hash(scramble, 2);
+        let b = a ^ 0x174f18ab;
+        let c = a ^ 0x691e72ca;
+        let d = a ^ 0xb40cc1b8;
+        [a, b, c, d].into()
+    };
+
+    n ^= [0xdc967795; 4].into();
+    n *= [0x97b754b7; 4].into();
+    n ^= [0x866350b1; 4].into();
+    n *= [0x9e3779cd; 4].into();
 
     n
 }
@@ -113,10 +143,4 @@ fn hash(n: u32, rounds: u32) -> u32 {
         hash ^= hash.wrapping_shr(16);
     }
     hash
-}
-
-#[inline(always)]
-fn u32_to_0_1_f32(n: u32) -> f32 {
-    const ONE_OVER_32BITS: f32 = 1.0 / (1u64 << 32) as f32;
-    n as f32 * ONE_OVER_32BITS
 }

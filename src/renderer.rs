@@ -241,14 +241,14 @@ impl<'a> Renderer<'a> {
             for y in bucket.y..(bucket.y + bucket.h) {
                 for x in bucket.x..(bucket.x + bucket.w) {
                     for si in 0..self.spp {
+                        // Raw sample numbers.
+                        let (d0, d1, d2, d3) = get_sample_4d(0, si as u32, (x, y), self.seed);
+                        let (d4, _, _, _) = get_sample_4d(1, si as u32, (x, y), self.seed);
+
                         // Calculate image plane x and y coordinates
                         let (img_x, img_y) = {
-                            let filter_x =
-                                probit(get_sample(3, si as u32, (x, y), self.seed), 2.0 / 6.0)
-                                    + 0.5;
-                            let filter_y =
-                                probit(get_sample(4, si as u32, (x, y), self.seed), 2.0 / 6.0)
-                                    + 0.5;
+                            let filter_x = probit(d3, 2.0 / 6.0) + 0.5;
+                            let filter_y = probit(d4, 2.0 / 6.0) + 0.5;
                             let samp_x = (filter_x + x as f32) * cmpx;
                             let samp_y = (filter_y + y as f32) * cmpy;
                             ((samp_x - 0.5) * x_extent, (0.5 - samp_y) * y_extent)
@@ -260,11 +260,8 @@ impl<'a> Renderer<'a> {
                             self.seed,
                             (x, y),
                             (img_x, img_y),
-                            (
-                                get_sample(1, si as u32, (x, y), self.seed),
-                                get_sample(2, si as u32, (x, y), self.seed),
-                            ),
-                            get_sample(0, si as u32, (x, y), self.seed),
+                            (d1, d2),
+                            d0,
                             map_0_1_to_wavelength(golden_ratio_sample(
                                 si as u32,
                                 hash_u32((x << 16) ^ y, self.seed),
@@ -438,10 +435,10 @@ impl LightPath {
         self.sampling_seed += 1;
     }
 
-    fn next_lds_samp(&mut self) -> f32 {
+    fn next_lds_samp(&mut self) -> (f32, f32, f32, f32) {
         let dimension = self.dim_offset;
         self.dim_offset += 1;
-        get_sample(
+        get_sample_4d(
             dimension,
             self.sample_number,
             self.pixel_co,
@@ -490,12 +487,8 @@ impl LightPath {
 
                     // Prepare light ray
                     self.next_lds_sequence();
-                    let light_n = self.next_lds_samp();
-                    let light_uvw = (
-                        self.next_lds_samp(),
-                        self.next_lds_samp(),
-                        self.next_lds_samp(),
-                    );
+                    let (light_n, d2, d3, d4) = self.next_lds_samp();
+                    let light_uvw = (d2, d3, d4);
                     xform_stack.clear();
                     let light_info = scene.sample_lights(
                         xform_stack,
@@ -609,8 +602,7 @@ impl LightPath {
                         // Sample closure
                         let (dir, filter, pdf) = {
                             self.next_lds_sequence();
-                            let u = self.next_lds_samp();
-                            let v = self.next_lds_samp();
+                            let (u, v, _, _) = self.next_lds_samp();
                             closure.sample(
                                 idata.incoming,
                                 idata.nor,
@@ -703,20 +695,31 @@ impl LightPath {
 /// and switching to random samples at higher dimensions where
 /// LDS samples aren't available.
 #[inline(always)]
-fn get_sample(dimension: u32, i: u32, pixel_co: (u32, u32), seed: u32) -> f32 {
+fn get_sample_4d(
+    dimension_set: u32,
+    i: u32,
+    pixel_co: (u32, u32),
+    seed: u32,
+) -> (f32, f32, f32, f32) {
     // A unique seed for every pixel coordinate up to a resolution of
     // 65536 x 65536.  Also incorperating the seed.
     let seed = pixel_co.0 ^ (pixel_co.1 << 16) ^ seed.wrapping_mul(0x736caf6f);
 
-    match dimension {
-        d if d < sobol::MAX_DIMENSION as u32 => {
+    match dimension_set {
+        ds if ds < sobol::MAX_DIMENSION as u32 => {
             // Sobol sampling.
-            sobol::sample(d, i, seed)
+            let n4 = sobol::sample_4d(ds, i, seed);
+            (n4[0], n4[1], n4[2], n4[3])
         }
-        d => {
+        ds => {
             // Random sampling.
             use crate::hash::hash_u32_to_f32;
-            hash_u32_to_f32(d ^ (i << 16), seed)
+            (
+                hash_u32_to_f32((ds * 4 + 0) ^ (i << 16), seed),
+                hash_u32_to_f32((ds * 4 + 1) ^ (i << 16), seed),
+                hash_u32_to_f32((ds * 4 + 2) ^ (i << 16), seed),
+                hash_u32_to_f32((ds * 4 + 3) ^ (i << 16), seed),
+            )
         }
     }
 }
