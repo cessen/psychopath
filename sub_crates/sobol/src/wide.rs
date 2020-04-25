@@ -112,6 +112,13 @@ pub(crate) mod sse {
                 Int4 { v: n }
             }
         }
+
+        #[inline(always)]
+        pub(crate) fn shr16(self) -> Int4 {
+            Int4 {
+                v: unsafe { _mm_srli_epi32(self.v, 16) },
+            }
+        }
     }
 
     impl std::ops::MulAssign for Int4 {
@@ -187,6 +194,17 @@ pub(crate) mod fallback {
                     self.v[1].reverse_bits(),
                     self.v[2].reverse_bits(),
                     self.v[3].reverse_bits(),
+                ],
+            }
+        }
+
+        pub(crate) fn shr16(self) -> Int4 {
+            Int4 {
+                v: [
+                    self.v[0] >> 16,
+                    self.v[1] >> 16,
+                    self.v[2] >> 16,
+                    self.v[3] >> 16,
                 ],
             }
         }

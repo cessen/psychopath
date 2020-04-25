@@ -99,13 +99,7 @@ fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
 /// with SIMD.
 #[inline(always)]
 fn lk_int4_scramble(mut n: Int4, scramble: u32) -> Int4 {
-    n += {
-        let a = hash(scramble, 2);
-        let b = a ^ 0x174f18ab;
-        let c = a ^ 0x691e72ca;
-        let d = a ^ 0xb40cc1b8;
-        [a, b, c, d].into()
-    };
+    n += hash_4d([scramble; 4].into(), 2);
 
     n ^= [0xdc967795; 4].into();
     n *= [0x97b754b7; 4].into();
@@ -141,6 +135,19 @@ fn hash(n: u32, rounds: u32) -> u32 {
     for _ in 0..rounds {
         hash = hash.wrapping_mul(0x736caf6f);
         hash ^= hash.wrapping_shr(16);
+    }
+    hash
+}
+
+/// A simple 32-bit hash function.  Its quality can be tuned with
+/// the number of rounds used.
+#[inline(always)]
+fn hash_4d(n: Int4, rounds: u32) -> Int4 {
+    let mut hash = n;
+    hash ^= [0x912f69ba, 0x174f18ab, 0x691e72ca, 0xb40cc1b8].into();
+    for _ in 0..rounds {
+        hash *= [0x736caf6f; 4].into();
+        hash ^= hash.shr16();
     }
     hash
 }
