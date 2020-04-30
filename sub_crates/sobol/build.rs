@@ -18,7 +18,7 @@ fn main() {
     let vectors = generate_direction_vectors(NUM_DIMENSIONS);
 
     // Write dimensions limit.
-    f.write_all(format!("pub const MAX_DIMENSION: u32 = {};\n", NUM_DIMENSIONS).as_bytes())
+    f.write_all(format!("const MAX_DIMENSION: u32 = {};\n", NUM_DIMENSIONS).as_bytes())
         .unwrap();
 
     // Write the vectors.
@@ -26,14 +26,8 @@ fn main() {
     // uses them.  First, we interleave the numbers of each set of four
     // dimensions, for SIMD evaluation.  Second, each number is written
     // with reversed bits, to avoid needing to reverse them before scrambling.
-    f.write_all(
-        format!(
-            "pub const REV_VECTORS: &[[[u{0}; 4]; {0}]] = &[\n",
-            SOBOL_BITS
-        )
-        .as_bytes(),
-    )
-    .unwrap();
+    f.write_all(format!("const REV_VECTORS: &[[[u{0}; 4]; {0}]] = &[\n", SOBOL_BITS).as_bytes())
+        .unwrap();
     for d4 in vectors.chunks_exact(4) {
         f.write_all("  [\n".as_bytes()).unwrap();
         for ((a, b), (c, d)) in d4[0]

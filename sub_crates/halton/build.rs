@@ -98,7 +98,7 @@ pub const MAX_DIMENSION: u32 = {};
     f.write_all(
         format!(
             r#"
-pub fn sample(dimension: u32, index: u32) -> f32 {{
+pub fn sample(index: u32, dimension: u32) -> f32 {{
     let mut index = index;
 
     match dimension {{"#

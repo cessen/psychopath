@@ -242,8 +242,8 @@ impl<'a> Renderer<'a> {
                 for x in bucket.x..(bucket.x + bucket.w) {
                     for si in 0..self.spp {
                         // Raw sample numbers.
-                        let (d0, d1, d2, d3) = get_sample_4d(0, si as u32, (x, y), self.seed);
-                        let (d4, _, _, _) = get_sample_4d(1, si as u32, (x, y), self.seed);
+                        let (d0, d1, d2, d3) = get_sample_4d(si as u32, 0, (x, y), self.seed);
+                        let (d4, _, _, _) = get_sample_4d(si as u32, 1, (x, y), self.seed);
 
                         // Calculate image plane x and y coordinates
                         let (img_x, img_y) = {
@@ -439,8 +439,8 @@ impl LightPath {
         let dimension = self.dim_offset;
         self.dim_offset += 1;
         get_sample_4d(
-            dimension,
             self.sample_number,
+            dimension,
             self.pixel_co,
             self.sampling_seed,
         )
@@ -696,8 +696,8 @@ impl LightPath {
 /// LDS samples aren't available.
 #[inline(always)]
 fn get_sample_4d(
-    dimension_set: u32,
     i: u32,
+    dimension_set: u32,
     pixel_co: (u32, u32),
     seed: u32,
 ) -> (f32, f32, f32, f32) {
@@ -706,9 +706,9 @@ fn get_sample_4d(
     let seed = pixel_co.0 ^ (pixel_co.1 << 16) ^ seed.wrapping_mul(0x736caf6f);
 
     match dimension_set {
-        ds if ds < sobol::MAX_DIMENSION as u32 => {
+        ds if ds < sobol::MAX_DIMENSION_SET as u32 => {
             // Sobol sampling.
-            let n4 = sobol::sample_4d(ds, i, seed);
+            let n4 = sobol::sample_4d(i, ds, seed);
             (n4[0], n4[1], n4[2], n4[3])
         }
         ds => {
