@@ -4,30 +4,9 @@
 // #[cfg(all(target_arch = "x86_64", target_feature = "sse4.1"))]
 pub(crate) mod sse {
     use core::arch::x86_64::{
-        __m128i,
-
-        // SSE2 or less
-        _mm_add_epi32,
-        _mm_and_si128,
-        _mm_cvtepi32_ps,
-        _mm_mul_ps,
-        _mm_or_si128,
-        _mm_set1_epi32,
-        _mm_set1_ps,
-        _mm_setzero_si128,
-        _mm_slli_epi32,
-        _mm_srli_epi32,
-        _mm_xor_si128,
-    };
-
-    use core::arch::x86_64::{
-        // SSE3 / SSE4.1
-        // Note: these aren't necessarily actually available on all
-        // x86_64 platforms, so their use here isn't quite correct
-        // with the platform guard above.
-        // TODO: fix this at some point.
-        _mm_loadu_si128,
-        _mm_mullo_epi32,
+        __m128i, _mm_add_epi32, _mm_and_si128, _mm_cvtepi32_ps, _mm_mul_ps, _mm_or_si128,
+        _mm_set1_epi32, _mm_set1_ps, _mm_set_epi32, _mm_setzero_si128, _mm_slli_epi32,
+        _mm_srli_epi32, _mm_xor_si128,
     };
 
     #[derive(Debug, Copy, Clone)]
@@ -124,9 +103,34 @@ pub(crate) mod sse {
     impl std::ops::MulAssign for Int4 {
         #[inline(always)]
         fn mul_assign(&mut self, other: Self) {
-            *self = Int4 {
-                v: unsafe { _mm_mullo_epi32(self.v, other.v) },
-            };
+            // This only works with SSE 4.1 support.
+            #[cfg(target_feature = "sse4.1")]
+            unsafe {
+                use core::arch::x86_64::_mm_mullo_epi32;
+                *self = Int4 {
+                    v: _mm_mullo_epi32(self.v, other.v),
+                };
+            }
+
+            // This works on all x86-64 chips.
+            #[cfg(not(target_feature = "sse4.1"))]
+            unsafe {
+                use core::arch::x86_64::{_mm_mul_epu32, _mm_shuffle_epi32};
+                let a = _mm_and_si128(
+                    _mm_mul_epu32(self.v, other.v),
+                    _mm_set_epi32(0, 0xffffffffu32 as i32, 0, 0xffffffffu32 as i32),
+                );
+                let b = _mm_and_si128(
+                    _mm_mul_epu32(
+                        _mm_shuffle_epi32(self.v, 0b11_11_01_01),
+                        _mm_shuffle_epi32(other.v, 0b11_11_01_01),
+                    ),
+                    _mm_set_epi32(0, 0xffffffffu32 as i32, 0, 0xffffffffu32 as i32),
+                );
+                *self = Int4 {
+                    v: _mm_or_si128(a, _mm_shuffle_epi32(b, 0b10_11_00_01)),
+                };
+            }
         }
     }
 
@@ -152,7 +156,7 @@ pub(crate) mod sse {
         #[inline(always)]
         fn from(v: [u32; 4]) -> Self {
             Int4 {
-                v: unsafe { _mm_loadu_si128(std::mem::transmute(&v as *const u32)) },
+                v: unsafe { std::mem::transmute(v) },
             }
         }
     }
