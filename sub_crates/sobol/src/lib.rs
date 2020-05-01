@@ -1,10 +1,7 @@
-//! An implementation of the Sobol sequence with Owen scrambling.
+//! A seedable, Owen-scrambled Sobol sequence.
 //!
-//! This implementation also allows seeding to create multiple statistically
-//! independent Sobol sequences, using a technique due to Brent Burley.  This
-//! is useful for any situation where you want to decorrelate sampling.
-//!
-//! This implementation is SIMD accelerated with SSE 4.1 on x86-64 platforms.
+//! This implementation is limited to `2^16` samples, and will loop back to
+//! the start of the sequence after that limit.
 
 mod wide;
 use wide::Int4;
@@ -15,21 +12,16 @@ include!(concat!(env!("OUT_DIR"), "/vectors.inc"));
 
 pub const MAX_DIMENSION_SET: u32 = MAX_DIMENSION / 4;
 
-/// Compute four dimensions of a sample from the Owen-scrambled Sobol sequence.
+/// Compute four dimensions of a single sample in the Sobol sequence.
 ///
-/// `sample_index` specifies which sample in the Sobol sequence to compute
-/// the dimensions for.  This implementation produces up to 2^16 samples total,
-/// and will loop back to the start of the sequence after that.
+/// `sample_index` specifies which sample in the Sobol sequence to compute.
 ///
-/// `dimension_set` specifies which four dimensions to compute:
-/// * 0 = dimensions 0-3
-/// * 1 = dimensions 4-7
-/// * 2 = dimensions 8-11
-/// * And so on.
+/// `dimension_set` specifies which four dimensions to compute. `0` yields the
+/// first four dimensions, `1` the second four dimensions, and so on.
 ///
-/// Passing a different `seed` will produce a completely statistically
-/// independent Sobol sequence, with no stratification with or correlation to
-/// sequences with other seeds.
+/// `seed` produces statistically independent Sobol sequences.  Passing two
+/// different seeds will produce two different sequences that are only randomly
+/// associated, with no stratification or correlation between them.
 #[inline]
 pub fn sample_4d(sample_index: u32, dimension_set: u32, seed: u32) -> [f32; 4] {
     assert!(dimension_set < MAX_DIMENSION_SET);
