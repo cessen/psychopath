@@ -3,6 +3,8 @@
 //! This implementation is limited to `2^16` samples, and will loop back to
 //! the start of the sequence after that limit.
 
+#![allow(clippy::unreadable_literal)]
+
 mod wide;
 use wide::Int4;
 

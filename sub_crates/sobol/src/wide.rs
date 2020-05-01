@@ -255,7 +255,7 @@ pub(crate) mod fallback {
 
     impl From<[u32; 4]> for Int4 {
         fn from(v: [u32; 4]) -> Self {
-            Int4 { v: v }
+            Int4 { v }
         }
     }
 }
