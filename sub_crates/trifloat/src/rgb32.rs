@@ -59,11 +59,6 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
     }
 
     // Encode Co and Cg as 8-bit integers.
-    // Note that the max values for each of these will get clamped
-    // very slightly, but that represents extremely saturated
-    // colors, where the human eye is not very sensitive to chroma
-    // differences anyway.  And the trade-off is that we can
-    // represent 0.0 (completely unsaturated, no chroma) exactly.
     let inv_y = 1.0 / y;
     let co_8bit = ((co * inv_y * 63.5) + 127.5).min(255.0).max(0.0) as u8;
     let cg_8bit = ((cg * inv_y * 127.0) + 127.5).min(255.0).max(0.0) as u8;
@@ -95,8 +90,6 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
 
 /// Decodes a packed HDR RGB 32-bit format into three full
 /// floating point RGB numbers.
-///
-/// This operation is lossless and cannot fail.
 #[inline]
 pub fn decode(packed_rgb: u32) -> (f32, f32, f32) {
     // Reconstruct Y, Co, and Cg from the packed bits.
