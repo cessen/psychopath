@@ -1,15 +1,15 @@
 use bencher::{benchmark_group, benchmark_main, black_box, Bencher};
 use rand::{rngs::SmallRng, FromEntropy, Rng};
-use trifloat::{signed48, unsigned32};
+use trifloat::{rgb32, signed48, unsigned32};
 
 //----
 
 fn unsigned32_encode_100_values(bench: &mut Bencher) {
     let mut rng = SmallRng::from_entropy();
     bench.iter(|| {
-        let x = rng.gen::<f32>() - 0.5;
-        let y = rng.gen::<f32>() - 0.5;
-        let z = rng.gen::<f32>() - 0.5;
+        let x = rng.gen::<f32>();
+        let y = rng.gen::<f32>();
+        let z = rng.gen::<f32>();
         for _ in 0..100 {
             black_box(unsigned32::encode(black_box((x, y, z))));
         }
@@ -48,6 +48,28 @@ fn signed48_decode_100_values(bench: &mut Bencher) {
     });
 }
 
+fn rgb32_encode_100_values(bench: &mut Bencher) {
+    let mut rng = SmallRng::from_entropy();
+    bench.iter(|| {
+        let y = rng.gen::<f32>();
+        let x = rng.gen::<f32>();
+        let z = rng.gen::<f32>();
+        for _ in 0..100 {
+            black_box(rgb32::encode(black_box((x, y, z))));
+        }
+    });
+}
+
+fn rgb32_decode_100_values(bench: &mut Bencher) {
+    let mut rng = SmallRng::from_entropy();
+    bench.iter(|| {
+        let v = rng.gen::<u32>();
+        for _ in 0..100 {
+            black_box(rgb32::decode(black_box(v)));
+        }
+    });
+}
+
 //----
 
 benchmark_group!(
@@ -56,5 +78,7 @@ benchmark_group!(
     unsigned32_decode_100_values,
     signed48_encode_100_values,
     signed48_decode_100_values,
+    rgb32_encode_100_values,
+    rgb32_decode_100_values,
 );
 benchmark_main!(benches);

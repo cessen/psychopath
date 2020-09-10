@@ -4,6 +4,7 @@
 //! The motivating use-case for this is compactly storing HDR RGB colors.  But
 //! it may be useful for other things as well.
 
+pub mod rgb32;
 pub mod signed48;
 pub mod unsigned32;
 
