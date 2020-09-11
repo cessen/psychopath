@@ -33,3 +33,8 @@ fn fiddle_log2(n: f32) -> i32 {
     use std::f32;
     ((f32::to_bits(n) >> 23) & 0b1111_1111) as i32 - 127
 }
+
+#[inline(always)]
+fn clamp_0_1(n: f32) -> f32 {
+    n.max(0.0).min(1.0)
+}
