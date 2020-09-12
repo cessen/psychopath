@@ -23,8 +23,6 @@
 //! The Y-mantissa has an implicit leading one, giving 11 bits of
 //! precision.
 
-use crate::clamp_0_1;
-
 const EXP_BIAS: i32 = 23;
 
 /// The largest value this format can store.
@@ -43,6 +41,30 @@ pub const MAX: f32 = ((1u64 << (63 - EXP_BIAS)) - (1 << (52 - EXP_BIAS))) as f32
 /// the numerical precision of all channels depends on the magnitude
 /// of the over-all RGB color.
 pub const MIN: f32 = 1.0 / (1 << (EXP_BIAS - 2)) as f32;
+
+/// The output c1 and c2 values should always be in the range [0, 1].
+#[inline(always)]
+fn rgb2ycc(rgb: (f32, f32, f32)) -> (f32, f32, f32) {
+    let rb = rgb.0 + rgb.2;
+    let y = (rb * 0.5) + rgb.1;
+    let c1 = rgb.1 / y;
+    let c2 = if rb > 0.0 { rgb.0 / rb } else { 0.5 };
+
+    (y, c1, c2)
+}
+
+/// The input c1 and c2 values should always be in the range [0, 1].
+#[inline(always)]
+fn ycc2rgb(ycc: (f32, f32, f32)) -> (f32, f32, f32) {
+    let (y, c1, c2) = ycc;
+
+    let g = y * c1;
+    let rb = (y - g) * 2.0;
+    let r = rb * c2;
+    let b = rb - r;
+
+    (r, g, b)
+}
 
 /// Encodes three floating point RGB values into a packed 32-bit format.
 ///
@@ -68,14 +90,7 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
     );
 
     // Convert to Y/Green-Magenta/Red-Blue components.
-    let u = floats.0 + floats.2;
-    let y = (u * 0.5) + floats.1;
-    let green_magenta = clamp_0_1(floats.1 / y);
-    let red_blue = if u > 0.0 {
-        clamp_0_1(floats.0 / u)
-    } else {
-        0.5
-    };
+    let (y, c1, c2) = rgb2ycc(floats);
 
     // Bit-fiddle to get the float components of Y.
     // This assumes we're working with a standard 32-bit IEEE float.
@@ -84,8 +99,8 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
     let y_exp = ((y_ieee_bits >> 23) & 0b1111_1111) as i32 - 127;
 
     // Encode Cg and Cr as 8-bit integers.
-    let gm_8bit = ((green_magenta * 254.0) + 0.5) as u8;
-    let rb_8bit = ((red_blue * 254.0) + 0.5) as u8;
+    let c1_8bit = ((c1 * 254.0) + 0.5) as u8;
+    let c2_8bit = ((c2 * 254.0) + 0.5) as u8;
 
     // Pack values into a u32 and return.
     if y_exp <= (0 - EXP_BIAS) {
@@ -102,12 +117,12 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
             // just go with white.
             0xffff7f7f
         } else {
-            0xffff0000 | ((gm_8bit as u32) << 8) | rb_8bit as u32
+            0xffff0000 | ((c1_8bit as u32) << 8) | c2_8bit as u32
         }
     } else {
         // Common case.
         let exp = (y_exp + EXP_BIAS) as u32;
-        (exp << 26) | (y_mantissa << 16) | ((gm_8bit as u32) << 8) | rb_8bit as u32
+        (exp << 26) | (y_mantissa << 16) | ((c1_8bit as u32) << 8) | c2_8bit as u32
     }
 }
 
@@ -127,22 +142,17 @@ pub fn decode(packed_rgb: u32) -> (f32, f32, f32) {
             )
         }
     };
-    let green_magenta = {
-        let gm_8bit = (packed_rgb >> 8) & 0xff;
-        (gm_8bit as f32) * (1.0 / 254.0)
+    let c1 = {
+        let c1_8bit = (packed_rgb >> 8) & 0xff;
+        (c1_8bit as f32) * (1.0 / 254.0)
     };
-    let red_blue = {
-        let rb_8bit = packed_rgb & 0xff;
-        (rb_8bit as f32) * (1.0 / 254.0)
+    let c2 = {
+        let c2_8bit = packed_rgb & 0xff;
+        (c2_8bit as f32) * (1.0 / 254.0)
     };
 
     // Convert back to RGB.
-    let g = y * green_magenta;
-    let u = (y - g) * 2.0;
-    let r = u * red_blue;
-    let b = u - r;
-
-    (r, g, b)
+    ycc2rgb((y, c1, c2))
 }
 
 #[cfg(test)]
