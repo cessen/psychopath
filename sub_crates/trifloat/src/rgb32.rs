@@ -7,23 +7,24 @@
 //! eye is most sensitive to.
 //!
 //! This encoding first transforms the color into a Y (luma) component
-//! and two chroma components (green-magenta and red-blue), and then
-//! fiddles those components into a special 32-bit format.
-//! The Y component is stored as an unsigned float, with 6 bits of
-//! exponent and 10 bits of mantissa.  The two chroma components are
-//! each stored as 8-bit integers.
+//! and two chroma components (C1 and C2), and then fiddles those
+//! components into a special 32-bit format.  The Y component is stored
+//! as an unsigned float, with 6 bits of exponent and 10 bits of
+//! mantissa.  The two chroma components are each stored as 8-bit
+//! integers.
 //!
 //! The layout is:
 //!
 //! 1. Y-exponent: 6 bits
 //! 2. Y-mantissa: 10 bits
-//! 3. Green-Magenta: 8 bits
-//! 4. Red-Blue: 8 bits
+//! 3. C1: 8 bits
+//! 4. C2: 8 bits
 //!
 //! The Y-mantissa has an implicit leading one, giving 11 bits of
 //! precision.
 
 const EXP_BIAS: i32 = 23;
+const CHROMA_QUANT: u32 = 254;
 
 /// The largest value this format can store.
 ///
@@ -42,28 +43,35 @@ pub const MAX: f32 = ((1u64 << (63 - EXP_BIAS)) - (1 << (52 - EXP_BIAS))) as f32
 /// of the over-all RGB color.
 pub const MIN: f32 = 1.0 / (1 << (EXP_BIAS - 2)) as f32;
 
-/// The output c1 and c2 values should always be in the range [0, 1].
+/// The output c1 and c2 values are always in the range [0, 1].
 #[inline(always)]
-fn rgb2ycc(rgb: (f32, f32, f32)) -> (f32, f32, f32) {
-    let rb = rgb.0 + rgb.2;
-    let y = (rb * 0.5) + rgb.1;
-    let c1 = rgb.1 / y;
-    let c2 = if rb > 0.0 { rgb.0 / rb } else { 0.5 };
+fn rgb2ycc(r: f32, g: f32, b: f32) -> (f32, f32, f32) {
+    let rb = (r + b) * 0.5;
+    let y = g + rb;
 
-    (y, c1, c2)
+    if r > b {
+        (y, rb / y, b / y)
+    } else {
+        (y, r / y, rb / y)
+    }
 }
 
 /// The input c1 and c2 values should always be in the range [0, 1].
 #[inline(always)]
-fn ycc2rgb(ycc: (f32, f32, f32)) -> (f32, f32, f32) {
-    let (y, c1, c2) = ycc;
-
-    let g = y * c1;
-    let rb = (y - g) * 2.0;
-    let r = rb * c2;
-    let b = rb - r;
-
-    (r, g, b)
+fn ycc2rgb(y: f32, c1: f32, c2: f32) -> (f32, f32, f32) {
+    if c1 > c2 {
+        let rb = y * c1;
+        let g = y - rb;
+        let b = y * c2;
+        let r = (rb * 2.0) - b;
+        (r, g, b)
+    } else {
+        let rb = y * c2;
+        let g = y - rb;
+        let r = y * c1;
+        let b = (rb * 2.0) - r;
+        (r, g, b)
+    }
 }
 
 /// Encodes three floating point RGB values into a packed 32-bit format.
@@ -89,8 +97,8 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
         floats.2
     );
 
-    // Convert to Y/Green-Magenta/Red-Blue components.
-    let (y, c1, c2) = rgb2ycc(floats);
+    // Convert to luma-chroma format.
+    let (y, c1, c2) = rgb2ycc(floats.0, floats.1, floats.2);
 
     // Bit-fiddle to get the float components of Y.
     // This assumes we're working with a standard 32-bit IEEE float.
@@ -98,9 +106,9 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
     let y_mantissa = (y_ieee_bits >> 13) & 0b11_1111_1111;
     let y_exp = ((y_ieee_bits >> 23) & 0b1111_1111) as i32 - 127;
 
-    // Encode Cg and Cr as 8-bit integers.
-    let c1_8bit = ((c1 * 254.0) + 0.5) as u8;
-    let c2_8bit = ((c2 * 254.0) + 0.5) as u8;
+    // Encode C1 and C2 as 8-bit integers.
+    let c1_8bit = ((c1 * CHROMA_QUANT as f32) + 0.5) as u32;
+    let c2_8bit = ((c2 * CHROMA_QUANT as f32) + 0.5) as u32;
 
     // Pack values into a u32 and return.
     if y_exp <= (0 - EXP_BIAS) {
@@ -115,14 +123,15 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
         if y.is_infinite() {
             // If luma is infinity, our chroma values are bogus, so
             // just go with white.
-            0xffff7f7f
+            let tmp = CHROMA_QUANT / 2;
+            0xffff0000 | tmp << 8 | tmp
         } else {
-            0xffff0000 | ((c1_8bit as u32) << 8) | c2_8bit as u32
+            0xffff0000 | (c1_8bit << 8) | c2_8bit
         }
     } else {
         // Common case.
         let exp = (y_exp + EXP_BIAS) as u32;
-        (exp << 26) | (y_mantissa << 16) | ((c1_8bit as u32) << 8) | c2_8bit as u32
+        (exp << 26) | (y_mantissa << 16) | (c1_8bit << 8) | c2_8bit
     }
 }
 
@@ -130,8 +139,7 @@ pub fn encode(floats: (f32, f32, f32)) -> u32 {
 /// floating point RGB numbers.
 #[inline]
 pub fn decode(packed_rgb: u32) -> (f32, f32, f32) {
-    // Pull out Y, Green-Magenta, and Red-Blue from the packed
-    // bits.
+    // Pull out Y, C1, and C2 from the packed bits.
     let y = {
         let exp = (packed_rgb & 0xfc00_0000) >> 26;
         if exp == 0 {
@@ -144,15 +152,15 @@ pub fn decode(packed_rgb: u32) -> (f32, f32, f32) {
     };
     let c1 = {
         let c1_8bit = (packed_rgb >> 8) & 0xff;
-        (c1_8bit as f32) * (1.0 / 254.0)
+        (c1_8bit as f32) * (1.0 / CHROMA_QUANT as f32)
     };
     let c2 = {
         let c2_8bit = packed_rgb & 0xff;
-        (c2_8bit as f32) * (1.0 / 254.0)
+        (c2_8bit as f32) * (1.0 / CHROMA_QUANT as f32)
     };
 
     // Convert back to RGB.
-    ycc2rgb((y, c1, c2))
+    ycc2rgb(y, c1, c2)
 }
 
 #[cfg(test)]
