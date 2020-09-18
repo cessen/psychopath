@@ -6,6 +6,7 @@
 
 pub mod signed48;
 pub mod unsigned32;
+pub mod unsigned40;
 
 //===========================================================================
 // Some shared functions used by the other modules in this crate.
