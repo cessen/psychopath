@@ -4,67 +4,73 @@ use trifloat::{signed48, unsigned32, unsigned40};
 
 //----
 
-fn unsigned32_encode_100_values(bench: &mut Bencher) {
+fn unsigned32_encode_1000_values(bench: &mut Bencher) {
     let mut rng = SmallRng::from_entropy();
     bench.iter(|| {
         let x = rng.gen::<f32>();
         let y = rng.gen::<f32>();
         let z = rng.gen::<f32>();
-        for _ in 0..100 {
+        for _ in 0..1000 {
             black_box(unsigned32::encode(black_box((x, y, z))));
         }
     });
 }
 
-fn unsigned32_decode_100_values(bench: &mut Bencher) {
+fn unsigned32_decode_1000_values(bench: &mut Bencher) {
     let mut rng = SmallRng::from_entropy();
     bench.iter(|| {
         let v = rng.gen::<u32>();
-        for _ in 0..100 {
+        for _ in 0..1000 {
             black_box(unsigned32::decode(black_box(v)));
         }
     });
 }
 
-fn unsigned40_encode_100_values(bench: &mut Bencher) {
+fn unsigned40_encode_1000_values(bench: &mut Bencher) {
     let mut rng = SmallRng::from_entropy();
     bench.iter(|| {
         let x = rng.gen::<f32>();
         let y = rng.gen::<f32>();
         let z = rng.gen::<f32>();
-        for _ in 0..100 {
+        for _ in 0..1000 {
             black_box(unsigned40::encode(black_box((x, y, z))));
         }
     });
 }
 
-fn unsigned40_decode_100_values(bench: &mut Bencher) {
+fn unsigned40_decode_1000_values(bench: &mut Bencher) {
     let mut rng = SmallRng::from_entropy();
     bench.iter(|| {
-        let v = rng.gen::<u64>();
-        for _ in 0..100 {
+        let v = [
+            rng.gen::<u8>(),
+            rng.gen::<u8>(),
+            rng.gen::<u8>(),
+            rng.gen::<u8>(),
+            rng.gen::<u8>(),
+        ];
+        for _ in 0..1000 {
             black_box(unsigned40::decode(black_box(v)));
         }
     });
 }
 
-fn signed48_encode_100_values(bench: &mut Bencher) {
+fn signed48_encode_1000_values(bench: &mut Bencher) {
     let mut rng = SmallRng::from_entropy();
     bench.iter(|| {
         let x = rng.gen::<f32>() - 0.5;
         let y = rng.gen::<f32>() - 0.5;
         let z = rng.gen::<f32>() - 0.5;
-        for _ in 0..100 {
+        for _ in 0..1000 {
             black_box(signed48::encode(black_box((x, y, z))));
         }
     });
 }
 
-fn signed48_decode_100_values(bench: &mut Bencher) {
+fn signed48_decode_1000_values(bench: &mut Bencher) {
     let mut rng = SmallRng::from_entropy();
     bench.iter(|| {
         let v = rng.gen::<u64>() & 0x0000_FFFF_FFFF_FFFF;
-        for _ in 0..100 {
+        for _ in 0..1000 {
             black_box(signed48::decode(black_box(v)));
         }
     });
@@ -74,11 +80,11 @@ fn signed48_decode_100_values(bench: &mut Bencher) {
 
 benchmark_group!(
     benches,
-    unsigned32_encode_100_values,
-    unsigned32_decode_100_values,
-    unsigned40_encode_100_values,
-    unsigned40_decode_100_values,
-    signed48_encode_100_values,
-    signed48_decode_100_values,
+    unsigned32_encode_1000_values,
+    unsigned32_decode_1000_values,
+    unsigned40_encode_1000_values,
+    unsigned40_decode_1000_values,
+    signed48_encode_1000_values,
+    signed48_decode_1000_values,
 );
 benchmark_main!(benches);
