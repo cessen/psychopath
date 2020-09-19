@@ -108,21 +108,31 @@ pub fn encode(xyz: (f32, f32, f32)) -> u32 {
 /// Decodes from 32-bit FloatLuv to CIE XYZ.
 #[inline]
 pub fn decode(luv32: u32) -> (f32, f32, f32) {
-    // Unpack values.
-    let l_exp = luv32 >> 26;
-    let l_mant = (luv32 >> 16) & 0b11_1111_1111;
-    let u = ((luv32 >> 8) & 0xff) as f32 * (1.0 / UV_SCALE);
-    let v4 = (luv32 & 0xff).max(1) as f32 * (4.0 / UV_SCALE); // 4 * v
-
-    if l_exp == 0 {
+    // Check for zero.
+    if luv32 & 0xffff0000 == 0 {
         return (0.0, 0.0, 0.0);
     }
 
-    let y = f32::from_bits(((l_exp + 127 - EXP_BIAS as u32) << 23) | (l_mant << 13));
-    let x = y * u * (9.0 / v4); // y * (9u / 4v)
-    let z = (y / v4) * (12.0 - (3.0 * u) - (5.0 * v4)); // y * ((12 - 3u - 20v) / 4v)
+    // Unpack values.
+    let l_exp = luv32 >> 26;
+    let l_mant = (luv32 >> 16) & 0x3ff;
+    let u = ((luv32 >> 8) & 0xff) as f32; // Range 0.0-255.0
+    let v = (luv32 & 0xff).max(1) as f32; // Range 0.0-255.0
 
-    (x, y, z.max(0.0))
+    // Calculate y.
+    let y = f32::from_bits(((l_exp + 127 - EXP_BIAS as u32) << 23) | (l_mant << 13));
+
+    // Calculate x and z.
+    // This is re-worked from the original equations, to allow a bunch of stuff
+    // to cancel out and avoid operations.  It makes the underlying equations a
+    // bit non-obvious.
+    // We also roll the UV_SCALE application into the final x and z formulas,
+    // since most of that also cancels if we do it there.
+    let tmp = y / v;
+    let x = tmp * (u * 2.25); // y * (9u / 4v)
+    let z = tmp * ((3.0 * UV_SCALE) - (0.75 * u) - (5.0 * v)).max(0.0); // y * ((12 - 3u - 20v) / 4v)
+
+    (x, y, z)
 }
 
 #[cfg(test)]
