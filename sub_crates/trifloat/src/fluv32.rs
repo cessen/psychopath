@@ -107,17 +107,17 @@ pub fn encode(xyz: (f32, f32, f32)) -> u32 {
 
 /// Decodes from 32-bit FloatLuv to CIE XYZ.
 #[inline]
-pub fn decode(luv32: u32) -> (f32, f32, f32) {
+pub fn decode(fluv32: u32) -> (f32, f32, f32) {
     // Check for zero.
-    if luv32 & 0xffff0000 == 0 {
+    if fluv32 & 0xffff0000 == 0 {
         return (0.0, 0.0, 0.0);
     }
 
     // Unpack values.
-    let l_exp = luv32 >> 26;
-    let l_mant = (luv32 >> 16) & 0x3ff;
-    let u = ((luv32 >> 8) & 0xff) as f32; // Range 0.0-255.0
-    let v = (luv32 & 0xff).max(1) as f32; // Range 0.0-255.0
+    let l_exp = fluv32 >> 26;
+    let l_mant = (fluv32 >> 16) & 0x3ff;
+    let u = ((fluv32 >> 8) & 0xff) as f32; // Range 0.0-255.0
+    let v = (fluv32 & 0xff).max(1) as f32; // Range 0.0-255.0
 
     // Calculate y.
     let y = f32::from_bits(((l_exp + 127 - EXP_BIAS as u32) << 23) | (l_mant << 13));
