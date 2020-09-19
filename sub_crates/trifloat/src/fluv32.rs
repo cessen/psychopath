@@ -79,7 +79,7 @@ pub fn encode(xyz: (f32, f32, f32)) -> u32 {
     fn encode_uv(xyz: (f32, f32, f32)) -> u32 {
         let s = xyz.0 + (15.0 * xyz.1) + (3.0 * xyz.2);
         let u = ((4.0 * UV_SCALE) * xyz.0 / s).max(0.0).min(255.0) as u32;
-        let v = ((9.0 * UV_SCALE) * xyz.1 / s).max(0.0).min(255.0) as u32;
+        let v = ((9.0 * UV_SCALE) * xyz.1 / s).max(1.0).min(255.0) as u32;
         (u << 8) | v
     };
 
@@ -117,7 +117,7 @@ pub fn decode(fluv32: u32) -> (f32, f32, f32) {
     let l_exp = fluv32 >> 26;
     let l_mant = (fluv32 >> 16) & 0x3ff;
     let u = ((fluv32 >> 8) & 0xff) as f32; // Range 0.0-255.0
-    let v = (fluv32 & 0xff).max(1) as f32; // Range 0.0-255.0
+    let v = (fluv32 & 0xff) as f32; // Range 0.0-255.0
 
     // Calculate y.
     let y = f32::from_bits(((l_exp + 127 - EXP_BIAS as u32) << 23) | (l_mant << 13));
