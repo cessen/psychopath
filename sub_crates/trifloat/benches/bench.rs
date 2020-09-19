@@ -69,7 +69,14 @@ fn signed48_encode_1000_values(bench: &mut Bencher) {
 fn signed48_decode_1000_values(bench: &mut Bencher) {
     let mut rng = SmallRng::from_entropy();
     bench.iter(|| {
-        let v = rng.gen::<u64>() & 0x0000_FFFF_FFFF_FFFF;
+        let v = [
+            rng.gen::<u8>(),
+            rng.gen::<u8>(),
+            rng.gen::<u8>(),
+            rng.gen::<u8>(),
+            rng.gen::<u8>(),
+            rng.gen::<u8>(),
+        ];
         for _ in 0..1000 {
             black_box(signed48::decode(black_box(v)));
         }

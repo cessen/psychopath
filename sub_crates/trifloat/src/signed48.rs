@@ -42,13 +42,24 @@ const EXP_BIAS: i32 = 26;
 /// to `MAX` and `MIN` respectively, including +/- infinity.  Values are
 /// converted to trifloat precision by rounding towards zero.
 ///
-/// Only the lower 48 bits of the return value are used.  The highest 16 bits
-/// will all be zero and can be safely discarded.
-///
 /// Warning: NaN's are _not_ supported by the trifloat format.  There are
 /// debug-only assertions in place to catch such values in the input floats.
 #[inline]
-pub fn encode(floats: (f32, f32, f32)) -> u64 {
+pub fn encode(floats: (f32, f32, f32)) -> [u8; 6] {
+    u64_to_bytes(encode_64(floats))
+}
+
+/// Decodes a signed 48-bit trifloat into three full floating point numbers.
+///
+/// This operation is lossless and cannot fail.
+#[inline]
+pub fn decode(trifloat: [u8; 6]) -> (f32, f32, f32) {
+    decode_64(bytes_to_u64(trifloat))
+}
+
+// Workhorse encode function, which operates on u64.
+#[inline(always)]
+fn encode_64(floats: (f32, f32, f32)) -> u64 {
     debug_assert!(
         !floats.0.is_nan() && !floats.1.is_nan() && !floats.2.is_nan(),
         "trifloat::signed48::encode(): encoding to signed tri-floats only \
@@ -86,13 +97,9 @@ pub fn encode(floats: (f32, f32, f32)) -> u64 {
     }
 }
 
-/// Decodes a signed 48-bit trifloat into three full floating point numbers.
-///
-/// This operation is lossless and cannot fail.  Only the lower 48 bits of the
-/// input value are used--the upper 16 bits can safely be anything and are
-/// ignored.
-#[inline]
-pub fn decode(trifloat: u64) -> (f32, f32, f32) {
+// Workhorse decode function, which operates on u64.
+#[inline(always)]
+fn decode_64(trifloat: u64) -> (f32, f32, f32) {
     // Unpack values.
     let x = (trifloat >> 34) & 0b111_11111_11111;
     let y = (trifloat >> 20) & 0b111_11111_11111;
@@ -113,6 +120,29 @@ pub fn decode(trifloat: u64) -> (f32, f32, f32) {
     )
 }
 
+#[inline(always)]
+fn u64_to_bytes(n: u64) -> [u8; 6] {
+    let a = n.to_ne_bytes();
+    let mut b = [0u8; 6];
+    if cfg!(target_endian = "big") {
+        (&mut b[..]).copy_from_slice(&a[2..8]);
+    } else {
+        (&mut b[..]).copy_from_slice(&a[0..6]);
+    }
+    b
+}
+
+#[inline(always)]
+fn bytes_to_u64(a: [u8; 6]) -> u64 {
+    let mut b = [0u8; 8];
+    if cfg!(target_endian = "big") {
+        (&mut b[2..8]).copy_from_slice(&a[..]);
+    } else {
+        (&mut b[0..6]).copy_from_slice(&a[..]);
+    }
+    u64::from_ne_bytes(b)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,8 +155,8 @@ mod tests {
     fn all_zeros() {
         let fs = (0.0f32, 0.0f32, 0.0f32);
 
-        let tri = encode(fs);
-        let fs2 = decode(tri);
+        let tri = encode_64(fs);
+        let fs2 = decode_64(tri);
 
         assert_eq!(tri, 0);
         assert_eq!(fs, fs2);
@@ -200,8 +230,8 @@ mod tests {
 
         assert_eq!((MAX, MAX, MAX), round_trip(fs));
         assert_eq!((MIN, MIN, MIN), round_trip(fsn));
-        assert_eq!((MAX, MAX, MAX), decode(0x7FFD_FFF7_FFFF));
-        assert_eq!((MIN, MIN, MIN), decode(0xFFFF_FFFF_FFFF));
+        assert_eq!((MAX, MAX, MAX), decode_64(0x7FFD_FFF7_FFFF));
+        assert_eq!((MIN, MIN, MIN), decode_64(0xFFFF_FFFF_FFFF));
     }
 
     #[test]
@@ -212,8 +242,8 @@ mod tests {
 
         assert_eq!((MAX, 0.0, 0.0), round_trip(fs));
         assert_eq!((MIN, 0.0, 0.0), round_trip(fsn));
-        assert_eq!(0x7FFC0000003F, encode(fs));
-        assert_eq!(0xFFFC0000003F, encode(fsn));
+        assert_eq!(0x7FFC0000003F, encode_64(fs));
+        assert_eq!(0xFFFC0000003F, encode_64(fsn));
     }
 
     #[test]
@@ -230,7 +260,7 @@ mod tests {
         let fs = (MIN_POSITIVE * 1.5, MIN_POSITIVE, MIN_POSITIVE * 0.50);
         let fsn = (-MIN_POSITIVE * 1.5, -MIN_POSITIVE, -MIN_POSITIVE * 0.50);
 
-        assert_eq!((MIN_POSITIVE, -MIN_POSITIVE, 0.0), decode(0x600100000));
+        assert_eq!((MIN_POSITIVE, -MIN_POSITIVE, 0.0), decode_64(0x600100000));
         assert_eq!((MIN_POSITIVE, MIN_POSITIVE, 0.0), round_trip(fs));
         assert_eq!((-MIN_POSITIVE, -MIN_POSITIVE, -0.0), round_trip(fsn));
     }
@@ -238,7 +268,7 @@ mod tests {
     #[test]
     fn underflow() {
         let fs = (MIN_POSITIVE * 0.5, -MIN_POSITIVE * 0.5, MIN_POSITIVE);
-        assert_eq!(0x200000040, encode(fs));
+        assert_eq!(0x200000040, encode_64(fs));
         assert_eq!((0.0, -0.0, MIN_POSITIVE), round_trip(fs));
     }
 
@@ -248,13 +278,13 @@ mod tests {
         let fs2 = (-63456254.2, 5235423.53, 54353.3);
         let fs3 = (-0.000000634, 0.00000000005, 0.00000000892);
 
-        let n1 = encode(fs1);
-        let n2 = encode(fs2);
-        let n3 = encode(fs3);
+        let n1 = encode_64(fs1);
+        let n2 = encode_64(fs2);
+        let n3 = encode_64(fs3);
 
-        assert_eq!(decode(n1), decode(n1 | 0xffff_0000_0000_0000));
-        assert_eq!(decode(n2), decode(n2 | 0xffff_0000_0000_0000));
-        assert_eq!(decode(n3), decode(n3 | 0xffff_0000_0000_0000));
+        assert_eq!(decode_64(n1), decode_64(n1 | 0xffff_0000_0000_0000));
+        assert_eq!(decode_64(n2), decode_64(n2 | 0xffff_0000_0000_0000));
+        assert_eq!(decode_64(n3), decode_64(n3 | 0xffff_0000_0000_0000));
     }
 
     #[test]
