@@ -1,6 +1,6 @@
 use bencher::{benchmark_group, benchmark_main, black_box, Bencher};
 use rand::{rngs::SmallRng, FromEntropy, Rng};
-use trifloat::{signed48, unsigned32, unsigned40};
+use trifloat::{luv32, signed48, unsigned32, unsigned40};
 
 //----
 
@@ -83,6 +83,28 @@ fn signed48_decode_1000_values(bench: &mut Bencher) {
     });
 }
 
+fn luv32_encode_1000_values(bench: &mut Bencher) {
+    let mut rng = SmallRng::from_entropy();
+    bench.iter(|| {
+        let x = rng.gen::<f32>();
+        let y = rng.gen::<f32>();
+        let z = rng.gen::<f32>();
+        for _ in 0..1000 {
+            black_box(luv32::encode(black_box((x, y, z))));
+        }
+    });
+}
+
+fn luv32_decode_1000_values(bench: &mut Bencher) {
+    let mut rng = SmallRng::from_entropy();
+    bench.iter(|| {
+        let v = rng.gen::<u32>();
+        for _ in 0..1000 {
+            black_box(luv32::decode(black_box(v)));
+        }
+    });
+}
+
 //----
 
 benchmark_group!(
@@ -93,5 +115,7 @@ benchmark_group!(
     unsigned40_decode_1000_values,
     signed48_encode_1000_values,
     signed48_decode_1000_values,
+    luv32_encode_1000_values,
+    luv32_decode_1000_values,
 );
 benchmark_main!(benches);
