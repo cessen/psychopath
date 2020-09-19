@@ -1,25 +1,51 @@
-//! Encoding/decoding for 32-bit HDR Luv color format.
+//! Encoding/decoding for the 32-bit FloatLuv color format.
 //!
-//! This encoding is based on the ideas behind the SGI LogLUV format,
-//! but using a floating point rather than log encoding to store the L
-//! component for the sake of faster encoding/decoding.
+//! This encoding is based on, but is slightly different than, the 32-bit
+//! LogLuv format from the paper "Overcoming Gamut and Dynamic Range
+//! Limitations in Digital Images" by Greg Ward.  It uses the same uv chroma
+//! storage, but uses a floating point rather than log encoding to store
+//! luminance, mainly for the sake of faster decoding.  It also omits the sign
+//! bit of LogLuv, foregoing negative luminance capabilities.
 //!
-//! The encoding uses 16 bits for the L component, and 8 bits each for the
-//! u and v components.  The L component's 16 bits are split into 10 bits of
-//! mantissa and 6 bits of exponent.  The mantissa uses an implicit-leading-1
-//! format, giving it 11 bits of precision, and the exponent bias is 26.
+//! Compared to LogLuv, this format's chroma precision is identical and its
+//! luminance precision is better, but its luminance *range* is smaller.
+//! The supported luminance range is still substantial, however (see
+//! "Luminance details" below).
 //!
-//! The format encodes from, and decodes to, CIE XYZ color values.
+//! Like the LogLuv format, this is an absolute rather than relative color
+//! encoding, and as such takes CIE XYZ triplets as input.  It is *not*
+//! designed to take arbitrary floating point triplets, and will perform poorly
+//! if e.g. passed RGB values.
 //!
-//! This format is explicitly designed to support HDR color, with a supported
-//! dynamic range of about 63 stops.  Specifically, the largest supported input
-//! Y value is just under `2^38`, and the smallest (non-zero) Y is `2^-25`.  Y
-//! values smaller than that range will underflow to zero, and larger will
-//! saturate to the max value.
+//! The bit layout is:
+//!
+//! 1. luminance exponent (6 bits, bias 27)
+//! 2. luminance mantissa (10 stored bits, 11 bits precision)
+//! 3. u (8 bits)
+//! 4. v (8 bits)
+//!
+//! ## Luminance details
+//!
+//! Quoting Greg Ward about luminance ranges:
+//!
+//! > The sun is about `10^8 cd/m^2`, and the underside of a rock on a moonless
+//! > night is probably around `10^-6` or so [...]
+//!
+//! The luminance range of this format is from about `10^11` on the brightest
+//! end, to about `10^-8` on the darkest (excluding zero itself, which can also
+//! be stored).
+//!
+//! That gives this format almost five orders of magnitude more dynamic range
+//! than is likely to be needed for any practical situation.  Moreover, that
+//! extra range is split between both the high and low end, giving a
+//! comfortable buffer on both ends for extreme situations.
+//!
+//! Like the LogLuv format, the input CIE Y value is taken directly as the
+//! luminance value.
 
 #![allow(clippy::cast_lossless)]
 
-const EXP_BIAS: i32 = 26;
+const EXP_BIAS: i32 = 27;
 const UV_SCALE: f32 = 410.0;
 
 /// Largest representable Y component.
@@ -28,7 +54,10 @@ pub const Y_MAX: f32 = ((1u64 << (64 - EXP_BIAS)) - (1u64 << (64 - EXP_BIAS - 11
 /// Smallest representable non-zero Y component.
 pub const Y_MIN: f32 = 1.0 / (1u64 << (EXP_BIAS - 1)) as f32;
 
-/// Encodes a CIE XYZ triplet into the 32-bit Luv format.
+/// Difference between 1.0 and the next largest representable Y value.
+pub const Y_EPSILON: f32 = 1.0 / 1024.0;
+
+/// Encodes from CIE XYZ to 32-bit FloatLuv.
 #[inline]
 pub fn encode(xyz: (f32, f32, f32)) -> u32 {
     debug_assert!(
@@ -46,25 +75,26 @@ pub fn encode(xyz: (f32, f32, f32)) -> u32 {
         xyz.2
     );
 
+    // Calculates the 16-bit encoding of the UV values for the given XYZ input.
+    fn encode_uv(xyz: (f32, f32, f32)) -> u32 {
+        let s = xyz.0 + (15.0 * xyz.1) + (3.0 * xyz.2);
+        let u = ((4.0 * UV_SCALE) * xyz.0 / s).max(0.0).min(255.0) as u32;
+        let v = ((9.0 * UV_SCALE) * xyz.1 / s).max(0.0).min(255.0) as u32;
+        (u << 8) | v
+    };
+
     // Special case: if Y is infinite, saturate to the brightest
     // white, since with infinities we have no reasonable basis
     // for determining chromaticity.
     if xyz.1.is_infinite() {
-        let s = 1.0 + (15.0 * 1.0) + (3.0 * 1.0);
-        let u = ((4.0 * UV_SCALE) * 1.0 / s) as u32;
-        let v = ((9.0 * UV_SCALE) * 1.0 / s) as u32;
-        return 0xffff0000 | (u << 8) | v;
+        return 0xffff0000 | encode_uv((1.0, 1.0, 1.0));
     }
-
-    let s = xyz.0 + (15.0 * xyz.1) + (3.0 * xyz.2);
-    let u = ((4.0 * UV_SCALE) * xyz.0 / s).max(0.0).min(255.0) as u32;
-    let v = ((9.0 * UV_SCALE) * xyz.1 / s).max(0.0).min(255.0) as u32;
 
     let (l_exp, l_mant) = {
         let n = xyz.1.to_bits();
         let exp = (n >> 23) as i32 - 127 + EXP_BIAS;
         if exp <= 0 {
-            return 0;
+            return encode_uv((1.0, 1.0, 1.0));
         } else if exp > 63 {
             (63, 0b11_1111_1111)
         } else {
@@ -72,10 +102,10 @@ pub fn encode(xyz: (f32, f32, f32)) -> u32 {
         }
     };
 
-    (l_exp << 26) | (l_mant << 16) | (u << 8) | v
+    (l_exp << 26) | (l_mant << 16) | encode_uv(xyz)
 }
 
-/// Decodes a 32-bit Luv formatted value into a CIE XYZ triplet.
+/// Decodes from 32-bit FloatLuv to CIE XYZ.
 #[inline]
 pub fn decode(luv32: u32) -> (f32, f32, f32) {
     // Unpack values.
@@ -110,7 +140,7 @@ mod tests {
         let tri = encode(fs);
         let fs2 = decode(tri);
 
-        assert_eq!(tri, 0u32);
+        assert_eq!(0x000056c2, tri);
         assert_eq!(fs, fs2);
     }
 
@@ -212,7 +242,7 @@ mod tests {
     #[test]
     fn underflow() {
         let fs = (Y_MIN * 0.99, Y_MIN * 0.99, Y_MIN * 0.99);
-        assert_eq!(0, encode(fs));
+        assert_eq!(0x000056c2, encode(fs));
         assert_eq!((0.0, 0.0, 0.0), round_trip(fs));
     }
 
