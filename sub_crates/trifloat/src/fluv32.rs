@@ -67,7 +67,7 @@ pub fn encode(xyz: (f32, f32, f32)) -> u32 {
             && !xyz.0.is_nan()
             && !xyz.1.is_nan()
             && !xyz.2.is_nan(),
-        "trifloat::yuv32::encode(): encoding to yuv32 only \
+        "trifloat::fluv32::encode(): encoding to fluv32 only \
          works correctly for positive, non-NaN numbers, but the numbers passed \
          were: ({}, {}, {})",
         xyz.0,
