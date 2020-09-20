@@ -46,7 +46,9 @@
 #![allow(clippy::cast_lossless)]
 
 const EXP_BIAS: i32 = 27;
-const UV_SCALE: f32 = 410.0;
+
+/// The scale factor of the quantized UV components.
+pub const UV_SCALE: f32 = 410.0;
 
 /// Largest representable Y component.
 pub const Y_MAX: f32 = ((1u64 << (64 - EXP_BIAS)) - (1u64 << (64 - EXP_BIAS - 11))) as f32;
@@ -143,6 +145,27 @@ pub fn decode(fluv32: u32) -> (f32, f32, f32) {
     (x, y, z)
 }
 
+/// Decodes from 32-bit FloatLuv to Yuv.
+///
+/// The Y component is the luminance, and is simply the Y from CIE XYZ.
+///
+/// The u and v components are the CIE LUV u' and v' chromaticity coordinates,
+/// but returned as `u8`s, and scaled by `UV_SCALE` to fit the range 0-255.
+#[inline]
+pub fn decode_yuv(fluv32: u32) -> (f32, u8, u8) {
+    // Check for zero.
+    if fluv32 & 0xffff0000 == 0 {
+        return (0.0, (fluv32 >> 8) as u8, fluv32 as u8);
+    }
+
+    // Calculate y.
+    let l_exp = fluv32 >> 26;
+    let l_mant = (fluv32 >> 16) & 0x3ff;
+    let y = f32::from_bits(((l_exp + 127 - EXP_BIAS as u32) << 23) | (l_mant << 13));
+
+    (y, (fluv32 >> 8) as u8, fluv32 as u8)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -229,6 +252,14 @@ mod tests {
     fn precision_floor() {
         let fs = (2049.0f32, 2049.0f32, 2049.0f32);
         assert_eq!(2048.0, round_trip(fs).1);
+    }
+
+    #[test]
+    fn decode_yuv_01() {
+        let fs = (1.0, 1.0, 1.0);
+        let a = encode(fs);
+
+        assert_eq!((1.0, 0x56, 0xc2), decode_yuv(a));
     }
 
     #[test]

@@ -105,6 +105,16 @@ fn fluv32_decode_1000_values(bench: &mut Bencher) {
     });
 }
 
+fn fluv32_decode_yuv_1000_values(bench: &mut Bencher) {
+    let mut rng = SmallRng::from_entropy();
+    bench.iter(|| {
+        let v = rng.gen::<u32>();
+        for _ in 0..1000 {
+            black_box(fluv32::decode_yuv(black_box(v)));
+        }
+    });
+}
+
 //----
 
 benchmark_group!(
@@ -117,5 +127,6 @@ benchmark_group!(
     signed48_decode_1000_values,
     fluv32_encode_1000_values,
     fluv32_decode_1000_values,
+    fluv32_decode_yuv_1000_values,
 );
 benchmark_main!(benches);
