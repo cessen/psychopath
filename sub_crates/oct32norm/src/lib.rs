@@ -10,21 +10,19 @@
 /// matters to the encoding process, not the length.
 #[inline]
 pub fn encode(vec: (f32, f32, f32)) -> u32 {
-    let inv_l1_norm = 1.0f32 / (vec.0.abs() + vec.1.abs() + vec.2.abs());
+    let l1_norm = vec.0.abs() + vec.1.abs() + vec.2.abs();
+    let v0_norm = vec.0 / l1_norm;
+    let v1_norm = vec.1 / l1_norm;
 
     let (u, v) = if vec.2 < 0.0 {
         (
-            u32::from(to_snorm_16(
-                (1.0 - (vec.1 * inv_l1_norm).abs()) * sign(vec.0),
-            )),
-            u32::from(to_snorm_16(
-                (1.0 - (vec.0 * inv_l1_norm).abs()) * sign(vec.1),
-            )),
+            u32::from(to_snorm_16((1.0 - v1_norm.abs()) * sign(vec.0))),
+            u32::from(to_snorm_16((1.0 - v0_norm.abs()) * sign(vec.1))),
         )
     } else {
         (
-            u32::from(to_snorm_16(vec.0 * inv_l1_norm)),
-            u32::from(to_snorm_16(vec.1 * inv_l1_norm)),
+            u32::from(to_snorm_16(v0_norm)),
+            u32::from(to_snorm_16(v1_norm)),
         )
     };
 
@@ -52,15 +50,12 @@ pub fn decode(n: u32) -> (f32, f32, f32) {
 
 #[inline(always)]
 fn to_snorm_16(n: f32) -> u16 {
-    (n.max(-1.0).min(1.0) * ((1u32 << (16 - 1)) - 1) as f32).round() as i16 as u16
+    (n * ((1u32 << (16 - 1)) - 1) as f32).round() as i16 as u16
 }
 
 #[inline(always)]
 fn from_snorm_16(n: u16) -> f32 {
-    f32::from(n as i16)
-        * (1.0f32 / ((1u32 << (16 - 1)) - 1) as f32)
-            .max(-1.0)
-            .min(1.0)
+    f32::from(n as i16) * (1.0f32 / ((1u32 << (16 - 1)) - 1) as f32)
 }
 
 #[inline(always)]
