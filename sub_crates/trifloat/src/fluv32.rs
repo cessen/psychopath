@@ -76,33 +76,41 @@ pub fn encode(xyz: (f32, f32, f32)) -> u32 {
     );
 
     // Calculates the 16-bit encoding of the UV values for the given XYZ input.
+    #[inline(always)]
     fn encode_uv(xyz: (f32, f32, f32)) -> u32 {
         let s = xyz.0 + (15.0 * xyz.1) + (3.0 * xyz.2);
-        let u = ((4.0 * UV_SCALE) * xyz.0 / s).max(0.0).min(255.0) as u32;
-        let v = ((9.0 * UV_SCALE) * xyz.1 / s).max(1.0).min(255.0) as u32;
-        (u << 8) | v
+
+        // The `+ 0.5` is for rounding, and is not part of the normal equation.
+        // The minimum value of 1.0 for v is to avoid a possible divide by zero
+        // when decoding.  A value less than 1.0 is outside the real colors,
+        // so we don't need to store it anyway.
+        let u = (((4.0 * UV_SCALE) * xyz.0 / s) + 0.5).max(0.0).min(255.0);
+        let v = (((9.0 * UV_SCALE) * xyz.1 / s) + 0.5).max(1.0).min(255.0);
+
+        ((u as u32) << 8) | (v as u32)
     };
 
-    // Special case: if Y is infinite, saturate to the brightest
-    // white, since with infinities we have no reasonable basis
-    // for determining chromaticity.
-    if xyz.1.is_infinite() {
-        return 0xffff0000 | encode_uv((1.0, 1.0, 1.0));
-    }
+    let y_bits = xyz.1.to_bits();
+    let exp = (y_bits >> 23) as i32 - 127 + EXP_BIAS;
 
-    let (l_exp, l_mant) = {
-        let n = xyz.1.to_bits();
-        let exp = (n >> 23) as i32 - 127 + EXP_BIAS;
-        if exp <= 0 {
-            return encode_uv((1.0, 1.0, 1.0));
-        } else if exp > 63 {
-            (63, 0b11_1111_1111)
+    if exp <= 0 {
+        // Special case: black.
+        encode_uv((1.0, 1.0, 1.0))
+    } else if exp > 63 {
+        if xyz.1.is_infinite() {
+            // Special case: infinity.  In this case, we don't have any
+            // reasonable basis for calculating chroma, so just return
+            // the brightest white.
+            0xffff0000 | encode_uv((1.0, 1.0, 1.0))
         } else {
-            (exp as u32, (n & 0x7fffff) >> 13)
+            // Special case: non-infinite, but brighter luma than can be
+            // represented.  Return the correct chroma, and the brightest luma.
+            0xffff0000 | encode_uv(xyz)
         }
-    };
-
-    (l_exp << 26) | (l_mant << 16) | encode_uv(xyz)
+    } else {
+        // Common case.
+        ((exp as u32) << 26) | ((y_bits & 0x07fe000) << 3) | encode_uv(xyz)
+    }
 }
 
 /// Decodes from 32-bit FloatLuv to CIE XYZ.
@@ -117,7 +125,7 @@ pub fn decode(fluv32: u32) -> (f32, f32, f32) {
     let l_exp = fluv32 >> 26;
     let l_mant = (fluv32 >> 16) & 0x3ff;
     let u = ((fluv32 >> 8) & 0xff) as f32; // Range 0.0-255.0
-    let v = (fluv32 & 0xff) as f32; // Range 0.0-255.0
+    let v = (fluv32 & 0xff) as f32; // Range 1.0-255.0
 
     // Calculate y.
     let y = f32::from_bits(((l_exp + 127 - EXP_BIAS as u32) << 23) | (l_mant << 13));
@@ -130,7 +138,7 @@ pub fn decode(fluv32: u32) -> (f32, f32, f32) {
     // since most of that also cancels if we do it there.
     let tmp = y / v;
     let x = tmp * (u * 2.25); // y * (9u / 4v)
-    let z = tmp * ((3.0 * UV_SCALE) - (0.75 * u) - (5.0 * v)).max(0.0); // y * ((12 - 3u - 20v) / 4v)
+    let z = tmp * ((3.0 * UV_SCALE) - (0.75 * u) - (5.0 * v)); // y * ((12 - 3u - 20v) / 4v)
 
     (x, y, z)
 }
@@ -219,9 +227,8 @@ mod tests {
 
     #[test]
     fn precision_floor() {
-        let a = (2049.0f32, 2049.0f32, 2049.0f32);
-        let b = round_trip(a);
-        assert_eq!(2048.0, b.1);
+        let fs = (2049.0f32, 2049.0f32, 2049.0f32);
+        assert_eq!(2048.0, round_trip(fs).1);
     }
 
     #[test]
@@ -254,6 +261,15 @@ mod tests {
         let fs = (Y_MIN * 0.99, Y_MIN * 0.99, Y_MIN * 0.99);
         assert_eq!(0x000056c2, encode(fs));
         assert_eq!((0.0, 0.0, 0.0), round_trip(fs));
+    }
+
+    #[test]
+    fn negative_z_impossible() {
+        // These are very specific values, which should result in smallest
+        // possible z value (specifically z = 0.0 with no quantization) while
+        // still having positive values in x and y.
+        let fs = (248.0 / 565.0, 9827.0 / 8475.0, 0.0);
+        assert!(round_trip(fs).2 >= 0.0);
     }
 
     #[test]
