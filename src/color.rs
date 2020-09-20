@@ -7,7 +7,7 @@ pub use color::{
 use glam::Vec4;
 use half::f16;
 use spectral_upsampling::meng::{spectrum_xyz_to_p_4, EQUAL_ENERGY_REFLECTANCE};
-use trifloat::signed48;
+use trifloat::fluv32;
 
 use crate::{lerp::Lerp, math::fast_exp};
 
@@ -144,7 +144,7 @@ impl Color {
     /// Returns the post-compression size of this color.
     pub fn compressed_size(&self) -> usize {
         match self {
-            Color::XYZ(_, _, _) => 7,
+            Color::XYZ(_, _, _) => 5,
 
             Color::Blackbody { .. } => 5,
 
@@ -162,9 +162,7 @@ impl Color {
         match *self {
             Color::XYZ(x, y, z) => {
                 out_data[0] = 0; // Discriminant
-                let col = signed48::encode((x, y, z));
-                let col = col.to_le_bytes();
-                (&mut out_data[1..7]).copy_from_slice(&col[0..6]);
+                (&mut out_data[1..5]).copy_from_slice(&fluv32::encode((x, y, z)).to_ne_bytes()[..]);
             }
 
             Color::Blackbody {
@@ -202,10 +200,10 @@ impl Color {
         match in_data[0] {
             0 => {
                 // XYZ
-                let mut bytes = [0u8; 8];
-                (&mut bytes[0..6]).copy_from_slice(&in_data[1..7]);
-                let (x, y, z) = signed48::decode(u64::from_le_bytes(bytes));
-                (Color::XYZ(x, y, z), 7)
+                let mut bytes = [0u8; 4];
+                (&mut bytes[..]).copy_from_slice(&in_data[1..5]);
+                let (x, y, z) = fluv32::decode(u32::from_ne_bytes(bytes));
+                (Color::XYZ(x, y, z), 5)
             }
 
             1 => {
