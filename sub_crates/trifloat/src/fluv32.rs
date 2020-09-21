@@ -125,19 +125,10 @@ pub fn encode(xyz: (f32, f32, f32)) -> u32 {
 /// Decodes from 32-bit FloatLuv to CIE XYZ.
 #[inline]
 pub fn decode(fluv32: u32) -> (f32, f32, f32) {
-    // Check for zero.
-    if fluv32 & 0xffff0000 == 0 {
-        return (0.0, 0.0, 0.0);
-    }
-
     // Unpack values.
-    let l_exp = fluv32 >> 26;
-    let l_mant = (fluv32 >> 16) & 0x3ff;
-    let u = ((fluv32 >> 8) & 0xff) as f32; // Range 0.0-255.0
-    let v = (fluv32 & 0xff) as f32; // Range 1.0-255.0
-
-    // Calculate y.
-    let y = f32::from_bits(((l_exp + 127 - EXP_BIAS as u32) << 23) | (l_mant << 13));
+    let (y, u, v) = decode_yuv(fluv32);
+    let u = u as f32;
+    let v = v as f32;
 
     // Calculate x and z.
     // This is re-worked from the original equations, to allow a bunch of stuff
@@ -146,9 +137,10 @@ pub fn decode(fluv32: u32) -> (f32, f32, f32) {
     // We also roll the U/V_SCALE application into the final x and z formulas,
     // since some of that cancels out as well, and all of it can be avoided at
     // runtime that way.
+    const VU_RATIO: f32 = V_SCALE / U_SCALE;
     let tmp = y / v;
-    let x = tmp * ((2.25 * V_SCALE / U_SCALE) * u); // y * (9u / 4v)
-    let z = tmp * ((3.0 * V_SCALE) - ((0.75 * V_SCALE / U_SCALE) * u) - (5.0 * v)); // y * ((12 - 3u - 20v) / 4v)
+    let x = tmp * ((2.25 * VU_RATIO) * u); // y * (9u / 4v)
+    let z = tmp * ((3.0 * V_SCALE) - ((0.75 * VU_RATIO) * u) - (5.0 * v)); // y * ((12 - 3u - 20v) / 4v)
 
     (x, y, z.max(0.0))
 }
@@ -162,17 +154,17 @@ pub fn decode(fluv32: u32) -> (f32, f32, f32) {
 /// to fit the range 0-255.
 #[inline]
 pub fn decode_yuv(fluv32: u32) -> (f32, u8, u8) {
-    // Check for zero.
-    if fluv32 & 0xffff0000 == 0 {
-        return (0.0, (fluv32 >> 8) as u8, fluv32 as u8);
+    const BIAS_OFFSET: u32 = (127 - EXP_BIAS as u32) << 23;
+
+    let y = f32::from_bits(((fluv32 & 0xffff0000) >> 3) + BIAS_OFFSET);
+    let u = (fluv32 >> 8) as u8;
+    let v = fluv32 as u8;
+
+    if fluv32 <= 0xffff {
+        (0.0, u, v)
+    } else {
+        (y, u, v)
     }
-
-    // Calculate y.
-    let l_exp = fluv32 >> 26;
-    let l_mant = (fluv32 >> 16) & 0x3ff;
-    let y = f32::from_bits(((l_exp + 127 - EXP_BIAS as u32) << 23) | (l_mant << 13));
-
-    (y, (fluv32 >> 8) as u8, fluv32 as u8)
 }
 
 #[cfg(test)]
