@@ -2,12 +2,16 @@
 //!
 //! This encoding is based on, but is slightly different than, the 32-bit
 //! LogLuv format from the paper "Overcoming Gamut and Dynamic Range
-//! Limitations in Digital Images" by Greg Ward.  It uses the same uv chroma
-//! storage, but uses a floating point rather than log encoding to store
-//! luminance, mainly for the sake of faster decoding.  It also omits the sign
-//! bit of LogLuv, foregoing negative luminance capabilities.
+//! Limitations in Digital Images" by Greg Ward:
 //!
-//! Compared to LogLuv, this format's chroma precision is identical and its
+//! * It uses the same uv chroma storage approach, but with *very* slightly
+//!   tweaked scales to allow perfect representation of E.
+//! * It uses uses a floating point rather than log encoding to store
+//!   luminance, mainly for the sake of faster decoding.
+//! * It also omits the sign bit of LogLuv, foregoing negative luminance
+//!   capabilities.
+//!
+//! Compared to LogLuv, this format's chroma precision is the same and its
 //! luminance precision is better, but its luminance *range* is smaller.
 //! The supported luminance range is still substantial, however (see
 //! "Luminance details" below).
@@ -47,8 +51,11 @@
 
 const EXP_BIAS: i32 = 27;
 
-/// The scale factor of the quantized UV components.
-pub const UV_SCALE: f32 = 410.0;
+/// The scale factor of the quantized U component.
+pub const U_SCALE: f32 = 817.0 / 2.0;
+
+/// The scale factor of the quantized V component.
+pub const V_SCALE: f32 = 1235.0 / 3.0;
 
 /// Largest representable Y component.
 pub const Y_MAX: f32 = ((1u64 << (64 - EXP_BIAS)) - (1u64 << (64 - EXP_BIAS - 11))) as f32;
@@ -86,8 +93,8 @@ pub fn encode(xyz: (f32, f32, f32)) -> u32 {
         // The minimum value of 1.0 for v is to avoid a possible divide by zero
         // when decoding.  A value less than 1.0 is outside the real colors,
         // so we don't need to store it anyway.
-        let u = (((4.0 * UV_SCALE) * xyz.0 / s) + 0.5).max(0.0).min(255.0);
-        let v = (((9.0 * UV_SCALE) * xyz.1 / s) + 0.5).max(1.0).min(255.0);
+        let u = (((4.0 * U_SCALE) * xyz.0 / s) + 0.5).max(0.0).min(255.0);
+        let v = (((9.0 * V_SCALE) * xyz.1 / s) + 0.5).max(1.0).min(255.0);
 
         ((u as u32) << 8) | (v as u32)
     };
@@ -136,13 +143,14 @@ pub fn decode(fluv32: u32) -> (f32, f32, f32) {
     // This is re-worked from the original equations, to allow a bunch of stuff
     // to cancel out and avoid operations.  It makes the underlying equations a
     // bit non-obvious.
-    // We also roll the UV_SCALE application into the final x and z formulas,
-    // since most of that also cancels if we do it there.
+    // We also roll the U/V_SCALE application into the final x and z formulas,
+    // since some of that cancels out as well, and all of it can be avoided at
+    // runtime that way.
     let tmp = y / v;
-    let x = tmp * (u * 2.25); // y * (9u / 4v)
-    let z = tmp * ((3.0 * UV_SCALE) - (0.75 * u) - (5.0 * v)); // y * ((12 - 3u - 20v) / 4v)
+    let x = tmp * ((2.25 * V_SCALE / U_SCALE) * u); // y * (9u / 4v)
+    let z = tmp * ((3.0 * V_SCALE) - ((0.75 * V_SCALE / U_SCALE) * u) - (5.0 * v)); // y * ((12 - 3u - 20v) / 4v)
 
-    (x, y, z)
+    (x, y, z.max(0.0))
 }
 
 /// Decodes from 32-bit FloatLuv to Yuv.
@@ -150,7 +158,8 @@ pub fn decode(fluv32: u32) -> (f32, f32, f32) {
 /// The Y component is the luminance, and is simply the Y from CIE XYZ.
 ///
 /// The u and v components are the CIE LUV u' and v' chromaticity coordinates,
-/// but returned as `u8`s, and scaled by `UV_SCALE` to fit the range 0-255.
+/// but returned as `u8`s, and scaled by `U_SCALE` and `V_SCALE` respectively
+/// to fit the range 0-255.
 #[inline]
 pub fn decode_yuv(fluv32: u32) -> (f32, u8, u8) {
     // Check for zero.
@@ -181,8 +190,22 @@ mod tests {
         let tri = encode(fs);
         let fs2 = decode(tri);
 
-        assert_eq!(0x000056c2, tri);
+        assert_eq!(0x000056c3, tri);
         assert_eq!(fs, fs2);
+    }
+
+    #[test]
+    fn all_ones() {
+        let fs = (1.0f32, 1.0f32, 1.0f32);
+
+        let tri = encode(fs);
+        let fs2 = decode(tri);
+
+        assert_eq!(0x6c0056c3, tri);
+
+        assert!((fs.0 - fs2.0).abs() < 0.0000001);
+        assert_eq!(fs.1, fs2.1);
+        assert!((fs.2 - fs2.2).abs() < 0.0000001);
     }
 
     #[test]
@@ -259,7 +282,7 @@ mod tests {
         let fs = (1.0, 1.0, 1.0);
         let a = encode(fs);
 
-        assert_eq!((1.0, 0x56, 0xc2), decode_yuv(a));
+        assert_eq!((1.0, 0x56, 0xc3), decode_yuv(a));
     }
 
     #[test]
@@ -276,7 +299,7 @@ mod tests {
         let fs = (INFINITY, INFINITY, INFINITY);
 
         assert_eq!(Y_MAX, round_trip(fs).1);
-        assert_eq!(0xffff56c2, encode(fs));
+        assert_eq!(0xffff56c3, encode(fs));
     }
 
     #[test]
@@ -290,17 +313,17 @@ mod tests {
     #[test]
     fn underflow() {
         let fs = (Y_MIN * 0.99, Y_MIN * 0.99, Y_MIN * 0.99);
-        assert_eq!(0x000056c2, encode(fs));
+        assert_eq!(0x000056c3, encode(fs));
         assert_eq!((0.0, 0.0, 0.0), round_trip(fs));
     }
 
     #[test]
     fn negative_z_impossible() {
-        // These are very specific values, which should result in smallest
-        // possible z value (specifically z = 0.0 with no quantization) while
-        // still having positive values in x and y.
-        let fs = (248.0 / 565.0, 9827.0 / 8475.0, 0.0);
-        assert!(round_trip(fs).2 >= 0.0);
+        for y in 0..1024 {
+            let fs = (1.0, 1.0 + (y as f32 / 4096.0), 0.0);
+            let fs2 = round_trip(fs);
+            assert!(fs2.2 >= 0.0);
+        }
     }
 
     #[test]
