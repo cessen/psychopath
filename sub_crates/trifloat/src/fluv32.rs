@@ -1,4 +1,4 @@
-//! Encoding/decoding for the 32-bit FloatLuv color format.
+//! Encoding/decoding for the 32-bit FLuv32 color format.
 //!
 //! This encoding is based on, but is slightly different than, the 32-bit
 //! LogLuv format from the paper "Overcoming Gamut and Dynamic Range
@@ -6,27 +6,27 @@
 //!
 //! * It uses the same uv chroma storage approach, but with *very* slightly
 //!   tweaked scales to allow perfect representation of E.
-//! * It uses uses a floating point rather than log encoding to store
-//!   luminance, mainly for the sake of faster decoding.
-//! * It also omits the sign bit of LogLuv, foregoing negative luminance
+//! * It uses a floating point rather than log encoding to store luminance,
+//!   mainly for the sake of faster decoding.
+//! * Unlike LogLuv, this format's dynamic range is biased to put more of it
+//!   above 1.0 (see Luminance details below).
+//! * It omits the sign bit of LogLuv, foregoing negative luminance
 //!   capabilities.
 //!
-//! Compared to LogLuv, this format's chroma precision is the same and its
-//! luminance precision is better, but its luminance *range* is smaller.
-//! The supported luminance range is still substantial, however (see
-//! "Luminance details" below).
+//! This format has the same chroma precision, very slightly improved luminance
+//! precision, and the same 127-stops of dynamic range as LogLuv.
 //!
 //! Like the LogLuv format, this is an absolute rather than relative color
 //! encoding, and as such takes CIE XYZ triplets as input.  It is *not*
 //! designed to take arbitrary floating point triplets, and will perform poorly
 //! if e.g. passed RGB values.
 //!
-//! The bit layout is:
+//! The bit layout is (from most to least significant bit):
 //!
-//! 1. luminance exponent (6 bits, bias 27)
-//! 2. luminance mantissa (10 stored bits, 11 bits precision)
-//! 3. u (8 bits)
-//! 4. v (8 bits)
+//! * 7 bits: luminance exponent (bias 42)
+//! * 9 bits: luminance mantissa (implied leading 1, for 10 bits precision)
+//! * 8 bits: u'
+//! * 8 bits: v'
 //!
 //! ## Luminance details
 //!
@@ -35,21 +35,36 @@
 //! > The sun is about `10^8 cd/m^2`, and the underside of a rock on a moonless
 //! > night is probably around `10^-6` or so [...]
 //!
-//! The luminance range of this format is from about `10^11` on the brightest
-//! end, to about `10^-8` on the darkest (excluding zero itself, which can also
-//! be stored).
+//! See also Wikipedia's
+//! [list of luminance levels](https://en.wikipedia.org/wiki/Orders_of_magnitude_(luminance)).
 //!
-//! That gives this format almost five orders of magnitude more dynamic range
-//! than is likely to be needed for any practical situation.  Moreover, that
-//! extra range is split between both the high and low end, giving a
-//! comfortable buffer on both ends for extreme situations.
+//! The luminance range of the original LogLuv is about `10^-19` to `10^19`,
+//! splitting the range evenly above and below 1.0.  Given the massive dynamic
+//! range, and the fact that all day-to-day luminance levels trivially fit
+//! within that, that's a perfectly reasonable choice.
 //!
-//! Like the LogLuv format, the input CIE Y value is taken directly as the
-//! luminance value.
+//! However, there are some stellar events like supernovae that are trillions
+//! of times brighter than the sun, and would exceed `10^19`.  Conversely,
+//! there likely isn't much use for significantly smaller values than `10^-10`
+//! or so.  So although recording supernovae in physical units with a graphics
+//! format seems unlikely, it doesn't hurt to bias the range towards brighter
+//! luminance levels.
+//!
+//! With that in mind, FLuv32 uses an exponent bias of 42, putting twice as
+//! many stops of dynamic range above 1.0 as below it, giving a luminance range
+//! of roughly `10^-13` to `10^25`.  It's the same dynamic range as
+//! LogLuv (about 127 stops), but with more of that range placed above 1.0.
+//!
+//! Like typical floating point, the mantissa is treated as having an implicit
+//! leading 1, giving it an extra bit of precision.  The smallest exponent
+//! indicates a value of zero, and a valid encoding should also set the
+//! mantissa to zero in that case (denormal numbers are not supported).  The
+//! largest exponent is given no special treatment (no infinities, no NaN).
 
 #![allow(clippy::cast_lossless)]
 
-const EXP_BIAS: i32 = 27;
+const EXP_BIAS: i32 = 42;
+const BIAS_OFFSET: u32 = 127 - EXP_BIAS as u32;
 
 /// The scale factor of the quantized U component.
 pub const U_SCALE: f32 = 817.0 / 2.0;
@@ -58,13 +73,13 @@ pub const U_SCALE: f32 = 817.0 / 2.0;
 pub const V_SCALE: f32 = 1235.0 / 3.0;
 
 /// Largest representable Y component.
-pub const Y_MAX: f32 = ((1u64 << (64 - EXP_BIAS)) - (1u64 << (64 - EXP_BIAS - 11))) as f32;
+pub const Y_MAX: f32 = ((1u128 << (128 - EXP_BIAS)) - (1u128 << (128 - EXP_BIAS - 10))) as f32;
 
 /// Smallest representable non-zero Y component.
-pub const Y_MIN: f32 = 1.0 / (1u64 << (EXP_BIAS - 1)) as f32;
+pub const Y_MIN: f32 = 1.0 / (1u128 << (EXP_BIAS - 1)) as f32;
 
 /// Difference between 1.0 and the next largest representable Y value.
-pub const Y_EPSILON: f32 = 1.0 / 1024.0;
+pub const Y_EPSILON: f32 = 1.0 / 512.0;
 
 /// Encodes from CIE XYZ to 32-bit FloatLuv.
 #[inline]
@@ -99,13 +114,12 @@ pub fn encode(xyz: (f32, f32, f32)) -> u32 {
         ((u as u32) << 8) | (v as u32)
     };
 
-    let y_bits = xyz.1.to_bits();
-    let exp = (y_bits >> 23) as i32 - 127 + EXP_BIAS;
+    let y_bits = xyz.1.to_bits() & 0x7fffffff;
 
-    if exp <= 0 {
+    if y_bits < ((BIAS_OFFSET + 1) << 23) {
         // Special case: black.
         encode_uv((1.0, 1.0, 1.0))
-    } else if exp > 63 {
+    } else if y_bits >= ((BIAS_OFFSET + 128) << 23) {
         if xyz.1.is_infinite() {
             // Special case: infinity.  In this case, we don't have any
             // reasonable basis for calculating chroma, so just return
@@ -118,7 +132,7 @@ pub fn encode(xyz: (f32, f32, f32)) -> u32 {
         }
     } else {
         // Common case.
-        ((exp as u32) << 26) | ((y_bits & 0x07fe000) << 3) | encode_uv(xyz)
+        (((y_bits - (BIAS_OFFSET << 23)) << 2) & 0xffff0000) | encode_uv(xyz)
     }
 }
 
@@ -154,9 +168,7 @@ pub fn decode(fluv32: u32) -> (f32, f32, f32) {
 /// to fit the range 0-255.
 #[inline]
 pub fn decode_yuv(fluv32: u32) -> (f32, u8, u8) {
-    const BIAS_OFFSET: u32 = (127 - EXP_BIAS as u32) << 23;
-
-    let y = f32::from_bits(((fluv32 & 0xffff0000) >> 3) + BIAS_OFFSET);
+    let y = f32::from_bits(((fluv32 & 0xffff0000) >> 2) + (BIAS_OFFSET << 23));
     let u = (fluv32 >> 8) as u8;
     let v = fluv32 as u8;
 
@@ -193,11 +205,10 @@ mod tests {
         let tri = encode(fs);
         let fs2 = decode(tri);
 
-        assert_eq!(0x6c0056c3, tri);
-
-        assert!((fs.0 - fs2.0).abs() < 0.0000001);
         assert_eq!(fs.1, fs2.1);
+        assert!((fs.0 - fs2.0).abs() < 0.0000001);
         assert!((fs.2 - fs2.2).abs() < 0.0000001);
+        assert_eq!(0x540056c3, tri);
     }
 
     #[test]
@@ -221,7 +232,7 @@ mod tests {
     #[test]
     fn accuracy_01() {
         let mut n = 1.0;
-        for _ in 0..1024 {
+        for _ in 0..512 {
             let a = (n as f32, n as f32, n as f32);
             let b = round_trip(a);
 
@@ -232,7 +243,7 @@ mod tests {
             assert!(rd0 < 0.01);
             assert!(rd2 < 0.01);
 
-            n += 1.0 / 1024.0;
+            n += 1.0 / 512.0;
         }
     }
 
@@ -240,11 +251,11 @@ mod tests {
     #[should_panic]
     fn accuracy_02() {
         let mut n = 1.0;
-        for _ in 0..2048 {
+        for _ in 0..1024 {
             let a = (n as f32, n as f32, n as f32);
             let b = round_trip(a);
             assert_eq!(a.1, b.1);
-            n += 1.0 / 2048.0;
+            n += 1.0 / 1024.0;
         }
     }
 
@@ -279,7 +290,7 @@ mod tests {
 
     #[test]
     fn saturate_y() {
-        let fs = (1.0e+20, 1.0e+20, 1.0e+20);
+        let fs = (1.0e+28, 1.0e+28, 1.0e+28);
 
         assert_eq!(Y_MAX, round_trip(fs).1);
         assert_eq!(Y_MAX, decode(0xFFFFFFFF).1);
@@ -295,18 +306,14 @@ mod tests {
     }
 
     #[test]
-    fn smallest_value() {
-        let a = (Y_MIN, Y_MIN, Y_MIN);
-        let b = (Y_MIN * 0.99, Y_MIN * 0.99, Y_MIN * 0.99);
-        assert_eq!(Y_MIN, round_trip(a).1);
-        assert_eq!(0.0, round_trip(b).1);
-    }
+    fn smallest_value_and_underflow() {
+        let fs1 = (Y_MIN, Y_MIN, Y_MIN);
+        let fs2 = (Y_MIN * 0.99, Y_MIN * 0.99, Y_MIN * 0.99);
 
-    #[test]
-    fn underflow() {
-        let fs = (Y_MIN * 0.99, Y_MIN * 0.99, Y_MIN * 0.99);
-        assert_eq!(0x000056c3, encode(fs));
-        assert_eq!((0.0, 0.0, 0.0), round_trip(fs));
+        dbg!(Y_MIN);
+        assert_eq!(fs1.1, round_trip(fs1).1);
+        assert_eq!(0.0, round_trip(fs2).1);
+        assert_eq!(0x000056c3, encode(fs2));
     }
 
     #[test]
