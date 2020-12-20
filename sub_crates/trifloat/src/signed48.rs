@@ -3,9 +3,9 @@
 //! The encoding uses 13 bits of mantissa and 1 sign bit per number, and 6
 //! bits for the shared exponent. The bit layout is: [sign 1, mantissa 1,
 //! sign 2, mantissa 2, sign 3, mantissa 3, exponent].  The exponent is stored
-//! as an unsigned integer with a bias of 25.
+//! as an unsigned integer with a bias of 26.
 //!
-//! The largest representable number is `2^38 - 2^25`, and the smallest
+//! The largest representable number is just under `2^38`, and the smallest
 //! representable positive number is `2^-38`.
 //!
 //! Since the exponent is shared between all three values, the precision
@@ -18,40 +18,48 @@
 use crate::{fiddle_exp2, fiddle_log2};
 
 /// Largest representable number.
-pub const MAX: f32 = 274_844_352_512.0;
+pub const MAX: f32 = ((1u128 << (64 - EXP_BIAS)) - (1 << (64 - EXP_BIAS - 13))) as f32;
 
 /// Smallest representable number.
 ///
 /// Note this is not the smallest _magnitude_ number.  This is a negative
 /// number of large magnitude.
-pub const MIN: f32 = -274_844_352_512.0;
+pub const MIN: f32 = -MAX;
 
 /// Smallest representable positive number.
 ///
 /// This is the number with the smallest possible magnitude (aside from zero).
-#[allow(clippy::excessive_precision)]
-pub const MIN_POSITIVE: f32 = 0.000_000_000_003_637_978_807_091_713;
+pub const MIN_POSITIVE: f32 = 1.0 / (1u128 << (EXP_BIAS + 12)) as f32;
 
 /// Difference between 1.0 and the next largest representable number.
 pub const EPSILON: f32 = 1.0 / 4096.0;
 
-const EXP_BIAS: i32 = 25;
-const MIN_EXP: i32 = 0 - EXP_BIAS;
-const MAX_EXP: i32 = 63 - EXP_BIAS;
+const EXP_BIAS: i32 = 26;
 
 /// Encodes three floating point values into a signed 48-bit trifloat.
 ///
 /// Input floats that are larger than `MAX` or smaller than `MIN` will saturate
 /// to `MAX` and `MIN` respectively, including +/- infinity.  Values are
-/// converted to trifloat precision by rounding.
-///
-/// Only the lower 48 bits of the return value are used.  The highest 16 bits
-/// will all be zero and can be safely discarded.
+/// converted to trifloat precision by rounding towards zero.
 ///
 /// Warning: NaN's are _not_ supported by the trifloat format.  There are
 /// debug-only assertions in place to catch such values in the input floats.
 #[inline]
-pub fn encode(floats: (f32, f32, f32)) -> u64 {
+pub fn encode(floats: (f32, f32, f32)) -> [u8; 6] {
+    u64_to_bytes(encode_64(floats))
+}
+
+/// Decodes a signed 48-bit trifloat into three full floating point numbers.
+///
+/// This operation is lossless and cannot fail.
+#[inline]
+pub fn decode(trifloat: [u8; 6]) -> (f32, f32, f32) {
+    decode_64(bytes_to_u64(trifloat))
+}
+
+// Workhorse encode function, which operates on u64.
+#[inline(always)]
+fn encode_64(floats: (f32, f32, f32)) -> u64 {
     debug_assert!(
         !floats.0.is_nan() && !floats.1.is_nan() && !floats.2.is_nan(),
         "trifloat::signed48::encode(): encoding to signed tri-floats only \
@@ -62,55 +70,36 @@ pub fn encode(floats: (f32, f32, f32)) -> u64 {
         floats.2
     );
 
-    // Find the largest (in magnitude) of the three values.
-    let largest_value = {
-        let mut largest_value: f32 = 0.0;
-        if floats.0.abs() > largest_value.abs() {
-            largest_value = floats.0;
-        }
-        if floats.1.abs() > largest_value.abs() {
-            largest_value = floats.1;
-        }
-        if floats.2.abs() > largest_value.abs() {
-            largest_value = floats.2;
-        }
-        largest_value
-    };
+    let floats_abs = (floats.0.abs(), floats.1.abs(), floats.2.abs());
 
-    // Calculate the exponent and 1.0/multiplier for encoding the values.
-    let (exponent, inv_multiplier) = {
-        let mut exponent = (fiddle_log2(largest_value) + 1).max(MIN_EXP).min(MAX_EXP);
-        let mut inv_multiplier = fiddle_exp2(-exponent + 13);
+    let largest_abs = floats_abs.0.max(floats_abs.1.max(floats_abs.2));
 
-        // Edge-case: make sure rounding pushes the largest value up
-        // appropriately if needed.
-        if (largest_value * inv_multiplier).abs() + 0.5 >= 8192.0 {
-            exponent = (exponent + 1).min(MAX_EXP);
-            inv_multiplier = fiddle_exp2(-exponent + 13);
-        }
-        (exponent, inv_multiplier)
-    };
+    if largest_abs < MIN_POSITIVE {
+        0
+    } else {
+        let e = fiddle_log2(largest_abs).max(-EXP_BIAS).min(63 - EXP_BIAS);
+        let inv_multiplier = fiddle_exp2(-e + 12);
 
-    // Quantize and encode values.
-    let x = (floats.0.abs() * inv_multiplier + 0.5).min(8191.0) as u64 & 0b111_11111_11111;
-    let x_sign = (floats.0.to_bits() >> 31) as u64;
-    let y = (floats.1.abs() * inv_multiplier + 0.5).min(8191.0) as u64 & 0b111_11111_11111;
-    let y_sign = (floats.1.to_bits() >> 31) as u64;
-    let z = (floats.2.abs() * inv_multiplier + 0.5).min(8191.0) as u64 & 0b111_11111_11111;
-    let z_sign = (floats.2.to_bits() >> 31) as u64;
-    let e = (exponent + EXP_BIAS) as u64 & 0b111_111;
+        let x_sign = (floats.0.to_bits() >> 31) as u64;
+        let x = (floats_abs.0 * inv_multiplier).min(8191.0) as u64;
+        let y_sign = (floats.1.to_bits() >> 31) as u64;
+        let y = (floats_abs.1 * inv_multiplier).min(8191.0) as u64;
+        let z_sign = (floats.2.to_bits() >> 31) as u64;
+        let z = (floats_abs.2 * inv_multiplier).min(8191.0) as u64;
 
-    // Pack values into a single u64 and return.
-    (x_sign << 47) | (x << 34) | (y_sign << 33) | (y << 20) | (z_sign << 19) | (z << 6) | e
+        (x_sign << 47)
+            | (x << 34)
+            | (y_sign << 33)
+            | (y << 20)
+            | (z_sign << 19)
+            | (z << 6)
+            | (e + EXP_BIAS) as u64
+    }
 }
 
-/// Decodes a signed 48-bit trifloat into three full floating point numbers.
-///
-/// This operation is lossless and cannot fail.  Only the lower 48 bits of the
-/// input value are used--the upper 16 bits can safely be anything and are
-/// ignored.
-#[inline]
-pub fn decode(trifloat: u64) -> (f32, f32, f32) {
+// Workhorse decode function, which operates on u64.
+#[inline(always)]
+fn decode_64(trifloat: u64) -> (f32, f32, f32) {
     // Unpack values.
     let x = (trifloat >> 34) & 0b111_11111_11111;
     let y = (trifloat >> 20) & 0b111_11111_11111;
@@ -122,13 +111,36 @@ pub fn decode(trifloat: u64) -> (f32, f32, f32) {
 
     let e = trifloat & 0b111_111;
 
-    let multiplier = fiddle_exp2(e as i32 - EXP_BIAS - 13);
+    let multiplier = fiddle_exp2(e as i32 - EXP_BIAS - 12);
 
     (
         f32::from_bits((x as f32 * multiplier).to_bits() | x_sign),
         f32::from_bits((y as f32 * multiplier).to_bits() | y_sign),
         f32::from_bits((z as f32 * multiplier).to_bits() | z_sign),
     )
+}
+
+#[inline(always)]
+fn u64_to_bytes(n: u64) -> [u8; 6] {
+    let a = n.to_ne_bytes();
+    let mut b = [0u8; 6];
+    if cfg!(target_endian = "big") {
+        (&mut b[..]).copy_from_slice(&a[2..8]);
+    } else {
+        (&mut b[..]).copy_from_slice(&a[0..6]);
+    }
+    b
+}
+
+#[inline(always)]
+fn bytes_to_u64(a: [u8; 6]) -> u64 {
+    let mut b = [0u8; 8];
+    if cfg!(target_endian = "big") {
+        (&mut b[2..8]).copy_from_slice(&a[..]);
+    } else {
+        (&mut b[0..6]).copy_from_slice(&a[..]);
+    }
+    u64::from_ne_bytes(b)
 }
 
 #[cfg(test)]
@@ -143,8 +155,8 @@ mod tests {
     fn all_zeros() {
         let fs = (0.0f32, 0.0f32, 0.0f32);
 
-        let tri = encode(fs);
-        let fs2 = decode(tri);
+        let tri = encode_64(fs);
+        let fs2 = decode_64(tri);
 
         assert_eq!(tri, 0);
         assert_eq!(fs, fs2);
@@ -153,7 +165,7 @@ mod tests {
     #[test]
     fn powers_of_two() {
         let fs = (8.0f32, 128.0f32, 0.5f32);
-        assert_eq!(round_trip(fs), fs);
+        assert_eq!(fs, round_trip(fs));
     }
 
     #[test]
@@ -196,18 +208,11 @@ mod tests {
     }
 
     #[test]
-    fn rounding() {
+    fn precision_floor() {
         let fs = (7.0f32, 8193.0f32, -1.0f32);
         let fsn = (-7.0f32, -8193.0f32, 1.0f32);
-        assert_eq!(round_trip(fs), (8.0, 8194.0, -2.0));
-        assert_eq!(round_trip(fsn), (-8.0, -8194.0, 2.0));
-    }
-
-    #[test]
-    fn rounding_edge_case() {
-        let fs = (16383.0f32, 0.0f32, 0.0f32);
-
-        assert_eq!(round_trip(fs), (16384.0, 0.0, 0.0),);
+        assert_eq!((6.0, 8192.0, -0.0), round_trip(fs));
+        assert_eq!((-6.0, -8192.0, 0.0), round_trip(fsn));
     }
 
     #[test]
@@ -223,10 +228,10 @@ mod tests {
             -99_999_999_999_999.0,
         );
 
-        assert_eq!(round_trip(fs), (MAX, MAX, MAX));
-        assert_eq!(round_trip(fsn), (MIN, MIN, MIN));
-        assert_eq!(decode(0x7FFD_FFF7_FFFF), (MAX, MAX, MAX));
-        assert_eq!(decode(0xFFFF_FFFF_FFFF), (MIN, MIN, MIN));
+        assert_eq!((MAX, MAX, MAX), round_trip(fs));
+        assert_eq!((MIN, MIN, MIN), round_trip(fsn));
+        assert_eq!((MAX, MAX, MAX), decode_64(0x7FFD_FFF7_FFFF));
+        assert_eq!((MIN, MIN, MIN), decode_64(0xFFFF_FFFF_FFFF));
     }
 
     #[test]
@@ -235,10 +240,10 @@ mod tests {
         let fs = (INFINITY, 0.0, 0.0);
         let fsn = (-INFINITY, 0.0, 0.0);
 
-        assert_eq!(round_trip(fs), (MAX, 0.0, 0.0));
-        assert_eq!(round_trip(fsn), (MIN, 0.0, 0.0));
-        assert_eq!(encode(fs), 0x7FFC0000003F);
-        assert_eq!(encode(fsn), 0xFFFC0000003F);
+        assert_eq!((MAX, 0.0, 0.0), round_trip(fs));
+        assert_eq!((MIN, 0.0, 0.0), round_trip(fsn));
+        assert_eq!(0x7FFC0000003F, encode_64(fs));
+        assert_eq!(0xFFFC0000003F, encode_64(fsn));
     }
 
     #[test]
@@ -246,25 +251,25 @@ mod tests {
         let fs = (99_999_999_999_999.0, 4294967296.0, -17179869184.0);
         let fsn = (-99_999_999_999_999.0, 4294967296.0, -17179869184.0);
 
-        assert_eq!(round_trip(fs), (MAX, 4294967296.0, -17179869184.0));
-        assert_eq!(round_trip(fsn), (MIN, 4294967296.0, -17179869184.0));
+        assert_eq!((MAX, 4294967296.0, -17179869184.0), round_trip(fs));
+        assert_eq!((MIN, 4294967296.0, -17179869184.0), round_trip(fsn));
     }
 
     #[test]
     fn smallest_value() {
-        let fs = (MIN_POSITIVE, MIN_POSITIVE * 0.5, MIN_POSITIVE * 0.49);
-        let fsn = (-MIN_POSITIVE, -MIN_POSITIVE * 0.5, -MIN_POSITIVE * 0.49);
+        let fs = (MIN_POSITIVE * 1.5, MIN_POSITIVE, MIN_POSITIVE * 0.50);
+        let fsn = (-MIN_POSITIVE * 1.5, -MIN_POSITIVE, -MIN_POSITIVE * 0.50);
 
-        assert_eq!(decode(0x600100000), (MIN_POSITIVE, -MIN_POSITIVE, 0.0));
-        assert_eq!(round_trip(fs), (MIN_POSITIVE, MIN_POSITIVE, 0.0));
-        assert_eq!(round_trip(fsn), (-MIN_POSITIVE, -MIN_POSITIVE, -0.0));
+        assert_eq!((MIN_POSITIVE, -MIN_POSITIVE, 0.0), decode_64(0x600100000));
+        assert_eq!((MIN_POSITIVE, MIN_POSITIVE, 0.0), round_trip(fs));
+        assert_eq!((-MIN_POSITIVE, -MIN_POSITIVE, -0.0), round_trip(fsn));
     }
 
     #[test]
     fn underflow() {
-        let fs = (MIN_POSITIVE * 0.49, -MIN_POSITIVE * 0.49, 0.0);
-        assert_eq!(encode(fs), 0x200000000);
-        assert_eq!(round_trip(fs), (0.0, -0.0, 0.0));
+        let fs = (MIN_POSITIVE * 0.5, -MIN_POSITIVE * 0.5, MIN_POSITIVE);
+        assert_eq!(0x200000040, encode_64(fs));
+        assert_eq!((0.0, -0.0, MIN_POSITIVE), round_trip(fs));
     }
 
     #[test]
@@ -273,13 +278,13 @@ mod tests {
         let fs2 = (-63456254.2, 5235423.53, 54353.3);
         let fs3 = (-0.000000634, 0.00000000005, 0.00000000892);
 
-        let n1 = encode(fs1);
-        let n2 = encode(fs2);
-        let n3 = encode(fs3);
+        let n1 = encode_64(fs1);
+        let n2 = encode_64(fs2);
+        let n3 = encode_64(fs3);
 
-        assert_eq!(decode(n1), decode(n1 | 0xffff_0000_0000_0000));
-        assert_eq!(decode(n2), decode(n2 | 0xffff_0000_0000_0000));
-        assert_eq!(decode(n3), decode(n3 | 0xffff_0000_0000_0000));
+        assert_eq!(decode_64(n1), decode_64(n1 | 0xffff_0000_0000_0000));
+        assert_eq!(decode_64(n2), decode_64(n2 | 0xffff_0000_0000_0000));
+        assert_eq!(decode_64(n3), decode_64(n3 | 0xffff_0000_0000_0000));
     }
 
     #[test]

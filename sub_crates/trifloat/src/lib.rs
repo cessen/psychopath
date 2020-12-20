@@ -4,8 +4,10 @@
 //! The motivating use-case for this is compactly storing HDR RGB colors.  But
 //! it may be useful for other things as well.
 
+pub mod fluv32;
 pub mod signed48;
 pub mod unsigned32;
+pub mod unsigned40;
 
 //===========================================================================
 // Some shared functions used by the other modules in this crate.
