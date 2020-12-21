@@ -34,18 +34,12 @@ documented in the [OpenEXR-rs readme](https://github.com/cessen/openexr-rs/blob/
 Once those environment variables are set, then you should be able to build using
 the same simple cargo command above.
 
-If you have any difficulties, please feel free to file an issue and I'll try to
-help out as I have time!
-
 # PsychoBlend
 
 Included in the repository is an add-on for [Blender](http://www.blender.org)
 called "PsychoBlend" that lets you use Psychopath for rendering in Blender.
 However, most Blender features are not yet supported because Psychopath itself
 doesn't support them yet.
-
-If you have any trouble getting the add-on working, please feel free to file an
-issue and I'll try to troubleshoot/fix it as I have time!
 
 ## Features Supported
 - Polygon meshes.
