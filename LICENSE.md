@@ -1,6 +1,6 @@
 ## Psychopath
 
-With the exception of files under `psychoblend/` and `sub_crates/`, and any code explicitly excepted in code comments, this project is licensed under the GPLv3 as follows:
+With the exception of files under `psychoblend/` and `sub_crates/`, this project is licensed under the GPLv3 as follows:
 
 Copyright (c) 2020 Nathan Vegdahl
 

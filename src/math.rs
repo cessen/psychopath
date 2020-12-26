@@ -188,64 +188,34 @@ pub fn probit(n: f32, width: f32) -> f32 {
     x as f32 * width
 }
 
-//----------------------------------------------------------------
-// Adapted to Rust from https://code.google.com/archive/p/fastapprox/
-
 pub fn fast_ln(x: f32) -> f32 {
-    use std::mem::transmute_copy;
-
-    let mut y = unsafe { transmute_copy::<f32, u32>(&x) as f32 };
-    y *= 8.262_958_288_192_749_0e-8;
-    y - 87.989_971_088
+    fastapprox::fast::ln(x)
 }
 
 pub fn fast_pow2(p: f32) -> f32 {
-    use std::mem::transmute_copy;
-
-    let offset: f32 = if p < 0.0 { 1.0 } else { 0.0 };
-    let clipp: f32 = if p < -126.0 { -126.0 } else { p };
-    let w: i32 = clipp as i32;
-    let z: f32 = clipp - w as f32 + offset;
-
-    let i: u32 = ((1 << 23) as f32
-        * (clipp + 121.274_057_5 + 27.728_023_3 / (4.842_525_68 - z) - 1.490_129_07 * z))
-        as u32;
-
-    unsafe { transmute_copy::<u32, f32>(&i) }
+    fastapprox::fast::pow2(p)
 }
 
 pub fn fast_log2(x: f32) -> f32 {
-    use std::mem::transmute_copy;
-
-    let xi = unsafe { transmute_copy::<f32, u32>(&x) };
-    let y = xi as f32 * 1.192_092_895_507_812_5e-7;
-    let mx = unsafe { transmute_copy::<u32, f32>(&((xi & 0x007F_FFFF) | 0x3f00_0000)) };
-
-    y - 124.225_514_99 - 1.498_030_302 * mx - 1.725_879_99 / (0.352_088_706_8 + mx)
+    fastapprox::fast::log2(x)
 }
 
 pub fn fast_exp(p: f32) -> f32 {
-    fast_pow2(f32::consts::LOG2_E * p)
+    fastapprox::fast::exp(p)
 }
 
 pub fn fast_pow(x: f32, p: f32) -> f32 {
-    fast_pow2(p * fast_log2(x))
+    fastapprox::fast::pow(x, p)
 }
 
 pub fn faster_pow2(p: f32) -> f32 {
-    use std::mem::transmute_copy;
-
-    let clipp: f32 = if p < -126.0 { -126.0 } else { p };
-    let i: u32 = ((1 << 23) as f32 * (clipp + 126.942_695_04)) as u32;
-
-    unsafe { transmute_copy::<u32, f32>(&i) }
+    fastapprox::faster::pow2(p)
 }
 
 pub fn faster_exp(p: f32) -> f32 {
-    faster_pow2(f32::consts::LOG2_E * p)
+    fastapprox::faster::exp(p)
 }
 
-// End of adapted code
 //----------------------------------------------------------------
 
 #[cfg(test)]
