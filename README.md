@@ -62,18 +62,10 @@ such projects to come out of Psychopath in the future.
 
 # License
 
-The original code in Psychopath is distributed under the [MIT license](https://opensource.org/licenses/MIT).
+See LICENSE.md for details.  But the gist is:
 
-PsychoBlend is distributed under the [GPL version 2](https://opensource.org/licenses/GPL-2.0)
-or (at your option) any later version.
+* The overall project is licensed under GPLv3.
+* PsychoBlend is licensed under GPLv2, for compatibility with Blender.
+* Most crates under the `sub_crates` directory are dual-licensed under MIT and Apache 2.0 (but with some exceptions--see each crate for its respective licenses).
 
-Some code in this repository was adapted to Rust from other sources.  With one
-exception, all of the adapted code is from sources that are licensed under the
-MIT license or a BSD license variant.  Adapted code is marked by comments citing
-their source.
-
-The one exception is the code in `sub_crates/spectra_xyz/src/generate_spectra_rust.py`,
-which is adapted from the supplemental material of the paper
-["Physically Meaningful Rendering using Tristimulus Colours" by Meng et al.](https://cg.ivd.kit.edu/spectrum.php)
-It has no explicit license, but I contacted one of the authors and confirmed
-that it is intended to be used freely.  Take that for what you will!
+The intent of this scheme is to keep Psychopath itself copyleft, while allowing smaller reusable components to be licensed more liberally.
