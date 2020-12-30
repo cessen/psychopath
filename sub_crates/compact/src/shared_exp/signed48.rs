@@ -15,7 +15,7 @@
 
 #![allow(clippy::cast_lossless)]
 
-use crate::{fiddle_exp2, fiddle_log2};
+use super::{fiddle_exp2, fiddle_log2};
 
 /// Largest representable number.
 pub const MAX: f32 = ((1u128 << (64 - EXP_BIAS)) - (1 << (64 - EXP_BIAS - 13))) as f32;

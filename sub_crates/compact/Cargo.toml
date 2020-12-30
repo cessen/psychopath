@@ -1,15 +1,16 @@
 [package]
-name = "trifloat"
+name = "compact"
 version = "0.1.0"
 authors = ["Nathan Vegdahl <cessen@cessen.com>"]
 edition = "2018"
-license = "MIT"
+license = "MIT, Apache 2.0"
 
 [lib]
-name = "trifloat"
+name = "compact"
 path = "src/lib.rs"
 
 [dev-dependencies]
+proptest = "0.8"
 bencher = "0.1.5"
 rand = "0.6"
 

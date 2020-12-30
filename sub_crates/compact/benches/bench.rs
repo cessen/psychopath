@@ -1,6 +1,10 @@
 use bencher::{benchmark_group, benchmark_main, black_box, Bencher};
+use compact::{
+    fluv::fluv32,
+    shared_exp::{signed48, unsigned32, unsigned40},
+    unit_vec::oct32,
+};
 use rand::{rngs::SmallRng, FromEntropy, Rng};
-use trifloat::{fluv32, signed48, unsigned32, unsigned40};
 
 //----
 
@@ -115,6 +119,40 @@ fn fluv32_decode_yuv_1000_values(bench: &mut Bencher) {
     });
 }
 
+fn oct32_encode_1000_values(bench: &mut Bencher) {
+    let mut rng = SmallRng::from_entropy();
+    bench.iter(|| {
+        let x = rng.gen::<f32>() - 0.5;
+        let y = rng.gen::<f32>() - 0.5;
+        let z = rng.gen::<f32>() - 0.5;
+        for _ in 0..1000 {
+            black_box(oct32::encode(black_box((x, y, z))));
+        }
+    });
+}
+
+fn oct32_encode_precise_1000_values(bench: &mut Bencher) {
+    let mut rng = SmallRng::from_entropy();
+    bench.iter(|| {
+        let x = rng.gen::<f32>() - 0.5;
+        let y = rng.gen::<f32>() - 0.5;
+        let z = rng.gen::<f32>() - 0.5;
+        for _ in 0..1000 {
+            black_box(oct32::encode_precise(black_box((x, y, z))));
+        }
+    });
+}
+
+fn oct32_decode_1000_values(bench: &mut Bencher) {
+    let mut rng = SmallRng::from_entropy();
+    bench.iter(|| {
+        let v = rng.gen::<u32>();
+        for _ in 0..1000 {
+            black_box(oct32::decode(black_box(v)));
+        }
+    });
+}
+
 //----
 
 benchmark_group!(
@@ -128,5 +166,8 @@ benchmark_group!(
     fluv32_encode_1000_values,
     fluv32_decode_1000_values,
     fluv32_decode_yuv_1000_values,
+    oct32_encode_1000_values,
+    oct32_encode_precise_1000_values,
+    oct32_decode_1000_values,
 );
 benchmark_main!(benches);

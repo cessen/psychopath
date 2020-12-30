@@ -11,7 +11,7 @@
 //! of all three values depends on the largest of the three.  All integers
 //! up to 2048 can be represented exactly in the largest value.
 
-use crate::{fiddle_exp2, fiddle_log2};
+use super::{fiddle_exp2, fiddle_log2};
 
 /// Largest representable number.
 pub const MAX: f32 = ((1u128 << (128 - EXP_BIAS)) - (1 << (128 - EXP_BIAS - 11))) as f32;

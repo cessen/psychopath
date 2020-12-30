@@ -1,8 +1,7 @@
 #[macro_use]
 extern crate proptest;
-extern crate oct32norm;
 
-use oct32norm::{decode, encode, encode_precise};
+use compact::unit_vec::oct32::{decode, encode, encode_precise};
 use proptest::test_runner::Config;
 
 /// Calculates the cosine of the angle between the two vectors,
@@ -54,7 +53,7 @@ proptest! {
     #![proptest_config(Config::with_cases(4096))]
 
     #[test]
-    fn pt_roundtrip_angle_precision(v in (-1.0f32..1.0, -1.0f32..1.0, -1.0f32..1.0)) {
+    fn oct32_pt_roundtrip_angle_precision(v in (-1.0f32..1.0, -1.0f32..1.0, -1.0f32..1.0)) {
         let oct = encode(v);
         let octp = encode_precise(v);
 
@@ -68,7 +67,7 @@ proptest! {
     }
 
     #[test]
-    fn pt_roundtrip_component_precision(v in (-1.0f32..1.0, -1.0f32..1.0, -1.0f32..1.0)) {
+    fn oct32_pt_roundtrip_component_precision(v in (-1.0f32..1.0, -1.0f32..1.0, -1.0f32..1.0)) {
         let oct = encode(v);
         let octp = encode_precise(v);
 
