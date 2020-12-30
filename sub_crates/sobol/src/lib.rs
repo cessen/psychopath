@@ -1,7 +1,12 @@
 //! A seedable, Owen-scrambled Sobol sequence.
 //!
-//! This implementation is limited to `2^16` samples, and will loop back to
-//! the start of the sequence after that limit.
+//! This is based on the paper "Practical Hash-based Owen Scrambling"
+//! by Brent Burley, but with a novel scramble function in place of the
+//! Laine-Karras function used in the paper, and with a larger set of direction
+//! numbers due to Kuo et al.
+//!
+//! This implementation is limited to `2^16` samples, and will loop back
+//! to the start of the sequence after that limit.
 
 #![allow(clippy::unreadable_literal)]
 
@@ -30,8 +35,7 @@ pub fn sample_4d(sample_index: u32, dimension_set: u32, seed: u32) -> [f32; 4] {
     let vecs = &REV_VECTORS[dimension_set as usize];
 
     // Shuffle the index using the given seed to produce a unique statistically
-    // independent Sobol sequence.  This index shuffling approach is due to
-    // Brent Burley.
+    // independent Sobol sequence.
     let shuffled_rev_index = lk_scramble(sample_index.reverse_bits(), seed);
 
     // Compute the Sobol sample with reversed bits.
@@ -55,24 +59,26 @@ pub fn sample_4d(sample_index: u32, dimension_set: u32, seed: u32) -> [f32; 4] {
 
 //----------------------------------------------------------------------
 
-/// Scrambles `n` using the Laine Karras hash.  This is equivalent to Owen
-/// scrambling, but on reversed bits.
+/// Scrambles `n` using a novel variation on the Laine-Karras hash.
+///
+/// This is equivalent to Owen scrambling, but on reversed bits.
 #[inline]
 fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
-    // This uses essentially the same technique as presented in the paper
-    // "Stratified Sampling for Stochastic Transparency" by Laine and Karras,
-    // but with a faster, higher quality hash function.
+    // The basic idea here is that we're running a special kind of hash
+    // function that only allows avalanche to happen upwards (i.e. a bit is
+    // only affected by the bits lower than it).  This is achieved by only
+    // doing mixing via operations that also adhere to that property.
     //
-    // The basic idea is that we're running a special kind of hash function
-    // that only allows avalanche to happen upwards (i.e. a bit is only
-    // affected by the bits lower than it).  This is achieved by only doing
-    // mixing via operations that also adhere to that property.
+    // Some known valid operations that adhere to that property are:
     //
-    // Normally this would be considered a poor hash function, because normally
-    // you want all bits to have an equal chance of affecting all other bits.
-    // But in this case that only-upward behavior is exactly what we want,
-    // because it ends up being equivalent to Owen scrambling on
-    // reverse-ordered bits.
+    // 1. n ^= constant
+    // 2. n += constant
+    // 3. n *= odd_constant
+    // 4. n ^= n * even_constant
+    //
+    // The original Laine-Karras function uses operations 2 and 4 above.
+    // However, faster and higher-quality results can be achieved with 1, 2,
+    // and 3, which is what we're doing here.
 
     n = n.wrapping_add(hash(scramble, 2));
 
