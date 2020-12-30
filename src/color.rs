@@ -4,10 +4,10 @@ pub use color::{
     rec709_e_to_xyz, rec709_to_xyz, xyz_to_aces_ap0, xyz_to_aces_ap0_e, xyz_to_rec709,
     xyz_to_rec709_e,
 };
+use compact::fluv::fluv32;
 use glam::Vec4;
 use half::f16;
 use spectral_upsampling::meng::{spectrum_xyz_to_p_4, EQUAL_ENERGY_REFLECTANCE};
-use trifloat::fluv32;
 
 use crate::{lerp::Lerp, math::fast_exp};
 

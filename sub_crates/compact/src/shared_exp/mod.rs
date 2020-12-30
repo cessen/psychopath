@@ -1,16 +1,11 @@
-//! Functions for storing triplets of floating point values in a
-//! shared-exponent format.
-//!
-//! The motivating use-case for this is compactly storing HDR RGB colors.  But
-//! it may be useful for other things as well.
+//! Shared-exponent float triplet formats.
 
-pub mod fluv32;
 pub mod signed48;
 pub mod unsigned32;
 pub mod unsigned40;
 
 //===========================================================================
-// Some shared functions used by the other modules in this crate.
+// Shared functions used by the other modules in this crate.
 
 /// Calculates 2.0^exp using IEEE bit fiddling.
 ///

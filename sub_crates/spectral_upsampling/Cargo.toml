@@ -3,7 +3,7 @@ name = "spectral_upsampling"
 version = "0.1.0"
 authors = ["Nathan Vegdahl <cessen@cessen.com>"]
 edition = "2018"
-license = "MIT"
+license = "MIT, Apache 2.0"
 
 [lib]
 name = "spectral_upsampling"

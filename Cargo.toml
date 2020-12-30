@@ -2,12 +2,11 @@
 members = [
     "sub_crates/bvh_order",
     "sub_crates/color",
+    "sub_crates/compact",
     "sub_crates/halton",
     "sub_crates/math3d",
-    "sub_crates/oct32norm",
     "sub_crates/sobol",
     "sub_crates/spectral_upsampling",
-    "sub_crates/trifloat"
 ]
 
 [package]
@@ -15,6 +14,7 @@ name = "psychopath"
 version = "0.1.0"
 authors = ["Nathan Vegdahl <cessen@cessen.com>"]
 edition = "2018"
+license = "GPL v3"
 
 [profile.release]
 debug = true
@@ -45,20 +45,17 @@ path = "sub_crates/bvh_order"
 [dependencies.color]
 path = "sub_crates/color"
 
+[dependencies.compact]
+path = "sub_crates/compact"
 [dependencies.halton]
+
 path = "sub_crates/halton"
 
 [dependencies.math3d]
 path = "sub_crates/math3d"
-
-[dependencies.oct32norm]
-path = "sub_crates/oct32norm"
 
 [dependencies.sobol]
 path = "sub_crates/sobol"
 
 [dependencies.spectral_upsampling]
 path = "sub_crates/spectral_upsampling"
-
-[dependencies.trifloat]
-path = "sub_crates/trifloat"

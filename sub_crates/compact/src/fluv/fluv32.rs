@@ -8,13 +8,12 @@
 //!   tweaked scales to allow perfect representation of E.
 //! * It uses a floating point rather than log encoding to store luminance,
 //!   mainly for the sake of faster decoding.
-//! * Unlike LogLuv, this format's dynamic range is biased to put more of it
-//!   above 1.0 (see Luminance details below).
 //! * It omits the sign bit of LogLuv, foregoing negative luminance
 //!   capabilities.
 //!
-//! This format has the same chroma precision, very slightly improved luminance
-//! precision, and the same 127-stops of dynamic range as LogLuv.
+//! Aside from that, this format has the same chroma precision, very slightly
+//! improved luminance precision, and the same 127-stops of dynamic range as
+//! LogLuv.
 //!
 //! Like the LogLuv format, this is an absolute rather than relative color
 //! encoding, and as such takes CIE XYZ triplets as input.  It is *not*
@@ -23,47 +22,38 @@
 //!
 //! The bit layout is (from most to least significant bit):
 //!
-//! * 7 bits: luminance exponent (bias 42)
+//! * 7 bits: luminance exponent (bias 63)
 //! * 9 bits: luminance mantissa (implied leading 1, for 10 bits precision)
 //! * 8 bits: u'
 //! * 8 bits: v'
 //!
 //! ## Luminance details
 //!
+//! Like typical floating point, the luminance mantissa is treated as having an
+//! implicit leading 1, giving it an extra bit of precision.
+//!
+//! The luminance exponent is stored in 7 bits with a bias of 63.  The smallest
+//! exponent indicates a value of zero, and a valid encoding should also set
+//! the mantissa to zero in that case (denormal numbers are not supported).
+//! The largest exponent is given no special treatment (no infinities, no NaN).
+//!
+//! All together, this gives Fluv32 a worst-case precision that's slightly
+//! better than Logluv, and a luminance range of roughly `10^-19` to `10^19`,
+//! essentially the same as Logluv.
+//!
 //! Quoting Greg Ward about luminance ranges:
 //!
 //! > The sun is about `10^8 cd/m^2`, and the underside of a rock on a moonless
 //! > night is probably around `10^-6` or so [...]
 //!
-//! See also Wikipedia's
-//! [list of luminance levels](https://en.wikipedia.org/wiki/Orders_of_magnitude_(luminance)).
-//!
-//! The luminance range of the original LogLuv is about `10^-19` to `10^19`,
-//! splitting the range evenly above and below 1.0.  Given the massive dynamic
-//! range, and the fact that all day-to-day luminance levels trivially fit
-//! within that, that's a perfectly reasonable choice.
-//!
-//! However, there are some stellar events like supernovae that are trillions
-//! of times brighter than the sun, and would exceed `10^19`.  Conversely,
-//! there likely isn't much use for significantly smaller values than `10^-10`
-//! or so.  So although recording supernovae in physical units with a graphics
-//! format seems unlikely, it doesn't hurt to bias the range towards brighter
-//! luminance levels.
-//!
-//! With that in mind, FLuv32 uses an exponent bias of 42, putting twice as
-//! many stops of dynamic range above 1.0 as below it, giving a luminance range
-//! of roughly `10^-13` to `10^25`.  It's the same dynamic range as
-//! LogLuv (about 127 stops), but with more of that range placed above 1.0.
-//!
-//! Like typical floating point, the mantissa is treated as having an implicit
-//! leading 1, giving it an extra bit of precision.  The smallest exponent
-//! indicates a value of zero, and a valid encoding should also set the
-//! mantissa to zero in that case (denormal numbers are not supported).  The
-//! largest exponent is given no special treatment (no infinities, no NaN).
+//! So Fluv32's luminance range is *massively* larger than needed for any
+//! day-to-day phenomena.  The only things that exceed it are stellar events
+//! such as supernovae, images of which are unliklely to be used with physical
+//! units in most practical graphics applications.
 
 #![allow(clippy::cast_lossless)]
 
-const EXP_BIAS: i32 = 42;
+const EXP_BIAS: i32 = 63;
 const BIAS_OFFSET: u32 = 127 - EXP_BIAS as u32;
 
 /// The scale factor of the quantized U component.
@@ -205,10 +195,10 @@ mod tests {
         let tri = encode(fs);
         let fs2 = decode(tri);
 
-        assert_eq!(fs.1, fs2.1);
         assert!((fs.0 - fs2.0).abs() < 0.0000001);
+        assert_eq!(fs.1, fs2.1);
         assert!((fs.2 - fs2.2).abs() < 0.0000001);
-        assert_eq!(0x540056c3, tri);
+        assert_eq!(0x7e0056c3, tri);
     }
 
     #[test]

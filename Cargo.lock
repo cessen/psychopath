@@ -135,6 +135,15 @@ name = "color"
 version = "0.1.0"
 
 [[package]]
+name = "compact"
+version = "0.1.0"
+dependencies = [
+ "bencher",
+ "proptest",
+ "rand 0.6.5",
+]
+
+[[package]]
 name = "copy_in_place"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -278,15 +287,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oct32norm"
-version = "0.1.0"
-dependencies = [
- "bencher",
- "proptest",
- "rand 0.6.5",
-]
-
-[[package]]
 name = "openexr"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -352,6 +352,7 @@ dependencies = [
  "bvh_order",
  "clap",
  "color",
+ "compact",
  "copy_in_place",
  "crossbeam",
  "fastapprox",
@@ -363,7 +364,6 @@ dependencies = [
  "math3d",
  "nom",
  "num_cpus",
- "oct32norm",
  "openexr",
  "png_encode_mini",
  "rustc-serialize",
@@ -371,7 +371,6 @@ dependencies = [
  "sobol",
  "spectral_upsampling",
  "time",
- "trifloat",
 ]
 
 [[package]]
@@ -661,14 +660,6 @@ dependencies = [
  "libc",
  "wasi 0.10.0+wasi-snapshot-preview1",
  "winapi",
-]
-
-[[package]]
-name = "trifloat"
-version = "0.1.0"
-dependencies = [
- "bencher",
- "rand 0.6.5",
 ]
 
 [[package]]
