@@ -292,9 +292,9 @@ dependencies = [
 
 [[package]]
 name = "openexr"
-version = "0.6.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9e3b9ae4f3eec70bc20117e11b24dd3acd629707a0a96d07f78b02910f0f480"
+checksum = "8e00775466799235631e5cf0d7af7b4ebe080042ba9d288e1fb57f57656f60cf"
 dependencies = [
  "half",
  "libc",
@@ -303,9 +303,9 @@ dependencies = [
 
 [[package]]
 name = "openexr-sys"
-version = "0.6.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96a68b449953411a919eea06547a3b4a1ee6195b41ada68d432826caeedb75bd"
+checksum = "29fb288fecb81811a0c42a587f0a1a4f75c6e53a8f4c5589759e593efe215951"
 dependencies = [
  "cc",
  "libc",
