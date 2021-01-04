@@ -100,16 +100,18 @@ pub(crate) mod sse {
         }
     }
 
-    impl std::ops::MulAssign for Int4 {
+    impl std::ops::Mul for Int4 {
+        type Output = Int4;
+
         #[inline(always)]
-        fn mul_assign(&mut self, other: Self) {
+        fn mul(self, other: Self) -> Int4 {
             // This only works with SSE 4.1 support.
             #[cfg(target_feature = "sse4.1")]
             unsafe {
                 use core::arch::x86_64::_mm_mullo_epi32;
-                *self = Int4 {
+                Int4 {
                     v: _mm_mullo_epi32(self.v, other.v),
-                };
+                }
             }
 
             // This works on all x86-64 chips.
@@ -127,10 +129,17 @@ pub(crate) mod sse {
                     ),
                     _mm_set_epi32(0, 0xffffffffu32 as i32, 0, 0xffffffffu32 as i32),
                 );
-                *self = Int4 {
+                Int4 {
                     v: _mm_or_si128(a, _mm_shuffle_epi32(b, 0b10_11_00_01)),
-                };
+                }
             }
+        }
+    }
+
+    impl std::ops::MulAssign for Int4 {
+        #[inline(always)]
+        fn mul_assign(&mut self, other: Self) {
+            *self = *self * other;
         }
     }
 
