@@ -59,33 +59,33 @@ pub fn sample_4d(sample_index: u32, dimension_set: u32, seed: u32) -> [f32; 4] {
 
 //----------------------------------------------------------------------
 
+// The permutation constants used in `lk_scramble()`.
+// Each tuple is for one round of permutation.  The first tuple is
+// optimized, and the remaining are random aside from making sure
+// that they are appropriately even or odd.
+const PERMS: &[(u32, u32)] = &[
+    (0x9ac7ea2a, 0x7d1e78d3),
+    (0x2ce68764, 0x9dd00551),
+    (0x79b82526, 0x2dfc1a6b),
+    (0xf358b1d0, 0x38743c65),
+];
+
+// How many permutation rounds to do.
+// In practice it seems like one round is plenty, but I'm leaving more
+// available in case we want to increase them later.
+const ROUNDS: usize = 1;
+
 /// Scrambles `n` using a novel variation on the Laine-Karras hash.
 ///
 /// This is equivalent to Owen scrambling, but on reversed bits.
-#[inline]
+#[inline(always)]
 fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
-    // The basic idea here is that we're running a special kind of hash
-    // function that only allows avalanche to happen upwards (i.e. a bit is
-    // only affected by the bits lower than it).  This is achieved by only
-    // doing mixing via operations that also adhere to that property.
-    //
-    // Some known valid operations that adhere to that property are:
-    //
-    // 1. n ^= constant
-    // 2. n += constant
-    // 3. n *= odd_constant
-    // 4. n ^= n * even_constant
-    //
-    // The original Laine-Karras function uses operations 2 and 4 above.
-    // However, faster and higher-quality results can be achieved with 1, 2,
-    // and 3, which is what we're doing here.
-
     n = n.wrapping_add(hash(scramble, 2));
 
-    n ^= 0xdc967795;
-    n = n.wrapping_mul(0x97b754b7);
-    n ^= 0x866350b1;
-    n = n.wrapping_mul(0x9e3779cd);
+    for &(p1, p2) in PERMS.iter().take(ROUNDS) {
+        n ^= n.wrapping_mul(p1);
+        n = n.wrapping_mul(p2);
+    }
 
     n
 }
@@ -95,10 +95,10 @@ fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
 fn lk_scramble_int4(mut n: Int4, scramble: u32) -> Int4 {
     n += hash_int4([scramble; 4].into(), 2);
 
-    n ^= [0xdc967795; 4].into();
-    n *= [0x97b754b7; 4].into();
-    n ^= [0x866350b1; 4].into();
-    n *= [0x9e3779cd; 4].into();
+    for &(p1, p2) in PERMS.iter().take(ROUNDS) {
+        n ^= n * [p1; 4].into();
+        n *= [p2; 4].into();
+    }
 
     n
 }
