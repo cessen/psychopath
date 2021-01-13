@@ -59,33 +59,17 @@ pub fn sample_4d(sample_index: u32, dimension_set: u32, seed: u32) -> [f32; 4] {
 
 //----------------------------------------------------------------------
 
-// The permutation constants used in `lk_scramble()`.
-// Each tuple is for one round of permutation.  The first tuple is
-// optimized, and the remaining are random aside from making sure
-// that they are appropriately even or odd.
-const PERMS: &[(u32, u32)] = &[
-    (0x9ac7ea2a, 0x7d1e78d3),
-    (0x2ce68764, 0x9dd00551),
-    (0x79b82526, 0x2dfc1a6b),
-    (0xf358b1d0, 0x38743c65),
-];
-
-// How many permutation rounds to do.
-// In practice it seems like one round is plenty, but I'm leaving more
-// available in case we want to increase them later.
-const ROUNDS: usize = 1;
-
 /// Scrambles `n` using a novel variation on the Laine-Karras hash.
 ///
 /// This is equivalent to Owen scrambling, but on reversed bits.
 #[inline(always)]
 fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
-    n = n.wrapping_add(hash(scramble, 2));
+    let scramble = hash(scramble);
 
-    for &(p1, p2) in PERMS.iter().take(ROUNDS) {
-        n ^= n.wrapping_mul(p1);
-        n = n.wrapping_mul(p2);
-    }
+    n = n.wrapping_add(scramble);
+    n ^= n.wrapping_mul(0x3354734a);
+    n = n.wrapping_add(n << 2);
+    n ^= n.wrapping_mul(scramble & !1);
 
     n
 }
@@ -93,25 +77,28 @@ fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
 /// Same as `lk_scramble()`, except does it on 4 integers at a time.
 #[inline(always)]
 fn lk_scramble_int4(mut n: Int4, scramble: u32) -> Int4 {
-    n += hash_int4([scramble; 4].into(), 2);
+    let scramble = hash_int4([scramble; 4].into());
 
-    for &(p1, p2) in PERMS.iter().take(ROUNDS) {
-        n ^= n * [p1; 4].into();
-        n *= [p2; 4].into();
-    }
+    n += scramble;
+    n ^= n * [0x3354734a; 4].into();
+    n += n << 2;
+    n ^= n * (scramble & [!1; 4].into());
 
     n
 }
 
-/// A simple 32-bit hash function.  Its quality can be tuned with
-/// the number of rounds used.
+/// A good 32-bit hash function.
+/// From https://github.com/skeeto/hash-prospector
 #[inline(always)]
-fn hash(n: u32, rounds: u32) -> u32 {
+fn hash(n: u32) -> u32 {
     let mut hash = n ^ 0x79c68e4a;
-    for _ in 0..rounds {
-        hash = hash.wrapping_mul(0x736caf6f);
-        hash ^= hash.wrapping_shr(16);
-    }
+
+    hash ^= hash >> 16;
+    hash = hash.wrapping_mul(0x7feb352d);
+    hash ^= hash >> 15;
+    hash = hash.wrapping_mul(0x846ca68b);
+    hash ^= hash >> 16;
+
     hash
 }
 
@@ -120,12 +107,14 @@ fn hash(n: u32, rounds: u32) -> u32 {
 /// Each of the four numbers gets a different hash, so even if all input
 /// numbers are the same, the outputs will still be different for each of them.
 #[inline(always)]
-fn hash_int4(n: Int4, rounds: u32) -> Int4 {
-    let mut hash = n;
-    hash ^= [0x912f69ba, 0x174f18ab, 0x691e72ca, 0xb40cc1b8].into();
-    for _ in 0..rounds {
-        hash *= [0x736caf6f; 4].into();
-        hash ^= hash.shr16();
-    }
+fn hash_int4(n: Int4) -> Int4 {
+    let mut hash = n ^ [0x912f69ba, 0x174f18ab, 0x691e72ca, 0xb40cc1b8].into();
+
+    hash ^= hash >> 16;
+    hash *= [0x7feb352d; 4].into();
+    hash ^= hash >> 15;
+    hash *= [0x846ca68b; 4].into();
+    hash ^= hash >> 16;
+
     hash
 }

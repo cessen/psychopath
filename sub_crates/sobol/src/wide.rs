@@ -5,8 +5,8 @@
 pub(crate) mod sse {
     use core::arch::x86_64::{
         __m128i, _mm_add_epi32, _mm_and_si128, _mm_cvtepi32_ps, _mm_mul_ps, _mm_or_si128,
-        _mm_set1_epi32, _mm_set1_ps, _mm_set_epi32, _mm_setzero_si128, _mm_slli_epi32,
-        _mm_srli_epi32, _mm_xor_si128,
+        _mm_set1_epi32, _mm_set1_ps, _mm_set_epi32, _mm_setzero_si128, _mm_sll_epi32,
+        _mm_slli_epi32, _mm_srl_epi32, _mm_srli_epi32, _mm_xor_si128,
     };
 
     #[derive(Debug, Copy, Clone)]
@@ -91,13 +91,6 @@ pub(crate) mod sse {
                 Int4 { v: n }
             }
         }
-
-        #[inline(always)]
-        pub(crate) fn shr16(self) -> Int4 {
-            Int4 {
-                v: unsafe { _mm_srli_epi32(self.v, 16) },
-            }
-        }
     }
 
     impl std::ops::Mul for Int4 {
@@ -152,12 +145,54 @@ pub(crate) mod sse {
         }
     }
 
+    impl std::ops::BitXor for Int4 {
+        type Output = Int4;
+
+        #[inline(always)]
+        fn bitxor(self, other: Self) -> Int4 {
+            Int4 {
+                v: unsafe { _mm_xor_si128(self.v, other.v) },
+            }
+        }
+    }
+
     impl std::ops::BitXorAssign for Int4 {
         #[inline(always)]
         fn bitxor_assign(&mut self, other: Self) {
-            *self = Int4 {
-                v: unsafe { _mm_xor_si128(self.v, other.v) },
-            };
+            *self = *self ^ other;
+        }
+    }
+
+    impl std::ops::BitAnd for Int4 {
+        type Output = Int4;
+
+        #[inline(always)]
+        fn bitand(self, other: Self) -> Int4 {
+            Int4 {
+                v: unsafe { _mm_and_si128(self.v, other.v) },
+            }
+        }
+    }
+
+    impl std::ops::Shl<i32> for Int4 {
+        type Output = Int4;
+
+        #[inline(always)]
+        fn shl(self, other: i32) -> Int4 {
+            Int4 {
+                v: unsafe { _mm_sll_epi32(self.v, _mm_set1_epi32(other)) },
+            }
+        }
+    }
+
+    impl std::ops::Shr<i32> for Int4 {
+        type Output = Int4;
+
+        #[inline(always)]
+        fn shr(self, other: i32) -> Int4 {
+            Int4 {
+                v: unsafe { _mm_srl_epi32(self.v, _mm_set1_epi32(other)) },
+            }
         }
     }
 
@@ -210,14 +245,18 @@ pub(crate) mod fallback {
                 ],
             }
         }
+    }
 
-        pub(crate) fn shr16(self) -> Int4 {
+    impl std::ops::Mul for Int4 {
+        type Output = Int4;
+
+        fn mul(self, other: Self) -> Int4 {
             Int4 {
                 v: [
-                    self.v[0] >> 16,
-                    self.v[1] >> 16,
-                    self.v[2] >> 16,
-                    self.v[3] >> 16,
+                    self.v[0].wrapping_mul(other.v[0]),
+                    self.v[1].wrapping_mul(other.v[1]),
+                    self.v[2].wrapping_mul(other.v[2]),
+                    self.v[3].wrapping_mul(other.v[3]),
                 ],
             }
         }
@@ -225,14 +264,7 @@ pub(crate) mod fallback {
 
     impl std::ops::MulAssign for Int4 {
         fn mul_assign(&mut self, other: Self) {
-            *self = Int4 {
-                v: [
-                    self.v[0].wrapping_mul(other.v[0]),
-                    self.v[1].wrapping_mul(other.v[1]),
-                    self.v[2].wrapping_mul(other.v[2]),
-                    self.v[3].wrapping_mul(other.v[3]),
-                ],
-            };
+            *self = *self * other;
         }
     }
 
@@ -249,16 +281,75 @@ pub(crate) mod fallback {
         }
     }
 
-    impl std::ops::BitXorAssign for Int4 {
-        fn bitxor_assign(&mut self, other: Self) {
-            *self = Int4 {
+    impl std::ops::BitAnd for Int4 {
+        type Output = Int4;
+        fn bitand(self, other: Self) -> Int4 {
+            Int4 {
+                v: [
+                    self.v[0] & other.v[0],
+                    self.v[1] & other.v[1],
+                    self.v[2] & other.v[2],
+                    self.v[3] & other.v[3],
+                ],
+            }
+        }
+    }
+
+    impl std::ops::BitAndAssign for Int4 {
+        fn bitand_assign(&mut self, other: Self) {
+            *self = *self & other;
+        }
+    }
+
+    impl std::ops::BitXor for Int4 {
+        type Output = Int4;
+        fn bitxor(self, other: Self) -> Int4 {
+            Int4 {
                 v: [
                     self.v[0] ^ other.v[0],
                     self.v[1] ^ other.v[1],
                     self.v[2] ^ other.v[2],
                     self.v[3] ^ other.v[3],
                 ],
-            };
+            }
+        }
+    }
+
+    impl std::ops::BitXorAssign for Int4 {
+        fn bitxor_assign(&mut self, other: Self) {
+            *self = *self ^ other;
+        }
+    }
+
+    impl std::ops::Shl<i32> for Int4 {
+        type Output = Int4;
+
+        #[inline(always)]
+        fn shl(self, other: i32) -> Int4 {
+            Int4 {
+                v: [
+                    self.v[0] << other,
+                    self.v[1] << other,
+                    self.v[2] << other,
+                    self.v[3] << other,
+                ],
+            }
+        }
+    }
+
+    impl std::ops::Shr<i32> for Int4 {
+        type Output = Int4;
+
+        #[inline(always)]
+        fn shr(self, other: i32) -> Int4 {
+            Int4 {
+                v: [
+                    self.v[0] >> other,
+                    self.v[1] >> other,
+                    self.v[2] >> other,
+                    self.v[3] >> other,
+                ],
+            }
         }
     }
 
