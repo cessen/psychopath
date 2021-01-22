@@ -145,6 +145,40 @@ pub(crate) mod sse {
         }
     }
 
+    impl std::ops::BitAnd for Int4 {
+        type Output = Int4;
+
+        #[inline(always)]
+        fn bitand(self, other: Self) -> Int4 {
+            Int4 {
+                v: unsafe { _mm_and_si128(self.v, other.v) },
+            }
+        }
+    }
+
+    impl std::ops::BitAndAssign for Int4 {
+        fn bitand_assign(&mut self, other: Self) {
+            *self = *self & other;
+        }
+    }
+
+    impl std::ops::BitOr for Int4 {
+        type Output = Int4;
+
+        #[inline(always)]
+        fn bitor(self, other: Self) -> Int4 {
+            Int4 {
+                v: unsafe { _mm_or_si128(self.v, other.v) },
+            }
+        }
+    }
+
+    impl std::ops::BitOrAssign for Int4 {
+        fn bitor_assign(&mut self, other: Self) {
+            *self = *self | other;
+        }
+    }
+
     impl std::ops::BitXor for Int4 {
         type Output = Int4;
 
@@ -160,17 +194,6 @@ pub(crate) mod sse {
         #[inline(always)]
         fn bitxor_assign(&mut self, other: Self) {
             *self = *self ^ other;
-        }
-    }
-
-    impl std::ops::BitAnd for Int4 {
-        type Output = Int4;
-
-        #[inline(always)]
-        fn bitand(self, other: Self) -> Int4 {
-            Int4 {
-                v: unsafe { _mm_and_si128(self.v, other.v) },
-            }
         }
     }
 
@@ -298,6 +321,26 @@ pub(crate) mod fallback {
     impl std::ops::BitAndAssign for Int4 {
         fn bitand_assign(&mut self, other: Self) {
             *self = *self & other;
+        }
+    }
+
+    impl std::ops::BitOr for Int4 {
+        type Output = Int4;
+        fn bitor(self, other: Self) -> Int4 {
+            Int4 {
+                v: [
+                    self.v[0] | other.v[0],
+                    self.v[1] | other.v[1],
+                    self.v[2] | other.v[2],
+                    self.v[3] | other.v[3],
+                ],
+            }
+        }
+    }
+
+    impl std::ops::BitOrAssign for Int4 {
+        fn bitor_assign(&mut self, other: Self) {
+            *self = *self | other;
         }
     }
 
