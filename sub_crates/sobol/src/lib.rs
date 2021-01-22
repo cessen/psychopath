@@ -66,10 +66,10 @@ pub fn sample_4d(sample_index: u32, dimension_set: u32, seed: u32) -> [f32; 4] {
 fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
     let scramble = hash(scramble);
 
-    n = n.wrapping_add(scramble);
-    n ^= n.wrapping_mul(0x3354734a);
     n = n.wrapping_add(n << 2);
-    n ^= n.wrapping_mul(scramble & !1);
+    n ^= n.wrapping_mul(0xfe9b5742);
+    n = n.wrapping_add(scramble);
+    n = n.wrapping_mul(scramble | 1);
 
     n
 }
@@ -79,10 +79,10 @@ fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
 fn lk_scramble_int4(mut n: Int4, scramble: u32) -> Int4 {
     let scramble = hash_int4([scramble; 4].into());
 
-    n += scramble;
-    n ^= n * [0x3354734a; 4].into();
     n += n << 2;
-    n ^= n * (scramble & [!1; 4].into());
+    n ^= n * [0xfe9b5742; 4].into();
+    n += scramble;
+    n *= scramble | [1; 4].into();
 
     n
 }
