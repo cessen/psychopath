@@ -7,7 +7,7 @@ use std::{env, fs::File, io::Write, path::Path};
 const NUM_DIMENSIONS: usize = 128;
 
 /// What file to generate the numbers from.
-const DIRECTION_NUMBERS_TEXT: &str = include_str!("direction_numbers/new-joe-kuo-5.1024.txt");
+const DIRECTION_NUMBERS_TEXT: &str = include_str!("direction_numbers/new-joe-kuo-6.1024.txt");
 
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
