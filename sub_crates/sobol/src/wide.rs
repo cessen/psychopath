@@ -22,7 +22,9 @@ pub(crate) mod sse {
             }
         }
 
-        pub fn get(self, i: usize) -> u32 {
+        /// For testing.
+        #[allow(dead_code)]
+        fn get(self, i: usize) -> u32 {
             let n: [u32; 4] = unsafe { std::mem::transmute(self) };
             n[i]
         }

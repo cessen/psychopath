@@ -69,7 +69,7 @@ fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
     n = n.wrapping_add(n << 2);
     n ^= n.wrapping_mul(0xfe9b5742);
     n = n.wrapping_add(scramble);
-    n = n.wrapping_mul(scramble | 1);
+    n = n.wrapping_mul((scramble >> 16) | 1);
 
     n
 }
@@ -82,7 +82,7 @@ fn lk_scramble_int4(mut n: Int4, scramble: u32) -> Int4 {
     n += n << 2;
     n ^= n * [0xfe9b5742; 4].into();
     n += scramble;
-    n *= scramble | [1; 4].into();
+    n *= (scramble >> 16) | [1; 4].into();
 
     n
 }
