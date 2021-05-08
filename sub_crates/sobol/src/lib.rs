@@ -1,9 +1,10 @@
 //! A seedable, Owen-scrambled Sobol sequence.
 //!
 //! This is based on the paper "Practical Hash-based Owen Scrambling"
-//! by Brent Burley, but with a novel scramble function in place of the
-//! Laine-Karras function used in the paper, and with a larger set of direction
-//! numbers due to Kuo et al.
+//! by Brent Burley, but using the scramble function from
+//! https://psychopath.io/post/2021_01_30_building_a_better_lk_hash
+//! in place of the Laine-Karras function used in the paper, and with a
+//! larger set of direction numbers due to Kuo et al.
 //!
 //! This implementation is limited to `2^16` samples, and will loop back
 //! to the start of the sequence after that limit.
@@ -36,7 +37,7 @@ pub fn sample_4d(sample_index: u32, dimension_set: u32, seed: u32) -> [f32; 4] {
 
     // Shuffle the index using the given seed to produce a unique statistically
     // independent Sobol sequence.
-    let shuffled_rev_index = lk_scramble(sample_index.reverse_bits(), seed);
+    let shuffled_rev_index = scramble(sample_index.reverse_bits(), seed);
 
     // Compute the Sobol sample with reversed bits.
     let mut sobol_rev = Int4::zero();
@@ -51,7 +52,7 @@ pub fn sample_4d(sample_index: u32, dimension_set: u32, seed: u32) -> [f32; 4] {
     }
 
     // Do Owen scrambling on the reversed-bits Sobol sample.
-    let sobol_owen_rev = lk_scramble_int4(sobol_rev, dimension_set ^ seed);
+    let sobol_owen_rev = scramble_int4(sobol_rev, dimension_set ^ seed);
 
     // Un-reverse the bits and convert to floating point in [0, 1).
     sobol_owen_rev.reverse_bits().to_norm_floats()
@@ -59,30 +60,33 @@ pub fn sample_4d(sample_index: u32, dimension_set: u32, seed: u32) -> [f32; 4] {
 
 //----------------------------------------------------------------------
 
-/// Scrambles `n` using a novel variation on the Laine-Karras hash.
+/// Scrambles `n` using the hash function from
+/// https://psychopath.io/post/2021_01_30_building_a_better_lk_hash
 ///
 /// This is equivalent to Owen scrambling, but on reversed bits.
 #[inline(always)]
-fn lk_scramble(mut n: u32, scramble: u32) -> u32 {
+fn scramble(mut n: u32, scramble: u32) -> u32 {
     let scramble = hash(scramble);
 
-    n = n.wrapping_add(n << 2);
-    n ^= n.wrapping_mul(0xfe9b5742);
+    n ^= n.wrapping_mul(0x3d20adea);
     n = n.wrapping_add(scramble);
     n = n.wrapping_mul((scramble >> 16) | 1);
+    n ^= n.wrapping_mul(0x05526c56);
+    n ^= n.wrapping_mul(0x53a22864);
 
     n
 }
 
-/// Same as `lk_scramble()`, except does it on 4 integers at a time.
+/// Same as `scramble()`, except does it on 4 integers at a time.
 #[inline(always)]
-fn lk_scramble_int4(mut n: Int4, scramble: u32) -> Int4 {
+fn scramble_int4(mut n: Int4, scramble: u32) -> Int4 {
     let scramble = hash_int4([scramble; 4].into());
 
-    n += n << 2;
-    n ^= n * [0xfe9b5742; 4].into();
+    n ^= n * [0x3d20adea; 4].into();
     n += scramble;
     n *= (scramble >> 16) | [1; 4].into();
+    n ^= n * [0x05526c56; 4].into();
+    n ^= n * [0x53a22864; 4].into();
 
     n
 }
