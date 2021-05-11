@@ -213,9 +213,9 @@ dependencies = [
 
 [[package]]
 name = "kioku"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30217b27028ccf61ba75afa4f9bb7be8e4a66780d7882fdaacd9ea8e0cdede26"
+checksum = "6d967239fdf2a2467247931a3055f627af65358fc99b534b5dc1ef8520384999"
 
 [[package]]
 name = "lazy_static"
@@ -252,9 +252,9 @@ dependencies = [
 
 [[package]]
 name = "memchr"
-version = "2.3.4"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ee1c47aaa256ecabcaea351eae4a9b01ef39ed810004e298d2511ed284b1525"
+checksum = "b16bd47d9e329435e309c58469fe0791c2d0d1ba96ec0954152a5ae2b04387dc"
 
 [[package]]
 name = "nom"
@@ -368,7 +368,7 @@ dependencies = [
  "png_encode_mini",
  "rustc-serialize",
  "scoped_threadpool",
- "sobol",
+ "sobol_burley",
  "spectral_upsampling",
  "time",
 ]
@@ -549,18 +549,18 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85dd92e586f7355c633911e11f77f3d12f04b1b1bd76a198bd34ae3af8341ef2"
+checksum = "742739e41cd49414de871ea5e549afb7e2a3ac77b589bcbebe8c82fab37147fc"
 dependencies = [
  "bitflags",
 ]
 
 [[package]]
 name = "regex-syntax"
-version = "0.6.23"
+version = "0.6.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24d5f089152e60f62d28b835fbff2cd2e8dc0baf1ac13343bef92ab7eed84548"
+checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
 name = "remove_dir_all"
@@ -608,12 +608,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d51f5df5af43ab3f1360b429fa5e0152ac5ce8c0bd6485cae490332e96846a8"
 
 [[package]]
-name = "sobol"
+name = "sobol_burley"
 version = "0.1.0"
-dependencies = [
- "bencher",
- "rand 0.6.5",
-]
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92317634ef0e1ece7bd4031abc3186df3781d0bf2b05682796655200aef4c965"
 
 [[package]]
 name = "spectral_upsampling"
