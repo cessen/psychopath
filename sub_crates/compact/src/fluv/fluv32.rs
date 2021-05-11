@@ -102,7 +102,7 @@ pub fn encode(xyz: (f32, f32, f32)) -> u32 {
         let v = (((9.0 * V_SCALE) * xyz.1 / s) + 0.5).max(1.0).min(255.0);
 
         ((u as u32) << 8) | (v as u32)
-    };
+    }
 
     let y_bits = xyz.1.to_bits() & 0x7fffffff;
 
