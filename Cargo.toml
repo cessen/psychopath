@@ -6,7 +6,6 @@ members = [
     "sub_crates/data_tree",
     "sub_crates/halton",
     "sub_crates/math3d",
-    "sub_crates/sobol",
     "sub_crates/spectral_upsampling",
 ]
 
@@ -32,6 +31,7 @@ nom = "5"
 num_cpus = "1.8"
 openexr = "0.7"
 kioku = "0.3"
+sobol_burley = "0.1"
 png_encode_mini = "0.1.2"
 rustc-serialize = "0.3"
 scoped_threadpool = "0.1"
@@ -57,9 +57,6 @@ path = "sub_crates/halton"
 
 [dependencies.math3d]
 path = "sub_crates/math3d"
-
-[dependencies.sobol]
-path = "sub_crates/sobol"
 
 [dependencies.spectral_upsampling]
 path = "sub_crates/spectral_upsampling"
