@@ -614,9 +614,9 @@ checksum = "1d51f5df5af43ab3f1360b429fa5e0152ac5ce8c0bd6485cae490332e96846a8"
 
 [[package]]
 name = "sobol_burley"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92317634ef0e1ece7bd4031abc3186df3781d0bf2b05682796655200aef4c965"
+checksum = "b9d3ea39927d337a987e2334d9ff049617d2d132d64e3ce3cd6fb6e4aa00a864"
 
 [[package]]
 name = "spectral_upsampling"

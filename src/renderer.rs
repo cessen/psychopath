@@ -706,7 +706,7 @@ fn get_sample_4d(
     let seed = pixel_co.0 ^ (pixel_co.1 << 16) ^ seed.wrapping_mul(0x736caf6f);
 
     match dimension_set {
-        ds if ds < sobol_burley::MAX_DIMENSION_SET as u32 => {
+        ds if ds < sobol_burley::NUM_DIMENSION_SETS as u32 => {
             // Sobol sampling.
             let n4 = sobol_burley::sample_4d(i, ds, seed);
             (n4[0], n4[1], n4[2], n4[3])
