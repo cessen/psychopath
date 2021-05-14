@@ -6,7 +6,7 @@
 
 use std::mem::{transmute, MaybeUninit};
 
-use glam::Vec4Mask;
+use glam::BVec4A;
 
 use kioku::Arena;
 
@@ -123,12 +123,12 @@ impl<'a> BVH4<'a> {
                     traversal_code,
                 } => {
                     node_tests += ray_stack.ray_count_in_next_task() as u64;
-                    let mut all_hits = Vec4Mask::default();
+                    let mut all_hits = BVec4A::default();
 
                     // Ray testing
                     ray_stack.pop_do_next_task_and_push_rays(children.len(), |ray_idx| {
                         if rays.is_done(ray_idx) {
-                            Vec4Mask::default()
+                            BVec4A::default()
                         } else {
                             let hits = if bounds.len() == 1 {
                                 bounds[0].intersect_ray(

@@ -120,8 +120,8 @@ impl Lerp for Normal {
 
 impl Lerp for Point {
     fn lerp(self, other: Point, alpha: f32) -> Point {
-        let s = self.norm();
-        let o = other.norm();
+        let s = self;
+        let o = other;
         Point {
             co: (s.co * (1.0 - alpha)) + (o.co * alpha),
         }

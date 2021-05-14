@@ -118,14 +118,14 @@ fn small_rgb_to_spectrum_p4(
 
     // Evaluate the spectral function and return the result.
     if max_val <= table_mid_value {
-        rgb2spec_eval_4([c[0].x(), c[0].y(), c[0].z()], lambdas) * (1.0 / table_mid_value) * max_val
+        rgb2spec_eval_4([c[0][0], c[0][1], c[0][2]], lambdas) * (1.0 / table_mid_value) * max_val
     } else if max_val < 1.0 {
         let n = (max_val - table_mid_value) / (1.0 - table_mid_value);
-        let s0 = rgb2spec_eval_4([c[0].x(), c[0].y(), c[0].z()], lambdas);
-        let s1 = rgb2spec_eval_4([c[1].x(), c[1].y(), c[1].z()], lambdas);
+        let s0 = rgb2spec_eval_4([c[0][0], c[0][1], c[0][2]], lambdas);
+        let s1 = rgb2spec_eval_4([c[1][0], c[1][1], c[1][2]], lambdas);
         (s0 * (1.0 - n)) + (s1 * n)
     } else {
-        rgb2spec_eval_4([c[1].x(), c[1].y(), c[1].z()], lambdas) * max_val
+        rgb2spec_eval_4([c[1][0], c[1][1], c[1][2]], lambdas) * max_val
     }
 }
 
@@ -147,7 +147,7 @@ fn rgb2spec_eval_4(coeff: [f32; RGB2SPEC_N_COEFFS], lambda: Vec4) -> Vec4 {
     let y = {
         // TODO: replace this with a SIMD sqrt op.
         let (x, y, z, w) = rgb2spec_fma_4(x, x, Vec4::splat(1.0)).into();
-        Vec4::new(x.sqrt(), y.sqrt(), z.sqrt(), w.sqrt()).reciprocal()
+        Vec4::new(x.sqrt(), y.sqrt(), z.sqrt(), w.sqrt()).recip()
     };
 
     rgb2spec_fma_4(Vec4::splat(0.5) * x, y, Vec4::splat(0.5))

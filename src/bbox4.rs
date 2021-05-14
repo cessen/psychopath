@@ -9,7 +9,7 @@ use crate::{
     math::{Point, Vector},
 };
 
-use glam::{Vec4, Vec4Mask};
+use glam::{BVec4A, Vec4};
 
 const BBOX_MAXT_ADJUST: f32 = 1.000_000_24;
 
@@ -60,14 +60,14 @@ impl BBox4 {
     }
 
     // Returns whether the given ray intersects with the bboxes.
-    pub fn intersect_ray(&self, orig: Point, dir_inv: Vector, max_t: f32) -> Vec4Mask {
+    pub fn intersect_ray(&self, orig: Point, dir_inv: Vector, max_t: f32) -> BVec4A {
         // Get the ray data into SIMD format.
-        let ro_x = Vec4::splat(orig.co.x());
-        let ro_y = Vec4::splat(orig.co.y());
-        let ro_z = Vec4::splat(orig.co.z());
-        let rdi_x = Vec4::splat(dir_inv.co.x());
-        let rdi_y = Vec4::splat(dir_inv.co.y());
-        let rdi_z = Vec4::splat(dir_inv.co.z());
+        let ro_x = Vec4::splat(orig.co[0]);
+        let ro_y = Vec4::splat(orig.co[1]);
+        let ro_z = Vec4::splat(orig.co[2]);
+        let rdi_x = Vec4::splat(dir_inv.co[0]);
+        let rdi_y = Vec4::splat(dir_inv.co[1]);
+        let rdi_z = Vec4::splat(dir_inv.co[2]);
         let max_t = Vec4::splat(max_t);
 
         // Slab tests

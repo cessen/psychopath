@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use glam::Vec4Mask;
+use glam::BVec4A;
 
 use crate::math::{Matrix4x4, Point, Vector};
 
@@ -86,7 +86,7 @@ impl RayBatch {
     pub fn set_from_ray(&mut self, ray: &Ray, is_occlusion: bool, idx: usize) {
         self.hot[idx].orig_local = ray.orig;
         self.hot[idx].dir_inv_local = Vector {
-            co: ray.dir.co.reciprocal(),
+            co: ray.dir.co.recip(),
         };
         self.hot[idx].max_t = ray.max_t;
         self.hot[idx].time = ray.time;
@@ -122,7 +122,7 @@ impl RayBatch {
     pub fn update_local(&mut self, idx: usize, xform: &Matrix4x4) {
         self.hot[idx].orig_local = self.cold[idx].orig * *xform;
         self.hot[idx].dir_inv_local = Vector {
-            co: (self.cold[idx].dir * *xform).co.reciprocal(),
+            co: (self.cold[idx].dir * *xform).co.recip(),
         };
     }
 
@@ -349,7 +349,7 @@ impl RayStack {
     /// indicated lanes.
     pub fn pop_do_next_task_and_push_rays<F>(&mut self, output_lane_count: usize, mut handle_ray: F)
     where
-        F: FnMut(usize) -> Vec4Mask,
+        F: FnMut(usize) -> BVec4A,
     {
         // Pop the task and do necessary bookkeeping.
         let task = self.tasks.pop().unwrap();

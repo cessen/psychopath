@@ -5,21 +5,21 @@ use std::{
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
-use glam::Vec3;
+use glam::Vec3A;
 
 use super::{CrossProduct, DotProduct, Matrix4x4, Vector};
 
 /// A surface normal in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
 pub struct Normal {
-    pub co: Vec3,
+    pub co: Vec3A,
 }
 
 impl Normal {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Normal {
         Normal {
-            co: Vec3::new(x, y, z),
+            co: Vec3A::new(x, y, z),
         }
     }
 
@@ -57,32 +57,32 @@ impl Normal {
 
     #[inline(always)]
     pub fn x(&self) -> f32 {
-        self.co.x()
+        self.co[0]
     }
 
     #[inline(always)]
     pub fn y(&self) -> f32 {
-        self.co.y()
+        self.co[1]
     }
 
     #[inline(always)]
     pub fn z(&self) -> f32 {
-        self.co.z()
+        self.co[2]
     }
 
     #[inline(always)]
     pub fn set_x(&mut self, x: f32) {
-        self.co.set_x(x);
+        self.co[0] = x;
     }
 
     #[inline(always)]
     pub fn set_y(&mut self, y: f32) {
-        self.co.set_y(y);
+        self.co[1] = y;
     }
 
     #[inline(always)]
     pub fn set_z(&mut self, z: f32) {
-        self.co.set_z(z);
+        self.co[2] = z;
     }
 }
 
@@ -133,7 +133,7 @@ impl Mul<Matrix4x4> for Normal {
     fn mul(self, other: Matrix4x4) -> Normal {
         let mat = other.0.inverse().transpose();
         Normal {
-            co: mat.transform_vector3(self.co),
+            co: mat.transform_vector3a(self.co),
         }
     }
 }

@@ -227,13 +227,13 @@ pub fn spectrum_xyz_to_p_4(lambdas: Vec4, xyz: (f32, f32, f32)) -> Vec4 {
     // Get the spectral values for the vertices of the grid cell.
     // TODO: use integer SIMD intrinsics to make this part faster.
     let mut p = [Vec4::splat(0.0); 6];
-    let sb0: [i32; 4] = [sb.x() as i32, sb.y() as i32, sb.z() as i32, sb.w() as i32];
+    let sb0: [i32; 4] = [sb[0] as i32, sb[1] as i32, sb[2] as i32, sb[3] as i32];
     assert!(sb0[0].max(sb0[1]).max(sb0[2].max(sb0[3])) < SPECTRUM_NUM_SAMPLES);
     let sb1: [i32; 4] = [
-        (sb.x() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
-        (sb.y() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
-        (sb.z() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
-        (sb.w() as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
+        (sb[0] as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
+        (sb[1] as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
+        (sb[2] as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
+        (sb[3] as i32 + 1).min(SPECTRUM_NUM_SAMPLES - 1),
     ];
     let sbf = sb - Vec4::new(sb0[0] as f32, sb0[1] as f32, sb0[2] as f32, sb0[3] as f32);
     for i in 0..(num as usize) {

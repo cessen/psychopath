@@ -11,9 +11,9 @@ dependencies = [
 
 [[package]]
 name = "approx"
-version = "0.3.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0e60b75072ecd4168020818c0107f2857bb6c4e64252d8d3983f6263b40a5c3"
+checksum = "3f2a05fd1bd10b2527e20a2cd32d8873d115b8b39fe219ee25f42a8aca6ba278"
 dependencies = [
  "num-traits",
 ]
@@ -186,11 +186,9 @@ dependencies = [
 
 [[package]]
 name = "glam"
-version = "0.7.1"
-source = "git+https://github.com/bitshifter/glam-rs.git?rev=0f314f99#0f314f990710ff9357e5896de2b55ec82fe88e0d"
-dependencies = [
- "approx",
-]
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "411e0584defa447c328f25c756ba3d0685727ecc126b46c3c1176001141cd4b6"
 
 [[package]]
 name = "half"

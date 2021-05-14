@@ -41,8 +41,8 @@ impl BBox {
     // Returns whether the given ray intersects with the bbox.
     pub fn intersect_ray(&self, orig: Point, dir_inv: Vector, max_t: f32) -> bool {
         // Calculate slab intersections
-        let t1 = (self.min.co - orig.co).truncate() * dir_inv.co;
-        let t2 = (self.max.co - orig.co).truncate() * dir_inv.co;
+        let t1 = (self.min.co - orig.co) * dir_inv.co;
+        let t2 = (self.max.co - orig.co) * dir_inv.co;
 
         // Find the far and near intersection
         let far_t = t1.max(t2).extend(std::f32::INFINITY);

@@ -5,21 +5,21 @@ use std::{
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
-use glam::Vec3;
+use glam::Vec3A;
 
 use super::{CrossProduct, DotProduct, Matrix4x4, Normal, Point};
 
 /// A direction vector in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
 pub struct Vector {
-    pub co: Vec3,
+    pub co: Vec3A,
 }
 
 impl Vector {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Vector {
         Vector {
-            co: Vec3::new(x, y, z),
+            co: Vec3A::new(x, y, z),
         }
     }
 
@@ -43,15 +43,13 @@ impl Vector {
     #[inline(always)]
     pub fn abs(&self) -> Vector {
         Vector {
-            co: self.co * self.co.sign(),
+            co: self.co * self.co.signum(),
         }
     }
 
     #[inline(always)]
     pub fn into_point(self) -> Point {
-        Point {
-            co: self.co.extend(1.0),
-        }
+        Point { co: self.co }
     }
 
     #[inline(always)]
@@ -71,32 +69,32 @@ impl Vector {
 
     #[inline(always)]
     pub fn x(&self) -> f32 {
-        self.co.x()
+        self.co[0]
     }
 
     #[inline(always)]
     pub fn y(&self) -> f32 {
-        self.co.y()
+        self.co[1]
     }
 
     #[inline(always)]
     pub fn z(&self) -> f32 {
-        self.co.z()
+        self.co[2]
     }
 
     #[inline(always)]
     pub fn set_x(&mut self, x: f32) {
-        self.co.set_x(x);
+        self.co[0] = x;
     }
 
     #[inline(always)]
     pub fn set_y(&mut self, y: f32) {
-        self.co.set_y(y);
+        self.co[1] = y;
     }
 
     #[inline(always)]
     pub fn set_z(&mut self, z: f32) {
-        self.co.set_z(z);
+        self.co[2] = z;
     }
 }
 
@@ -146,7 +144,7 @@ impl Mul<Matrix4x4> for Vector {
     #[inline]
     fn mul(self, other: Matrix4x4) -> Vector {
         Vector {
-            co: other.0.transform_vector3(self.co),
+            co: other.0.transform_vector3a(self.co),
         }
     }
 }

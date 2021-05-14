@@ -95,10 +95,10 @@ impl Color {
                 SpectralSample::from_parts(
                     // TODO: make this SIMD
                     Vec4::new(
-                        plancks_law(temperature, wls.x()) * factor,
-                        plancks_law(temperature, wls.y()) * factor,
-                        plancks_law(temperature, wls.z()) * factor,
-                        plancks_law(temperature, wls.w()) * factor,
+                        plancks_law(temperature, wls[0]) * factor,
+                        plancks_law(temperature, wls[1]) * factor,
+                        plancks_law(temperature, wls[2]) * factor,
+                        plancks_law(temperature, wls[3]) * factor,
                     ),
                     hero_wavelength,
                 )
@@ -110,10 +110,10 @@ impl Color {
                 SpectralSample::from_parts(
                     // TODO: make this SIMD
                     Vec4::new(
-                        plancks_law_normalized(temperature, wls.x()) * factor,
-                        plancks_law_normalized(temperature, wls.y()) * factor,
-                        plancks_law_normalized(temperature, wls.z()) * factor,
-                        plancks_law_normalized(temperature, wls.w()) * factor,
+                        plancks_law_normalized(temperature, wls[0]) * factor,
+                        plancks_law_normalized(temperature, wls[1]) * factor,
+                        plancks_law_normalized(temperature, wls[2]) * factor,
+                        plancks_law_normalized(temperature, wls[3]) * factor,
                     ),
                     hero_wavelength,
                 )
@@ -518,10 +518,10 @@ impl XYZ {
     }
 
     pub fn from_spectral_sample(ss: &SpectralSample) -> XYZ {
-        let xyz0 = XYZ::from_wavelength(ss.wl_n(0), ss.e.x());
-        let xyz1 = XYZ::from_wavelength(ss.wl_n(1), ss.e.y());
-        let xyz2 = XYZ::from_wavelength(ss.wl_n(2), ss.e.z());
-        let xyz3 = XYZ::from_wavelength(ss.wl_n(3), ss.e.w());
+        let xyz0 = XYZ::from_wavelength(ss.wl_n(0), ss.e[0]);
+        let xyz1 = XYZ::from_wavelength(ss.wl_n(1), ss.e[1]);
+        let xyz2 = XYZ::from_wavelength(ss.wl_n(2), ss.e[2]);
+        let xyz3 = XYZ::from_wavelength(ss.wl_n(3), ss.e[3]);
         (xyz0 + xyz1 + xyz2 + xyz3) * 0.75
     }
 

@@ -35,7 +35,7 @@ png_encode_mini = "0.1.2"
 rustc-serialize = "0.3"
 scoped_threadpool = "0.1"
 time = "0.1"
-glam = {git="https://github.com/bitshifter/glam-rs.git", rev="0f314f99", default-features=false, features=["approx"]}
+glam = "0.15"
 fastapprox = "0.3"
 
 # Local crate dependencies

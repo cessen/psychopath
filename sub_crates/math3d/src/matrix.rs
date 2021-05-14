@@ -2,7 +2,7 @@
 
 use std::ops::{Add, Mul};
 
-use approx::RelativeEq;
+use approx::relative_eq;
 use glam::{Mat4, Vec4};
 
 use super::Point;
@@ -15,7 +15,7 @@ impl Matrix4x4 {
     /// Creates a new identity matrix
     #[inline]
     pub fn new() -> Matrix4x4 {
-        Matrix4x4(Mat4::identity())
+        Matrix4x4(Mat4::IDENTITY)
     }
 
     /// Creates a new matrix with the specified values:
@@ -44,7 +44,7 @@ impl Matrix4x4 {
         o: f32,
         p: f32,
     ) -> Matrix4x4 {
-        Matrix4x4(Mat4::new(
+        Matrix4x4(Mat4::from_cols(
             Vec4::new(a, e, i, m),
             Vec4::new(b, f, j, n),
             Vec4::new(c, g, k, o),
@@ -54,7 +54,7 @@ impl Matrix4x4 {
 
     #[inline]
     pub fn from_location(loc: Point) -> Matrix4x4 {
-        Matrix4x4(Mat4::from_translation(loc.co.truncate()))
+        Matrix4x4(Mat4::from_translation(loc.co.into()))
     }
 
     /// Returns whether the matrices are approximately equal to each other.
@@ -62,7 +62,15 @@ impl Matrix4x4 {
     /// error exceeding epsilon.
     #[inline]
     pub fn aprx_eq(&self, other: Matrix4x4, epsilon: f32) -> bool {
-        self.0.relative_eq(&other.0, std::f32::EPSILON, epsilon)
+        let mut eq = true;
+        for c in 0..4 {
+            for r in 0..4 {
+                let a = self.0.col(c)[r];
+                let b = other.0.col(c)[r];
+                eq &= relative_eq!(a, b, epsilon = epsilon);
+            }
+        }
+        eq
     }
 
     /// Returns the transpose of the matrix
