@@ -5,21 +5,21 @@ use std::{
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
-use glam::Vec3;
+use glam::Vec3A;
 
-use super::{CrossProduct, DotProduct, Matrix4x4, Normal, Point};
+use super::{CrossProduct, DotProduct, Normal, Point, Transform};
 
 /// A direction vector in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
 pub struct Vector {
-    pub co: Vec3,
+    pub co: Vec3A,
 }
 
 impl Vector {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Vector {
         Vector {
-            co: Vec3::new(x, y, z),
+            co: Vec3A::new(x, y, z),
         }
     }
 
@@ -43,15 +43,13 @@ impl Vector {
     #[inline(always)]
     pub fn abs(&self) -> Vector {
         Vector {
-            co: self.co * self.co.sign(),
+            co: self.co * self.co.signum(),
         }
     }
 
     #[inline(always)]
     pub fn into_point(self) -> Point {
-        Point {
-            co: self.co.extend(1.0),
-        }
+        Point { co: self.co }
     }
 
     #[inline(always)]
@@ -71,32 +69,32 @@ impl Vector {
 
     #[inline(always)]
     pub fn x(&self) -> f32 {
-        self.co.x()
+        self.co[0]
     }
 
     #[inline(always)]
     pub fn y(&self) -> f32 {
-        self.co.y()
+        self.co[1]
     }
 
     #[inline(always)]
     pub fn z(&self) -> f32 {
-        self.co.z()
+        self.co[2]
     }
 
     #[inline(always)]
     pub fn set_x(&mut self, x: f32) {
-        self.co.set_x(x);
+        self.co[0] = x;
     }
 
     #[inline(always)]
     pub fn set_y(&mut self, y: f32) {
-        self.co.set_y(y);
+        self.co[1] = y;
     }
 
     #[inline(always)]
     pub fn set_z(&mut self, z: f32) {
-        self.co.set_z(z);
+        self.co[2] = z;
     }
 }
 
@@ -140,13 +138,13 @@ impl Mul<f32> for Vector {
     }
 }
 
-impl Mul<Matrix4x4> for Vector {
+impl Mul<Transform> for Vector {
     type Output = Vector;
 
     #[inline]
-    fn mul(self, other: Matrix4x4) -> Vector {
+    fn mul(self, other: Transform) -> Vector {
         Vector {
-            co: other.0.transform_vector3(self.co),
+            co: other.0.transform_vector3a(self.co),
         }
     }
 }
@@ -189,7 +187,7 @@ impl CrossProduct for Vector {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{CrossProduct, DotProduct, Matrix4x4};
+    use super::super::{CrossProduct, DotProduct, Transform};
     use super::*;
 
     #[test]
@@ -222,8 +220,8 @@ mod tests {
     #[test]
     fn mul_matrix_1() {
         let v = Vector::new(1.0, 2.5, 4.0);
-        let m = Matrix4x4::new_from_values(
-            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 13.0, 7.0, 15.0, 3.0,
+        let m = Transform::new_from_values(
+            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0,
         );
         assert_eq!(v * m, Vector::new(14.0, 46.0, 58.0));
     }
@@ -231,8 +229,8 @@ mod tests {
     #[test]
     fn mul_matrix_2() {
         let v = Vector::new(1.0, 2.5, 4.0);
-        let m = Matrix4x4::new_from_values(
-            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 0.0, 0.0, 0.0, 1.0,
+        let m = Transform::new_from_values(
+            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0,
         );
         assert_eq!(v * m, Vector::new(14.0, 46.0, 58.0));
     }

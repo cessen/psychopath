@@ -2,7 +2,7 @@
 
 use std::f32;
 
-pub use math3d::{cross, dot, CrossProduct, DotProduct, Matrix4x4, Normal, Point, Vector};
+pub use math3d::{cross, dot, CrossProduct, DotProduct, Normal, Point, Transform, Vector};
 
 /// Clamps a value between a min and max.
 pub fn clamp<T: PartialOrd>(v: T, lower: T, upper: T) -> T {

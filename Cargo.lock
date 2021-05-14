@@ -11,9 +11,9 @@ dependencies = [
 
 [[package]]
 name = "approx"
-version = "0.3.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0e60b75072ecd4168020818c0107f2857bb6c4e64252d8d3983f6263b40a5c3"
+checksum = "3f2a05fd1bd10b2527e20a2cd32d8873d115b8b39fe219ee25f42a8aca6ba278"
 dependencies = [
  "num-traits",
 ]
@@ -190,11 +190,9 @@ dependencies = [
 
 [[package]]
 name = "glam"
-version = "0.7.1"
-source = "git+https://github.com/bitshifter/glam-rs.git?rev=0f314f99#0f314f990710ff9357e5896de2b55ec82fe88e0d"
-dependencies = [
- "approx",
-]
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "411e0584defa447c328f25c756ba3d0685727ecc126b46c3c1176001141cd4b6"
 
 [[package]]
 name = "half"
@@ -614,9 +612,9 @@ checksum = "1d51f5df5af43ab3f1360b429fa5e0152ac5ce8c0bd6485cae490332e96846a8"
 
 [[package]]
 name = "sobol_burley"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9d3ea39927d337a987e2334d9ff049617d2d132d64e3ce3cd6fb6e4aa00a864"
+checksum = "26e3528b09b1f1b1e152342a4462d1e80d568dc5623a0772252a6e584a53d550"
 
 [[package]]
 name = "spectral_upsampling"

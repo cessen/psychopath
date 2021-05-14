@@ -5,7 +5,7 @@ use crate::{
     boundable::Boundable,
     color::{Color, SpectralSample},
     lerp::lerp_slice,
-    math::{cross, dot, Matrix4x4, Normal, Point, Vector},
+    math::{cross, dot, Normal, Point, Transform, Vector},
     ray::{RayBatch, RayStack},
     sampling::{
         spherical_triangle_solid_angle, triangle_surface_area, uniform_sample_spherical_triangle,
@@ -51,7 +51,7 @@ impl<'a> RectangleLight<'a> {
     // more efficiently by inlining it there.
     fn sample_pdf(
         &self,
-        space: &Matrix4x4,
+        space: &Transform,
         arr: Point,
         sample_dir: Vector,
         hit_point: Point,
@@ -97,7 +97,7 @@ impl<'a> RectangleLight<'a> {
 
     // fn outgoing(
     //     &self,
-    //     space: &Matrix4x4,
+    //     space: &Transform,
     //     dir: Vector,
     //     u: f32,
     //     v: f32,
@@ -120,7 +120,7 @@ impl<'a> RectangleLight<'a> {
 impl<'a> SurfaceLight for RectangleLight<'a> {
     fn sample_from_point(
         &self,
-        space: &Matrix4x4,
+        space: &Transform,
         arr: Point,
         u: f32,
         v: f32,
@@ -261,7 +261,7 @@ impl<'a> Surface for RectangleLight<'a> {
         ray_stack: &mut RayStack,
         isects: &mut [SurfaceIntersection],
         shader: &dyn SurfaceShader,
-        space: &[Matrix4x4],
+        space: &[Transform],
     ) {
         let _ = shader; // Silence 'unused' warning
 

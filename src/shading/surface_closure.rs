@@ -545,23 +545,23 @@ mod ggx_closure {
             let spectrum_sample = col.to_spectral_sample(wavelength);
             let rev_fresnel = 1.0 - fresnel;
             let c0 = lerp(
-                schlick_fresnel_from_fac(spectrum_sample.e.x(), hb),
-                spectrum_sample.e.x(),
+                schlick_fresnel_from_fac(spectrum_sample.e[0], hb),
+                spectrum_sample.e[0],
                 rev_fresnel,
             );
             let c1 = lerp(
-                schlick_fresnel_from_fac(spectrum_sample.e.y(), hb),
-                spectrum_sample.e.y(),
+                schlick_fresnel_from_fac(spectrum_sample.e[1], hb),
+                spectrum_sample.e[1],
                 rev_fresnel,
             );
             let c2 = lerp(
-                schlick_fresnel_from_fac(spectrum_sample.e.z(), hb),
-                spectrum_sample.e.z(),
+                schlick_fresnel_from_fac(spectrum_sample.e[2], hb),
+                spectrum_sample.e[2],
                 rev_fresnel,
             );
             let c3 = lerp(
-                schlick_fresnel_from_fac(spectrum_sample.e.w(), hb),
-                spectrum_sample.e.w(),
+                schlick_fresnel_from_fac(spectrum_sample.e[3], hb),
+                spectrum_sample.e[3],
                 rev_fresnel,
             );
 

@@ -6,7 +6,7 @@ use std::fmt::Debug;
 
 use crate::{
     color::SpectralSample,
-    math::{Matrix4x4, Normal, Point, Vector},
+    math::{Normal, Point, Transform, Vector},
     surface::Surface,
 };
 
@@ -34,7 +34,7 @@ pub trait SurfaceLight: Surface {
     /// - The pdf of the sample.
     fn sample_from_point(
         &self,
-        space: &Matrix4x4,
+        space: &Transform,
         arr: Point,
         u: f32,
         v: f32,

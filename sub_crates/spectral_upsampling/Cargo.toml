@@ -10,4 +10,4 @@ name = "spectral_upsampling"
 path = "src/lib.rs"
 
 [dependencies]
-glam = {git="https://github.com/bitshifter/glam-rs.git", rev="0f314f99", default-features=false, features=["approx"]}
+glam = "0.15"

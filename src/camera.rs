@@ -4,14 +4,14 @@ use kioku::Arena;
 
 use crate::{
     lerp::lerp_slice,
-    math::{Matrix4x4, Point, Vector},
+    math::{Point, Transform, Vector},
     ray::Ray,
     sampling::square_to_circle,
 };
 
 #[derive(Copy, Clone, Debug)]
 pub struct Camera<'a> {
-    transforms: &'a [Matrix4x4],
+    transforms: &'a [Transform],
     fovs: &'a [f32],
     tfovs: &'a [f32],
     aperture_radii: &'a [f32],
@@ -21,7 +21,7 @@ pub struct Camera<'a> {
 impl<'a> Camera<'a> {
     pub fn new(
         arena: &'a Arena,
-        transforms: &[Matrix4x4],
+        transforms: &[Transform],
         fovs: &[f32],
         mut aperture_radii: &[f32],
         mut focus_distances: &[f32],

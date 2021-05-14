@@ -10,7 +10,7 @@ use std::fmt::Debug;
 
 use crate::{
     boundable::Boundable,
-    math::{Matrix4x4, Normal, Point, Vector},
+    math::{Normal, Point, Transform, Vector},
     ray::{RayBatch, RayStack},
     shading::surface_closure::SurfaceClosure,
     shading::SurfaceShader,
@@ -25,7 +25,7 @@ pub trait Surface: Boundable + Debug + Sync {
         ray_stack: &mut RayStack,
         isects: &mut [SurfaceIntersection],
         shader: &dyn SurfaceShader,
-        space: &[Matrix4x4],
+        space: &[Transform],
     );
 }
 
@@ -86,7 +86,7 @@ pub struct SurfaceIntersectionData {
     // a cube centered around `pos` with dimensions of `2 * pos_err`.
     pub nor: Normal,            // Shading normal
     pub nor_g: Normal,          // True geometric normal
-    pub local_space: Matrix4x4, // Matrix from global space to local space
+    pub local_space: Transform, // Matrix from global space to local space
     pub t: f32,                 // Ray t-value at the intersection point
     pub sample_pdf: f32,        // The PDF of getting this point by explicitly sampling the surface
 }

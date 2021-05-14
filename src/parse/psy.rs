@@ -11,7 +11,7 @@ use crate::{
     camera::Camera,
     color::{rec709_e_to_xyz, Color},
     light::WorldLightSource,
-    math::Matrix4x4,
+    math::Transform,
     // renderer::Renderer,
     scene::Scene,
     scene::World,
@@ -650,16 +650,17 @@ fn parse_shaders<'a>(
     return Ok(shaders);
 }
 
-pub fn parse_matrix(contents: &str) -> PsyResult<Matrix4x4> {
+pub fn parse_matrix(contents: &str) -> PsyResult<Transform> {
     if let IResult::Ok((leftover, ns)) = all_consuming(tuple((
         ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32, ws_f32,
         ws_f32, ws_f32, ws_f32, ws_f32, ws_f32,
     )))(contents)
     {
         if leftover.is_empty() {
-            return Ok(Matrix4x4::new_from_values(
-                ns.0, ns.4, ns.8, ns.12, ns.1, ns.5, ns.9, ns.13, ns.2, ns.6, ns.10, ns.14, ns.3,
-                ns.7, ns.11, ns.15,
+            return Ok(Transform::new_from_values(
+                // We throw away the last row, since it's not necessarily affine.
+                // TODO: is there a more correct way to handle this?
+                ns.0, ns.4, ns.8, ns.12, ns.1, ns.5, ns.9, ns.13, ns.2, ns.6, ns.10, ns.14,
             ));
         }
     }

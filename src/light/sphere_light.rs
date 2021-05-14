@@ -7,7 +7,7 @@ use crate::{
     boundable::Boundable,
     color::{Color, SpectralSample},
     lerp::lerp_slice,
-    math::{coordinate_system_from_vector, dot, Matrix4x4, Normal, Point, Vector},
+    math::{coordinate_system_from_vector, dot, Normal, Point, Transform, Vector},
     ray::{RayBatch, RayStack},
     sampling::{uniform_sample_cone, uniform_sample_cone_pdf, uniform_sample_sphere},
     shading::surface_closure::SurfaceClosure,
@@ -50,7 +50,7 @@ impl<'a> SphereLight<'a> {
     // more efficiently by inlining it there.
     fn sample_pdf(
         &self,
-        space: &Matrix4x4,
+        space: &Transform,
         arr: Point,
         sample_dir: Vector,
         sample_u: f32,
@@ -84,7 +84,7 @@ impl<'a> SphereLight<'a> {
 impl<'a> SurfaceLight for SphereLight<'a> {
     fn sample_from_point(
         &self,
-        space: &Matrix4x4,
+        space: &Transform,
         arr: Point,
         u: f32,
         v: f32,
@@ -210,7 +210,7 @@ impl<'a> Surface for SphereLight<'a> {
         ray_stack: &mut RayStack,
         isects: &mut [SurfaceIntersection],
         shader: &dyn SurfaceShader,
-        space: &[Matrix4x4],
+        space: &[Transform],
     ) {
         let _ = shader; // Silence 'unused' warning
 

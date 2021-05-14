@@ -5,21 +5,21 @@ use std::{
     ops::{Add, Div, Mul, Neg, Sub},
 };
 
-use glam::Vec3;
+use glam::Vec3A;
 
-use super::{CrossProduct, DotProduct, Matrix4x4, Vector};
+use super::{CrossProduct, DotProduct, Transform, Vector};
 
 /// A surface normal in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
 pub struct Normal {
-    pub co: Vec3,
+    pub co: Vec3A,
 }
 
 impl Normal {
     #[inline(always)]
     pub fn new(x: f32, y: f32, z: f32) -> Normal {
         Normal {
-            co: Vec3::new(x, y, z),
+            co: Vec3A::new(x, y, z),
         }
     }
 
@@ -57,32 +57,32 @@ impl Normal {
 
     #[inline(always)]
     pub fn x(&self) -> f32 {
-        self.co.x()
+        self.co[0]
     }
 
     #[inline(always)]
     pub fn y(&self) -> f32 {
-        self.co.y()
+        self.co[1]
     }
 
     #[inline(always)]
     pub fn z(&self) -> f32 {
-        self.co.z()
+        self.co[2]
     }
 
     #[inline(always)]
     pub fn set_x(&mut self, x: f32) {
-        self.co.set_x(x);
+        self.co[0] = x;
     }
 
     #[inline(always)]
     pub fn set_y(&mut self, y: f32) {
-        self.co.set_y(y);
+        self.co[1] = y;
     }
 
     #[inline(always)]
     pub fn set_z(&mut self, z: f32) {
-        self.co.set_z(z);
+        self.co[2] = z;
     }
 }
 
@@ -126,14 +126,13 @@ impl Mul<f32> for Normal {
     }
 }
 
-impl Mul<Matrix4x4> for Normal {
+impl Mul<Transform> for Normal {
     type Output = Normal;
 
     #[inline]
-    fn mul(self, other: Matrix4x4) -> Normal {
-        let mat = other.0.inverse().transpose();
+    fn mul(self, other: Transform) -> Normal {
         Normal {
-            co: mat.transform_vector3(self.co),
+            co: other.0.matrix3.inverse().transpose().mul_vec3a(self.co),
         }
     }
 }
@@ -176,9 +175,9 @@ impl CrossProduct for Normal {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{CrossProduct, DotProduct, Matrix4x4};
+    use super::super::{CrossProduct, DotProduct, Transform};
     use super::*;
-    use approx::UlpsEq;
+    use approx::assert_ulps_eq;
 
     #[test]
     fn add() {
@@ -210,12 +209,14 @@ mod tests {
     #[test]
     fn mul_matrix_1() {
         let n = Normal::new(1.0, 2.5, 4.0);
-        let m = Matrix4x4::new_from_values(
-            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 13.0, 7.0, 15.0, 3.0,
+        let m = Transform::new_from_values(
+            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0,
         );
         let nm = n * m;
-        let nm2 = Normal::new(-19.258825, 5.717648, -1.770588);
-        assert!(nm.co.ulps_eq(&nm2.co, 0.0, 4));
+        let nm2 = Normal::new(-4.0625, 1.78125, -0.03125);
+        for i in 0..3 {
+            assert_ulps_eq!(nm.co[i], nm2.co[i], max_ulps = 4);
+        }
     }
 
     #[test]

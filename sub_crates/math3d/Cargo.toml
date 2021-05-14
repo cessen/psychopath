@@ -11,5 +11,5 @@ path = "src/lib.rs"
 
 # Local crate dependencies
 [dependencies]
-glam = {git="https://github.com/bitshifter/glam-rs.git", rev="0f314f99", default-features=false, features=["approx"]}
-approx = "0.3"
+glam = "0.15"
+approx = "0.4"

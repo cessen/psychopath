@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     lerp::{lerp, lerp_slice, Lerp},
-    math::{fast_minf32, Matrix4x4, Point, Vector},
+    math::{fast_minf32, Point, Transform, Vector},
 };
 
 const BBOX_MAXT_ADJUST: f32 = 1.000_000_24;
@@ -41,8 +41,8 @@ impl BBox {
     // Returns whether the given ray intersects with the bbox.
     pub fn intersect_ray(&self, orig: Point, dir_inv: Vector, max_t: f32) -> bool {
         // Calculate slab intersections
-        let t1 = (self.min.co - orig.co).truncate() * dir_inv.co;
-        let t2 = (self.max.co - orig.co).truncate() * dir_inv.co;
+        let t1 = (self.min.co - orig.co) * dir_inv.co;
+        let t2 = (self.max.co - orig.co) * dir_inv.co;
 
         // Find the far and near intersection
         let far_t = t1.max(t2).extend(std::f32::INFINITY);
@@ -55,7 +55,7 @@ impl BBox {
     }
 
     // Creates a new BBox transformed into a different space.
-    pub fn transformed(&self, xform: Matrix4x4) -> BBox {
+    pub fn transformed(&self, xform: Transform) -> BBox {
         // BBox corners
         let vs = [
             Point::new(self.min.x(), self.min.y(), self.min.z()),
@@ -150,7 +150,7 @@ impl Lerp for BBox {
     }
 }
 
-pub fn transform_bbox_slice_from(bbs_in: &[BBox], xforms: &[Matrix4x4], bbs_out: &mut Vec<BBox>) {
+pub fn transform_bbox_slice_from(bbs_in: &[BBox], xforms: &[Transform], bbs_out: &mut Vec<BBox>) {
     bbs_out.clear();
 
     // Transform the bounding boxes
