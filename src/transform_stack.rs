@@ -3,10 +3,10 @@ use std::{
     mem::{transmute, MaybeUninit},
 };
 
-use crate::{algorithm::merge_slices_to, math::Matrix4x4};
+use crate::{algorithm::merge_slices_to, math::Transform};
 
 pub struct TransformStack {
-    stack: Vec<MaybeUninit<Matrix4x4>>,
+    stack: Vec<MaybeUninit<Transform>>,
     stack_indices: Vec<usize>,
 }
 
@@ -30,11 +30,11 @@ impl TransformStack {
         self.stack_indices.push(0);
     }
 
-    pub fn push(&mut self, xforms: &[Matrix4x4]) {
+    pub fn push(&mut self, xforms: &[Transform]) {
         assert!(!xforms.is_empty());
 
         if self.stack.is_empty() {
-            let xforms: &[MaybeUninit<Matrix4x4>] = unsafe { transmute(xforms) };
+            let xforms: &[MaybeUninit<Transform>] = unsafe { transmute(xforms) };
             self.stack.extend(xforms);
         } else {
             let sil = self.stack_indices.len();
@@ -73,7 +73,7 @@ impl TransformStack {
         self.stack_indices.pop();
     }
 
-    pub fn top(&self) -> &[Matrix4x4] {
+    pub fn top(&self) -> &[Transform] {
         let sil = self.stack_indices.len();
         let i1 = self.stack_indices[sil - 2];
         let i2 = self.stack_indices[sil - 1];

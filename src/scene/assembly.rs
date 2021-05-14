@@ -10,7 +10,7 @@ use crate::{
     color::SpectralSample,
     lerp::lerp_slice,
     light::SurfaceLight,
-    math::{Matrix4x4, Normal, Point},
+    math::{Normal, Point, Transform},
     shading::SurfaceShader,
     surface::{Surface, SurfaceIntersection},
     transform_stack::TransformStack,
@@ -21,7 +21,7 @@ pub struct Assembly<'a> {
     // Instance list
     pub instances: &'a [Instance],
     pub light_instances: &'a [Instance],
-    pub xforms: &'a [Matrix4x4],
+    pub xforms: &'a [Transform],
 
     // Surface shader list
     pub surface_shaders: &'a [&'a dyn SurfaceShader],
@@ -60,7 +60,7 @@ impl<'a> Assembly<'a> {
             let sel_xform = if !xform_stack.top().is_empty() {
                 lerp_slice(xform_stack.top(), time)
             } else {
-                Matrix4x4::new()
+                Transform::new()
             };
             if let Some((light_i, sel_pdf, whittled_n)) = self.light_accel.select(
                 idata.incoming * sel_xform,
@@ -90,7 +90,7 @@ impl<'a> Assembly<'a> {
                                     if !pxforms.is_empty() {
                                         lerp_slice(pxforms, time)
                                     } else {
-                                        Matrix4x4::new()
+                                        Transform::new()
                                     }
                                 };
 
@@ -152,7 +152,7 @@ pub struct AssemblyBuilder<'a> {
 
     // Instance list
     instances: Vec<Instance>,
-    xforms: Vec<Matrix4x4>,
+    xforms: Vec<Transform>,
 
     // Shader list
     surface_shaders: Vec<&'a dyn SurfaceShader>,
@@ -224,7 +224,7 @@ impl<'a> AssemblyBuilder<'a> {
         &mut self,
         name: &str,
         surface_shader_name: Option<&str>,
-        xforms: Option<&[Matrix4x4]>,
+        xforms: Option<&[Transform]>,
     ) {
         // Make sure name exists
         if !self.name_exists(name) {

@@ -2,7 +2,7 @@
 
 use glam::BVec4A;
 
-use crate::math::{Matrix4x4, Point, Vector};
+use crate::math::{Point, Transform, Vector};
 
 type RayIndexType = u16;
 type FlagType = u8;
@@ -119,7 +119,7 @@ impl RayBatch {
     ///
     /// This should be called when entering (and exiting) traversal of a
     /// new transform space.
-    pub fn update_local(&mut self, idx: usize, xform: &Matrix4x4) {
+    pub fn update_local(&mut self, idx: usize, xform: &Transform) {
         self.hot[idx].orig_local = self.cold[idx].orig * *xform;
         self.hot[idx].dir_inv_local = Vector {
             co: (self.cold[idx].dir * *xform).co.recip(),

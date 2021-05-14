@@ -7,7 +7,7 @@ use crate::{
     bbox::BBox,
     boundable::Boundable,
     lerp::lerp_slice,
-    math::{cross, dot, Matrix4x4, Normal, Point},
+    math::{cross, dot, Normal, Point, Transform},
     ray::{RayBatch, RayStack},
     shading::SurfaceShader,
 };
@@ -128,13 +128,13 @@ impl<'a> Surface for TriangleMesh<'a> {
         ray_stack: &mut RayStack,
         isects: &mut [SurfaceIntersection],
         shader: &dyn SurfaceShader,
-        space: &[Matrix4x4],
+        space: &[Transform],
     ) {
         // Precalculate transform for non-motion blur cases
         let static_mat_space = if space.len() == 1 {
             lerp_slice(space, 0.0).inverse()
         } else {
-            Matrix4x4::new()
+            Transform::new()
         };
 
         self.accel

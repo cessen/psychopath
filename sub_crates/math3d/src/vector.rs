@@ -7,7 +7,7 @@ use std::{
 
 use glam::Vec3A;
 
-use super::{CrossProduct, DotProduct, Matrix4x4, Normal, Point};
+use super::{CrossProduct, DotProduct, Normal, Point, Transform};
 
 /// A direction vector in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
@@ -138,11 +138,11 @@ impl Mul<f32> for Vector {
     }
 }
 
-impl Mul<Matrix4x4> for Vector {
+impl Mul<Transform> for Vector {
     type Output = Vector;
 
     #[inline]
-    fn mul(self, other: Matrix4x4) -> Vector {
+    fn mul(self, other: Transform) -> Vector {
         Vector {
             co: other.0.transform_vector3a(self.co),
         }
@@ -187,7 +187,7 @@ impl CrossProduct for Vector {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{CrossProduct, DotProduct, Matrix4x4};
+    use super::super::{CrossProduct, DotProduct, Transform};
     use super::*;
 
     #[test]
@@ -220,8 +220,8 @@ mod tests {
     #[test]
     fn mul_matrix_1() {
         let v = Vector::new(1.0, 2.5, 4.0);
-        let m = Matrix4x4::new_from_values(
-            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 13.0, 7.0, 15.0, 3.0,
+        let m = Transform::new_from_values(
+            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0,
         );
         assert_eq!(v * m, Vector::new(14.0, 46.0, 58.0));
     }
@@ -229,8 +229,8 @@ mod tests {
     #[test]
     fn mul_matrix_2() {
         let v = Vector::new(1.0, 2.5, 4.0);
-        let m = Matrix4x4::new_from_values(
-            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 0.0, 0.0, 0.0, 1.0,
+        let m = Transform::new_from_values(
+            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0,
         );
         assert_eq!(v * m, Vector::new(14.0, 46.0, 58.0));
     }

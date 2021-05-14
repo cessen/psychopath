@@ -4,7 +4,7 @@ use crate::{
     accel::ray_code,
     color::{rec709_to_xyz, Color},
     lerp::lerp_slice,
-    math::Matrix4x4,
+    math::Transform,
     ray::{RayBatch, RayStack},
     scene::{Assembly, InstanceType, Object},
     shading::{SimpleSurfaceShader, SurfaceShader},
@@ -63,7 +63,7 @@ impl<'a> TracerInner<'a> {
 
         // Prep the accel part of the rays.
         {
-            let ident = Matrix4x4::new();
+            let ident = Transform::new();
             for i in 0..rays.len() {
                 rays.update_local(i, &ident);
             }
@@ -140,7 +140,7 @@ impl<'a> TracerInner<'a> {
                             rays.update_local(ray_idx, &lerp_slice(xforms, t));
                         });
                     } else {
-                        let ident = Matrix4x4::new();
+                        let ident = Transform::new();
                         ray_stack.pop_do_next_task(|ray_idx| {
                             rays.update_local(ray_idx, &ident);
                         });

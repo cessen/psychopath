@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     lerp::{lerp, lerp_slice, Lerp},
-    math::{fast_minf32, Matrix4x4, Point, Vector},
+    math::{fast_minf32, Point, Transform, Vector},
 };
 
 const BBOX_MAXT_ADJUST: f32 = 1.000_000_24;
@@ -55,7 +55,7 @@ impl BBox {
     }
 
     // Creates a new BBox transformed into a different space.
-    pub fn transformed(&self, xform: Matrix4x4) -> BBox {
+    pub fn transformed(&self, xform: Transform) -> BBox {
         // BBox corners
         let vs = [
             Point::new(self.min.x(), self.min.y(), self.min.z()),
@@ -150,7 +150,7 @@ impl Lerp for BBox {
     }
 }
 
-pub fn transform_bbox_slice_from(bbs_in: &[BBox], xforms: &[Matrix4x4], bbs_out: &mut Vec<BBox>) {
+pub fn transform_bbox_slice_from(bbs_in: &[BBox], xforms: &[Transform], bbs_out: &mut Vec<BBox>) {
     bbs_out.clear();
 
     // Transform the bounding boxes

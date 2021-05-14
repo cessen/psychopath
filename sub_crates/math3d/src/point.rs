@@ -7,7 +7,7 @@ use std::{
 
 use glam::Vec3A;
 
-use super::{Matrix4x4, Vector};
+use super::{Transform, Vector};
 
 /// A position in 3d homogeneous space.
 #[derive(Debug, Copy, Clone)]
@@ -22,15 +22,6 @@ impl Point {
             co: Vec3A::new(x, y, z),
         }
     }
-
-    // /// Returns the point in standardized coordinates, where the
-    // /// fourth homogeneous component has been normalized to 1.0.
-    // #[inline(always)]
-    // pub fn norm(&self) -> Point {
-    //     Point {
-    //         co: self.co / self.co[3],
-    //     }
-    // }
 
     #[inline(always)]
     pub fn min(&self, other: Point) -> Point {
@@ -138,11 +129,11 @@ impl Sub<Vector> for Point {
     }
 }
 
-impl Mul<Matrix4x4> for Point {
+impl Mul<Transform> for Point {
     type Output = Point;
 
     #[inline]
-    fn mul(self, other: Matrix4x4) -> Point {
+    fn mul(self, other: Transform) -> Point {
         Point {
             co: other.0.transform_point3a(self.co),
         }
@@ -151,17 +142,8 @@ impl Mul<Matrix4x4> for Point {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{Matrix4x4, Vector};
+    use super::super::{Transform, Vector};
     use super::*;
-
-    #[test]
-    fn norm() {
-        let mut p1 = Point::new(1.0, 2.0, 3.0);
-        let p2 = Point::new(2.0, 4.0, 6.0);
-        p1.co.set_w(0.5);
-
-        assert_eq!(p2, p1.norm());
-    }
 
     #[test]
     fn add() {
@@ -184,8 +166,8 @@ mod tests {
     #[test]
     fn mul_matrix_1() {
         let p = Point::new(1.0, 2.5, 4.0);
-        let m = Matrix4x4::new_from_values(
-            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 0.0, 0.0, 0.0, 1.0,
+        let m = Transform::new_from_values(
+            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0,
         );
         let pm = Point::new(15.5, 54.0, 70.0);
         assert_eq!(p * m, pm);
@@ -194,11 +176,10 @@ mod tests {
     #[test]
     fn mul_matrix_2() {
         let p = Point::new(1.0, 2.5, 4.0);
-        let m = Matrix4x4::new_from_values(
-            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 2.0, 3.0, 1.0, 5.0,
+        let m = Transform::new_from_values(
+            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0,
         );
-        let mut pm = Point::new(15.5, 54.0, 70.0);
-        pm.co.set_w(18.5);
+        let pm = Point::new(15.5, 54.0, 70.0);
         assert_eq!(p * m, pm);
     }
 
@@ -206,12 +187,11 @@ mod tests {
     fn mul_matrix_3() {
         // Make sure matrix multiplication composes the way one would expect
         let p = Point::new(1.0, 2.5, 4.0);
-        let m1 = Matrix4x4::new_from_values(
-            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0, 13.0, 7.0, 15.0, 3.0,
+        let m1 = Transform::new_from_values(
+            1.0, 2.0, 2.0, 1.5, 3.0, 6.0, 7.0, 8.0, 9.0, 2.0, 11.0, 12.0,
         );
-        let m2 = Matrix4x4::new_from_values(
-            4.0, 1.0, 2.0, 3.5, 3.0, 6.0, 5.0, 2.0, 2.0, 2.0, 4.0, 12.0, 5.0, 7.0, 8.0, 11.0,
-        );
+        let m2 =
+            Transform::new_from_values(4.0, 1.0, 2.0, 3.5, 3.0, 6.0, 5.0, 2.0, 2.0, 2.0, 4.0, 12.0);
         println!("{:?}", m1 * m2);
 
         let pmm1 = p * (m1 * m2);

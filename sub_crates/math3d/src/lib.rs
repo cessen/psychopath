@@ -1,11 +1,11 @@
 #![allow(dead_code)]
 
-mod matrix;
 mod normal;
 mod point;
+mod transform;
 mod vector;
 
-pub use self::{matrix::Matrix4x4, normal::Normal, point::Point, vector::Vector};
+pub use self::{normal::Normal, point::Point, transform::Transform, vector::Vector};
 
 /// Trait for calculating dot products.
 pub trait DotProduct {
