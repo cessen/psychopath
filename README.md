@@ -13,7 +13,9 @@ efficiently handle very large data sets, complex shading, motion blur, color
 management, etc. presents a much richer and more challenging problem space to
 explore than just writing a basic path tracer.
 
+
 ## Building
+
 Psychopath is written in [Rust](https://www.rust-lang.org), and is pretty
 straightforward to build except for its OpenEXR dependency.
 
@@ -34,6 +36,7 @@ documented in the [OpenEXR-rs readme](https://github.com/cessen/openexr-rs/blob/
 Once those environment variables are set, then you should be able to build using
 the same simple cargo command above.
 
+
 # PsychoBlend
 
 Included in the repository is an add-on for [Blender](http://www.blender.org)
@@ -50,15 +53,6 @@ doesn't support them yet.
 - Exports dupligroups with full hierarchical instancing
 - Limited auto-detection of instanced meshes
 
-# Contributing
-
-I'm not looking for contributions right now, and I'm likely to reject pull
-requests.  This is currently a solo project and I like it that way.
-
-However, if you're looking for projects _related_ to Psychopath to contribute to,
-[OpenEXR-rs](https://github.com/cessen/openexr-rs) is definitely a
-collaborative project that I would love more help with!  And I fully expect more
-such projects to come out of Psychopath in the future.
 
 # License
 
@@ -69,3 +63,13 @@ See LICENSE.md for details.  But the gist is:
 * Most crates under the `sub_crates` directory are dual-licensed under MIT and Apache 2.0 (but with some exceptions--see each crate for its respective licenses).
 
 The intent of this scheme is to keep Psychopath itself copyleft, while allowing smaller reusable components to be licensed more liberally.
+
+
+# Contributing
+
+This is a personal, experimental, for-fun project, and I am specifically
+not looking for contributions of any kind.  All PRs will be rejected
+without review.
+
+However, feel free to fork this into an entirely new project, or examine
+the code for ideas for a project of your own.
