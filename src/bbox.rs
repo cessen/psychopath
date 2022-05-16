@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     lerp::{lerp, lerp_slice, Lerp},
-    math::{fast_minf32, Point, Transform, Vector},
+    math::{Point, Transform, Vector},
 };
 
 const BBOX_MAXT_ADJUST: f32 = 1.000_000_24;
@@ -47,7 +47,7 @@ impl BBox {
         // Find the far and near intersection
         let far_t = t1.max(t2).extend(std::f32::INFINITY);
         let near_t = t1.min(t2).extend(0.0);
-        let far_hit_t = fast_minf32(far_t.min_element() * BBOX_MAXT_ADJUST, max_t);
+        let far_hit_t = (far_t.min_element() * BBOX_MAXT_ADJUST).min(max_t);
         let near_hit_t = near_t.max_element();
 
         // Did we hit?

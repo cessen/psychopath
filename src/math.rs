@@ -4,73 +4,16 @@ use std::f32;
 
 pub use math3d::{cross, dot, CrossProduct, DotProduct, Normal, Point, Transform, Vector};
 
-/// Clamps a value between a min and max.
-pub fn clamp<T: PartialOrd>(v: T, lower: T, upper: T) -> T {
-    if v < lower {
-        lower
-    } else if v > upper {
-        upper
-    } else {
-        v
-    }
-}
-
-// The stdlib min function is slower than a simple if statement for some reason.
-pub fn fast_minf32(a: f32, b: f32) -> f32 {
-    if a < b {
-        a
-    } else {
-        b
-    }
-}
-
-// The stdlib max function is slower than a simple if statement for some reason.
-pub fn fast_maxf32(a: f32, b: f32) -> f32 {
-    if a > b {
-        a
-    } else {
-        b
-    }
-}
-
-/// Rounds an integer up to the next power of two.
-pub fn upper_power_of_two(mut v: u32) -> u32 {
-    v -= 1;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v + 1
-}
-
 /// Gets the log base 2 of the given integer
-pub fn log2_64(mut value: u64) -> u64 {
-    // This works by doing a binary search for the largest non-zero binary
-    // digit in the number.  Its bit position is then the log2 of the integer.
+pub fn log2_64(n: u64) -> u64 {
+    // This works by finding the largest non-zero binary digit in the
+    // number.  Its bit position is then the log2 of the integer.
 
-    let mut log = 0;
-
-    const POWERS: [(u64, u64); 6] = [
-        (32, (1 << 32) - 1),
-        (16, (1 << 16) - 1),
-        (8, (1 << 8) - 1),
-        (4, (1 << 4) - 1),
-        (2, (1 << 2) - 1),
-        (1, (1 << 1) - 1),
-    ];
-
-    for &(i, j) in &POWERS {
-        let tmp = value >> i;
-        if tmp != 0 {
-            log += i;
-            value = tmp;
-        } else {
-            value &= j;
-        }
+    if n == 0 {
+        0
+    } else {
+        (63 - n.leading_zeros()) as u64
     }
-
-    log
 }
 
 /// Creates a coordinate system from a single vector.

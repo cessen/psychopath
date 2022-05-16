@@ -18,7 +18,7 @@ use crate::{
     hash::hash_u32,
     hilbert,
     image::Image,
-    math::{probit, upper_power_of_two},
+    math::probit,
     mis::power_heuristic,
     ray::{Ray, RayBatch},
     scene::{Scene, SceneLightSample},
@@ -151,7 +151,7 @@ impl<'a> Renderer<'a> {
                 let bucket_count_x = ((width / bucket_w) + 1) as u32;
                 let bucket_count_y = ((height / bucket_h) + 1) as u32;
                 let larger = cmp::max(bucket_count_x, bucket_count_y);
-                let pow2 = upper_power_of_two(larger);
+                let pow2 = larger.next_power_of_two();
                 pow2 * pow2
             };
             for hilbert_d in 0..bucket_n {

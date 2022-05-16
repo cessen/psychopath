@@ -7,7 +7,7 @@ use glam::Vec4;
 use crate::{
     color::{Color, SpectralSample},
     lerp::{lerp, Lerp},
-    math::{clamp, dot, zup_to_vec, Normal, Vector},
+    math::{dot, zup_to_vec, Normal, Vector},
     sampling::cosine_sample_hemisphere,
 };
 
@@ -481,11 +481,11 @@ mod ggx_closure {
         }
 
         // Calculate needed dot products
-        let na = clamp(dot(nn, aa), -1.0, 1.0);
-        let nb = clamp(dot(nn, bb), -1.0, 1.0);
-        let ha = clamp(dot(hh, aa), -1.0, 1.0);
-        let hb = clamp(dot(hh, bb), -1.0, 1.0);
-        let nh = clamp(dot(nn, hh), -1.0, 1.0);
+        let na = dot(nn, aa).clamp(-1.0, 1.0);
+        let nb = dot(nn, bb).clamp(-1.0, 1.0);
+        let ha = dot(hh, aa).clamp(-1.0, 1.0);
+        let hb = dot(hh, bb).clamp(-1.0, 1.0);
+        let nh = dot(nn, hh).clamp(-1.0, 1.0);
 
         // Calculate F - Fresnel
         let col_f = {
@@ -584,7 +584,7 @@ mod ggx_closure {
         // Approximate method
         let theta = cos_theta_max.acos();
         let hh = (aa + bb).normalized();
-        let nh = clamp(dot(nn, hh), -1.0, 1.0);
+        let nh = dot(nn, hh).clamp(-1.0, 1.0);
         let fac = ggx_d(nh, (1.0f32).min(roughness.sqrt() + (2.0 * theta / PI_32)));
 
         fac * (1.0f32).min(1.0 - cos_theta_max) * INV_PI
